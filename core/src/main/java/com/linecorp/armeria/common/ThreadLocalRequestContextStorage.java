@@ -14,15 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPoppingException;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextStorage;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
@@ -30,6 +27,8 @@ import io.netty.util.internal.InternalThreadLocalMap;
 final class ThreadLocalRequestContextStorage implements RequestContextStorage {
 
     private static final FastThreadLocal<RequestContext> context = new FastThreadLocal<>();
+
+    static final ThreadLocalRequestContextStorage INSTANCE = new ThreadLocalRequestContextStorage();
 
     @Nullable
     @Override
@@ -45,11 +44,12 @@ final class ThreadLocalRequestContextStorage implements RequestContextStorage {
     @Override
     public void pop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
-        final RequestContext contextInThreadLocal = context.get();
+        final InternalThreadLocalMap map = InternalThreadLocalMap.get();
+        final RequestContext contextInThreadLocal = context.get(map);
         if (current != contextInThreadLocal) {
             throw newIllegalContextPoppingException(current, contextInThreadLocal);
         }
-        context.set(toRestore);
+        context.set(map, toRestore);
     }
 
     @Nullable
@@ -58,4 +58,6 @@ final class ThreadLocalRequestContextStorage implements RequestContextStorage {
     public <T extends RequestContext> T currentOrNull() {
         return (T) context.get();
     }
+
+    private ThreadLocalRequestContextStorage() {}
 }

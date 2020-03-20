@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.util.concurrent.FastThreadLocal;
 
 /**
  * Utilities for {@link RequestContext}.
@@ -57,13 +56,6 @@ public final class RequestContextUtil {
      */
     private static final Set<Thread> REPORTED_THREADS =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
-
-    /**
-     * The default {@link RequestContextStorage} which stores the {@link RequestContext} in
-     * {@link FastThreadLocal}.
-     */
-    public static final RequestContextStorage
-            threadLocalRequestContextStorage = new ThreadLocalRequestContextStorage();
 
     private static final RequestContextStorage requestContextStorage;
 
@@ -108,8 +100,10 @@ public final class RequestContextUtil {
             } catch (Throwable t) {
                 throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
             }
+            logger.info("{} is used to create the request context storage: {}",
+                        provider, requestContextStorage);
         } else {
-            requestContextStorage = threadLocalRequestContextStorage;
+            requestContextStorage = RequestContextStorage.threadLocal();
         }
     }
 

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.common.RequestContextUtil.threadLocalRequestContextStorage;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.UnstableApi;
@@ -66,7 +64,7 @@ public interface RequestContextStorage {
      * in the thread-local.
      */
     static RequestContextStorage threadLocal() {
-        return threadLocalRequestContextStorage;
+        return ThreadLocalRequestContextStorage.INSTANCE;
     }
 
     /**

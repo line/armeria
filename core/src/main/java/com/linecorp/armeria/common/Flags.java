@@ -120,8 +120,9 @@ public final class Flags {
 
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
-    private static final String REQUEST_CONTEXT_STORAGE_PROVIER =
-            get("requestContextStorageProvider", "", unused -> true);
+    @Nullable
+    private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
+            System.getProperty(PREFIX + "requestContextStorageProvider");
 
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
@@ -426,8 +427,9 @@ public final class Flags {
      * specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option to
      * choose the {@link RequestContextStorageProvider}.
      */
+    @Nullable
     public static String requestContextStorageProvider() {
-        return REQUEST_CONTEXT_STORAGE_PROVIER;
+        return REQUEST_CONTEXT_STORAGE_PROVIDER;
     }
 
     /**
