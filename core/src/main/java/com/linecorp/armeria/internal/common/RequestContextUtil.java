@@ -67,7 +67,7 @@ public final class RequestContextUtil {
 
             RequestContextStorageProvider provider = null;
             if (providers.size() > 1) {
-                if (providerFqcn.isEmpty()) {
+                if (providerFqcn == null) {
                     throw new IllegalStateException(
                             "Found more than one " + RequestContextStorageProvider.class.getSimpleName() +
                             ". You must specify -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>." +
@@ -93,6 +93,8 @@ public final class RequestContextUtil {
                 }
             } else {
                 provider = providers.get(0);
+                logger.info("Use {} to create {}.", provider.getClass().getSimpleName(),
+                            RequestContextStorage.class.getSimpleName());
             }
 
             try {
@@ -100,8 +102,6 @@ public final class RequestContextUtil {
             } catch (Throwable t) {
                 throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
             }
-            logger.info("{} is used to create the request context storage: {}",
-                        provider, requestContextStorage);
         } else {
             requestContextStorage = RequestContextStorage.threadLocal();
         }
