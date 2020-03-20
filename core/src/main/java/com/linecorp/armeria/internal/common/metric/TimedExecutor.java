@@ -28,7 +28,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.internal.common.metric;
 
 import java.util.concurrent.Executor;
 

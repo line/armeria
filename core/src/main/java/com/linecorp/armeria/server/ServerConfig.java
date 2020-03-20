@@ -38,7 +38,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.metric.ExecutorServiceMetrics;
+import com.linecorp.armeria.internal.common.metric.ExecutorServiceMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;

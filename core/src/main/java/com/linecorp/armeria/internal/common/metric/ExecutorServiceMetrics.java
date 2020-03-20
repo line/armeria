@@ -28,7 +28,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.internal.common.metric;
 
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
@@ -64,6 +64,8 @@ import io.micrometer.core.instrument.binder.MeterBinder;
  */
 @UnstableApi
 public final class ExecutorServiceMetrics implements MeterBinder {
+
+    // TODO(ikhoon) Remove this class once upstream ExecutorServiceMetrics allows customizing a metric name.
 
     // Forked from Micrometer 1.3.6
     // https://github.com/micrometer-metrics/micrometer/blob/e6ff3c2fe9542608a33a62b10fdf1222cd60feae/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/jvm/ExecutorServiceMetrics.java
