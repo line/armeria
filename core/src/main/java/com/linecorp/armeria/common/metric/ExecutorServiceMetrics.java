@@ -121,8 +121,8 @@ public final class ExecutorServiceMetrics implements MeterBinder {
     public static ExecutorService monitor(MeterRegistry registry, ExecutorService executor,
                                           String executorServiceName, String metricPrefix, Iterable<Tag> tags) {
         if (executor instanceof ScheduledExecutorService) {
-            return monitor(registry, (ScheduledExecutorService) executor, executorServiceName, metricPrefix,
-                           tags);
+            return monitor(registry, (ScheduledExecutorService) executor,
+                           executorServiceName, metricPrefix, tags);
         }
 
         requireNonNull(registry, "registry");
