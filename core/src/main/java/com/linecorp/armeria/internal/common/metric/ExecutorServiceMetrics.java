@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.internal.common.metric;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -230,6 +231,8 @@ public final class ExecutorServiceMetrics implements MeterBinder {
 
     private ExecutorServiceMetrics(@Nullable ExecutorService executorService, String executorServiceName,
                                    String metricPrefix, Iterable<Tag> tags) {
+        checkArgument(!executorServiceName.isEmpty(), "executorServiceName is empty");
+        checkArgument(!metricPrefix.isEmpty(), "metricPrefix is empty");
         this.executorService = executorService;
         this.metricPrefix = metricPrefix;
         this.tags = Tags.concat(tags, "name", executorServiceName);
