@@ -106,7 +106,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     static final ChannelFutureListener CLOSE_ON_FAILURE = future -> {
         final Throwable cause = future.cause();
-        if (cause != null && !(cause instanceof ClosedStreamException)) {
+        if (cause != null && (!(cause instanceof ClosedStreamException)
+                              || cause instanceof ClosedSessionException)) {
             final Channel ch = future.channel();
             logException(ch, cause);
             safeClose(ch);

@@ -45,6 +45,7 @@ import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
@@ -81,7 +82,7 @@ public final class GrpcStatus {
         if (s.getCode() != Code.UNKNOWN) {
             return s;
         }
-        if (t instanceof ClosedStreamException) {
+        if (t instanceof ClosedStreamException && !(t instanceof ClosedSessionException)) {
             return Status.CANCELLED;
         }
         if (t instanceof ClosedChannelException) {
