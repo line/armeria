@@ -205,7 +205,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
         return Mono.defer(() -> {
             final HttpResponse response = HttpResponse.of(
-                    new HttpResponseProcessor(ctx.eventLoop(), armeriaHeaders.build(),
+                    new HttpResponseProcessor(ctx.eventLoop(), buildResponseHeaders(),
                                               publisher.map(factoryWrapper::toHttpData)));
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
@@ -215,17 +215,20 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         });
     }
 
+    private ResponseHeaders buildResponseHeaders() {
+        if (!armeriaHeaders.contains(HttpHeaderNames.STATUS)) {
+            // If there is no status code specified, set 200 OK by default.
+            armeriaHeaders.status(com.linecorp.armeria.common.HttpStatus.OK);
+        }
+        return armeriaHeaders.build();
+    }
+
     private Mono<Void> doCommit(@Nullable Supplier<? extends Mono<Void>> writeAction) {
         if (!stateUpdater.compareAndSet(this, State.NEW, State.COMMITTING)) {
             return Mono.empty();
         }
 
         commitActions.add(() -> Mono.fromRunnable(() -> {
-            if (!armeriaHeaders.contains(HttpHeaderNames.STATUS)) {
-                // If there is no status code specified, set 200 OK by default.
-                armeriaHeaders.status(com.linecorp.armeria.common.HttpStatus.OK);
-            }
-
             getHeaders().forEach((name, values) -> armeriaHeaders.add(HttpHeaderNames.of(name), values));
 
             final List<String> cookieValues =
@@ -283,7 +286,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
             return Mono.empty();
         }
 
-        final HttpResponse response = HttpResponse.of(armeriaHeaders.build());
+        final HttpResponse response = HttpResponse.of(buildResponseHeaders());
         future.complete(response);
         logger.debug("{} Response future has been completed with an HttpResponse", ctx);
         return Mono.fromFuture(response.whenComplete());
