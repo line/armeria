@@ -104,9 +104,9 @@ class SubscriberThrowingExceptionTest {
         final PublisherBasedStreamMessage<Object> publisherBasedStreamMessage =
                 new PublisherBasedStreamMessage<>(publisher);
         subscribeAndValidate(publisherBasedStreamMessage, throwExceptionOnOnSubscribe);
-        assertThat(data.refCnt()).isZero();
         assertThatThrownBy(() -> publisher.whenComplete().join())
                 .hasCauseInstanceOf(CancelledSubscriptionException.class);
+        assertThat(data.refCnt()).isZero();
     }
 
     private void subscribeAndValidate(StreamMessage<Object> stream, boolean throwExceptionOnOnSubscribe) {
