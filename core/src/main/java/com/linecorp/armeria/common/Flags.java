@@ -422,9 +422,9 @@ public final class Flags {
      * Returns the fully qualified class name of {@link RequestContextStorageProvider} that is used to choose
      * when multiple {@link RequestContextStorageProvider}s exist.
      *
-     * <p>The default value of this flag is an empty string, which means only one
+     * <p>The default value of this flag is {@code null}, which means only one
      * {@link RequestContextStorageProvider} must be found via Java SPI. If there are more than one,
-     * specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option to
+     * you must specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option to
      * choose the {@link RequestContextStorageProvider}.
      */
     @Nullable
