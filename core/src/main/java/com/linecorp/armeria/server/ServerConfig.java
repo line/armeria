@@ -160,7 +160,7 @@ public final class ServerConfig {
         if (!ExecutorServiceMetrics.isMonitoredExecutor(blockingTaskExecutor)) {
             blockingTaskExecutor =
                     ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                                   "armeriaBlockingTaskExecutor", "armeria.executor");
+                                                   "blockingTaskExecutor", "armeria.executor");
         }
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
