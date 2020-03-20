@@ -25,7 +25,11 @@ import javax.annotation.Nullable;
 import org.junit.After;
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -41,6 +45,9 @@ import brave.propagation.StrictScopeDecorator;
 import brave.test.http.ITHttpServer;
 
 public class BraveServiceIntegrationTest extends ITHttpServer {
+
+    @Rule(order = Integer.MAX_VALUE)
+    public TestRule globalTimeout = new DisableOnDebug(Timeout.seconds(15));
 
     @Nullable
     private Server server;
