@@ -24,11 +24,11 @@ import javax.annotation.Nullable;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 
-final class ThreadLocalRequestContextStorage implements RequestContextStorage {
+enum ThreadLocalRequestContextStorage implements RequestContextStorage {
+
+    INSTANCE;
 
     private static final FastThreadLocal<RequestContext> context = new FastThreadLocal<>();
-
-    static final ThreadLocalRequestContextStorage INSTANCE = new ThreadLocalRequestContextStorage();
 
     @Nullable
     @Override
@@ -58,6 +58,4 @@ final class ThreadLocalRequestContextStorage implements RequestContextStorage {
     public <T extends RequestContext> T currentOrNull() {
         return (T) context.get();
     }
-
-    private ThreadLocalRequestContextStorage() {}
 }
