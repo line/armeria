@@ -44,8 +44,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.util.UnstableApi;
-
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -63,10 +61,10 @@ import io.micrometer.core.instrument.binder.MeterBinder;
  * @author Clint Checketts
  * @author Johnny Lim
  */
-@UnstableApi
 public final class ExecutorServiceMetrics implements MeterBinder {
 
     // TODO(ikhoon) Remove this class once upstream ExecutorServiceMetrics allows customizing a metric name.
+    // https://github.com/micrometer-metrics/micrometer/pull/1920
 
     // Forked from Micrometer 1.3.6
     // https://github.com/micrometer-metrics/micrometer/blob/e6ff3c2fe9542608a33a62b10fdf1222cd60feae/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/jvm/ExecutorServiceMetrics.java
