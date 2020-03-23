@@ -1,0 +1,4 @@
+dependencies {
+    // Bucket4j - rate-limiting library based on Token-Bucket algorithm
+    implementation 'com.github.vladimir-bukhtoyarov:bucket4j-core'
+}

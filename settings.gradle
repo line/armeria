@@ -35,6 +35,7 @@ includeWithFlags ':tomcat',                             'java', 'publish', 'relo
 includeWithFlags ':tomcat8.5',                          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':zookeeper',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                               'java', 'publish', 'relocate'
+includeWithFlags ':bucket4j',                           'java', 'publish', 'relocate'
 
 // Unpublished Java projects
 includeWithFlags ':benchmarks',               'java'

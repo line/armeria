@@ -505,3 +505,9 @@ pl.project13.scala:
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 xml-apis:
   xml-apis: { version: '1.4.01' }
+
+com.github.vladimir-bukhtoyarov:
+  bucket4j-core:
+    version: '4.9.0'
+    javadocs:
+    - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/4.9.0/
