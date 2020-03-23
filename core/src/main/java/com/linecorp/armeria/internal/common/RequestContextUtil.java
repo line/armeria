@@ -94,7 +94,7 @@ public final class RequestContextUtil {
             } else {
                 provider = providers.get(0);
                 if (logger.isInfoEnabled()) {
-                    logger.info("Using {} as a {}", 
+                    logger.info("Using {} as a {}",
                                 provider.getClass().getSimpleName(),
                                 RequestContextStorageProvider.class.getSimpleName());
                 }
