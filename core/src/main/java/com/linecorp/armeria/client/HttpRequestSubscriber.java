@@ -48,6 +48,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
@@ -334,6 +335,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void failAndReset(Throwable cause) {
+        if (cause instanceof ProxyConnectException) {
+            // ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+            return;
+        }
+
         fail(cause);
 
         final Http2Error error;

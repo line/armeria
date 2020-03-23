@@ -293,7 +293,8 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(ProxyConnectException.class);
+                                                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                .hasRootCauseInstanceOf(ProxyConnectException.class);
     }
 
     @Test
@@ -338,9 +339,9 @@ public class ProxyClientIntegrationTest {
                                              .build();
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
-
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(ProxyConnectException.class);
+                                                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                .hasRootCauseInstanceOf(ProxyConnectException.class);
     }
 
     @Test
@@ -358,7 +359,8 @@ public class ProxyClientIntegrationTest {
                 webClient.get(PROXY_PATH).aggregate();
 
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(ProxyConnectException.class);
+                                                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                .hasRootCauseInstanceOf(ProxyConnectException.class);
     }
 
     static class ProxySuccessEvent {
