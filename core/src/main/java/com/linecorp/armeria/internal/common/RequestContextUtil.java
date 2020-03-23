@@ -93,8 +93,11 @@ public final class RequestContextUtil {
                 }
             } else {
                 provider = providers.get(0);
-                logger.info("Use {} to create {}.", provider.getClass().getSimpleName(),
-                            RequestContextStorage.class.getSimpleName());
+                if (logger.isInfoEnabled()) {
+                    logger.info("Using {} as a {}", 
+                                provider.getClass().getSimpleName(),
+                                RequestContextStorageProvider.class.getSimpleName());
+                }
             }
 
             try {
