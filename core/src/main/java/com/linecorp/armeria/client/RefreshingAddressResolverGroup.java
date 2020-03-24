@@ -99,18 +99,21 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
 
     private final int minTtl;
     private final int maxTtl;
-    private int negativeTtl;
+    private final int negativeTtl;
+    private final long queryTimeoutMillis;
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
-                                   int minTtl, int maxTtl, int negativeTtl, Backoff refreshBackoff,
+                                   int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
+                                   Backoff refreshBackoff,
                                    @Nullable ResolvedAddressTypes resolvedAddressTypes) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
+        this.queryTimeoutMillis = queryTimeoutMillis;
         this.refreshBackoff = refreshBackoff;
         if (resolvedAddressTypes == null) {
             dnsRecordTypes = defaultDnsRecordTypes;
@@ -130,7 +133,8 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         final EventLoop eventLoop = (EventLoop) executor;
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
         resolverConfigurator.accept(builder);
-        final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop);
+        final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
+                                                                           queryTimeoutMillis);
         return new RefreshingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
                                              negativeTtl, refreshBackoff);
     }

@@ -16,16 +16,23 @@
 
 package com.linecorp.armeria.internal.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
+
+import com.linecorp.armeria.client.DnsTimeoutException;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
@@ -39,12 +46,17 @@ public class DefaultDnsNameResolver {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultDnsNameResolver.class);
 
+    private static final Iterable<DnsRecord> EMPTY_ADDITIONALS = ImmutableList.of();
+
     private final DnsNameResolver delegate;
     private final EventLoop eventLoop;
+    private final long queryTimeoutMillis;
 
-    public DefaultDnsNameResolver(DnsNameResolver delegate, EventLoop eventLoop) {
+    public DefaultDnsNameResolver(DnsNameResolver delegate, EventLoop eventLoop, long queryTimeoutMillis) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
+        checkArgument(queryTimeoutMillis > 0, "queryTimeoutMillis: %s (expected: > 0)", queryTimeoutMillis);
+        this.queryTimeoutMillis = queryTimeoutMillis;
     }
 
     public EventLoop executor() {
@@ -59,7 +71,10 @@ public class DefaultDnsNameResolver {
             // Simple case of single query
             final DnsQuestion question = questions.get(0);
             logger.debug("[{}] Sending a DNS query: {}", logPrefix, question);
-            return delegate.resolveAll(question);
+            final Promise<List<DnsRecord>> promise = executor().newPromise();
+            delegate.resolveAll(question, EMPTY_ADDITIONALS, promise);
+            configureTimeout(questions, logPrefix, promise, ImmutableList.of(promise));
+            return promise;
         }
 
         // Multiple queries
@@ -103,8 +118,37 @@ public class DefaultDnsNameResolver {
             }
         };
 
-        questions.forEach(q -> delegate.resolveAll(q).addListener(listener));
+        final Builder<Promise<List<DnsRecord>>> promises =
+                ImmutableList.builderWithExpectedSize(questions.size());
+        questions.forEach(q -> {
+            final Promise<List<DnsRecord>> promise = executor().newPromise();
+            promises.add(promise);
+            delegate.resolveAll(q, EMPTY_ADDITIONALS, promise);
+            promise.addListener(listener);
+        });
+        configureTimeout(questions, logPrefix, aggregatedPromise, promises.build());
         return aggregatedPromise;
+    }
+
+    private void configureTimeout(List<DnsQuestion> questions, String logPrefix,
+                                  Promise<List<DnsRecord>> result,
+                                  List<Promise<List<DnsRecord>>> promises) {
+        eventLoop.schedule(() -> {
+            if (result.isDone()) {
+                // Received a response before the query times out.
+                return;
+            }
+            final DnsTimeoutException exception = new DnsTimeoutException(
+                    '[' + logPrefix + "] " + questions + " are timed out after " +
+                    queryTimeoutMillis + " milliseconds.");
+            result.tryFailure(exception);
+            promises.forEach(promise -> {
+                if (promise.isDone()) {
+                    return;
+                }
+                promise.cancel(true);
+            });
+        }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     public void close() {
