@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -39,21 +38,12 @@ import io.grpc.Status;
 
 final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
 
-    private static final ConcurrentHashMap<CallCredentials, HttpClient> DECORATED_CLIENTS =
-            new ConcurrentHashMap<>();
-
-    static HttpClient decorate(HttpClient delegate, CallCredentials credentials, MethodDescriptor<?, ?> method,
-                               String authority) {
-        return DECORATED_CLIENTS.computeIfAbsent(credentials, creds ->
-                new CallCredentialsDecoratingClient(delegate, creds, method, authority));
-    }
-
     private final CallCredentials credentials;
     private final MethodDescriptor<?, ?> method;
     private final String authority;
 
-    private CallCredentialsDecoratingClient(HttpClient delegate, CallCredentials credentials,
-                                            MethodDescriptor<?, ?> method, String authority) {
+    CallCredentialsDecoratingClient(HttpClient delegate, CallCredentials credentials,
+                                    MethodDescriptor<?, ?> method, String authority) {
         super(delegate);
         this.credentials = credentials;
         this.method = method;
@@ -75,7 +65,7 @@ final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
                 // Semantics of SecurityLevel aren't very clear but we follow the pattern of the upstream
                 // client.
                 // https://github.com/grpc/grpc-java/blob/bf2a66c8a2d52be41afd7090c151984a3ce64e0d/okhttp/src/main/java/io/grpc/okhttp/OkHttpClientTransport.java#L586
-                return ctx.sslSession() == null ? SecurityLevel.NONE : SecurityLevel.PRIVACY_AND_INTEGRITY;
+                return ctx.sessionProtocol().isTls() ? SecurityLevel.PRIVACY_AND_INTEGRITY : SecurityLevel.NONE;
             }
 
             @Override

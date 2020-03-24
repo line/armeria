@@ -102,7 +102,6 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
-import io.grpc.CallCredentials.RequestInfo;
 import io.grpc.CallOptions;
 import io.grpc.ClientCall;
 import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
@@ -887,9 +886,6 @@ class GrpcClientTest {
 
     @Test
     void credentialsUnaryCall() {
-        final AtomicReference<RequestInfo> requestInfoCapture = new AtomicReference<>();
-        final AtomicReference<Executor> executorCapture = new AtomicReference<>();
-
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
                 Clients.builder("gproto+http://localhost:" + server.httpPort())
@@ -901,8 +897,13 @@ class GrpcClientTest {
                                    public void applyRequestMetadata(RequestInfo requestInfo,
                                                                     Executor appExecutor,
                                                                     MetadataApplier applier) {
-                                       requestInfoCapture.set(requestInfo);
-                                       executorCapture.set(appExecutor);
+                                       assertThat(requestInfo.getMethodDescriptor())
+                                               .isEqualTo(TestServiceGrpc.getEmptyCallMethod());
+                                       assertThat(requestInfo.getAuthority())
+                                               .isEqualTo("localhost:" + server.httpPort());
+                                       assertThat(requestInfo.getSecurityLevel())
+                                               .isEqualTo(SecurityLevel.NONE);
+                                       assertThat(appExecutor).isEqualTo(CommonPools.blockingTaskExecutor());
 
                                        CommonPools.blockingTaskExecutor().schedule(() -> {
                                            final Metadata metadata = new Metadata();
@@ -916,25 +917,14 @@ class GrpcClientTest {
                                    }
                                });
 
-        try (ClientRequestContextCaptor ctx = Clients.newContextCaptor()) {
-            assertThat(stub.emptyCall(EMPTY)).isNotNull();
+        assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
-            assertThat(executorCapture.get()).isEqualTo(CommonPools.blockingTaskExecutor());
-
-            final HttpHeaders clientHeaders = CLIENT_HEADERS_CAPTURE.get();
-            assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("token");
-
-            assertThat(requestInfoCapture.get().getMethodDescriptor())
-                    .isEqualTo(TestServiceGrpc.getEmptyCallMethod());
-            assertThat(requestInfoCapture.get().getAuthority()).isEqualTo("localhost:" + server.httpPort());
-            assertThat(requestInfoCapture.get().getSecurityLevel()).isEqualTo(SecurityLevel.NONE);
-        }
+        final HttpHeaders clientHeaders = CLIENT_HEADERS_CAPTURE.get();
+        assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("token");
     }
 
     @Test
     void credentialsUnaryCall_https() {
-        final AtomicReference<RequestInfo> requestInfoCapture = new AtomicReference<>();
-
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
                 Clients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
@@ -947,7 +937,10 @@ class GrpcClientTest {
                                    public void applyRequestMetadata(RequestInfo requestInfo,
                                                                     Executor appExecutor,
                                                                     MetadataApplier applier) {
-                                       requestInfoCapture.set(requestInfo);
+                                       assertThat(requestInfo.getAuthority())
+                                               .isEqualTo("127.0.0.1:" + server.httpsPort());
+                                       assertThat(requestInfo.getSecurityLevel())
+                                               .isEqualTo(SecurityLevel.PRIVACY_AND_INTEGRITY);
                                        applier.apply(new Metadata());
                                    }
 
@@ -957,10 +950,6 @@ class GrpcClientTest {
                                });
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
-
-        assertThat(requestInfoCapture.get().getAuthority()).isEqualTo("127.0.0.1:" + server.httpsPort());
-        assertThat(requestInfoCapture.get().getSecurityLevel())
-                .isEqualTo(SecurityLevel.PRIVACY_AND_INTEGRITY);
     }
 
     @Test
