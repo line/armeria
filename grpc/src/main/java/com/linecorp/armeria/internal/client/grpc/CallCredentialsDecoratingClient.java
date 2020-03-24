@@ -24,7 +24,6 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 
 import io.grpc.Attributes;
@@ -86,31 +85,26 @@ final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
             }
         };
 
-        try {
-            credentials.applyRequestMetadata(
-                    requestInfo,
-                    CommonPools.blockingTaskExecutor(),
-                    new MetadataApplier() {
-                        @Override
-                        public void apply(Metadata metadata) {
-                            ctx.mutateAdditionalRequestHeaders(
-                                    headers -> MetadataUtil.fillHeaders(metadata, headers));
-                            try {
-                                response.complete(delegate().execute(ctx, req));
-                            } catch (Exception e) {
-                                response.completeExceptionally(e);
-                            }
+        credentials.applyRequestMetadata(
+                requestInfo,
+                CommonPools.blockingTaskExecutor(),
+                new MetadataApplier() {
+                    @Override
+                    public void apply(Metadata metadata) {
+                        ctx.mutateAdditionalRequestHeaders(
+                                headers -> MetadataUtil.fillHeaders(metadata, headers));
+                        try {
+                            response.complete(delegate().execute(ctx, req));
+                        } catch (Exception e) {
+                            response.completeExceptionally(e);
                         }
+                    }
 
-                        @Override
-                        public void fail(Status status) {
-                            response.completeExceptionally(status.asRuntimeException());
-                        }
-                    });
-        } catch (Throwable t) {
-            Exceptions.throwIfFatal(t);
-            return HttpResponse.ofFailure(t);
-        }
+                    @Override
+                    public void fail(Status status) {
+                        response.completeExceptionally(status.asRuntimeException());
+                    }
+                });
 
         return HttpResponse.from(response);
     }
