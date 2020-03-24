@@ -499,13 +499,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             return;
         }
 
-        final Throwable cause = future.cause();
-        fail(cause);
-        if (!(cause instanceof ClosedStreamException) && !(cause instanceof ClosedSessionException)) {
-            logger.warn("{} Unexpected exception while writing to a channel.",
-                        ctx.channel(), cause);
-            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
-            ctx.flush();
-        }
+        fail(future.cause());
+        // We do not send RST but close the channel because there's high chances that the channel
+        // is not reusable if an exception was raised while writing to the channel.
+        HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(future);
     }
 }
