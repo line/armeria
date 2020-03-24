@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 
+import io.grpc.CallCredentials;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
@@ -100,10 +101,19 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final int maxInboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES);
         final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
 
+        final HttpClient client;
+
+        final CallCredentials credentials = callOptions.getCredentials();
+        if (credentials != null) {
+            client = CallCredentialsDecoratingClient.decorate(httpClient, credentials, method, authority());
+        } else {
+            client = httpClient;
+        }
+
         return new ArmeriaClientCall<>(
                 ctx,
                 params.endpointGroup(),
-                httpClient,
+                client,
                 req,
                 method,
                 maxOutboundMessageSizeBytes,
