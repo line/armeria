@@ -953,6 +953,34 @@ class GrpcClientTest {
     }
 
     @Test
+    void credentialsUnaryCall_fail() {
+        final TestServiceBlockingStub stub =
+                // Explicitly construct URL to better test authority.
+                Clients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
+                       .decorator(LoggingClient.builder().newDecorator())
+                       .factory(ClientFactory.insecure())
+                       .build(TestServiceBlockingStub.class)
+                       .withCallCredentials(
+                               new CallCredentials() {
+                                   @Override
+                                   public void applyRequestMetadata(RequestInfo requestInfo,
+                                                                    Executor appExecutor,
+                                                                    MetadataApplier applier) {
+                                       applier.fail(Status.FAILED_PRECONDITION);
+                                   }
+
+                                   @Override
+                                   public void thisUsesUnstableApi() {
+                                   }
+                               });
+
+        assertThatThrownBy(() -> stub.emptyCall(EMPTY))
+                .isInstanceOfSatisfying(StatusRuntimeException.class,
+                                        t -> assertThat(t.getStatus().getCode())
+                                                .isEqualTo(Code.FAILED_PRECONDITION));
+    }
+
+    @Test
     void credentialsStreamingCall() throws Exception {
         final List<StreamingInputCallRequest> requests = Arrays.asList(
                 StreamingInputCallRequest.newBuilder()
