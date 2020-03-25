@@ -462,6 +462,9 @@ public class AnnotatedService implements HttpService {
                                             ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
+            if (result instanceof HttpResponse) {
+                return (HttpResponse) result;
+            }
             try (SafeCloseable ignored = ctx.push()) {
                 for (final ResponseConverterFunction func : functions) {
                     try {
@@ -471,7 +474,7 @@ public class AnnotatedService implements HttpService {
                     } catch (Exception e) {
                         throw new IllegalStateException(
                                 "Response converter " + func.getClass().getName() +
-                                " cannot convert a result to HttpResponse: " + result, e);
+                                        " cannot convert a result to HttpResponse: " + result, e);
                     }
                 }
             }

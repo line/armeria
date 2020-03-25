@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -76,6 +77,11 @@ class ObservableResponseConverterFunctionTest {
                 public Maybe<String> error() {
                     return Maybe.error(new AnticipatedException());
                 }
+
+                @Get("/http-response")
+                public Maybe<HttpResponse> httpResponse() {
+                    return Maybe.just(HttpResponse.of("a"));
+                }
             });
 
             sb.annotatedService("/single", new Object() {
@@ -93,6 +99,11 @@ class ObservableResponseConverterFunctionTest {
                 @Get("/error")
                 public Single<String> error() {
                     return Single.error(new AnticipatedException());
+                }
+
+                @Get("/http-response")
+                public Single<HttpResponse> httpResponse() {
+                    return Single.just(HttpResponse.of("a"));
                 }
             });
 
@@ -188,6 +199,10 @@ class ObservableResponseConverterFunctionTest {
 
         res = client.get("/error").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        res = client.get("/http-response").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
     }
 
     @Test
@@ -206,6 +221,10 @@ class ObservableResponseConverterFunctionTest {
 
         res = client.get("/error").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        res = client.get("/http-response").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
     }
 
     @Test
