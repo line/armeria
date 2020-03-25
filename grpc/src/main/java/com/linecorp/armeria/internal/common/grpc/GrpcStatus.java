@@ -82,7 +82,11 @@ public final class GrpcStatus {
         if (s.getCode() != Code.UNKNOWN) {
             return s;
         }
-        if (t instanceof ClosedStreamException && !(t instanceof ClosedSessionException)) {
+
+        if (t instanceof ClosedSessionException) {
+            return Status.UNKNOWN;
+        }
+        if (t instanceof ClosedStreamException) {
             return Status.CANCELLED;
         }
         if (t instanceof ClosedChannelException) {
