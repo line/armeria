@@ -919,17 +919,15 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         if (name == null) {
             String newName = null;
-            if (ctx instanceof ServiceRequestContext) {
-                newName = ((ServiceRequestContext) ctx).config().defaultLogName();
+            final RpcRequest rpcReq = ctx.rpcRequest();
+            if (rpcReq != null) {
+                newName = rpcReq.method();
+            } else if (requestContent instanceof RpcRequest) {
+                newName = ((RpcRequest) requestContent).method();
             }
 
-            if (newName == null) {
-                final RpcRequest rpcReq = ctx.rpcRequest();
-                if (rpcReq != null) {
-                    newName = rpcReq.method();
-                } else if (requestContent instanceof RpcRequest) {
-                    newName = ((RpcRequest) requestContent).method();
-                }
+            if (ctx instanceof ServiceRequestContext) {
+                newName = ((ServiceRequestContext) ctx).config().defaultLogName();
             }
 
             name = newName;
