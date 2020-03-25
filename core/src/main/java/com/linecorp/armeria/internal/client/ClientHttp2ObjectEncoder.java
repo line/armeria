@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -36,7 +37,7 @@ import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2LocalFlowController;
 
-public final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder {
+public final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements ClientHttpObjectEncoder {
     private final SessionProtocol protocol;
 
     public ClientHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
@@ -46,21 +47,11 @@ public final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder {
     }
 
     @Override
-    protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream,
-                                           HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) {
+    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
         final Http2Connection conn = encoder().connection();
-        final boolean isTrailer = !headers.contains(HttpHeaderNames.METHOD);
-        final Http2Headers convertedHeaders;
-
         if (isStreamPresentAndWritable(streamId)) {
-            if (!isTrailer) {
-                convertedHeaders = convertHeaders(headers, additionalHeaders);
-            } else {
-                convertedHeaders = ArmeriaHttpUtil.toNettyHttp2ClientTrailer(headers);
-            }
-            // Writing to an existing stream.
-            return encoder().writeHeaders(ctx(), streamId, convertedHeaders, 0, endStream,
-                                          ctx().newPromise());
+            return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0,
+                                          endStream, ctx().newPromise());
         }
 
         final Endpoint<Http2LocalFlowController> local = conn.local();
@@ -68,27 +59,16 @@ public final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder {
             final ClosedStreamException closedStreamException =
                     new ClosedStreamException("Cannot create a new stream. streamId: " + streamId +
                                               ", lastStreamCreated: " + local.lastStreamCreated());
-            if (!isTrailer) {
-                return newFailedFuture(new UnprocessedRequestException(closedStreamException));
-            } else {
-                return newFailedFuture(closedStreamException);
-            }
-        }
-
-        if (!isTrailer) {
-            convertedHeaders = convertHeaders(headers, additionalHeaders);
-        } else {
-            convertedHeaders = ArmeriaHttpUtil.toNettyHttp2ClientTrailer(headers);
+            return newFailedFuture(new UnprocessedRequestException(closedStreamException));
         }
 
         // Client starts a new stream.
-        return encoder().writeHeaders(ctx(), streamId, convertedHeaders, 0, endStream,
+        return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0, endStream,
                                       ctx().newPromise());
     }
 
-    private Http2Headers convertHeaders(HttpHeaders inputHeaders, HttpHeaders additionalHeaders) {
-        final Http2Headers outputHeaders =
-                ArmeriaHttpUtil.toNettyHttp2ClientHeader(inputHeaders, additionalHeaders);
+    private Http2Headers convertHeaders(HttpHeaders inputHeaders) {
+        final Http2Headers outputHeaders = ArmeriaHttpUtil.toNettyHttp2ClientHeader(inputHeaders);
 
         if (!outputHeaders.contains(HttpHeaderNames.USER_AGENT)) {
             outputHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
@@ -106,5 +86,15 @@ public final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder {
                                                               remoteAddress.getPort(), protocol.defaultPort()));
         }
         return outputHeaders;
+    }
+
+    @Override
+    public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
+        if (isStreamPresentAndWritable(streamId)) {
+            return encoder().writeHeaders(ctx(), streamId, ArmeriaHttpUtil.toNettyHttp2ClientTrailer(headers),
+                                          0, true, ctx().newPromise());
+        }
+
+        return newFailedFuture(ClosedStreamException.get());
     }
 }

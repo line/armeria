@@ -16,6 +16,10 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -26,9 +30,13 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class HttpServerAdditionalHeadersTest {
+
+    private static final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -42,6 +50,12 @@ class HttpServerAdditionalHeadersTest {
             sb.service("/headers_and_trailers", (ctx, req) -> {
                 addBadHeaders(ctx);
                 return HttpResponse.of("headers and trailers");
+            });
+            sb.service("/informational", (ctx, req) -> {
+                ctx.setAdditionalResponseHeader("foo", "bar");
+                ctx.log().whenComplete().thenAccept(logHolder::set);
+                return HttpResponse.of(ResponseHeaders.of(HttpStatus.CONTINUE),
+                                       ResponseHeaders.of(HttpStatus.OK));
             });
         }
 
@@ -96,5 +110,26 @@ class HttpServerAdditionalHeadersTest {
                                                         .endOfStream(true)
                                                         .add("foo", "bar")
                                                         .build());
+    }
+
+    @Test
+    void informationalHeadersDoNotContainAdditionalHeaders() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/informational").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        final List<ResponseHeaders> informationals = res.informationals();
+        assertThat(informationals).hasSize(1);
+        final ResponseHeaders informationalHeaders = informationals.get(0);
+        assertThat(informationalHeaders.status()).isEqualTo(HttpStatus.CONTINUE);
+        assertThat(informationalHeaders.names()).doesNotContain(HttpHeaderNames.of("foo"));
+        assertThat(res.headers().names()).contains(HttpHeaderNames.of("foo"));
+    }
+
+    @Test
+    void responseHeadersContainsAdditionalHeaders() {
+        final WebClient client = WebClient.of(server.httpUri());
+        client.get("/informational").aggregate().join();
+        await().until(() -> logHolder.get() != null);
+        assertThat(logHolder.get().responseHeaders().names()).contains(HttpHeaderNames.of("foo"));
     }
 }

@@ -30,9 +30,11 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.util.ReferenceCountUtil;
 
-public abstract class Http2ObjectEncoder extends HttpObjectEncoder {
+public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     private final ChannelHandlerContext ctx;
     private final Http2ConnectionEncoder encoder;
+
+    private volatile boolean closed;
 
     protected Http2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder) {
         this.ctx = requireNonNull(ctx, "ctx");
@@ -40,12 +42,12 @@ public abstract class Http2ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected final Channel channel() {
+    public final Channel channel() {
         return ctx.channel();
     }
 
     @Override
-    protected final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
+    public final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (isStreamPresentAndWritable(streamId)) {
             // Write to an existing stream.
             return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
@@ -66,7 +68,7 @@ public abstract class Http2ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
+    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
         final Http2Stream stream = encoder.connection().stream(streamId);
         // Send a RST_STREAM frame only for an active stream which did not send a RST_STREAM frame already.
         if (stream != null && !stream.isResetSent()) {
@@ -103,7 +105,14 @@ public abstract class Http2ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected final void doClose() {}
+    public final void close() {
+        closed = true;
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closed;
+    }
 
     protected final ChannelHandlerContext ctx() {
         return ctx;

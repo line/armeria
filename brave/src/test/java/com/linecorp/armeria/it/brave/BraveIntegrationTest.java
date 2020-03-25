@@ -212,12 +212,12 @@ class BraveIntegrationTest {
         timeoutClientClientTimesOut =
                 Clients.builder(server.httpUri(BINARY) + "/timeout")
                        .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                       .responseTimeout(Duration.ofMillis(10))
+                       .responseTimeout(Duration.ofMillis(3))
                        .build(HelloService.Iface.class);
         http1TimeoutClientClientTimesOut =
                 Clients.builder(server.uri(H1C, BINARY) + "/timeout")
                        .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                       .responseTimeout(Duration.ofMillis(10))
+                       .responseTimeout(Duration.ofMillis(3))
                        .build(HelloService.Iface.class);
     }
 

@@ -33,8 +33,6 @@ package com.linecorp.armeria.internal.common;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
 import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
@@ -47,7 +45,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -89,7 +86,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
@@ -218,10 +214,10 @@ public final class ArmeriaHttpUtil {
         HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
     }
 
-    private static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_BLACKLIST = ImmutableSet.of(
+    static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_BLACKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
-    private static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_BLACKLIST = ImmutableSet.of(
+    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_BLACKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
     public static final String SERVER_HEADER =
@@ -712,7 +708,8 @@ public final class ArmeriaHttpUtil {
     /**
      * Filter the {@link HttpHeaderNames#TE} header according to the
      * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.2">special rules in the HTTP/2 RFC</a>.
-     * @param entry An entry whose name is {@link HttpHeaderNames#TE}.
+     *
+     * @param entry the entry whose name is {@link HttpHeaderNames#TE}.
      * @param out the resulting HTTP/2 headers.
      */
     private static void toHttp2HeadersFilterTE(Entry<CharSequence, CharSequence> entry,
@@ -814,54 +811,76 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the specified Armeria HTTP/2 response headers into Netty HTTP/2 headers.
      *
-     * @param inputHeaders The HTTP/2 response headers to convert.
-     * @param additionalHeaders The additional headers which will be merged.
-     * @param additionalTrailers The additional trailers which will be merged.
-     * @param endStream {@code true} if returned headers will end streams.
-     *                  {@code false} otherwise.
+     * @param inputHeaders the HTTP/2 response headers to convert.
      */
-    public static Http2Headers toNettyHttp2ServerHeader(HttpHeaders inputHeaders, HttpHeaders additionalHeaders,
-                                                        HttpHeaders additionalTrailers, boolean endStream) {
-        final int headerSizeHint = inputHeaders.size() + additionalHeaders.size() + additionalTrailers.size();
+    public static Http2Headers toNettyHttp2ServerHeaders(HttpHeaders inputHeaders) {
+        final int headerSizeHint = inputHeaders.size() + 2; // server and data headers
         final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
-
-        mergeHeadersHttp2Server(inputHeaders, outputHeaders, false, false);
-        mergeHeadersHttp2Server(additionalHeaders, outputHeaders, false, true);
-
-        if (endStream && !additionalTrailers.isEmpty()) {
-            mergeHeadersHttp2Server(additionalTrailers, outputHeaders, true, true);
+        for (Entry<AsciiString, String> entry : inputHeaders) {
+            final AsciiString name = entry.getKey();
+            final String value = entry.getValue();
+            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(name)) {
+                continue;
+            }
+            outputHeaders.add(name, value);
         }
-        return toNettyHttp2(outputHeaders);
+        return outputHeaders;
     }
 
     /**
      * Converts the specified Armeria HTTP/2 response headers into Netty HTTP/2 headers.
      *
-     * @param inputHeaders The HTTP/2 response headers to convert.
-     * @param additionalTrailers The additional trailers which will be merged.
-     * @param endStream {@code true} if returned headers will end streams.
-     *                  {@code false} otherwise.
+     * @param inputHeaders the HTTP/2 response headers to convert.
      */
-    public static Http2Headers toNettyHttp2ServerTrailer(
-            HttpHeaders inputHeaders, HttpHeaders additionalTrailers, boolean endStream) {
-        final int headerSizeHint = inputHeaders.size() + additionalTrailers.size();
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
-
-        mergeHeadersHttp2Server(inputHeaders, outputHeaders, true, false);
-
-        if (endStream) {
-            mergeHeadersHttp2Server(additionalTrailers, outputHeaders, true, true);
-        }
-        return toNettyHttp2(outputHeaders);
-    }
-
-    private static void mergeHeadersHttp2Server(HttpHeaders inputHeaders, Http2Headers outputHeaders,
-                                                boolean isTrailer, boolean isAdditionalHeaders) {
-        final Set<AsciiString> removed = new HashSet<>();
+    public static Http2Headers toNettyHttp2ServerTrailer(HttpHeaders inputHeaders) {
+        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, inputHeaders.size());
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (isAdditionalHeaders && ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name)) {
+            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(name)) {
+                continue;
+            }
+            if (ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name)) {
+                continue;
+            }
+            if (isTrailerBlacklisted(name)) {
+                continue;
+            }
+            outputHeaders.add(name, value);
+        }
+        return outputHeaders;
+    }
+
+    /**
+     * Converts the specified Armeria HTTP/2 request headers into Netty HTTP/2 headers.
+     *
+     * @param inputHeaders the HTTP/2 request headers to convert.
+     */
+    public static Http2Headers toNettyHttp2ClientHeader(HttpHeaders inputHeaders) {
+        final int headerSizeHint = inputHeaders.size() + 3; // User_Agent, :scheme and :authority.
+        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
+        toNettyHttp2Client(inputHeaders, outputHeaders, false);
+        return outputHeaders;
+    }
+
+    /**
+     * Converts the specified Armeria HTTP/2 request headers into Netty HTTP/2 headers.
+     *
+     * @param inputHeaders the HTTP/2 request headers to convert.
+     */
+    public static Http2Headers toNettyHttp2ClientTrailer(HttpHeaders inputHeaders) {
+        final int headerSizeHint = inputHeaders.size();
+        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
+        toNettyHttp2Client(inputHeaders, outputHeaders, true);
+        return outputHeaders;
+    }
+
+    private static void toNettyHttp2Client(HttpHeaders inputHeaders, Http2Headers outputHeaders,
+                                           boolean isTrailer) {
+        for (Entry<AsciiString, String> entry : inputHeaders) {
+            final AsciiString name = entry.getKey();
+            final String value = entry.getValue();
+            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(name)) {
                 continue;
             }
 
@@ -869,19 +888,11 @@ public final class ArmeriaHttpUtil {
                 continue;
             }
 
-            if (removed.add(name)) {
-                outputHeaders.remove(name);
-            }
             outputHeaders.add(name, value);
         }
-    }
-
-    private static Http2Headers toNettyHttp2(Http2Headers outputHeaders) {
-        outputHeaders.remove(HttpHeaderNames.CONNECTION);
-        outputHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
         if (!outputHeaders.contains(HttpHeaderNames.COOKIE)) {
-            return outputHeaders;
+            return;
         }
 
         // Split up cookies to allow for better compression.
@@ -890,48 +901,92 @@ public final class ArmeriaHttpUtil {
         for (CharSequence c : cookies) {
             outputHeaders.add(HttpHeaderNames.COOKIE, COOKIE_SPLITTER.split(c));
         }
-
-        return outputHeaders;
     }
 
     /**
-     * Converts the specified Armeria HTTP/2 request headers into Netty HTTP/2 headers.
+     * Translates and adds HTTP/2 response headers to HTTP/1.1 headers.
      *
-     * @param inputHeaders The HTTP/2 request headers to convert.
-     * @param additionalHeaders The additional headers which will be merged.
+     * @param inputHeaders the HTTP/2 response headers to convert.
+     * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
-    public static Http2Headers toNettyHttp2ClientHeader(HttpHeaders inputHeaders,
-                                                        HttpHeaders additionalHeaders) {
-        final int headerSizeHint = inputHeaders.size() + additionalHeaders.size();
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
-
-        mergeHeadersHttp2Client(inputHeaders, outputHeaders, false, false);
-        mergeHeadersHttp2Client(additionalHeaders, outputHeaders, false, true);
-
-        return toNettyHttp2(outputHeaders);
+    public static void toNettyHttp1ServerHeader(
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
+        toNettyHttp1Server(inputHeaders, outputHeaders, false);
+        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
     /**
-     * Converts the specified Armeria HTTP/2 request headers into Netty HTTP/2 headers.
+     * Translates and adds HTTP/2 response trailers to HTTP/1.1 headers.
      *
-     * @param inputHeaders The HTTP/2 request headers to convert.
+     * @param inputHeaders The HTTP/2 response headers to convert.
+     * @param outputHeaders The object which will contain the resulting HTTP/1.1 headers.
      */
-    public static Http2Headers toNettyHttp2ClientTrailer(HttpHeaders inputHeaders) {
-        final int headerSizeHint = inputHeaders.size();
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
-
-        mergeHeadersHttp2Client(inputHeaders, outputHeaders, true, false);
-
-        return toNettyHttp2(outputHeaders);
+    public static void toNettyHttp1ServerTrailer(
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
+        toNettyHttp1Server(inputHeaders, outputHeaders, true);
     }
 
-    private static void mergeHeadersHttp2Client(HttpHeaders inputHeaders, Http2Headers outputHeaders,
-                                                boolean isTrailer, boolean isAdditionalHeaders) {
-        final Set<AsciiString> removed = new HashSet<>();
+    private static void toNettyHttp1Server(
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            boolean isTrailer) {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (isAdditionalHeaders && ADDITIONAL_REQUEST_HEADER_BLACKLIST.contains(name)) {
+            final AsciiString translatedName = RESPONSE_HEADER_TRANSLATIONS.get(name);
+            if (translatedName != null && !inputHeaders.contains(translatedName)) {
+                outputHeaders.add(translatedName, value);
+                continue;
+            }
+
+            if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+                continue;
+            }
+
+            if (isTrailer && isTrailerBlacklisted(name)) {
+                continue;
+            }
+            outputHeaders.add(name, value);
+        }
+    }
+
+    /**
+     * Translates and adds HTTP/2 request headers to HTTP/1.1 headers.
+     *
+     * @param inputHeaders the HTTP/2 request headers to convert.
+     * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
+     */
+    public static void toNettyHttp1ClientHeader(
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
+        toNettyHttp1Client(inputHeaders, outputHeaders, false);
+        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
+    }
+
+    /**
+     * Translates and adds HTTP/2 request headers to HTTP/1.1 headers.
+     *
+     * @param inputHeaders the HTTP/2 request headers to convert.
+     * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
+     */
+    public static void toNettyHttp1ClientTrailer(
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
+        toNettyHttp1Client(inputHeaders, outputHeaders, true);
+    }
+
+    private static void toNettyHttp1Client(
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            boolean isTrailer) {
+        StringJoiner cookieJoiner = null;
+
+        for (Entry<AsciiString, String> entry : inputHeaders) {
+            final AsciiString name = entry.getKey();
+            final String value = entry.getValue();
+            final AsciiString translatedName = REQUEST_HEADER_TRANSLATIONS.get(name);
+            if (translatedName != null && !inputHeaders.contains(translatedName)) {
+                outputHeaders.add(translatedName, value);
+                continue;
+            }
+
+            if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
                 continue;
             }
 
@@ -939,186 +994,20 @@ public final class ArmeriaHttpUtil {
                 continue;
             }
 
-            if (removed.add(name)) {
-                outputHeaders.remove(name);
-            }
-            outputHeaders.add(name, value);
-        }
-    }
-
-    /**
-     * Translate and add HTTP/2 response headers to HTTP/1.x headers.
-     *
-     * @param streamId The stream associated with {@code sourceHeaders}.
-     * @param inputHeaders The HTTP/2 response headers to convert.
-     * @param additionalHeaders The additional headers which will be merged.
-     * @param additionalTrailers The additional trailers which will be merged.
-     * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
-     * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as
-     *                    when doing the conversion.
-     * @param endStream {@code true} if {@code outputHeaders} will end streams.
-     *                  {@code false} otherwise.
-     *
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
-     */
-    public static void toNettyHttp1ServerHeader(
-            int streamId, HttpHeaders inputHeaders,
-            HttpHeaders additionalHeaders, HttpHeaders additionalTrailers,
-            io.netty.handler.codec.http.HttpHeaders outputHeaders, HttpVersion httpVersion, boolean endStream)
-            throws Http2Exception {
-        mergeHeadersHttp1Server(streamId, inputHeaders, outputHeaders, false, false);
-        mergeHeadersHttp1Server(streamId, additionalHeaders, outputHeaders, false, true);
-
-        if (endStream && !additionalTrailers.isEmpty()) {
-            mergeHeadersHttp1Server(streamId, additionalTrailers, outputHeaders, true, true);
-        }
-        HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
-    }
-
-    /**
-     * Translate and add HTTP/2 response headers to HTTP/1.x headers.
-     *
-     * @param streamId The stream associated with {@code sourceHeaders}.
-     * @param inputHeaders The HTTP/2 response headers to convert.
-     * @param additionalTrailers The additional trailers which will be merged.
-     * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
-     *                    when doing the conversion.
-     * @param endStream {@code true} if {@code outputHeaders} will end streams.
-     *                  {@code false} otherwise.
-     *
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
-     */
-    public static void toNettyHttp1ServerTrailer(
-            int streamId, HttpHeaders inputHeaders, HttpHeaders additionalTrailers,
-            io.netty.handler.codec.http.HttpHeaders outputHeaders, boolean endStream) throws Http2Exception {
-        mergeHeadersHttp1Server(streamId, inputHeaders, outputHeaders, true, false);
-
-        if (endStream) {
-            mergeHeadersHttp1Server(streamId, additionalTrailers, outputHeaders, true, true);
-        }
-    }
-
-    private static void mergeHeadersHttp1Server(
-            int streamId, HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            boolean isTrailer, boolean isAdditionalHeader) throws Http2Exception {
-        try {
-            final Set<AsciiString> removed = new HashSet<>();
-            for (Entry<AsciiString, String> entry : inputHeaders) {
-                final AsciiString name = entry.getKey();
-                final String value = entry.getValue();
-                final AsciiString translatedName = RESPONSE_HEADER_TRANSLATIONS.get(name);
-                if (translatedName != null && !inputHeaders.contains(translatedName)) {
-                    outputHeaders.add(translatedName, value);
-                    continue;
+            if (HttpHeaderNames.COOKIE.equals(name)) {
+                // combine the cookie values into 1 header entry.
+                // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                if (cookieJoiner == null) {
+                    cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
                 }
-
-                if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
-                    continue;
-                }
-
-                if (isAdditionalHeader && ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name)) {
-                    continue;
-                }
-
-                if (isTrailer && isTrailerBlacklisted(name)) {
-                    continue;
-                }
-
-                if (removed.add(name)) {
-                    outputHeaders.remove(name);
-                }
+                COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
+            } else {
                 outputHeaders.add(name, value);
             }
-        } catch (Throwable t) {
-            throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
-    }
 
-    /**
-     * Translate and add HTTP/2 request headers to HTTP/1.x headers.
-     *
-     * @param streamId The stream associated with {@code sourceHeaders}.
-     * @param inputHeaders The HTTP/2 request headers to convert.
-     * @param additionalHeaders The additional headers which will be merged.
-     * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
-     * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as
-     *                    when doing the conversion.
-     *
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
-     */
-    public static void toNettyHttp1ClientHeader(
-            int streamId, HttpHeaders inputHeaders, HttpHeaders additionalHeaders,
-            io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            HttpVersion httpVersion) throws Http2Exception {
-
-        mergeHeadersHttp1Client(streamId, inputHeaders, outputHeaders, false, false);
-        mergeHeadersHttp1Client(streamId, additionalHeaders, outputHeaders, false, true);
-        HttpUtil.setKeepAlive(outputHeaders, httpVersion, true);
-    }
-
-    /**
-     * Translate and add HTTP/2 request headers to HTTP/1.x headers.
-     *
-     * @param streamId The stream associated with {@code sourceHeaders}.
-     * @param inputHeaders The HTTP/2 request headers to convert.
-     * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
-     *
-     * @throws Http2Exception If not all HTTP/2 headers can be translated to HTTP/1.x.
-     */
-    public static void toNettyHttp1ClientTrailer(
-            int streamId, HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders)
-            throws Http2Exception {
-        mergeHeadersHttp1Client(streamId, inputHeaders, outputHeaders, true, false);
-    }
-
-    private static void mergeHeadersHttp1Client(
-            int streamId, HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            boolean isTrailer, boolean isAdditionalHeader) throws Http2Exception {
-        StringJoiner cookieJoiner = null;
-
-        try {
-            final Set<AsciiString> removed = new HashSet<>();
-            for (Entry<AsciiString, String> entry : inputHeaders) {
-                final AsciiString name = entry.getKey();
-                final String value = entry.getValue();
-                final AsciiString translatedName = REQUEST_HEADER_TRANSLATIONS.get(name);
-                if (translatedName != null && !inputHeaders.contains(translatedName)) {
-                    outputHeaders.add(translatedName, value);
-                    continue;
-                }
-
-                if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
-                    continue;
-                }
-
-                if (isAdditionalHeader && ADDITIONAL_REQUEST_HEADER_BLACKLIST.contains(name)) {
-                    continue;
-                }
-
-                if (isTrailer && isTrailerBlacklisted(name)) {
-                    continue;
-                }
-
-                if (HttpHeaderNames.COOKIE.equals(name)) {
-                    // combine the cookie values into 1 header entry.
-                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                    if (cookieJoiner == null) {
-                        cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
-                    }
-                    COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
-                } else {
-                    if (removed.add(name)) {
-                        outputHeaders.remove(name);
-                    }
-                    outputHeaders.add(name, value);
-                }
-            }
-
-            if (cookieJoiner != null && cookieJoiner.length() != 0) {
-                outputHeaders.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
-            }
-        } catch (Throwable t) {
-            throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
+        if (cookieJoiner != null && cookieJoiner.length() != 0) {
+            outputHeaders.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
     }
 

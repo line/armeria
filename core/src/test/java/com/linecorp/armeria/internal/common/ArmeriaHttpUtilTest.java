@@ -25,8 +25,8 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1C
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientTrailer;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerHeader;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerTrailer;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientHeader;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientTrailer;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ServerHeader;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ServerTrailer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -58,9 +58,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 
@@ -154,7 +152,7 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void outboundCookiesMustBeMergedForHttp1() throws Http2Exception {
+    void outboundCookiesMustBeMergedForHttp1() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.COOKIE, "a=b; c=d")
                                           .add(HttpHeaderNames.COOKIE, "e=f;g=h")
@@ -166,7 +164,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ClientHeader(0, in, HttpHeaders.of(), out, HttpVersion.HTTP_1_1);
+        toNettyHttp1ClientHeader(in, out);
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
     }
@@ -181,7 +179,8 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.COOKIE, "k=l;")
                                           .build();
 
-        final Http2Headers out = toNettyHttp2ServerHeader(in, HttpHeaders.of(), HttpHeaders.of(), false);
+        final Http2Headers out = toNettyHttp2ClientHeader(in);
+        System.err.println(out.getAll(HttpHeaderNames.COOKIE));
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
     }
@@ -356,7 +355,7 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void excludeBlacklistHeadersWhileHttp2ToHttp1() throws Http2Exception {
+    void excludeBlacklistHeadersWhileHttp2ToHttp1() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.TRAILER, "foo")
                                           .add(HttpHeaderNames.AUTHORITY, "bar") // Translated to host
@@ -373,14 +372,14 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ServerHeader(0, in, HttpHeaders.of(), HttpHeaders.of(), out, HttpVersion.HTTP_1_1, false);
+        toNettyHttp1ServerHeader(in, out);
         assertThat(out).isEqualTo(new DefaultHttpHeaders()
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.TRAILER, "foo")
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.HOST, "bar"));
     }
 
     @Test
-    void excludeBlacklistInTrailers() throws Http2Exception {
+    void excludeBlacklistInTrailers() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.of("foo"), "bar")
                                           .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
@@ -407,16 +406,15 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.TRAILER, "dummy")
                                           .build();
 
-        final io.netty.handler.codec.http.HttpHeaders outHttp1 =
-                new DefaultHttpHeaders();
-
-        toNettyHttp1ServerTrailer(0, in, HttpHeaders.of(), outHttp1, true);
+        final io.netty.handler.codec.http.HttpHeaders outHttp1 = new DefaultHttpHeaders();
+        toNettyHttp1ServerTrailer(in, outHttp1);
         assertThat(outHttp1).isEqualTo(new DefaultHttpHeaders().add("foo", "bar"));
 
-        toNettyHttp1ClientTrailer(0, in, outHttp1);
-        assertThat(outHttp1).isEqualTo(new DefaultHttpHeaders().add("foo", "bar"));
+        final io.netty.handler.codec.http.HttpHeaders outHttp2 = new DefaultHttpHeaders();
+        toNettyHttp1ClientTrailer(in, outHttp2);
+        assertThat(outHttp2).isEqualTo(new DefaultHttpHeaders().add("foo", "bar"));
 
-        final Http2Headers outHttp2Response = toNettyHttp2ServerTrailer(in, HttpHeaders.of(), false);
+        final Http2Headers outHttp2Response = toNettyHttp2ServerTrailer(in);
         assertThat(outHttp2Response).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
 
         final Http2Headers outHttp2Request = toNettyHttp2ClientTrailer(in);
