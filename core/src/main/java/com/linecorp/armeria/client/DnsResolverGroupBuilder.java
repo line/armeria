@@ -137,24 +137,24 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
-     * Sets the timeout of the DNS query performed by this resolver.
+     * Sets the timeout of the DNS query performed by this resolver. {@code 0} disables the timeout.
      *
      * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
     public DnsResolverGroupBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
-        checkArgument(!queryTimeout.isNegative() && !queryTimeout.isZero(), "queryTimeout: %s (expected: > 0)",
-                      queryTimeout);
+        checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)", queryTimeout);
         return queryTimeoutMillis(queryTimeout.toMillis());
     }
 
     /**
      * Sets the timeout of the DNS query performed by this resolver in milliseconds.
+     * {@code 0} disables the timeout.
      *
      * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
     public DnsResolverGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
-        checkArgument(queryTimeoutMillis > 0, "queryTimeoutMillis: %s (expected: > 0)", queryTimeoutMillis);
+        checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
         this.queryTimeoutMillis = queryTimeoutMillis;
         return this;
     }
@@ -300,8 +300,13 @@ public final class DnsResolverGroupBuilder {
                    .authoritativeDnsServerCache(NoopAuthoritativeDnsServerCache.INSTANCE)
                    .cnameCache(NoopDnsCnameCache.INSTANCE)
                    .traceEnabled(traceEnabled)
-                   .queryTimeoutMillis(queryTimeoutMillis)
                    .completeOncePreferredResolved(true);
+
+            if (queryTimeoutMillis == 0) {
+                builder.queryTimeoutMillis(Long.MAX_VALUE);
+            } else {
+                builder.queryTimeoutMillis(queryTimeoutMillis);
+            }
 
             if (resolvedAddressTypes != null) {
                 builder.resolvedAddressTypes(resolvedAddressTypes);

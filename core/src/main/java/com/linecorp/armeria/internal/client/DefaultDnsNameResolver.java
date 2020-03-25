@@ -55,7 +55,7 @@ public class DefaultDnsNameResolver {
     public DefaultDnsNameResolver(DnsNameResolver delegate, EventLoop eventLoop, long queryTimeoutMillis) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        checkArgument(queryTimeoutMillis > 0, "queryTimeoutMillis: %s (expected: > 0)", queryTimeoutMillis);
+        checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
         this.queryTimeoutMillis = queryTimeoutMillis;
     }
 
@@ -133,6 +133,9 @@ public class DefaultDnsNameResolver {
     private void configureTimeout(List<DnsQuestion> questions, String logPrefix,
                                   Promise<List<DnsRecord>> result,
                                   List<Promise<List<DnsRecord>>> promises) {
+        if (queryTimeoutMillis == 0) {
+            return;
+        }
         eventLoop.schedule(() -> {
             if (result.isDone()) {
                 // Received a response before the query times out.
@@ -143,9 +146,6 @@ public class DefaultDnsNameResolver {
                     queryTimeoutMillis + " milliseconds.");
             result.tryFailure(exception);
             promises.forEach(promise -> {
-                if (promise.isDone()) {
-                    return;
-                }
                 promise.cancel(true);
             });
         }, queryTimeoutMillis, TimeUnit.MILLISECONDS);

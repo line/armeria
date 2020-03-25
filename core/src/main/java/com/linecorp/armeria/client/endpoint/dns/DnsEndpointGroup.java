@@ -97,6 +97,11 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
                 .ttl(minTtl, maxTtl)
                 .traceEnabled(true)
                 .nameServerProvider(serverAddressStreamProvider);
+        if (queryTimeoutMillis == 0) {
+            resolverBuilder.queryTimeoutMillis(Long.MAX_VALUE);
+        } else {
+            resolverBuilder.queryTimeoutMillis(queryTimeoutMillis);
+        }
 
         resolverConfigurator.accept(resolverBuilder);
         resolver = new DefaultDnsNameResolver(resolverBuilder.build(), eventLoop, queryTimeoutMillis);

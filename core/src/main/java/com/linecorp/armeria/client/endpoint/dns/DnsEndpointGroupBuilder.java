@@ -105,24 +105,25 @@ abstract class DnsEndpointGroupBuilder {
     }
 
     /**
-     * Sets the timeout of the DNS query performed.
+     * Sets the timeout of the DNS query performed by this endpoint group. {@code 0} disables the timeout.
      *
      * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
     public DnsEndpointGroupBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
-        checkArgument(!queryTimeout.isNegative() && !queryTimeout.isZero(), "queryTimeout: %s (expected: > 0)",
+        checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)",
                       queryTimeout);
         return queryTimeoutMillis(queryTimeout.toMillis());
     }
 
     /**
-     * Sets the timeout of the DNS query performed in milliseconds.
+     * Sets the timeout of the DNS query performed by this endpoint group in milliseconds.
+     * {@code 0} disables the timeout.
      *
      * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
     public DnsEndpointGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
-        checkArgument(queryTimeoutMillis > 0, "queryTimeoutMillis: %s (expected: > 0)", queryTimeoutMillis);
+        checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
         this.queryTimeoutMillis = queryTimeoutMillis;
         return this;
     }
