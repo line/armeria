@@ -59,10 +59,6 @@ public class DefaultDnsNameResolver {
         this.queryTimeoutMillis = queryTimeoutMillis;
     }
 
-    public EventLoop executor() {
-        return eventLoop;
-    }
-
     public Future<List<DnsRecord>> sendQueries(List<DnsQuestion> questions, String logPrefix) {
         requireNonNull(questions, "questions");
         requireNonNull(logPrefix, "logPrefix");
@@ -71,7 +67,7 @@ public class DefaultDnsNameResolver {
             // Simple case of single query
             final DnsQuestion question = questions.get(0);
             logger.debug("[{}] Sending a DNS query: {}", logPrefix, question);
-            final Promise<List<DnsRecord>> promise = executor().newPromise();
+            final Promise<List<DnsRecord>> promise = eventLoop.newPromise();
             delegate.resolveAll(question, EMPTY_ADDITIONALS, promise);
             configureTimeout(questions, logPrefix, promise, ImmutableList.of(promise));
             return promise;
@@ -121,7 +117,7 @@ public class DefaultDnsNameResolver {
         final Builder<Promise<List<DnsRecord>>> promises =
                 ImmutableList.builderWithExpectedSize(questions.size());
         questions.forEach(q -> {
-            final Promise<List<DnsRecord>> promise = executor().newPromise();
+            final Promise<List<DnsRecord>> promise = eventLoop.newPromise();
             promises.add(promise);
             delegate.resolveAll(q, EMPTY_ADDITIONALS, promise);
             promise.addListener(listener);
@@ -144,7 +140,7 @@ public class DefaultDnsNameResolver {
             final DnsTimeoutException exception = new DnsTimeoutException(
                     '[' + logPrefix + "] " + questions + " are timed out after " +
                     queryTimeoutMillis + " milliseconds.");
-            result.tryFailure(exception);
+            result.setFailure(exception);
             promises.forEach(promise -> {
                 promise.cancel(true);
             });
