@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpSessionHandler.MAX_NUM_REQUESTS_SENT;
-import static com.linecorp.armeria.internal.common.HttpHeadersUtil.composeRequestHeaders;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeRequestHeaders;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -83,6 +83,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     private boolean isSubscriptionCompleted;
     private boolean loggedRequestFirstBytesTransferred;
+
+    @Nullable
+    private WriteFutureListener cachedWriteFutureListener;
 
     HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                           HttpRequest request, DecodedHttpResponse originalRes,
@@ -161,10 +164,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
 
-        final RequestHeaders composed = composeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
+        final RequestHeaders composed = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(firstHeaders);
         final ChannelFuture future = encoder.writeHeaders(id, streamId(), composed, request.isEmpty());
-        future.addListener(new WriteFutureListener(true));
+        future.addListener(writeFutureListener(true));
         ch.flush();
     }
 
@@ -246,7 +249,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
             future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
         }
 
-        future.addListener(new WriteFutureListener(false));
+        future.addListener(writeFutureListener(false));
         ch.flush();
     }
 
@@ -330,6 +333,17 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
 
         this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
+    }
+
+    private WriteFutureListener writeFutureListener(boolean isRequestHeadersFuture) {
+        if (!isRequestHeadersFuture) {
+            // Reuse in case sending streaming requests.
+            if (cachedWriteFutureListener == null) {
+                cachedWriteFutureListener = new WriteFutureListener(false);
+            }
+            return cachedWriteFutureListener;
+        }
+        return new WriteFutureListener(true);
     }
 
     private class WriteFutureListener implements ChannelFutureListener {

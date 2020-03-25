@@ -29,11 +29,11 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 
 import io.netty.util.AsciiString;
 
-// This class will be removed after introducing CompositeHeaders.
+// TODO(minwoox): Replace this class with CompositeHeaders.
 public final class HttpHeadersUtil {
 
-    public static ResponseHeaders composeResponseHeaders(ResponseHeaders headers,
-                                                         HttpHeaders additionalHeaders) {
+    public static ResponseHeaders mergeResponseHeaders(ResponseHeaders headers,
+                                                       HttpHeaders additionalHeaders) {
         if (additionalHeaders.isEmpty()) {
             return headers;
         }
@@ -48,8 +48,8 @@ public final class HttpHeadersUtil {
         return builder.build();
     }
 
-    public static RequestHeaders composeRequestHeaders(RequestHeaders headers,
-                                                       HttpHeaders additionalHeaders) {
+    public static RequestHeaders mergeRequestHeaders(RequestHeaders headers,
+                                                     HttpHeaders additionalHeaders) {
         if (additionalHeaders.isEmpty()) {
             return headers;
         }
@@ -64,7 +64,7 @@ public final class HttpHeadersUtil {
         return builder.build();
     }
 
-    public static HttpHeaders composeTrailers(HttpHeaders headers, HttpHeaders additionalTrailers) {
+    public static HttpHeaders mergeTrailers(HttpHeaders headers, HttpHeaders additionalTrailers) {
         if (additionalTrailers.isEmpty()) {
             return headers;
         }

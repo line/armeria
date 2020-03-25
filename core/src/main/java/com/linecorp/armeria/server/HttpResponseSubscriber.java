@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.HttpHeadersUtil.composeResponseHeaders;
-import static com.linecorp.armeria.internal.common.HttpHeadersUtil.composeTrailers;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
 import java.nio.channels.ClosedChannelException;
 
@@ -79,6 +79,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     private boolean isComplete;
 
     private boolean loggedResponseHeadersFirstBytesTransferred;
+
+    @Nullable
+    private WriteHeadersFutureListener cachedWriteHeadersListener;
+
+    @Nullable
+    private WriteDataFutureListener cachedWriteDataListener;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
@@ -164,13 +170,13 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     if (endOfStream) {
                         setDone();
                     }
-                    composedHeaders = composeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
+                    composedHeaders = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
                     logBuilder().responseHeaders(composedHeaders);
                 }
 
                 responseEncoder.writeHeaders(req.id(), req.streamId(), composedHeaders, endOfStream,
                                              reqCtx.additionalResponseTrailers().isEmpty())
-                               .addListener(new WriteHeadersFutureListener(endOfStream));
+                               .addListener(writeHeadersFutureListener(endOfStream));
                 break;
             }
             case NEEDS_TRAILERS: {
@@ -192,10 +198,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                         return;
                     }
                     setDone();
-                    final HttpHeaders composed = composeTrailers(trailers, reqCtx.additionalResponseTrailers());
+                    final HttpHeaders composed = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
                     logBuilder().responseTrailers(composed);
                     responseEncoder.writeTrailers(req.id(), req.streamId(), composed)
-                                   .addListener(new WriteHeadersFutureListener(true));
+                                   .addListener(writeHeadersFutureListener(true));
                 } else {
                     final HttpData data = (HttpData) o;
                     final boolean wroteEmptyData = data.isEmpty();
@@ -207,13 +213,13 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
                     if (endOfStream && !additionalTrailers.isEmpty()) { // Last DATA frame
                         responseEncoder.writeData(req.id(), req.streamId(), data, false)
-                                       .addListener(new WriteDataFutureListener(false, wroteEmptyData));
+                                       .addListener(writeDataFutureListener(false, wroteEmptyData));
                         logBuilder().responseTrailers(additionalTrailers);
                         responseEncoder.writeTrailers(req.id(), req.streamId(), additionalTrailers)
-                                       .addListener(new WriteHeadersFutureListener(true));
+                                       .addListener(writeHeadersFutureListener(true));
                     } else {
                         responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream)
-                                       .addListener(new WriteDataFutureListener(endOfStream, wroteEmptyData));
+                                       .addListener(writeDataFutureListener(endOfStream, wroteEmptyData));
                     }
                 }
                 break;
@@ -305,11 +311,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             if (!additionalTrailers.isEmpty()) {
                 logBuilder().responseTrailers(additionalTrailers);
                 responseEncoder.writeTrailers(req.id(), req.streamId(), additionalTrailers)
-                               .addListener(new WriteHeadersFutureListener(true));
+                               .addListener(writeHeadersFutureListener(true));
                 ctx.flush();
             } else if (responseEncoder.isWritable(req.id(), req.streamId())) {
                 responseEncoder.writeData(req.id(), req.streamId(), HttpData.empty(), true)
-                               .addListener(new WriteDataFutureListener(true, true));
+                               .addListener(writeDataFutureListener(true, true));
                 ctx.flush();
             }
         }
@@ -356,10 +362,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             // Did not write anything yet; we can send an error response instead of resetting the stream.
             if (content.isEmpty()) {
                 future = responseEncoder.writeHeaders(id, streamId, headers, true);
-                maybeLogFirstResponseBytesTransferred(future);
             } else {
-                maybeLogFirstResponseBytesTransferred(
-                        responseEncoder.writeHeaders(id, streamId, headers, false));
+                responseEncoder.writeHeaders(id, streamId, headers, false);
                 logBuilder().increaseResponseLength(content);
                 future = responseEncoder.writeData(id, streamId, content, true);
             }
@@ -369,23 +373,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         }
 
         addCallbackAndFlush(cause, oldState, future);
-    }
-
-    private void maybeLogFirstResponseBytesTransferred(ChannelFuture future) {
-        future.addListener((ChannelFuture f) -> {
-            if (f.isSuccess()) {
-                maybeLogFirstResponseBytesTransferred();
-            }
-        });
-    }
-
-    private void maybeLogFirstResponseBytesTransferred() {
-        if (!loggedResponseHeadersFirstBytesTransferred) {
-            try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                logBuilder().responseFirstBytesTransferred();
-            }
-            loggedResponseHeadersFirstBytesTransferred = true;
-        }
     }
 
     private void failAndReset(Throwable cause) {
@@ -402,13 +389,17 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void addCallbackAndFlush(Throwable cause, State oldState, ChannelFuture future) {
         if (oldState != State.DONE) {
-            future.addListener(unused -> {
-                // Write an access log always with a cause. Respect the first specified cause.
-                if (tryComplete()) {
-                    try (SafeCloseable ignored = RequestContextUtil.pop()) {
+            future.addListener(f -> {
+                try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                    if (f.isSuccess()) {
+                        maybeLogFirstResponseBytesTransferred();
+                    }
+                    // Write an access log always with a cause. Respect the first specified cause.
+                    if (tryComplete()) {
                         logBuilder().endResponse(cause);
                         reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                     }
+
                 }
             });
         }
@@ -435,6 +426,28 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 }
             }
         };
+    }
+
+    private WriteHeadersFutureListener writeHeadersFutureListener(boolean endOfStream) {
+        if (!endOfStream) {
+            // Reuse in case sending multiple informational headers.
+            if (cachedWriteHeadersListener == null) {
+                cachedWriteHeadersListener = new WriteHeadersFutureListener(false);
+            }
+            return cachedWriteHeadersListener;
+        }
+        return new WriteHeadersFutureListener(true);
+    }
+
+    private WriteDataFutureListener writeDataFutureListener(boolean endOfStream, boolean wroteEmptyData) {
+        if (!endOfStream && !wroteEmptyData) {
+            // Reuse in case sending streaming data.
+            if (cachedWriteDataListener == null) {
+                cachedWriteDataListener = new WriteDataFutureListener(false, false);
+            }
+            return cachedWriteDataListener;
+        }
+        return new WriteDataFutureListener(endOfStream, wroteEmptyData);
     }
 
     private class WriteHeadersFutureListener implements ChannelFutureListener {
@@ -503,5 +516,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         // We do not send RST but close the channel because there's high chances that the channel
         // is not reusable if an exception was raised while writing to the channel.
         HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(future);
+    }
+
+    private void maybeLogFirstResponseBytesTransferred() {
+        if (!loggedResponseHeadersFirstBytesTransferred) {
+            loggedResponseHeadersFirstBytesTransferred = true;
+            logBuilder().responseFirstBytesTransferred();
+        }
     }
 }
