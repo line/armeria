@@ -399,7 +399,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                         logBuilder().endResponse(cause);
                         reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                     }
-
                 }
             });
         }
