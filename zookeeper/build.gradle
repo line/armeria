@@ -8,18 +8,16 @@ dependencies {
     // ZooKeeper
     api 'org.apache.zookeeper:zookeeper'
 
-    constraints {
-        implementation("io.dropwizard.metrics:metrics-core") {
-            version {
-                // Will fail the build if the override doesn't work
-                strictly DROPWIZARD_VERSION
-            }
+    implementation("io.dropwizard.metrics:metrics-core") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly DROPWIZARD_VERSION
         }
-        implementation("org.xerial.snappy:snappy-java") {
-            version {
-                // Will fail the build if the override doesn't work
-                strictly SNAPPY_VERSION
-            }
+    }
+    implementation("org.xerial.snappy:snappy-java") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly SNAPPY_VERSION
         }
     }
 
