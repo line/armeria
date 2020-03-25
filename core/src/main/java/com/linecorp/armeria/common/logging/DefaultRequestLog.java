@@ -926,7 +926,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 newName = ((RpcRequest) requestContent).method();
             }
 
-            if (ctx instanceof ServiceRequestContext) {
+            if (newName == null && ctx instanceof ServiceRequestContext) {
                 newName = ((ServiceRequestContext) ctx).config().defaultLogName();
             }
 
