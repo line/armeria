@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -42,6 +44,8 @@ public final class ServiceConfig {
 
     private final Route route;
     private final HttpService service;
+    @Nullable
+    private final String defaultLogName;
 
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
@@ -54,10 +58,10 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(Route route, HttpService service,
+    ServiceConfig(Route route, HttpService service, @Nullable String defaultLogName,
                   long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                   AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
-        this(null, route, service, requestTimeoutMillis, maxRequestLength,
+        this(null, route, service, defaultLogName, requestTimeoutMillis, maxRequestLength,
              verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
@@ -65,11 +69,13 @@ public final class ServiceConfig {
      * Creates a new instance.
      */
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
+                          @Nullable String defaultLogName,
                           long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                           AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
+        this.defaultLogName = defaultLogName;
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         this.verboseResponses = verboseResponses;
@@ -96,14 +102,14 @@ public final class ServiceConfig {
 
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
-        return new ServiceConfig(virtualHost, route, service,
+        return new ServiceConfig(virtualHost, route, service, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-        return new ServiceConfig(virtualHost, route, service.decorate(decorator),
+        return new ServiceConfig(virtualHost, route, service.decorate(decorator), defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop);
     }
@@ -137,6 +143,15 @@ public final class ServiceConfig {
      */
     public HttpService service() {
         return service;
+    }
+
+    /**
+     * Returns the default value of the {@link RequestLog#name()} property when no name was set via
+     * {@link RequestLogBuilder#name(String)}. If {@code null}, HTTP method name will be used instead.
+     */
+    @Nullable
+    public String defaultLogName() {
+        return defaultLogName;
     }
 
     /**
@@ -202,6 +217,7 @@ public final class ServiceConfig {
         }
         return toStringHelper.add("route", route)
                              .add("service", service)
+                             .add("defaultLogName", defaultLogName)
                              .add("requestTimeoutMillis", requestTimeoutMillis)
                              .add("maxRequestLength", maxRequestLength)
                              .add("verboseResponses", verboseResponses)

@@ -136,32 +136,32 @@ class ServerRequestContextAdapterTest {
     @Test
     void route() {
         final HttpServerRequest res = newRouteRequest(Route.builder()
-                                                             .path("/foo/:bar/hoge")
-                                                             .build());
+                                                           .path("/foo/:bar/hoge")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo/:/hoge");
     }
 
     @Test
     void route_prefix() {
         final HttpServerRequest res = newRouteRequest(Route.builder()
-                                                             .path("exact:/foo")
-                                                             .build());
+                                                           .path("exact:/foo")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo");
     }
 
     @Test
     void route_pathWithPrefix_glob() {
         final HttpServerRequest res = newRouteRequest(Route.builder()
-                                                             .path("/foo/", "glob:bar")
-                                                             .build());
+                                                           .path("/foo/", "glob:bar")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo/**/bar");
     }
 
     @Test
     void route_pathWithPrefix_regex() {
         final HttpServerRequest res = newRouteRequest(Route.builder()
-                                                             .path("/foo/", "regex:(bar|baz)")
-                                                             .build());
+                                                           .path("/foo/", "regex:(bar|baz)")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo/(bar|baz)");
     }
 

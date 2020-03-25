@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 
@@ -917,12 +918,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (name == null) {
-            final RpcRequest rpcReq = ctx.rpcRequest();
-            if (rpcReq != null) {
-                name = rpcReq.method();
-            } else if (requestContent instanceof RpcRequest) {
-                name = ((RpcRequest) requestContent).method();
+            String newName = null;
+            if (ctx instanceof ServiceRequestContext) {
+                newName = ((ServiceRequestContext) ctx).config().defaultLogName();
             }
+
+            if (newName == null) {
+                final RpcRequest rpcReq = ctx.rpcRequest();
+                if (rpcReq != null) {
+                    newName = rpcReq.method();
+                } else if (requestContent instanceof RpcRequest) {
+                    newName = ((RpcRequest) requestContent).method();
+                }
+            }
+
+            name = newName;
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;

@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 
@@ -260,5 +261,14 @@ class DefaultRequestLogTest {
 
         log.endResponse();
         assertThat(completeFuture.isDone()).isTrue();
+    }
+
+    @Test
+    void useDefaultLogNameWhenNoNameIsSet() {
+        final String logName = "someLogName";
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                               .defaultLogName(logName).build();
+        ctx.logBuilder().endRequest();
+        assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).name()).isSameAs(logName);
     }
 }

@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.
@@ -86,18 +85,8 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public Server server() {
-        return delegate().server();
-    }
-
-    @Override
-    public VirtualHost virtualHost() {
-        return delegate().virtualHost();
-    }
-
-    @Override
-    public Route route() {
-        return delegate().route();
+    public ServiceConfig config() {
+        return delegate().config();
     }
 
     @Override
@@ -108,11 +97,6 @@ public class ServiceRequestContextWrapper
     @Override
     public Map<String, String> pathParams() {
         return delegate().pathParams();
-    }
-
-    @Override
-    public HttpService service() {
-        return delegate().service();
     }
 
     @Override
@@ -148,7 +132,7 @@ public class ServiceRequestContextWrapper
 
     @Override
     public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
-       delegate().setRequestTimeoutMillis(mode, requestTimeoutMillis);
+        delegate().setRequestTimeoutMillis(mode, requestTimeoutMillis);
     }
 
     @Override
@@ -175,16 +159,6 @@ public class ServiceRequestContextWrapper
     @Override
     public void setMaxRequestLength(long maxRequestLength) {
         delegate().setMaxRequestLength(maxRequestLength);
-    }
-
-    @Override
-    public boolean verboseResponses() {
-        return delegate().verboseResponses();
-    }
-
-    @Override
-    public AccessLogWriter accessLogWriter() {
-        return delegate().accessLogWriter();
     }
 
     @Override

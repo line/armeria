@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -33,6 +34,9 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * {@link ServiceConfigBuilder}.
  */
 final class DefaultServiceConfigSetters implements ServiceConfigSetters {
+
+    @Nullable
+    private String defaultLogName;
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -44,6 +48,11 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
+
+    ServiceConfigSetters defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
+        return this;
+    }
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -109,6 +118,14 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
      */
     ServiceConfigBuilder toServiceConfigBuilder(Route route, HttpService service) {
         final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
+        if (defaultLogName != null) {
+            serviceConfigBuilder.defaultLogName(defaultLogName);
+        } else {
+            final AnnotatedService annotatedService = service.as(AnnotatedService.class);
+            if (annotatedService != null) {
+                serviceConfigBuilder.defaultLogName(annotatedService.defaultLogName());
+            }
+        }
         if (requestTimeoutMillis != null) {
             serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
         }

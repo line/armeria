@@ -237,20 +237,31 @@ public interface ServiceRequestContext extends RequestContext {
                                             @Nullable RpcRequest rpcReq);
 
     /**
+     * Returns the {@link ServiceConfig} of the {@link Service} that is handling the current {@link Request}.
+     */
+    ServiceConfig config();
+
+    /**
      * Returns the {@link Server} that is handling the current {@link Request}.
      */
-    Server server();
+    default Server server() {
+        return config().server();
+    }
 
     /**
      * Returns the {@link VirtualHost} that is handling the current {@link Request}.
      */
-    VirtualHost virtualHost();
+    default VirtualHost virtualHost() {
+        return config().virtualHost();
+    }
 
     /**
      * Returns the {@link Route} associated with the {@link Service} that is handling the current
      * {@link Request}.
      */
-    Route route();
+    default Route route() {
+        return config().route();
+    }
 
     /**
      * Returns the {@link RoutingContext} used to find the {@link Service}.
@@ -274,7 +285,9 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the {@link HttpService} that is handling the current {@link Request}.
      */
-    HttpService service();
+    default HttpService service() {
+        return config().service();
+    }
 
     /**
      * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
@@ -635,12 +648,16 @@ public interface ServiceRequestContext extends RequestContext {
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the service responses will not expose such server-side details to the client.
      */
-    boolean verboseResponses();
+    default boolean verboseResponses() {
+        return config().verboseResponses();
+    }
 
     /**
      * Returns the {@link AccessLogWriter}.
      */
-    AccessLogWriter accessLogWriter();
+    default AccessLogWriter accessLogWriter() {
+        return config().accessLogWriter();
+    }
 
     /**
      * Returns the {@link HttpHeaders} which will be included when a {@link Service} sends an
