@@ -277,7 +277,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                     }
                     break;
                 case GET:
-                    final HttpResponse res = read(ctx.contextAwareBlockingTaskExecutor(), ctx.alloc());
+                    final HttpResponse res = read(ctx.blockingTaskExecutor(), ctx.alloc());
                     if (res != null) {
                         return res;
                     }

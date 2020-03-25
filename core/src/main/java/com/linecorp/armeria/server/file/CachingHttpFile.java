@@ -99,7 +99,7 @@ final class CachingHttpFile implements HttpFile {
     @Override
     public HttpService asService() {
         return (ctx, req) -> {
-            final HttpFile file = firstNonNull(getFile(ctx.contextAwareBlockingTaskExecutor()),
+            final HttpFile file = firstNonNull(getFile(ctx.blockingTaskExecutor()),
                                                HttpFile.nonExistent());
             return file.asService().serve(ctx, req);
         };

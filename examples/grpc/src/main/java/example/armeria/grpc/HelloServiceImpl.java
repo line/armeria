@@ -53,7 +53,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
         // 3. Call a blocking API in the separate thread pool you manage.
         //
         // In this example, we chose the option 1:
-        ServiceRequestContext.current().contextAwareBlockingTaskExecutor().submit(() -> {
+        ServiceRequestContext.current().blockingTaskExecutor().submit(() -> {
             try {
                 // Simulate a blocking API call.
                 Thread.sleep(3000);

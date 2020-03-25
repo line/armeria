@@ -247,7 +247,7 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public ScheduledExecutorService contextAwareBlockingTaskExecutor() {
+    public ScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }

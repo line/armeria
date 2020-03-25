@@ -510,7 +510,7 @@ public final class ServerConfig {
      * Returns the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
      * Note that the {@link ScheduledExecutorService} returned by this method does not set the
      * {@link ServiceRequestContext} when executing a submitted task.
-     * Use {@link ServiceRequestContext#contextAwareBlockingTaskExecutor()} if possible.
+     * Use {@link ServiceRequestContext#blockingTaskExecutor()} if possible.
      */
     public ScheduledExecutorService blockingTaskExecutor() {
         return blockingTaskExecutor;

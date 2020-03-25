@@ -56,7 +56,7 @@ public final class StringResponseConverterFunction implements ResponseConverterF
                 }
                 if (result instanceof Stream) {
                     return aggregateFrom((Stream<?>) result, headers, trailers,
-                                         o -> toHttpData(o, charset), ctx.contextAwareBlockingTaskExecutor());
+                                         o -> toHttpData(o, charset), ctx.blockingTaskExecutor());
                 }
                 return HttpResponse.of(headers, toHttpData(result, charset), trailers);
             }

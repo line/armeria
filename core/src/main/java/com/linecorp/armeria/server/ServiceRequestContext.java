@@ -309,22 +309,7 @@ public interface ServiceRequestContext extends RequestContext {
      * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
      * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
      */
-    ScheduledExecutorService contextAwareBlockingTaskExecutor();
-
-    /**
-     * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
-     * long-running task. The {@link ScheduledExecutorService} will propagate the {@link ServiceRequestContext}
-     * automatically when running a task.
-     *
-     * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
-     * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
-     *
-     * @deprecated Use {@link #contextAwareBlockingTaskExecutor()}.
-     */
-    @Deprecated
-    default ScheduledExecutorService blockingTaskExecutor() {
-        return contextAwareBlockingTaskExecutor();
-    }
+    ScheduledExecutorService blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable

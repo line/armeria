@@ -179,7 +179,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         blockingExecutor = useBlockingTaskExecutor ?
-                           MoreExecutors.newSequentialExecutor(ctx.contextAwareBlockingTaskExecutor()) : null;
+                           MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
 
         res.whenComplete().handleAsync((unused, t) -> {
             if (!closeCalled) {

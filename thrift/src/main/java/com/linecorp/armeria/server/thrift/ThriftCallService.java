@@ -184,7 +184,7 @@ public final class ThriftCallService implements RpcService {
             ThriftFunction func, TBase<?, ?> args, CompletableRpcResponse reply) {
 
         final ProcessFunction<Object, TBase<?, ?>> f = func.syncFunc();
-        ctx.contextAwareBlockingTaskExecutor().execute(() -> {
+        ctx.blockingTaskExecutor().execute(() -> {
             if (reply.isDone()) {
                 // Closed already most likely due to timeout.
                 return;

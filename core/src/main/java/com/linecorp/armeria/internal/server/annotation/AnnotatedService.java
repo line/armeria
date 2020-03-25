@@ -246,7 +246,7 @@ public class AnnotatedService implements HttpService {
                             msg -> new ExceptionFilteredHttpResponse(ctx, req,
                                                                      (HttpResponse) invoke(ctx, req, msg),
                                                                      exceptionHandler),
-                            ctx.contextAwareBlockingTaskExecutor());
+                            ctx.blockingTaskExecutor());
                 } else {
                     return f.thenApply(
                             msg -> new ExceptionFilteredHttpResponse(ctx, req,
@@ -257,7 +257,7 @@ public class AnnotatedService implements HttpService {
             case COMPLETION_STAGE:
                 if (useBlockingTaskExecutor) {
                     return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
-                                              ctx.contextAwareBlockingTaskExecutor())
+                                              ctx.blockingTaskExecutor())
                             .handle((result, cause) ->
                                             cause == null ? convertResponse(ctx, req, null, result,
                                                                             HttpHeaders.of())
@@ -275,7 +275,7 @@ public class AnnotatedService implements HttpService {
                     return f.thenApplyAsync(
                             msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
                                                    HttpHeaders.of()),
-                            ctx.contextAwareBlockingTaskExecutor());
+                            ctx.blockingTaskExecutor());
                 } else {
                     return f.thenApply(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
                                                               HttpHeaders.of()));
@@ -566,7 +566,7 @@ public class AnnotatedService implements HttpService {
             if (result instanceof Publisher) {
                 f = collectFrom((Publisher<Object>) result);
             } else if (result instanceof Stream) {
-                f = collectFrom((Stream<Object>) result, ctx.contextAwareBlockingTaskExecutor());
+                f = collectFrom((Stream<Object>) result, ctx.blockingTaskExecutor());
             } else {
                 return ResponseConverterFunction.fallthrough();
             }

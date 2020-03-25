@@ -128,7 +128,7 @@ final class WebOperationService implements HttpService {
                 return null;
             }
             if (operation.isBlocking()) {
-                ctx.contextAwareBlockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
+                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
             } else {
                 invoke(ctx, aggregatedReq, resFuture);
             }
@@ -229,7 +229,7 @@ final class WebOperationService implements HttpService {
             try {
                 in = resource.readableChannel();
                 final ReadableByteChannel finalIn = in;
-                ctx.contextAwareBlockingTaskExecutor().execute(() -> streamResource(ctx, res, finalIn, length));
+                ctx.blockingTaskExecutor().execute(() -> streamResource(ctx, res, finalIn, length));
                 success = true;
                 return res;
             } finally {
@@ -291,7 +291,7 @@ final class WebOperationService implements HttpService {
 
         res.whenConsumed().thenRun(() -> {
             try {
-                ctx.contextAwareBlockingTaskExecutor()
+                ctx.blockingTaskExecutor()
                    .execute(() -> streamResource(ctx, res, in, nextRemainingBytes));
             } catch (Exception e) {
                 close(res, in, e);

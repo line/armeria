@@ -100,8 +100,8 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ScheduledExecutorService contextAwareBlockingTaskExecutor() {
-        return delegate().contextAwareBlockingTaskExecutor();
+    public ScheduledExecutorService blockingTaskExecutor() {
+        return delegate().blockingTaskExecutor();
     }
 
     @Override
