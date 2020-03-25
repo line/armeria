@@ -5,10 +5,11 @@ JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jd
 JRE8_VERSION='AdoptOpenJDK-8u242b08'
 JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jre_x64_linux_hotspot_11.0.6_10.tar.gz'
 JRE11_VERSION='AdoptOpenJDK-11.0.6_10'
-JRE14_URL='https://github.com/AdoptOpenJDK/openjdk14-binaries/releases/download/jdk-14%2B36/OpenJDK14U-jre_x64_linux_hotspot_14_36.tar.gz'
-JRE14_VERSION='AdoptOpenJDK-14_36'
-BUILD_JRE_URL="$JRE14_URL"
-BUILD_JRE_VERSION="$JRE14_VERSION"
+# Use JDK to build.
+JDK14_URL='https://github.com/AdoptOpenJDK/openjdk14-binaries/releases/download/jdk-14%2B36/OpenJDK14U-jdk_x64_linux_hotspot_14_36.tar.gz'
+JDK14_VERSION='AdoptOpenJDK-14_36'
+BUILD_JDK_URL="$JDK14_URL"
+BUILD_JDK_VERSION="$JDK14_VERSION"
 
 function msg() {
   echo -ne "\033[1;32m"
@@ -44,8 +45,8 @@ java11)
   COVERAGE=1
   ;;
 java14)
-  TEST_JRE_URL="$JRE14_URL"
-  TEST_JRE_VERSION="$JRE14_VERSION"
+  TEST_JRE_URL="$JDK14_URL"
+  TEST_JRE_VERSION="$JDK14_VERSION"
   TEST_JAVA_VERSION='14'
   COVERAGE=0
   ;;
@@ -56,7 +57,7 @@ java14)
 esac
 
 export TEST_JAVA_VERSION
-export JAVA_HOME="$HOME/jdk/build-$BUILD_JRE_VERSION"
+export JAVA_HOME="$HOME/jdk/build-$BUILD_JDK_VERSION"
 export JAVA_TEST_HOME="$HOME/jdk/test-$TEST_JAVA_VERSION-$TEST_JRE_VERSION"
 export PATH="$JAVA_HOME/bin:$PATH"
 
@@ -112,7 +113,7 @@ fi
 if [[ ! -x "$JAVA_HOME/bin/javac" ]]; then
   msg "Downloading the build JDK .."
   echo_and_run mkdir -p "$HOME/jdk/downloads"
-  echo_and_run curl -L -o "$HOME/jdk/downloads/build.tgz" "$BUILD_JRE_URL"
+  echo_and_run curl -L -o "$HOME/jdk/downloads/build.tgz" "$BUILD_JDK_URL"
   echo_and_run rm -fr "$JAVA_HOME" "$JAVA_HOME.tmp"
   echo_and_run mkdir -p "$JAVA_HOME.tmp"
   echo_and_run tar xf "$HOME/jdk/downloads/build.tgz" --strip-components=1 -C "$JAVA_HOME.tmp"
