@@ -97,7 +97,7 @@ public final class GrpcStatus {
         }
         if (t instanceof Http2Exception) {
             if (t instanceof Http2Exception.StreamException &&
-                    ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
+                ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
                 return Status.CANCELLED;
             }
             return Status.INTERNAL.withCause(t);
