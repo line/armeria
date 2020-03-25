@@ -177,7 +177,6 @@ public final class Exceptions {
         }
 
         return cause instanceof ClosedStreamException ||
-               cause instanceof ClosedSessionException ||
                cause instanceof CancelledSubscriptionException ||
                cause instanceof WriteTimeoutException ||
                cause instanceof AbortedStreamException ||

@@ -17,10 +17,12 @@ package com.linecorp.armeria.common;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.stream.ClosedStreamException;
+
 /**
  * A {@link RuntimeException} raised when the connection to the remote peer has been closed unexpectedly.
  */
-public final class ClosedSessionException extends RuntimeException {
+public final class ClosedSessionException extends ClosedStreamException {
 
     private static final long serialVersionUID = -78487475521731580L;
 

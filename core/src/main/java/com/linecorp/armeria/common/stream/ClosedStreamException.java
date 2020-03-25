@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.Flags;
 /**
  * A {@link RuntimeException} that is raised when a {@link StreamMessage} has been closed unexpectedly.
  */
-public final class ClosedStreamException extends RuntimeException {
+public class ClosedStreamException extends RuntimeException {
 
     private static final long serialVersionUID = -7665826869012452735L;
 
@@ -66,7 +66,7 @@ public final class ClosedStreamException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    private ClosedStreamException(@Nullable String message, @Nullable Throwable cause,
+    protected ClosedStreamException(@Nullable String message, @Nullable Throwable cause,
                                   boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }

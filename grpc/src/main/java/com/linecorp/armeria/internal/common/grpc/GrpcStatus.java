@@ -45,6 +45,7 @@ import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
@@ -81,14 +82,15 @@ public final class GrpcStatus {
         if (s.getCode() != Code.UNKNOWN) {
             return s;
         }
-        if (t instanceof ClosedStreamException) {
-            return Status.CANCELLED;
-        }
-        if (t instanceof ClosedChannelException) {
+
+        if (t instanceof ClosedSessionException || t instanceof ClosedChannelException) {
             // ClosedChannelException is used any time the Netty channel is closed. Proper error
             // processing requires remembering the error that occurred before this one and using it
             // instead.
-            return Status.UNKNOWN.withCause(t);
+            return s;
+        }
+        if (t instanceof ClosedStreamException) {
+            return Status.CANCELLED;
         }
         if (t instanceof UnprocessedRequestException || t instanceof IOException) {
             return Status.UNAVAILABLE.withCause(t);
