@@ -146,8 +146,8 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the default value of the {@link RequestLog#name()} property when no name was set via
-     * {@link RequestLogBuilder#name(String)}. If {@code null}, HTTP method name will be used instead.
+     * Returns the default value of the {@link RequestLog#name()} property which is used when no name was set
+     * via {@link RequestLogBuilder#name(String)}. If {@code null}, HTTP method name will be used instead.
      */
     @Nullable
     public String defaultLogName() {

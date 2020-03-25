@@ -88,7 +88,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     /**
-     * Sets the default value of the {@link RequestLog#name()} property when no name was set via
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
      * {@link RequestLogBuilder#name(String)}.
      *
      * @param defaultLogName the default log name.
