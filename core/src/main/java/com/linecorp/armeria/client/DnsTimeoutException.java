@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 
 /**
- * A {@link TimeoutException} raised when a response has not been received from a server within timeout.
+ * A {@link TimeoutException} raised when a response has not been received from a DNS server within timeout.
  */
 public final class DnsTimeoutException extends TimeoutException {
 
