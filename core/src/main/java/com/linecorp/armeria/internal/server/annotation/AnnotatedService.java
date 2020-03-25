@@ -474,7 +474,7 @@ public class AnnotatedService implements HttpService {
                     } catch (Exception e) {
                         throw new IllegalStateException(
                                 "Response converter " + func.getClass().getName() +
-                                        " cannot convert a result to HttpResponse: " + result, e);
+                                " cannot convert a result to HttpResponse: " + result, e);
                     }
                 }
             }
