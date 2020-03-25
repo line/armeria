@@ -6,12 +6,12 @@ boms:
   - com.fasterxml.jackson:jackson-bom:2.10.3
   - io.dropwizard.metrics:metrics-bom:4.1.5
   - io.grpc:grpc-bom:1.28.0
-  - io.micrometer:micrometer-bom:1.3.5
+  - io.micrometer:micrometer-bom:1.4.0
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.47.Final
-  - io.zipkin.brave:brave-bom:5.10.1
+  - io.netty:netty-bom:4.1.48.Final
+  - io.zipkin.brave:brave-bom:5.10.2
   - org.eclipse.jetty:jetty-bom:9.4.27.v20200227
-  - org.junit:junit-bom:5.6.0
+  - org.junit:junit-bom:5.6.1
 
 cglib:
   cglib: { version: '3.3.0' }
@@ -24,9 +24,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.10.0'
+    version: '3.10.1'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.10.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.10.1/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -128,7 +128,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.7.2'
+    version: &RETROFIT2_VERSION '2.8.0'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -217,11 +217,11 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.29.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.30.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.3.RELEASE'
+    version: &REACTOR_VERSION '3.3.4.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -243,7 +243,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.0.0'
+    version: '3.0.1'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -301,18 +301,18 @@ net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.14.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.16.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
   proguard-gradle: { version: '6.2.2' }
 
 net.shibboleth.utilities:
-  java-support: { version: '7.5.0' }
+  java-support: { version: '7.5.1' }
 
 org.apache.curator:
   curator-recipes:
-    version: '4.2.0'
+    version: '4.3.0'
     javadocs:
     - https://static.javadoc.io/org.apache.curator/curator-recipes/4.2.0/
     exclusions:
@@ -351,7 +351,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.31'
+    version: &TOMCAT_VERSION '9.0.33'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -359,7 +359,7 @@ org.apache.tomcat.embed:
 
 org.apache.zookeeper:
   zookeeper:
-    version: '3.5.7'
+    version: '3.6.0'
     exclusions:
     - io.netty:netty-all
     - log4j:log4j
@@ -421,7 +421,7 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version, 
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.3.70' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.3.71' }
 
 org.jetbrains.kotlinx:
   kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.4' }
@@ -439,14 +439,14 @@ org.mockito:
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
-  jetty-alpn-agent: { version: '2.0.9' }
+  jetty-alpn-agent: { version: '2.0.10' }
 
 org.openjdk.jmh:
   jmh-core: { version: &JMH_VERSION '1.23' }
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:
-  opensaml-core: { version: &OPENSAML_VERSION '3.4.3' }
+  opensaml-core: { version: &OPENSAML_VERSION '3.4.5' }
   opensaml-saml-api: { version: *OPENSAML_VERSION }
   opensaml-saml-impl: { version: *OPENSAML_VERSION }
   opensaml-messaging-api: { version: *OPENSAML_VERSION }
@@ -508,6 +508,6 @@ xml-apis:
 
 com.github.vladimir-bukhtoyarov:
   bucket4j-core:
-    version: '4.9.0'
+    version: '4.10.0'
     javadocs:
-    - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/4.9.0/
+    - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/4.10.0/
