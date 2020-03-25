@@ -56,7 +56,7 @@ public final class ByteArrayResponseConverterFunction implements ResponseConvert
                 if (result instanceof Stream) {
                     return streamingFrom((Stream<?>) result, headers, trailers,
                                          ByteArrayResponseConverterFunction::toHttpData,
-                                         ctx.blockingTaskExecutor());
+                                         ctx.contextAwareBlockingTaskExecutor());
                 }
             }
 

@@ -367,7 +367,7 @@ public abstract class TomcatService implements HttpService {
                 final Queue<HttpData> data = new ArrayDeque<>();
                 coyoteRes.setOutputBuffer((OutputBuffer) OUTPUT_BUFFER_CONSTRUCTOR.invoke(data));
 
-                ctx.blockingTaskExecutor().execute(() -> {
+                ctx.contextAwareBlockingTaskExecutor().execute(() -> {
                     if (!res.isOpen()) {
                         return;
                     }

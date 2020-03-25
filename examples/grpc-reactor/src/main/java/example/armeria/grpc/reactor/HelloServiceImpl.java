@@ -53,7 +53,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
         //
         // In this example, we chose the option 1:
         return request
-                .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().blockingTaskExecutor()))
+                .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().contextAwareBlockingTaskExecutor()))
                 .map(it -> {
                     try {
                         // Simulate a blocking API call.

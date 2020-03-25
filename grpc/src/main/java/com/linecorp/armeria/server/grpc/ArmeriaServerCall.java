@@ -179,7 +179,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         blockingExecutor = useBlockingTaskExecutor ?
-                           MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
+                           MoreExecutors.newSequentialExecutor(ctx.contextAwareBlockingTaskExecutor()) : null;
 
         res.whenComplete().handleAsync((unused, t) -> {
             if (!closeCalled) {
@@ -524,7 +524,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         MetadataUtil.fillHeaders(metadata, trailers);
 
-        if (ctx.verboseResponses() && status.getCause() != null) {
+        if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                          Base64.getEncoder().encodeToString(proto.toByteArray()));

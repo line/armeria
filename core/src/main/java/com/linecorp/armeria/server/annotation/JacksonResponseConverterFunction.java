@@ -85,7 +85,7 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
                     }
                     if (result instanceof Stream) {
                         return aggregateFrom((Stream<?>) result, headers, trailers,
-                                             this::toJsonHttpData, ctx.blockingTaskExecutor());
+                                             this::toJsonHttpData, ctx.contextAwareBlockingTaskExecutor());
                     }
                     return HttpResponse.of(headers, toJsonHttpData(result), trailers);
                 }
@@ -98,7 +98,7 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
                 }
                 if (result instanceof Stream) {
                     return JsonTextSequences.fromStream(headers, (Stream<?>) result, trailers,
-                                                        ctx.blockingTaskExecutor(), mapper);
+                                                        ctx.contextAwareBlockingTaskExecutor(), mapper);
                 }
                 return JsonTextSequences.fromObject(headers, result, trailers, mapper);
             }

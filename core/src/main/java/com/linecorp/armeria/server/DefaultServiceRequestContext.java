@@ -247,12 +247,12 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public ScheduledExecutorService contextAwareBlockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = makeContextAware(server().config().blockingTaskExecutor());
+        return blockingTaskExecutor = makeContextAware(config().server().config().blockingTaskExecutor());
     }
 
     @Override
@@ -448,7 +448,7 @@ public final class DefaultServiceRequestContext
         final InetSocketAddress laddr = localAddress();
         final InetAddress caddr = clientAddress();
         final String proto = sessionProtocol().uriText();
-        final String authority = virtualHost().defaultHostname();
+        final String authority = config().virtualHost().defaultHostname();
         final String path = path();
         final String method = method().name();
 

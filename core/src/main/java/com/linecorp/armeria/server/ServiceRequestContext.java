@@ -243,14 +243,20 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
+    @Deprecated
     default Server server() {
         return config().server();
     }
 
     /**
      * Returns the {@link VirtualHost} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
+    @Deprecated
     default VirtualHost virtualHost() {
         return config().virtualHost();
     }
@@ -258,7 +264,10 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the {@link Route} associated with the {@link Service} that is handling the current
      * {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
+    @Deprecated
     default Route route() {
         return config().route();
     }
@@ -269,7 +278,7 @@ public interface ServiceRequestContext extends RequestContext {
     RoutingContext routingContext();
 
     /**
-     * Returns the path parameters mapped by the {@link #route()} associated with the {@link Service}
+     * Returns the path parameters mapped by the {@link Route} associated with the {@link Service}
      * that is handling the current {@link Request}.
      */
     Map<String, String> pathParams();
@@ -284,7 +293,10 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the {@link HttpService} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
+    @Deprecated
     default HttpService service() {
         return config().service();
     }
@@ -297,7 +309,20 @@ public interface ServiceRequestContext extends RequestContext {
      * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
      * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
      */
-    ScheduledExecutorService blockingTaskExecutor();
+    ScheduledExecutorService contextAwareBlockingTaskExecutor();
+
+    /**
+     * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
+     * long-running task. The {@link ScheduledExecutorService} will propagate the {@link ServiceRequestContext}
+     * automatically when running a task.
+     *
+     * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
+     * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
+     */
+    @Deprecated
+    default ScheduledExecutorService blockingTaskExecutor() {
+        return contextAwareBlockingTaskExecutor();
+    }
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable
@@ -647,14 +672,20 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns whether the verbose response mode is enabled. When enabled, the service responses will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the service responses will not expose such server-side details to the client.
+     *
+     * @deprecated Access via {@link #config()}.
      */
+    @Deprecated
     default boolean verboseResponses() {
         return config().verboseResponses();
     }
 
     /**
      * Returns the {@link AccessLogWriter}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
+    @Deprecated
     default AccessLogWriter accessLogWriter() {
         return config().accessLogWriter();
     }

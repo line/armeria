@@ -223,7 +223,7 @@ public final class JettyService implements HttpService {
 
                 fillRequest(ctx, aReq, httpChannel.getRequest());
 
-                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, res, transport, httpChannel));
+                ctx.contextAwareBlockingTaskExecutor().execute(() -> invoke(ctx, res, transport, httpChannel));
                 success = true;
                 return null;
             } finally {

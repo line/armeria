@@ -129,7 +129,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
                 if (idp == null) {
                     throw new RuntimeException("cannot find a suitable identity provider from configurations");
                 }
-                final String defaultHostname = firstNonNull(sp.hostname(), ctx.virtualHost().defaultHostname());
+                final String defaultHostname = firstNonNull(sp.hostname(), ctx.config().virtualHost().defaultHostname());
                 final AuthnRequest request = createAuthRequest(idp, defaultHostname);
                 final MessageContext<AuthnRequest> messageContext = new MessageContext<>();
                 messageContext.setMessage(request);

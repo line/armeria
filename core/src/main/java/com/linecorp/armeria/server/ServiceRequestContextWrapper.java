@@ -100,8 +100,8 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ScheduledExecutorService blockingTaskExecutor() {
-        return delegate().blockingTaskExecutor();
+    public ScheduledExecutorService contextAwareBlockingTaskExecutor() {
+        return delegate().contextAwareBlockingTaskExecutor();
     }
 
     @Override
@@ -136,6 +136,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    @Deprecated
     public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
         delegate().setRequestTimeoutAtMillis(requestTimeoutAtMillis);
     }

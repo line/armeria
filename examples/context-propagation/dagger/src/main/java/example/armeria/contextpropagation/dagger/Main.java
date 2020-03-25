@@ -61,7 +61,7 @@ public class Main {
         // appropriately. Because Dagger only works with ListenableFuture, we provide this convenience wrapper.
         @Provides
         static ListeningScheduledExecutorService blockingExecutor(ServiceRequestContext ctx) {
-            return MoreExecutors.listeningDecorator(ctx.blockingTaskExecutor());
+            return MoreExecutors.listeningDecorator(ctx.contextAwareBlockingTaskExecutor());
         }
     }
 

@@ -52,7 +52,7 @@ public final class ServerSentEventResponseConverterFunction implements ResponseC
                                      ServerSentEventResponseConverterFunction::toSse);
             }
             if (result instanceof Stream) {
-                return fromStream(headers, (Stream<?>) result, trailers, ctx.blockingTaskExecutor(),
+                return fromStream(headers, (Stream<?>) result, trailers, ctx.contextAwareBlockingTaskExecutor(),
                                   ServerSentEventResponseConverterFunction::toSse);
             }
             return fromEvent(headers, toSse(result), trailers);

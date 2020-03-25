@@ -97,7 +97,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private HttpService service() {
-        return reqCtx.service();
+        return reqCtx.config().service();
     }
 
     private RequestLogBuilder logBuilder() {
@@ -328,7 +328,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             // unlike failAndRespond and failAndReset, subscription cannot be null at this time.
             assert subscription != null;
             subscription.cancel();
-            reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+            reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
         }
     }
 
@@ -400,7 +400,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
                         logBuilder().endResponse(cause);
-                        reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                        reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
                     }
                 }
             });
@@ -506,7 +506,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
             if (endOfStream && tryComplete()) {
                 logBuilder().endResponse();
-                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
             }
 
             assert subscription != null;

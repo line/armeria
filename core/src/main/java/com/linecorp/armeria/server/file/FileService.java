@@ -319,7 +319,7 @@ public final class FileService extends AbstractHttpService {
     private HttpFile cache(ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile file) {
         assert cache != null;
 
-        final Executor executor = ctx.blockingTaskExecutor();
+        final Executor executor = ctx.contextAwareBlockingTaskExecutor();
         final AggregatedHttpFile maybeAggregated =
                 file.aggregateWithPooledObjects(executor, ctx.alloc()).thenApply(aggregated -> {
                     cache.put(pathAndEncoding, aggregated);

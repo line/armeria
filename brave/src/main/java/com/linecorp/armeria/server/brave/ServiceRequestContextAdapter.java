@@ -85,7 +85,7 @@ final class ServiceRequestContextAdapter {
         @Override
         @Nullable
         public String route() {
-            final Route route = ctx.route();
+            final Route route = ctx.config().route();
             final List<String> paths = route.paths();
             switch (route.pathType()) {
                 case EXACT:

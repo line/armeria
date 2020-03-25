@@ -84,10 +84,10 @@ class DefaultServiceRequestContextTest {
         final HttpRequest newRequest = HttpRequest.of(HttpMethod.GET, "/derived/hello");
         final ServiceRequestContext derivedCtx = originalCtx.newDerivedContext(newId, newRequest, null);
 
-        assertThat(derivedCtx.server()).isSameAs(originalCtx.server());
+        assertThat(derivedCtx.config().server()).isSameAs(originalCtx.config().server());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
-        assertThat(derivedCtx.service()).isSameAs(originalCtx.service());
-        assertThat(derivedCtx.route()).isSameAs(originalCtx.route());
+        assertThat(derivedCtx.config().service()).isSameAs(originalCtx.config().service());
+        assertThat(derivedCtx.config().route()).isSameAs(originalCtx.config().route());
         assertThat(derivedCtx.id()).isSameAs(newId);
         assertThat(derivedCtx.request()).isSameAs(newRequest);
 

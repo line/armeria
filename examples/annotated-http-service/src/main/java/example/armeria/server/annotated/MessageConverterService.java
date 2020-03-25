@@ -105,7 +105,7 @@ public class MessageConverterService {
     public CompletionStage<Response> json4(@RequestObject Request request,
                                            ServiceRequestContext ctx) {
         final CompletableFuture<Response> future = new CompletableFuture<>();
-        ctx.blockingTaskExecutor()
+        ctx.contextAwareBlockingTaskExecutor()
            .submit(() -> future.complete(new Response(Response.SUCCESS, request.name())));
         return future;
     }

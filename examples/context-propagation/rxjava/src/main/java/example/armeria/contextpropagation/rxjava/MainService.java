@@ -54,7 +54,7 @@ public class MainService implements HttpService {
                       // Always run blocking logic on the blocking task executor. By using
                       // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
                       // inside the logic (e.g., your DB call will be traced!).
-                      .subscribeOn(Schedulers.from(ctx.blockingTaskExecutor()))
+                      .subscribeOn(Schedulers.from(ctx.contextAwareBlockingTaskExecutor()))
                       .flattenAsFlowable(l -> l);
 
         final Flowable<Long> extractNumsFromRequest =
