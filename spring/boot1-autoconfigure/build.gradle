@@ -1,14 +1,26 @@
 final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
+final def MICROMETER_VERSION = '1.3.6'
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
     compileOnly project(':thrift')
     implementation project(':logback')
 
-    implementation 'io.micrometer:micrometer-spring-legacy'
-
+    [ 'micrometer-core', 'micrometer-spring-legacy' ].each {
+        implementation("io.micrometer:$it") {
+            version {
+                // Will fail the build if the override doesn't work
+                strictly MICROMETER_VERSION
+            }
+        }
+    }
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
-    optionalApi 'io.micrometer:micrometer-registry-prometheus'
+    optionalApi("io.micrometer:micrometer-registry-prometheus") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly MICROMETER_VERSION
+        }
+    }
     optionalApi 'io.dropwizard.metrics:metrics-json'
 
     api 'javax.inject:javax.inject'
