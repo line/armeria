@@ -29,14 +29,14 @@ import io.netty.channel.ChannelFuture;
 public interface ServerHttpObjectEncoder extends HttpObjectEncoder {
 
     /**
-     * Writes an {@link ResponseHeaders}.
+     * Writes a {@link ResponseHeaders}.
      */
     default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream) {
         return writeHeaders(id, streamId, headers, endStream, true);
     }
 
     /**
-     * Writes an {@link ResponseHeaders}.
+     * Writes a {@link ResponseHeaders}.
      */
     default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
                                        boolean isTrailersEmpty) {
@@ -49,7 +49,7 @@ public interface ServerHttpObjectEncoder extends HttpObjectEncoder {
     }
 
     /**
-     * Writes an {@link ResponseHeaders}.
+     * Writes a {@link ResponseHeaders}.
      */
     ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
                                  boolean isTrailersEmpty);

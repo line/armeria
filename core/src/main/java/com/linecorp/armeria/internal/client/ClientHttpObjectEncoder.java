@@ -31,7 +31,7 @@ import io.netty.channel.ChannelFuture;
 public interface ClientHttpObjectEncoder extends HttpObjectEncoder {
 
     /**
-     * Writes an {@link RequestHeaders}.
+     * Writes a {@link RequestHeaders}.
      */
     default ChannelFuture writeHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
         assert eventLoop().inEventLoop();
@@ -43,7 +43,7 @@ public interface ClientHttpObjectEncoder extends HttpObjectEncoder {
     }
 
     /**
-     * Writes an {@link RequestHeaders}.
+     * Writes a {@link RequestHeaders}.
      */
     ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream);
 }

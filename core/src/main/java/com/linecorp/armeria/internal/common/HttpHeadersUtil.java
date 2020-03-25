@@ -39,12 +39,10 @@ public final class HttpHeadersUtil {
         }
 
         final ResponseHeadersBuilder builder = headers.toBuilder();
-        if (!additionalHeaders.isEmpty()) {
-            for (AsciiString name : additionalHeaders.names()) {
-                if (!ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name)) {
-                    builder.remove(name);
-                    additionalHeaders.forEachValue(name, value -> builder.add(name, value));
-                }
+        for (AsciiString name : additionalHeaders.names()) {
+            if (!ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name)) {
+                builder.remove(name);
+                additionalHeaders.forEachValue(name, value -> builder.add(name, value));
             }
         }
         return builder.build();
@@ -57,31 +55,29 @@ public final class HttpHeadersUtil {
         }
 
         final RequestHeadersBuilder builder = headers.toBuilder();
-        if (!additionalHeaders.isEmpty()) {
-            for (AsciiString name : additionalHeaders.names()) {
-                if (!ADDITIONAL_REQUEST_HEADER_BLACKLIST.contains(name)) {
-                    builder.remove(name);
-                    additionalHeaders.forEachValue(name, value -> builder.add(name, value));
-                }
+        for (AsciiString name : additionalHeaders.names()) {
+            if (!ADDITIONAL_REQUEST_HEADER_BLACKLIST.contains(name)) {
+                builder.remove(name);
+                additionalHeaders.forEachValue(name, value -> builder.add(name, value));
             }
         }
         return builder.build();
     }
 
-    public static HttpHeaders composeTrailers(HttpHeaders headers, HttpHeaders additionalHeaders) {
-        if (additionalHeaders.isEmpty()) {
+    public static HttpHeaders composeTrailers(HttpHeaders headers, HttpHeaders additionalTrailers) {
+        if (additionalTrailers.isEmpty()) {
             return headers;
         }
         if (headers.isEmpty()) {
-            return additionalHeaders;
+            return additionalTrailers;
         }
 
         final HttpHeadersBuilder builder = headers.toBuilder();
-        for (AsciiString name : additionalHeaders.names()) {
+        for (AsciiString name : additionalTrailers.names()) {
             if (!ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name) &&
                 !isTrailerBlacklisted(name)) {
                 builder.remove(name);
-                additionalHeaders.forEachValue(name, value -> builder.add(name, value));
+                additionalTrailers.forEachValue(name, value -> builder.add(name, value));
             }
         }
         return builder.build();
