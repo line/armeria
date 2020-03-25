@@ -360,7 +360,7 @@ public enum BuiltInProperty {
         if (ctx instanceof ServiceRequestContext) {
             final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
             final int port = ((InetSocketAddress) sCtx.remoteAddress()).getPort();
-            final String hostname = sCtx.virtualHost().defaultHostname();
+            final String hostname = sCtx.config().virtualHost().defaultHostname();
             if (port == ctx.sessionProtocol().defaultPort()) {
                 authority = hostname;
             } else {

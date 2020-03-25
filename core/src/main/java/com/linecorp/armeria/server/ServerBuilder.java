@@ -862,7 +862,7 @@ public final class ServerBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public ServerBuilder service(String pathPattern, HttpService service) {
-        return service(Route.builder().path(pathPattern).build(), service);
+        return route().path(pathPattern).build(service);
     }
 
     /**
@@ -870,7 +870,7 @@ public final class ServerBuilder {
      * {@link VirtualHost}.
      */
     public ServerBuilder service(Route route, HttpService service) {
-        return serviceConfigBuilder(new ServiceConfigBuilder(route, service));
+        return route().addRoute(route).build(service);
     }
 
     /**

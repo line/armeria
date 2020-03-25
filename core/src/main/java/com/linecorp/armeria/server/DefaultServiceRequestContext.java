@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -233,18 +232,8 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public Server server() {
-        return cfg.server();
-    }
-
-    @Override
-    public VirtualHost virtualHost() {
-        return cfg.virtualHost();
-    }
-
-    @Override
-    public Route route() {
-        return cfg.route();
+    public ServiceConfig config() {
+        return cfg;
     }
 
     @Override
@@ -258,17 +247,12 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public HttpService service() {
-        return cfg.service();
-    }
-
-    @Override
     public ScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = makeContextAware(server().config().blockingTaskExecutor());
+        return blockingTaskExecutor = makeContextAware(config().server().config().blockingTaskExecutor());
     }
 
     @Override
@@ -349,16 +333,6 @@ public final class DefaultServiceRequestContext
     public void setMaxRequestLength(long maxRequestLength) {
         checkArgument(maxRequestLength >= 0, "maxRequestLength: %s (expected: >= 0)", maxRequestLength);
         this.maxRequestLength = maxRequestLength;
-    }
-
-    @Override
-    public boolean verboseResponses() {
-        return cfg.verboseResponses();
-    }
-
-    @Override
-    public AccessLogWriter accessLogWriter() {
-        return cfg.accessLogWriter();
     }
 
     @Override
@@ -474,7 +448,7 @@ public final class DefaultServiceRequestContext
         final InetSocketAddress laddr = localAddress();
         final InetAddress caddr = clientAddress();
         final String proto = sessionProtocol().uriText();
-        final String authority = virtualHost().defaultHostname();
+        final String authority = config().virtualHost().defaultHostname();
         final String path = path();
         final String method = method().name();
 

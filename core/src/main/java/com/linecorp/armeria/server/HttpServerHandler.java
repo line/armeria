@@ -578,7 +578,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     // Respect the first specified cause.
                     logBuilder.endResponse(firstNonNull(cause, f.cause()));
                 }
-                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
             }
         });
         return future;

@@ -228,7 +228,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
 
         final List<AnnotatedServiceElement> elements =
                 AnnotatedServiceFactory.find(pathPrefix, service, requestConverterFunctions,
-                                                 responseConverterFunctions, exceptionHandlerFunctions);
+                                             responseConverterFunctions, exceptionHandlerFunctions);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

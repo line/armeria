@@ -63,6 +63,7 @@ abstract class AbstractBindingBuilder {
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
+    private final List<Route> additionalRoutes = new ArrayList<>();
 
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to.
@@ -397,23 +398,34 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
+     * Specifies an additional {@link Route} that should be matched.
+     */
+    public AbstractBindingBuilder addRoute(Route route) {
+        additionalRoutes.add(requireNonNull(route, "route"));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route}s based on the properties of this builder.
      */
     final List<Route> buildRouteList() {
         final Builder<Route> builder = ImmutableList.builder();
 
-        if (pathBuilders.isEmpty() && routeBuilders.isEmpty()) {
-            throw new IllegalStateException(
-                    "Should set at least one path that the service is bound to before calling this.");
-        }
-        if (pathBuilders.isEmpty() && !methods.isEmpty()) {
-            throw new IllegalStateException("Should set a path when the methods are set: " + methods);
+        if (additionalRoutes.isEmpty()) {
+            if (pathBuilders.isEmpty() && routeBuilders.isEmpty()) {
+                throw new IllegalStateException(
+                        "Should set at least one path that the service is bound to before calling this.");
+            }
+            if (pathBuilders.isEmpty() && !methods.isEmpty()) {
+                throw new IllegalStateException("Should set a path when the methods are set: " + methods);
+            }
         }
 
         if (!pathBuilders.isEmpty()) {
             final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
             pathBuilders.forEach(pathBuilder -> addRouteBuilder(pathBuilder, pathMethods));
         }
+
         routeBuilders.forEach((routeBuilder, routeMethods) -> {
             builder.add(routeBuilder.methods(routeMethods)
                                     .consumes(consumeTypes)
@@ -422,6 +434,8 @@ abstract class AbstractBindingBuilder {
                                     .matchesHeaders(headerPredicates)
                                     .build());
         });
+
+        additionalRoutes.forEach(builder::add);
 
         return builder.build();
     }
