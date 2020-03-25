@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.dns;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 
 import javax.annotation.Nullable;
 
@@ -66,7 +67,7 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
      */
     public DnsAddressEndpointGroup build() {
         return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
-                                           serverAddressStreamProvider(), backoff(),
+                                           queryTimeoutMillis(), serverAddressStreamProvider(), backoff(),
                                            resolvedAddressTypes, hostname(), port);
     }
 
@@ -80,6 +81,16 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsAddressEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
         return (DnsAddressEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder queryTimeout(Duration queryTimeout) {
+        return (DnsAddressEndpointGroupBuilder) super.queryTimeout(queryTimeout);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
+        return (DnsAddressEndpointGroupBuilder) super.queryTimeoutMillis(queryTimeoutMillis);
     }
 
     @Override

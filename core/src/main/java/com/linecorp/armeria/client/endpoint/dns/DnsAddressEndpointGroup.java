@@ -85,12 +85,13 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
     private final int port;
 
     DnsAddressEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
-                            int minTtl, int maxTtl, DnsServerAddressStreamProvider serverAddressStreamProvider,
+                            int minTtl, int maxTtl, long queryTimeoutMillis,
+                            DnsServerAddressStreamProvider serverAddressStreamProvider,
                             Backoff backoff, @Nullable ResolvedAddressTypes resolvedAddressTypes,
                             String hostname, int port) {
 
-        super(selectionStrategy, eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
-              newQuestions(hostname, resolvedAddressTypes),
+        super(selectionStrategy, eventLoop, minTtl, maxTtl, queryTimeoutMillis, serverAddressStreamProvider,
+              backoff, newQuestions(hostname, resolvedAddressTypes),
               resolverBuilder -> {
                   if (resolvedAddressTypes != null) {
                       resolverBuilder.resolvedAddressTypes(resolvedAddressTypes);
