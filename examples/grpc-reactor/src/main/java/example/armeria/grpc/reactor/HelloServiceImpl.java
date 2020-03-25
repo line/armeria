@@ -30,7 +30,8 @@ public class HelloServiceImpl extends HelloServiceImplBase {
         // You can use the event loop for scheduling a task.
         return request
                 .delayElement(Duration.ofSeconds(3),
-                              Schedulers.fromExecutor(ServiceRequestContext.current().contextAwareEventLoop())
+                              Schedulers.fromExecutor(ServiceRequestContext.current()
+                                                                           .contextAwareEventLoop())
                 )
                 .map(it -> buildReply(toMessage(it.getName())));
     }
@@ -53,7 +54,8 @@ public class HelloServiceImpl extends HelloServiceImplBase {
         //
         // In this example, we chose the option 1:
         return request
-                .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().contextAwareBlockingTaskExecutor()))
+                .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current()
+                                                                        .contextAwareBlockingTaskExecutor()))
                 .map(it -> {
                     try {
                         // Simulate a blocking API call.
