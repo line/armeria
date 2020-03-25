@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -128,6 +129,7 @@ class HttpServerAdditionalHeadersTest {
     void responseHeadersContainsAdditionalHeaders() {
         final WebClient client = WebClient.of(server.httpUri());
         client.get("/informational").aggregate().join();
+        await().until(() -> logHolder.get() != null);
         assertThat(logHolder.get().responseHeaders().names()).contains(HttpHeaderNames.of("foo"));
     }
 }
