@@ -14,12 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client;
+package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 
 import io.netty.channel.Channel;
@@ -28,22 +26,31 @@ import io.netty.channel.ChannelFuture;
 /**
  * Converts an {@link HttpObject} into a protocol-specific object and writes it into a {@link Channel}.
  */
-public interface ClientHttpObjectEncoder extends HttpObjectEncoder {
+interface ServerHttpObjectEncoder extends HttpObjectEncoder {
 
     /**
-     * Writes a {@link RequestHeaders}.
+     * Writes a {@link ResponseHeaders}.
      */
-    default ChannelFuture writeHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
-        assert eventLoop().inEventLoop();
-        if (isClosed()) {
-            return newFailedFuture(new UnprocessedRequestException(ClosedSessionException.get()));
-        }
-
-        return doWriteHeaders(id, streamId, headers, endStream);
+    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream) {
+        return writeHeaders(id, streamId, headers, endStream, true);
     }
 
     /**
-     * Writes a {@link RequestHeaders}.
+     * Writes a {@link ResponseHeaders}.
      */
-    ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream);
+    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                       boolean isTrailersEmpty) {
+        assert eventLoop().inEventLoop();
+        if (isClosed()) {
+            return newClosedSessionFuture();
+        }
+
+        return doWriteHeaders(id, streamId, headers, endStream, isTrailersEmpty);
+    }
+
+    /**
+     * Writes a {@link ResponseHeaders}.
+     */
+    ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                 boolean isTrailersEmpty);
 }

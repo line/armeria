@@ -57,15 +57,15 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
     @Nullable
-    private final Http2KeepAliveHandler keepAlive;
+    private final Http2KeepAliveHandler keepAliveHandler;
 
     Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
-                         @Nullable Http2KeepAliveHandler keepAlive) {
+                         @Nullable Http2KeepAliveHandler keepAliveHandler) {
         super(channel,
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
-        this.keepAlive = keepAlive;
+        this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }
 
@@ -293,13 +293,15 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onPingRead(ChannelHandlerContext ctx, long data) {
-        keepAliveChannelRead();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPing();
+        }
     }
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, long data) {
-        if (keepAlive != null) {
-            keepAlive.onPingAck(data);
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPingAck(data);
         }
     }
 
@@ -314,8 +316,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                ByteBuf payload) {}
 
     private void keepAliveChannelRead() {
-        if (keepAlive != null) {
-            keepAlive.onChannelRead();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
         }
     }
 

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -38,6 +40,16 @@ public interface HttpObjectEncoder {
 
     default EventLoop eventLoop() {
         return channel().eventLoop();
+    }
+
+    @Nullable
+    KeepAliveHandler keepAliveHandler();
+
+    default void keepAliveWrite(int id) {
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
+        }
     }
 
     /**

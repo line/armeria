@@ -419,36 +419,33 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
-     *
-     * @param http2PingTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * Sets the PING interval in milliseconds.
+     * When neither read nor write was performed for the given {@code pingIntervalMillis},
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1,
+     * or <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     * {@code 0} means the client will not send a PING.
      */
-    public ClientFactoryBuilder http2PingTimeoutMillis(long http2PingTimeoutMillis) {
-        checkArgument(http2PingTimeoutMillis >= 0,
-                      "http2PingTimeoutMillis: %s (expected: >= 0)", http2PingTimeoutMillis);
-        option(ClientFactoryOption.HTTP2_PING_TIMEOUT_MILLIS, http2PingTimeoutMillis);
+    public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
+        checkArgument(pingIntervalMillis >= 0,
+                      "pingIntervalMillis: %s (expected: >= 0)", pingIntervalMillis);
+        option(ClientFactoryOption.PING_INTERVAL_MILLIS, pingIntervalMillis);
         return this;
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
-     *
-     * @param http2PingTimeout the timeout. {@code 0} disables the timeout.
+     * Sets the PING interval in milliseconds.
+     * When neither read nor write was performed for the given {@code pingInterval},
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1,
+     * or <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     * {@code 0} means the client will not send a PING.
      */
-    public ClientFactoryBuilder http2PingTimeout(Duration http2PingTimeout) {
-        requireNonNull(http2PingTimeout, "http2PingTimeout");
-        checkArgument(http2PingTimeout.toMillis() >= 0,
-                      "http2PingTimeoutMillis: %s (expected: >= 0)", http2PingTimeout.toMillis());
-        http2PingTimeoutMillis(http2PingTimeout.toMillis());
-        return this;
-    }
-
-    /**
-     * Sets whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
-     * when there are no active streams open.
-     */
-    public ClientFactoryBuilder useHttp2PingWhenNoActiveStreams(boolean useHttp2PingWhenNoActiveStreams) {
-        option(ClientFactoryOption.USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS, useHttp2PingWhenNoActiveStreams);
+    public ClientFactoryBuilder pingInterval(Duration pingInterval) {
+        requireNonNull(pingInterval, "pingInterval");
+        checkArgument(pingInterval.toMillis() >= 0,
+                      "pingInterval: %s (expected: >= 0)", pingInterval.toMillis());
+        pingIntervalMillis(pingInterval.toMillis());
         return this;
     }
 
@@ -558,7 +555,16 @@ public final class ClientFactoryBuilder {
             return ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
 
-        return ClientFactoryOptions.of(options.values());
+        final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
+        final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
+        final long pingIntervalMillis = newOptions.pingIntervalMillis();
+        if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
+            checkArgument(idleTimeoutMillis > pingIntervalMillis,
+                          "idleTimeoutMillis: %s, pingIntervalMillis: %s " +
+                          "(expected: idleTimeoutMillis > pingIntervalMillis)",
+                          idleTimeoutMillis, pingIntervalMillis);
+        }
+        return newOptions;
     }
 
     /**

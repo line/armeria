@@ -61,8 +61,6 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.server.ServerHttp2ObjectEncoder;
-import com.linecorp.armeria.internal.server.ServerHttpObjectEncoder;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -74,7 +72,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
@@ -267,16 +264,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final ChannelPipeline pipeline = ctx.pipeline();
-        final Http2ConnectionHandler handler = pipeline.get(Http2ConnectionHandler.class);
+        final Http2ServerConnectionHandler handler = pipeline.get(Http2ServerConnectionHandler.class);
         if (responseEncoder == null) {
-            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(),
-                                                           config.isServerHeaderEnabled(),
-                                                           config.isDateHeaderEnabled());
+            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
+                                                           config.isDateHeaderEnabled(),
+                                                           config.isServerHeaderEnabled()
+            );
         } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
-            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(),
-                                                           config.isServerHeaderEnabled(),
-                                                           config.isDateHeaderEnabled());
+            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
+                                                           config.isDateHeaderEnabled(),
+                                                           config.isServerHeaderEnabled()
+            );
         }
 
         // Update the connection-level flow-control window size.

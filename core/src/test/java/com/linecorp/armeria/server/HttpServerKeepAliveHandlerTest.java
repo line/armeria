@@ -1,0 +1,113 @@
+/*
+ * Copyright 2020 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.server;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ConnectionPoolListener;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
+
+import io.netty.util.AttributeMap;
+
+class HttpServerKeepAliveHandlerTest {
+
+    private static final int serverIdleTimeout = 5000;
+    private static final int serverPingInterval = 1000;
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.idleTimeoutMillis(serverIdleTimeout);
+            sb.pingIntervalMillis(serverPingInterval);
+            sb.decorator(LoggingService.newDecorator())
+              .service("/", (ctx, req) -> HttpResponse.of("OK"));
+        }
+    };
+
+    private AtomicInteger counter;
+    private ConnectionPoolListener listener;
+
+    @BeforeEach
+    void setUp() {
+        counter = new AtomicInteger();
+        listener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                counter.incrementAndGet();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                counter.decrementAndGet();
+            }
+        };
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "H1C", "H2C" })
+    void closeByClientIdleTimeout(SessionProtocol protocol) throws InterruptedException {
+        final int clientIdleTimeout = 2000;
+        final ClientFactory factory = ClientFactory.builder()
+                                                   .idleTimeoutMillis(clientIdleTimeout)
+                                                   .connectionPoolListener(listener)
+                                                   .build();
+        final WebClient client = WebClient.builder(server.uri(protocol))
+                                          .factory(factory)
+                                          .build();
+
+        client.get("/").aggregate().join();
+
+        // HTTP/2 PING frame sent by the server cannot prevent to close an idle connection.
+        Thread.sleep(clientIdleTimeout + 1000);
+        assertThat(counter).hasValue(0);
+    }
+
+    @Test
+    void http1CloseByServerIdleTimeout() throws InterruptedException {
+        final int clientIdleTimeout = 10000;
+        final ClientFactory factory = ClientFactory.builder()
+                                                   .idleTimeoutMillis(clientIdleTimeout)
+                                                   .connectionPoolListener(listener)
+                                                   .build();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
+                                          .factory(factory)
+                                          .build();
+
+        client.get("/").aggregate().join();
+
+        // The connection should be closed by server
+        Thread.sleep(serverIdleTimeout + 1000);
+        assertThat(counter).hasValue(0);
+    }
+}

@@ -218,6 +218,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 flushPendingWrites(currentPendingWrites);
             }
 
+            keepAliveWrite(id);
             final ChannelFuture future = ch.write(obj);
             if (endStream) {
                 currentId++;

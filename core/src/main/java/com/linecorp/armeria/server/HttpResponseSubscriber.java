@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.DefaultTimeoutController;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.server.ServerHttpObjectEncoder;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

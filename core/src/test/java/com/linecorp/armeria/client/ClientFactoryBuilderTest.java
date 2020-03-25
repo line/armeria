@@ -126,4 +126,15 @@ class ClientFactoryBuilderTest {
                     getClass().getResourceAsStream(resourceRoot + privateKeyPath));
         }).build();
     }
+
+    @Test
+    void pingIntervalShouldBeLessThenIdleTimeout() {
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                  .idleTimeoutMillis(1000)
+                  .pingIntervalMillis(2000)
+                  .build();
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("(expected: idleTimeoutMillis > pingIntervalMillis)");
+    }
 }

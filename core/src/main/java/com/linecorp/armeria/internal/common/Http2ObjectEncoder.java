@@ -33,7 +33,6 @@ import io.netty.util.ReferenceCountUtil;
 public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     private final ChannelHandlerContext ctx;
     private final Http2ConnectionEncoder encoder;
-
     private volatile boolean closed;
 
     protected Http2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder) {
@@ -49,6 +48,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     @Override
     public final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (isStreamPresentAndWritable(streamId)) {
+            keepAliveWrite(id);
             // Write to an existing stream.
             return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
         }

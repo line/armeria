@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -57,7 +58,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     /** The request being decoded currently. */
     @Nullable
     private HttpResponseWrapper res;
+    @Nullable
+    private KeepAliveHandler keepAliveHandler;
     private int resId = 1;
+    private int lastPingReqId = -1;
     private State state = State.NEED_HEADERS;
 
     Http1ResponseDecoder(Channel channel) {
@@ -84,6 +88,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         return resWrapper;
     }
 
+    void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
+        this.keepAliveHandler = keepAliveHandler;
+        maybeKeepAliveInitialize(ctx);
+    }
+
     private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
@@ -96,13 +105,18 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {}
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        maybeKeepAliveInitialize(ctx);
+    }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {}
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        keepAliveDestroy();
+    }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        maybeKeepAliveInitialize(ctx);
         ctx.fireChannelRegistered();
     }
 
@@ -113,6 +127,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        maybeKeepAliveInitialize(ctx);
         ctx.fireChannelActive();
     }
 
@@ -121,6 +136,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         if (res != null) {
             res.close(ClosedSessionException.get());
         }
+        keepAliveDestroy();
         ctx.fireChannelInactive();
     }
 
@@ -128,6 +144,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (!(msg instanceof HttpObject)) {
             ctx.fireChannelRead(msg);
+            return;
+        }
+
+        if (isPing()) {
+            onPingRead(msg);
             return;
         }
 
@@ -262,5 +283,42 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.fireExceptionCaught(cause);
+    }
+
+    private void maybeKeepAliveInitialize(ChannelHandlerContext ctx) {
+        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+            keepAliveHandler.initialize(ctx);
+        }
+    }
+
+    private void keepAliveDestroy() {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
+    }
+
+    private void onPingRead(Object msg) {
+        if (msg instanceof LastHttpContent) {
+            onPingComplete();
+        } else {
+            keepAliveHandler.onPing();
+        }
+    }
+
+    private boolean isPing() {
+        return lastPingReqId == resId;
+    }
+
+    void setPingReqId(int id) {
+        lastPingReqId = id;
+    }
+
+    boolean isPingReqId(int id) {
+        return lastPingReqId == id;
+    }
+
+    private void onPingComplete() {
+        lastPingReqId = -1;
+        resId++;
     }
 }

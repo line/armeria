@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,14 +16,16 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.internal.common.IdleTimeoutHandler;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2FrameWriter;
 
-final class HttpServerIdleTimeoutHandler extends IdleTimeoutHandler {
-
-    HttpServerIdleTimeoutHandler(long idleTimeoutMillis, boolean isHttp2, boolean sendHttp2Ping) {
-        super("server", idleTimeoutMillis, isHttp2, sendHttp2Ping);
+final class Http2ServerKeepAliveHandler extends Http2KeepAliveHandler {
+    Http2ServerKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
+                                long idleTimeoutMillis, long pingIntervalMillis) {
+        super(channel, frameWriter, "server", idleTimeoutMillis, pingIntervalMillis);
     }
 
     @Override

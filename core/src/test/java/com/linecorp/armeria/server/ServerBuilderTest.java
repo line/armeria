@@ -505,4 +505,16 @@ class ServerBuilderTest {
         Schedulers.enableMetrics();
         Schedulers.decorateExecutorService(Schedulers.single(), Executors.newSingleThreadScheduledExecutor());
     }
+
+    @Test
+    void pingIntervalShouldBeLessThenIdleTimeout() {
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .service("/", (ctx, req) -> HttpResponse.of(200))
+                  .idleTimeoutMillis(1000)
+                  .pingIntervalMillis(2000)
+                  .build();
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("(expected: idleTimeoutMillis > pingIntervalMillis)");
+    }
 }

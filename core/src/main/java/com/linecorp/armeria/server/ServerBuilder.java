@@ -168,8 +168,7 @@ public final class ServerBuilder {
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
-    private long http2PingTimeoutMillis = Flags.defaultHttp2PingTimeoutMillis();
-    private boolean useHttp2PingWhenNoActiveStreams = Flags.defaultUseHttp2PingWhenNoActiveStreams();
+    private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -461,33 +460,21 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
-     *
-     * @param http2PingTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * {@code 0} means the server will not send PING frames on a HTTP/2 connection.
      */
-    public ServerBuilder http2PingTimeoutMillis(long http2PingTimeoutMillis) {
-        this.http2PingTimeoutMillis = validateNonNegative(http2PingTimeoutMillis, "http2PingTimeoutMillis");
+    public ServerBuilder pingIntervalMillis(long pingIntervalMillis) {
+        this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
         return this;
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
-     *
-     * @param http2PingTimeoutMillis the timeout. {@code 0} disables the timeout.
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * {@code 0} means the server will not send PING frames on a HTTP/2 connection.
      */
-    public ServerBuilder http2PingTimeoutMillis(Duration http2PingTimeoutMillis) {
-        requireNonNull(http2PingTimeoutMillis, "http2PingTimeoutMillis");
-        this.http2PingTimeoutMillis =
-                validateNonNegative(http2PingTimeoutMillis.toMillis(), "http2PingTimeoutMillis");
-        return this;
-    }
-
-    /**
-     * Sets whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
-     * when there are no active streams open.
-     */
-    public ServerBuilder useHttp2PingWhenNoActiveStreams(boolean useHttp2PingWhenNoActiveStreams) {
-        this.useHttp2PingWhenNoActiveStreams = useHttp2PingWhenNoActiveStreams;
+    public ServerBuilder pingInterval(Duration pingInterval) {
+        requireNonNull(pingInterval, "pingInterval");
+        pingIntervalMillis = validateNonNegative(pingInterval.toMillis(), "pingInterval");
         return this;
     }
 
@@ -1406,6 +1393,13 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
+            checkArgument(idleTimeoutMillis > pingIntervalMillis,
+                          "idleTimeoutMillis: %s, pingIntervalMillis: %s " +
+                          "(expected: idleTimeoutMillis > pingIntervalMillis)",
+                          idleTimeoutMillis, pingIntervalMillis);
+        }
+
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1471,8 +1465,8 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, http2PingTimeoutMillis, useHttp2PingWhenNoActiveStreams,
-                http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                idleTimeoutMillis, pingIntervalMillis, http2InitialConnectionWindowSize,
+                http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,

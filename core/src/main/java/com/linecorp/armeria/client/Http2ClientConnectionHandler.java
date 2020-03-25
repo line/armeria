@@ -26,14 +26,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.timeout.IdleStateEvent;
 
 final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler {
 
     private final HttpClientFactory clientFactory;
     private final Http2ResponseDecoder responseDecoder;
     @Nullable
-    private final Http2KeepAliveHandler keepAlive;
+    private final Http2KeepAliveHandler keepAliveHandler;
 
     Http2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel,
@@ -42,11 +41,12 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
-        keepAlive = clientFactory.http2PingTimeoutMillis() > 0 ?
-                    new Http2KeepAliveHandler(channel, encoder.frameWriter(), connection(),
-                                              clientFactory.http2PingTimeoutMillis(),
-                                              clientFactory.useHttp2PingWhenNoActiveStreams()) : null;
-        responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAlive);
+        keepAliveHandler = clientFactory.idleTimeoutMillis() > 0 ?
+                           new Http2ClientKeepAliveHandler(channel, encoder.frameWriter(),
+                                                           clientFactory.idleTimeoutMillis(),
+                                                           clientFactory.pingIntervalMillis()) : null;
+
+        responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler);
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
 
@@ -64,10 +64,34 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         return responseDecoder;
     }
 
+    @Nullable
+    Http2KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        maybeKeepAliveInitialize(ctx);
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        keepAliveDestroy();
+        super.handlerRemoved0(ctx);
+    }
+
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        maybeKeepAliveInitialize(ctx);
+        super.channelRegistered(ctx);
+    }
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        super.channelActive(ctx);
+        maybeKeepAliveInitialize(ctx);
 
+        super.channelActive(ctx);
         // NB: Http2ConnectionHandler does not flush the preface string automatically.
         ctx.flush();
     }
@@ -79,20 +103,19 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        if (keepAlive != null) {
-            keepAlive.onChannelInactive();
-        }
+        keepAliveDestroy();
         super.channelInactive(ctx);
     }
 
-    @Override
-    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
-        if (evt instanceof IdleStateEvent) {
-            if (keepAlive != null) {
-                keepAlive.onChannelIdle(ctx, (IdleStateEvent) evt);
-            }
-            return;
+    private void maybeKeepAliveInitialize(ChannelHandlerContext ctx) {
+        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+            keepAliveHandler.initialize(ctx);
         }
-        super.userEventTriggered(ctx, evt);
+    }
+
+    private void keepAliveDestroy() {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
     }
 }
