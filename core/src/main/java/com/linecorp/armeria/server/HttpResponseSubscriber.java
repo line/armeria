@@ -354,6 +354,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         final int streamId = req.streamId();
 
         final ChannelFuture future;
+        final boolean isReset;
         if (oldState == State.NEEDS_HEADERS) { // ResponseHeaders is not sent yet, so we can send the response.
             final ResponseHeaders headers = res.headers();
             logBuilder().responseHeaders(headers);
@@ -367,12 +368,14 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 logBuilder().increaseResponseLength(content);
                 future = responseEncoder.writeData(id, streamId, content, true);
             }
+            isReset = false;
         } else {
             // Wrote something already; we have to reset/cancel the stream.
             future = responseEncoder.writeReset(id, streamId, error);
+            isReset = true;
         }
 
-        addCallbackAndFlush(cause, oldState, future);
+        addCallbackAndFlush(cause, oldState, future, isReset);
     }
 
     private void failAndReset(Throwable cause) {
@@ -384,14 +387,14 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         final ChannelFuture future =
                 responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL);
 
-        addCallbackAndFlush(cause, oldState, future);
+        addCallbackAndFlush(cause, oldState, future, true);
     }
 
-    private void addCallbackAndFlush(Throwable cause, State oldState, ChannelFuture future) {
+    private void addCallbackAndFlush(Throwable cause, State oldState, ChannelFuture future, boolean isReset) {
         if (oldState != State.DONE) {
             future.addListener(f -> {
                 try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                    if (f.isSuccess()) {
+                    if (f.isSuccess() && !isReset) {
                         maybeLogFirstResponseBytesTransferred();
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
