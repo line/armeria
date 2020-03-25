@@ -462,6 +462,9 @@ public class AnnotatedService implements HttpService {
                                             ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
+            if (result instanceof HttpResponse) {
+                return (HttpResponse) result;
+            }
             try (SafeCloseable ignored = ctx.push()) {
                 for (final ResponseConverterFunction func : functions) {
                     try {
