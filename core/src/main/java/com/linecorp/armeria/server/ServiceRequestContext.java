@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -212,22 +212,22 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @Override
     default SafeCloseable push() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
             return noopSafeCloseable();
         }
 
-        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
-            return () -> RequestContextThreadLocal.set(oldCtx);
+        if (oldCtx == null) {
+            return () -> RequestContextUtil.pop(this, null);
         }
 
-        if (oldCtx == null) {
-            return RequestContextThreadLocal::remove;
+        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
+            return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
-        RequestContextThreadLocal.set(oldCtx);
+        RequestContextUtil.pop(this, oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
 

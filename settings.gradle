@@ -39,6 +39,7 @@ includeWithFlags ':bucket4j',                           'java', 'publish', 'relo
 
 // Unpublished Java projects
 includeWithFlags ':benchmarks',               'java'
+includeWithFlags ':it:context-storage',       'java'
 includeWithFlags ':it:server',                'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'

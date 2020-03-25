@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -148,6 +149,10 @@ public final class ServerBuilder {
             ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
+
+    static {
+        RequestContextUtil.init();
+    }
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
