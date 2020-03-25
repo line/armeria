@@ -83,24 +83,21 @@ public final class GrpcStatus {
             return s;
         }
 
-        if (t instanceof ClosedSessionException) {
-            return Status.UNKNOWN;
-        }
-        if (t instanceof ClosedStreamException) {
-            return Status.CANCELLED;
-        }
-        if (t instanceof ClosedChannelException) {
+        if (t instanceof ClosedSessionException || t instanceof ClosedChannelException) {
             // ClosedChannelException is used any time the Netty channel is closed. Proper error
             // processing requires remembering the error that occurred before this one and using it
             // instead.
-            return Status.UNKNOWN.withCause(t);
+            return s;
+        }
+        if (t instanceof ClosedStreamException) {
+            return Status.CANCELLED;
         }
         if (t instanceof UnprocessedRequestException || t instanceof IOException) {
             return Status.UNAVAILABLE.withCause(t);
         }
         if (t instanceof Http2Exception) {
             if (t instanceof Http2Exception.StreamException &&
-                ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
+                    ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
                 return Status.CANCELLED;
             }
             return Status.INTERNAL.withCause(t);
