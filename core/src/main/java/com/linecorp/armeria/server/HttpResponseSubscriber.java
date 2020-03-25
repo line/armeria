@@ -150,7 +150,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
                 final ResponseHeaders headers = (ResponseHeaders) o;
                 final HttpStatus status = headers.status();
-                final ResponseHeaders composedHeaders;
+                final ResponseHeaders merged;
                 if (status.isInformational()) {
                     if (endOfStream) {
                         failAndRespond(new IllegalStateException(
@@ -158,7 +158,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                                 " (service: " + service() + ')'));
                         return;
                     }
-                    composedHeaders = headers;
+                    merged = headers;
                 } else {
                     if (req.method() == HttpMethod.HEAD) {
                         endOfStream = true;
@@ -170,11 +170,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     if (endOfStream) {
                         setDone();
                     }
-                    composedHeaders = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
-                    logBuilder().responseHeaders(composedHeaders);
+                    merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
+                    logBuilder().responseHeaders(merged);
                 }
 
-                responseEncoder.writeHeaders(req.id(), req.streamId(), composedHeaders, endOfStream,
+                responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream,
                                              reqCtx.additionalResponseTrailers().isEmpty())
                                .addListener(writeHeadersFutureListener(endOfStream));
                 break;
@@ -198,9 +198,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                         return;
                     }
                     setDone();
-                    final HttpHeaders composed = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
-                    logBuilder().responseTrailers(composed);
-                    responseEncoder.writeTrailers(req.id(), req.streamId(), composed)
+                    final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
+                    logBuilder().responseTrailers(merged);
+                    responseEncoder.writeTrailers(req.id(), req.streamId(), merged)
                                    .addListener(writeHeadersFutureListener(true));
                 } else {
                     final HttpData data = (HttpData) o;

@@ -52,7 +52,7 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpRequestSubscriber implements Subscriber<HttpObject> {
+final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpRequestSubscriber.class);
 
@@ -84,9 +84,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
     private boolean isSubscriptionCompleted;
     private boolean loggedRequestFirstBytesTransferred;
 
-    @Nullable
-    private WriteFutureListener cachedWriteFutureListener;
-
     HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                           HttpRequest request, DecodedHttpResponse originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
@@ -98,6 +95,53 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
         this.ctx = ctx;
         logBuilder = ctx.logBuilder();
         this.timeoutMillis = timeoutMillis;
+    }
+
+    /**
+     * Invoked on each write of an {@link HttpObject}.
+     */
+    @Override
+    public void operationComplete(ChannelFuture future) throws Exception {
+        // If a message has been sent out, cancel the timeout for starting a request.
+        cancelTimeout();
+
+        try (SafeCloseable ignored = RequestContextUtil.pop()) {
+            if (future.isSuccess()) {
+                // The first write is always the first headers, so log that we finished our first transfer
+                // over the wire.
+                if (!loggedRequestFirstBytesTransferred) {
+                    logBuilder.requestFirstBytesTransferred();
+                    loggedRequestFirstBytesTransferred = true;
+                }
+
+                if (state == State.DONE) {
+                    logBuilder.endRequest();
+                    // Successfully sent the request; schedule the response timeout.
+                    assert responseWrapper != null;
+                    responseWrapper.initTimeout();
+                }
+
+                // Request more messages regardless whether the state is DONE. It makes the producer have
+                // a chance to produce the last call such as 'onComplete' and 'onError' when there are
+                // no more messages it can produce.
+                if (!isSubscriptionCompleted) {
+                    assert subscription != null;
+                    subscription.request(1);
+                }
+                return;
+            }
+
+            if (!loggedRequestFirstBytesTransferred) {
+                final Throwable cause = future.cause();
+                if (cause instanceof UnprocessedRequestException) {
+                    fail(cause);
+                } else {
+                    fail(new UnprocessedRequestException(cause));
+                }
+            } else {
+                failAndReset(future.cause());
+            }
+        }
     }
 
     @Override
@@ -164,10 +208,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
 
-        final RequestHeaders composed = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
+        final RequestHeaders merged = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(firstHeaders);
-        final ChannelFuture future = encoder.writeHeaders(id, streamId(), composed, request.isEmpty());
-        future.addListener(writeFutureListener(true));
+        final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, request.isEmpty());
+        future.addListener(this);
         ch.flush();
     }
 
@@ -249,7 +293,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
             future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
         }
 
-        future.addListener(writeFutureListener(false));
+        future.addListener(this);
         ch.flush();
     }
 
@@ -333,69 +377,5 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject> {
 
         this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
-    }
-
-    private WriteFutureListener writeFutureListener(boolean isRequestHeadersFuture) {
-        if (!isRequestHeadersFuture) {
-            // Reuse in case sending streaming requests.
-            if (cachedWriteFutureListener == null) {
-                cachedWriteFutureListener = new WriteFutureListener(false);
-            }
-            return cachedWriteFutureListener;
-        }
-        return new WriteFutureListener(true);
-    }
-
-    private class WriteFutureListener implements ChannelFutureListener {
-
-        private final boolean isRequestHeadersFuture;
-
-        WriteFutureListener(boolean isRequestHeadersFuture) {
-            this.isRequestHeadersFuture = isRequestHeadersFuture;
-        }
-
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            // If a message has been sent out, cancel the timeout for starting a request.
-            cancelTimeout();
-
-            try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                if (future.isSuccess()) {
-                    // The first write is always the first headers, so log that we finished our first transfer
-                    // over the wire.
-                    if (!loggedRequestFirstBytesTransferred) {
-                        logBuilder.requestFirstBytesTransferred();
-                        loggedRequestFirstBytesTransferred = true;
-                    }
-
-                    if (state == State.DONE) {
-                        logBuilder.endRequest();
-                        // Successfully sent the request; schedule the response timeout.
-                        assert responseWrapper != null;
-                        responseWrapper.initTimeout();
-                    }
-
-                    // Request more messages regardless whether the state is DONE. It makes the producer have
-                    // a chance to produce the last call such as 'onComplete' and 'onError' when there are
-                    // no more messages it can produce.
-                    if (!isSubscriptionCompleted) {
-                        assert subscription != null;
-                        subscription.request(1);
-                    }
-                    return;
-                }
-
-                if (isRequestHeadersFuture) {
-                    final Throwable cause = future.cause();
-                    if (cause instanceof UnprocessedRequestException) {
-                        fail(cause);
-                    } else {
-                        fail(new UnprocessedRequestException(cause));
-                    }
-                } else {
-                    failAndReset(future.cause());
-                }
-            }
-        }
     }
 }
