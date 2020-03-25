@@ -123,7 +123,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         } else {
             final AnnotatedService annotatedService = service.as(AnnotatedService.class);
             if (annotatedService != null) {
-                serviceConfigBuilder.defaultLogName(annotatedService.defaultLogName());
+                serviceConfigBuilder.defaultLogName(annotatedService.logName());
             }
         }
         if (requestTimeoutMillis != null) {
