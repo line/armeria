@@ -41,7 +41,6 @@ public class HttpResponseSubscriberTest {
                 final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.NO_CONTENT).contentType(
                         MediaType.PLAIN_TEXT_UTF_8).build();
                 final HttpResponseWriter streaming = HttpResponse.streaming();
-                streaming.write(ResponseHeaders.of(HttpStatus.CONTINUE));
                 streaming.write(headers);
                 streaming.write(HttpData.ofUtf8("foo"));
                 streaming.close();
