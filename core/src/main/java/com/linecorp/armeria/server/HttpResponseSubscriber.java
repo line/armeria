@@ -130,10 +130,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             failAndRespond(new IllegalArgumentException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
                     " (service: " + service() + ')'));
+            ReferenceCountUtil.safeRelease(o);
             return;
         }
 
         if (isStreamOrSessionClosed()) {
+            ReferenceCountUtil.safeRelease(o);
             return;
         }
 
@@ -180,10 +182,17 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 break;
             }
             case NEEDS_TRAILERS: {
-                if (o instanceof HttpData || o instanceof ResponseHeaders) {
+                if (o instanceof ResponseHeaders) {
                     failAndRespond(new IllegalStateException(
-                            "published an HttpData or a ResponseHeaders: " + o +
+                            "published a ResponseHeaders: " + o +
                             " (expected: an HTTP trailers). service: " + service()));
+                    return;
+                }
+                if (o instanceof HttpData) {
+                    // We silently ignore the data and call subscription.request(1).
+                    ReferenceCountUtil.safeRelease(o);
+                    assert subscription != null;
+                    subscription.request(1);
                     return;
                 }
                 // We handle the trailers in NEEDS_DATA_OR_TRAILERS.

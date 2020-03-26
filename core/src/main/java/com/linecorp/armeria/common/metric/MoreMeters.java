@@ -112,12 +112,12 @@ public final class MoreMeters {
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
 
-        final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValue();
-        final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValue();
+        final Long maxExpectedValueNanos = distStatCfg.getMaximumExpectedValue();
+        final Long minExpectedValueNanos = distStatCfg.getMinimumExpectedValue();
         final Duration maxExpectedValue =
-                maxExpectedValueNanos != null ? Duration.ofNanos(maxExpectedValueNanos.longValue()) : null;
+                maxExpectedValueNanos != null ? Duration.ofNanos(maxExpectedValueNanos) : null;
         final Duration minExpectedValue =
-                minExpectedValueNanos != null ? Duration.ofNanos(minExpectedValueNanos.longValue()) : null;
+                minExpectedValueNanos != null ? Duration.ofNanos(minExpectedValueNanos) : null;
 
         return Timer.builder(name)
                     .tags(tags)
