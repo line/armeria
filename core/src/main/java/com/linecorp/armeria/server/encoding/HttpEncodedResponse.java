@@ -77,7 +77,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
 
             // Skip informational headers.
             final HttpStatus status = headers.status();
-            if (status.isInformational() || status.isContentAlwaysEmpty()) {
+            if (status.isInformational()) {
                 return obj;
             }
 
@@ -168,7 +168,10 @@ class HttpEncodedResponse extends FilteredHttpResponse {
         }
     }
 
-    private boolean shouldEncodeResponse(HttpHeaders headers) {
+    private boolean shouldEncodeResponse(ResponseHeaders headers) {
+        if (headers.status().isContentAlwaysEmpty()) {
+            return false;
+        }
         if (headers.contains(HttpHeaderNames.CONTENT_ENCODING)) {
             // We don't do automatic encoding if the user-supplied headers contain
             // Content-Encoding.

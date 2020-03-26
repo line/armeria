@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -39,15 +40,18 @@ public class HttpResponseSubscriberTest {
             sb.service("/", (ctx, req) -> {
                 final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.NO_CONTENT).contentType(
                         MediaType.PLAIN_TEXT_UTF_8).build();
-                // Add CONTINUE not to validate when creating HttpResponse.
-                return HttpResponse.of(ResponseHeaders.of(HttpStatus.CONTINUE), headers,
-                                       HttpData.ofUtf8("foo"));
+                final HttpResponseWriter streaming = HttpResponse.streaming();
+                streaming.write(ResponseHeaders.of(HttpStatus.CONTINUE));
+                streaming.write(headers);
+                streaming.write(HttpData.ofUtf8("foo"));
+                streaming.close();
+                return streaming;
             });
         }
     };
 
     @Test
-    void httpResponseSubscriberDoNotThrowExceptionWhenContentIsNotEmpty() {
+    void httpResponseSubscriberDoesNotThrowExceptionWhenContentIsNotEmpty() {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
         assertThat(res.content().isEmpty()).isTrue();
