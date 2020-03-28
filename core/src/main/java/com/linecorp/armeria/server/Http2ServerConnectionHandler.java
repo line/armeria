@@ -45,8 +45,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
         keepAliveHandler = config.idleTimeoutMillis() > 0 ?
                            new Http2ServerKeepAliveHandler(channel, encoder().frameWriter(),
-                                                    config.idleTimeoutMillis(),
-                                                    config.pingIntervalMillis()) : null;
+                                                           config.idleTimeoutMillis(),
+                                                           config.pingIntervalMillis()) : null;
 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);

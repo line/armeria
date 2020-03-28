@@ -434,7 +434,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the PING interval in milliseconds.
+     * Sets the PING interval.
      * When neither read nor write was performed for the given {@code pingInterval},
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1,

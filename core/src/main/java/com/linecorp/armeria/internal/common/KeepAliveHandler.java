@@ -20,7 +20,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,6 @@ import io.netty.channel.EventLoop;
  * the specified {@code pingIntervalMillis}, and closes the connection
  * when neither read nor write was performed within the given {@code idleTimeoutMillis}.
  */
-@NotThreadSafe
 public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
 
     private static final Logger logger = LoggerFactory.getLogger(KeepAliveHandler.class);
@@ -96,6 +94,8 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
 
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);
 
+    protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
+
     @Override
     protected void onIdleEvent(ChannelHandlerContext ctx, IdleStateEvent evt) {
         if (evt.state() == IdleState.ALL_IDLE && evt.isFirst()) {
@@ -121,7 +121,7 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
         return state;
     }
 
-    protected boolean isPendingPingAck() {
+    protected final boolean isPendingPingAck() {
         return state == State.PENDING_PING_ACK;
     }
 
@@ -198,6 +198,4 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
             }
         }
     }
-
-    protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 }

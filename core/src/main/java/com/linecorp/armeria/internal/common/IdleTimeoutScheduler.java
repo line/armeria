@@ -33,7 +33,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
 /**
- * A Scheduler that triggers an {@link IdleStateEvent} when {@link #onReadOrWrite()} or {@linkplain #onPing()}
+ * A scheduler that triggers an {@link IdleStateEvent} when {@link #onReadOrWrite()} or {@linkplain #onPing()}
  * has not invoked for a while.
  *
  * <h3>Supported idle states</h3>
