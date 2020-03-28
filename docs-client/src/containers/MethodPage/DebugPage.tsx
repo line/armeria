@@ -371,8 +371,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const onPrettify = useCallback(() => {
     const response = debugResponse;
     try {
-      const jsonResponse = JSON.parse(response);
-      setDebugResponse(JSON.stringify(jsonResponse, null, 2));
+      setDebugResponse(jsonPrettify(response));
     } catch {
       // ignored
     }
@@ -570,7 +569,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                 </IconButton>
               </div>
             </Tooltip>
-            <Tooltip title="Pretty print JSON">
+            <Tooltip title="Prettify JSON">
               <div>
                 <IconButton
                   onClick={onPrettify}
