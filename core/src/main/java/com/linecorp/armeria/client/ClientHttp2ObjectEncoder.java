@@ -47,8 +47,8 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     private final Http2KeepAliveHandler keepAliveHandler;
 
     ClientHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                                    SessionProtocol protocol,
-                                    @Nullable Http2KeepAliveHandler keepAliveHandler) {
+                             SessionProtocol protocol,
+                             @Nullable Http2KeepAliveHandler keepAliveHandler) {
         super(ctx, encoder);
         this.protocol = requireNonNull(protocol, "protocol");
         this.keepAliveHandler = keepAliveHandler;
