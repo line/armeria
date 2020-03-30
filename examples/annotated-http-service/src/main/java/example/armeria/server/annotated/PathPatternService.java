@@ -3,6 +3,7 @@ package example.armeria.server.annotated;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 
 /**

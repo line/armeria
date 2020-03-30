@@ -14,6 +14,8 @@ buildscript {
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
+
+    kotlin("kapt") apply true
 }
 
 apply(plugin = "org.jetbrains.kotlin.plugin.spring")
@@ -33,6 +35,8 @@ dependencies {
     testImplementation("net.javacrumbs.json-unit:json-unit-fluent")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    configurations["kapt"].dependencies.add(project(":core"))
 }
 
 tasks.withType<KotlinCompile> {
