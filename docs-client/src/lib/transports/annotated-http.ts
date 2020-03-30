@@ -15,6 +15,7 @@
  */
 
 import { Method } from '../specification';
+import prettify from '../json-prettify';
 
 import Transport from './transport';
 
@@ -58,7 +59,14 @@ export default class AnnotatedHttpTransport extends Transport {
       method: method.httpMethod,
       body: bodyJson,
     });
+    const applicationType = httpResponse.headers.get('content-type') || '';
     const response = await httpResponse.text();
-    return response.length > 0 ? response : '&lt;zero-length response&gt;';
+    if (response.length > 0) {
+      if (applicationType.indexOf('json') > -1) {
+        return prettify(response);
+      }
+      return response;
+    }
+    return '&lt;zero-length response&gt;';
   }
 }
