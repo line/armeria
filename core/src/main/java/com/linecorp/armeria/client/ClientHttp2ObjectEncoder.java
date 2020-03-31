@@ -47,8 +47,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     private final Http2KeepAliveHandler keepAliveHandler;
 
     ClientHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                             SessionProtocol protocol,
-                             @Nullable Http2KeepAliveHandler keepAliveHandler) {
+                             SessionProtocol protocol, @Nullable Http2KeepAliveHandler keepAliveHandler) {
         super(ctx, encoder);
         this.protocol = requireNonNull(protocol, "protocol");
         this.keepAliveHandler = keepAliveHandler;
@@ -99,12 +98,6 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
         return outputHeaders;
     }
 
-    @Nullable
-    @Override
-    public KeepAliveHandler keepAliveHandler() {
-        return keepAliveHandler;
-    }
-
     @Override
     public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
         if (isStreamPresentAndWritable(streamId)) {
@@ -116,5 +109,11 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
         }
 
         return newFailedFuture(ClosedStreamException.get());
+    }
+
+    @Nullable
+    @Override
+    public KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
     }
 }

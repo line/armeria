@@ -184,7 +184,7 @@ public final class ClientFactoryOption<T>
      * When neither read nor write was performed for the specified period of time,
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1,
-     * or <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     * or a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
      */
     public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS =
             define("PING_INTERVAL_MILLIS", Flags.defaultPingIntervalMillis());

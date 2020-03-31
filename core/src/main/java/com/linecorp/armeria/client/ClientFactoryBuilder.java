@@ -423,7 +423,7 @@ public final class ClientFactoryBuilder {
      * When neither read nor write was performed for the given {@code pingIntervalMillis},
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1,
-     * or <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     * or a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
      * {@code 0} means the client will not send a PING.
      */
     public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
@@ -438,7 +438,7 @@ public final class ClientFactoryBuilder {
      * When neither read nor write was performed for the given {@code pingInterval},
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1,
-     * or <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     * or a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
      * {@code 0} means the client will not send a PING.
      */
     public ClientFactoryBuilder pingInterval(Duration pingInterval) {

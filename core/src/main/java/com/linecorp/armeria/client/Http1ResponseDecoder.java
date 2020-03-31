@@ -88,11 +88,6 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         return resWrapper;
     }
 
-    void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
-        this.keepAliveHandler = keepAliveHandler;
-        maybeInitializeKeepAliveHandler(ctx);
-    }
-
     private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
@@ -285,6 +280,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         ctx.fireExceptionCaught(cause);
     }
 
+    void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
+        this.keepAliveHandler = keepAliveHandler;
+        maybeInitializeKeepAliveHandler(ctx);
+    }
+
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         if (keepAliveHandler != null && ctx.channel().isActive()) {
             keepAliveHandler.initialize(ctx);
@@ -305,16 +305,16 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         }
     }
 
-    private boolean isPing() {
-        return lastPingReqId == resId;
-    }
-
     void setPingReqId(int id) {
         lastPingReqId = id;
     }
 
     boolean isPingReqId(int id) {
         return lastPingReqId == id;
+    }
+
+    private boolean isPing() {
+        return lastPingReqId == resId;
     }
 
     private void onPingComplete() {

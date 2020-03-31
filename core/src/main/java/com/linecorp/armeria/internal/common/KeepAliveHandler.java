@@ -103,12 +103,13 @@ public abstract class KeepAliveHandler {
     private boolean firstPingIdleEvent = true;
 
     private byte state; // 0 - none, 1 - initialized, 2 - destroyed
+    private PingState pingState = PingState.IDLE;
 
     @Nullable
     private ChannelFuture pingWriteFuture;
     @Nullable
     private Future<?> shutdownFuture;
-    private PingState pingState = PingState.IDLE;
+
 
     protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channel = channel;
@@ -388,7 +389,7 @@ public abstract class KeepAliveHandler {
                     }
                 }
             } else {
-                // A PING was sent or received within the ping interval
+                // A PING was sent or received within the ping timeout
                 // - set a new timeout with shorter delay.
                 pingIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
             }

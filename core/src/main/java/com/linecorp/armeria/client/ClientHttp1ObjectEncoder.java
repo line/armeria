@@ -121,6 +121,6 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
 
     @Override
     protected boolean isPing(int id) {
-        return keepAliveHandler != null && !keepAliveHandler.isPing(id);
+        return keepAliveHandler != null && keepAliveHandler.isPing(id);
     }
 }
