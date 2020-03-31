@@ -218,8 +218,13 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 flushPendingWrites(currentPendingWrites);
             }
 
-            keepAliveWrite(id);
             final ChannelFuture future = ch.write(obj);
+            if (!isPing(id)) {
+                final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+                if (keepAliveHandler != null) {
+                    keepAliveHandler.onReadOrWrite();
+                }
+            }
             if (endStream) {
                 currentId++;
 
@@ -336,6 +341,8 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     protected final boolean isWritable(int id) {
         return id < minClosedId;
     }
+
+    protected abstract boolean isPing(int id);
 
     @Override
     public final void close() {

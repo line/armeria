@@ -45,13 +45,6 @@ public interface HttpObjectEncoder {
     @Nullable
     KeepAliveHandler keepAliveHandler();
 
-    default void keepAliveWrite(int id) {
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onReadOrWrite();
-        }
-    }
-
     /**
      * Writes an HTTP trailers.
      */

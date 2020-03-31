@@ -41,7 +41,7 @@ enum IdleState {
     /**
      * No data was either received or sent for a while.
      */
-    ALL_IDLE,
+    CONNECTION_IDLE,
     /**
      * No PING was either received or send for a while.
      */

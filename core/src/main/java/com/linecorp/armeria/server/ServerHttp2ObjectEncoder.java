@@ -58,7 +58,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
-        keepAliveWrite(id);
+        onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, endStream, ctx().newPromise());
     }
 
@@ -97,7 +97,14 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         }
 
         final Http2Headers converted = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(headers);
-        keepAliveWrite(id);
+        onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, true, ctx().newPromise());
+    }
+
+    private void onKeepAliveReadOrWrite() {
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
+        }
     }
 }

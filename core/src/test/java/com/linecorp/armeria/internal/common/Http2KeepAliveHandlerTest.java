@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 
-import com.linecorp.armeria.internal.common.KeepAliveHandler.State;
+import com.linecorp.armeria.internal.common.KeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -70,7 +70,7 @@ class Http2KeepAliveHandlerTest {
         };
 
         assertThat(channel.isOpen()).isTrue();
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
     }
 
     @AfterEach
@@ -85,15 +85,15 @@ class Http2KeepAliveHandlerTest {
         when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
 
         Thread.sleep(pingIntervalMillis * 2);
-        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(State.PING_SCHEDULED));
+        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(PingState.PING_SCHEDULED));
 
         promise.setSuccess();
-        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(State.PENDING_PING_ACK));
+        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(PingState.PENDING_PING_ACK));
 
         keepAliveHandler.onPingAck(keepAliveHandler.lastPingPayload() + 1);
-        assertThat(keepAliveHandler.state()).isEqualTo(State.PENDING_PING_ACK);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.PENDING_PING_ACK);
 
         keepAliveHandler.onPingAck(keepAliveHandler.lastPingPayload());
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
     }
 }

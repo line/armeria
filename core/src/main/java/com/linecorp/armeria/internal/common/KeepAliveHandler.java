@@ -13,10 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.IdleStateEvent.CONNECTION_IDLE_STATE_EVENT;
+import static com.linecorp.armeria.internal.common.IdleStateEvent.FIRST_CONNECTION_IDLE_STATE_EVENT;
+import static com.linecorp.armeria.internal.common.IdleStateEvent.FIRST_PING_IDLE_STATE_EVENT;
+import static com.linecorp.armeria.internal.common.IdleStateEvent.PING_IDLE_STATE_EVENT;
+
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -36,59 +58,133 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 
 /**
- * A {@link IdleTimeoutScheduler} that writes a PING when neither read nor write was performed for
+ * A {@link KeepAliveHandler} that writes a PING when neither read nor write was performed for
  * the specified {@code pingIntervalMillis}, and closes the connection
  * when neither read nor write was performed within the given {@code idleTimeoutMillis}.
  */
-public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
+public abstract class KeepAliveHandler {
+
+    // Forked from Netty 4.1.48
+    // https://github.com/netty/netty/blob/81513c3728df8add3c94fd0bdaaf9ba424925b29/handler/src/main/java/io/netty/handler/timeout/IdleStateEvent.java
 
     private static final Logger logger = LoggerFactory.getLogger(KeepAliveHandler.class);
 
+    private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
+
+    private static IdleStateEvent newIdleStateEvent(IdleState state, boolean first) {
+        switch (state) {
+            case CONNECTION_IDLE:
+                return first ? FIRST_CONNECTION_IDLE_STATE_EVENT : CONNECTION_IDLE_STATE_EVENT;
+            case PING_IDLE:
+                return first ? FIRST_PING_IDLE_STATE_EVENT : PING_IDLE_STATE_EVENT;
+            default:
+                throw new IllegalArgumentException("Unhandled: state=" + state + ", first=" + first);
+        }
+    }
+
     @Nullable
     private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
-    private final long pingIntervalMillis;
-    private final Channel channel;
-    private final String name;
     private final ChannelFutureListener pingWriteListener = new PingWriteListener();
     private final Runnable shutdownRunnable = this::closeChannelAndLog;
+
+    private final Channel channel;
+    private final String name;
+
+    @Nullable
+    private ScheduledFuture<?> connectionIdleTimeout;
+    private final long connectionIdleTimeNanos;
+    private long lastConnectionIdleTime;
+    private boolean firstConnectionIdleEvent = true;
+
+    @Nullable
+    private ScheduledFuture<?> pingIdleTimeout;
+    private final long pingIdleTimeNanos;
+    private long lastPingIdleTime;
+    private boolean firstPingIdleEvent = true;
+
+    private byte state; // 0 - none, 1 - initialized, 2 - destroyed
 
     @Nullable
     private ChannelFuture pingWriteFuture;
     @Nullable
     private Future<?> shutdownFuture;
-    private State state = State.IDLE;
+    private PingState pingState = PingState.IDLE;
 
     protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis) {
-        super(idleTimeoutMillis, pingIntervalMillis, TimeUnit.MILLISECONDS, channel.eventLoop());
         this.channel = channel;
         this.name = name;
-        this.pingIntervalMillis = pingIntervalMillis;
+
+        if (idleTimeoutMillis <= 0) {
+            connectionIdleTimeNanos = 0;
+        } else {
+            connectionIdleTimeNanos = Math.max(TimeUnit.MILLISECONDS.toNanos(idleTimeoutMillis),
+                                               MIN_TIMEOUT_NANOS);
+        }
+        if (pingIntervalMillis <= 0) {
+            pingIdleTimeNanos = 0;
+        } else {
+            pingIdleTimeNanos = Math.max(TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis), MIN_TIMEOUT_NANOS);
+        }
     }
 
-    @Override
-    public void destroy() {
-        super.destroy();
-        state = State.SHUTDOWN;
+    public final void initialize(ChannelHandlerContext ctx) {
+        // Avoid the case where destroy() is called before scheduling timeouts.
+        // See: https://github.com/netty/netty/issues/143
+        switch (state) {
+            case 1:
+            case 2:
+                return;
+        }
+
+        state = 1;
+
+        if (connectionIdleTimeNanos > 0) {
+            connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
+                                                        connectionIdleTimeNanos, TimeUnit.NANOSECONDS);
+        }
+        if (pingIdleTimeNanos > 0) {
+            pingIdleTimeout = executor().schedule(new PingIdleTimeoutTask(ctx),
+                                                  pingIdleTimeNanos, TimeUnit.NANOSECONDS);
+        }
+    }
+
+    public final void destroy() {
+        state = 2;
+        if (connectionIdleTimeout != null) {
+            connectionIdleTimeout.cancel(false);
+            connectionIdleTimeout = null;
+        }
+        if (pingIdleTimeout != null) {
+            pingIdleTimeout.cancel(false);
+            pingIdleTimeout = null;
+        }
+        pingState = PingState.SHUTDOWN;
         cancelFutures();
     }
 
-    @Override
     public final void onReadOrWrite() {
-        if (state == State.SHUTDOWN) {
+        if (pingState == PingState.SHUTDOWN) {
             return;
         }
-        super.onReadOrWrite();
-        state = State.IDLE;
+
+        if (connectionIdleTimeNanos > 0 || pingIdleTimeNanos > 0) {
+            lastConnectionIdleTime = lastPingIdleTime = System.nanoTime();
+            firstConnectionIdleEvent = firstPingIdleEvent = true;
+        }
+        pingState = PingState.IDLE;
         cancelFutures();
     }
 
-    @Override
     public final void onPing() {
-        if (state == State.SHUTDOWN) {
+        if (pingState == PingState.SHUTDOWN) {
             return;
         }
-        super.onPing();
-        state = State.IDLE;
+
+        if (pingIdleTimeNanos > 0) {
+            firstPingIdleEvent = true;
+            lastPingIdleTime = System.nanoTime();
+        }
+        pingState = PingState.IDLE;
         cancelFutures();
     }
 
@@ -96,33 +192,34 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 
-    @Override
-    protected void onIdleEvent(ChannelHandlerContext ctx, IdleStateEvent evt) {
-        if (evt.state() == IdleState.ALL_IDLE && evt.isFirst()) {
+    protected final Future<?> shutdownFuture() {
+        return shutdownFuture;
+    }
+
+    protected final boolean isPendingPingAck() {
+        return pingState == PingState.PENDING_PING_ACK;
+    }
+
+    @VisibleForTesting
+    final PingState state() {
+        return pingState;
+    }
+
+    @VisibleForTesting
+    void onIdleEvent(ChannelHandlerContext ctx, IdleStateEvent evt) {
+        if (evt.state() == IdleState.CONNECTION_IDLE && evt.isFirst()) {
             if (!hasRequestsInProgress(ctx)) {
-                state = State.SHUTDOWN;
+                pingState = PingState.SHUTDOWN;
                 logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
                 ctx.channel().close();
             }
             return;
         }
 
-        if (pingIntervalMillis > 0 && evt.state() == IdleState.PING_IDLE && evt.isFirst()) {
-            state = State.PING_SCHEDULED;
+        if (pingIdleTimeNanos > 0 && evt.state() == IdleState.PING_IDLE && evt.isFirst()) {
+            pingState = PingState.PING_SCHEDULED;
             writePing(ctx).addListener(pingWriteListener);
         }
-    }
-
-    protected final Future<?> shutdownFuture() {
-        return shutdownFuture;
-    }
-
-    protected final State state() {
-        return state;
-    }
-
-    protected final boolean isPendingPingAck() {
-        return state == State.PENDING_PING_ACK;
     }
 
     private void cancelFutures() {
@@ -137,7 +234,7 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
     }
 
     private void closeChannelAndLog() {
-        if (state == State.SHUTDOWN) {
+        if (pingState == PingState.SHUTDOWN) {
             return;
         }
         logger.debug("{} Closing an idle channel", channel);
@@ -147,8 +244,12 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
             } else {
                 logger.debug("{} Failed to close an idle channel", channel, future.cause());
             }
-            state = State.SHUTDOWN;
+            pingState = PingState.SHUTDOWN;
         });
+    }
+
+    private ScheduledExecutorService executor() {
+        return channel.eventLoop();
     }
 
     /**
@@ -156,7 +257,7 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
      * channel is inactive then the state changes to SHUTDOWN.
      */
     @VisibleForTesting
-    enum State {
+    enum PingState {
         /* Nothing happening, but waiting for IdleStateEvent */
         IDLE,
 
@@ -177,8 +278,8 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
             if (future.isSuccess()) {
                 logger.debug("{} PING write successful", channel);
                 final EventLoop el = channel.eventLoop();
-                shutdownFuture = el.schedule(shutdownRunnable, pingIntervalMillis, TimeUnit.MILLISECONDS);
-                state = State.PENDING_PING_ACK;
+                shutdownFuture = el.schedule(shutdownRunnable, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
+                pingState = PingState.PENDING_PING_ACK;
                 resetStopwatch();
             } else {
                 // Mostly because the channel is already closed. So ignore and change state to IDLE.
@@ -186,8 +287,8 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
                 if (!future.isCancelled() && Exceptions.isExpected(future.cause())) {
                     logger.debug("{} PING write failed", channel, future.cause());
                 }
-                if (state != State.SHUTDOWN) {
-                    state = State.IDLE;
+                if (pingState != PingState.SHUTDOWN) {
+                    pingState = PingState.IDLE;
                 }
             }
         }
@@ -195,6 +296,101 @@ public abstract class KeepAliveHandler extends IdleTimeoutScheduler {
         private void resetStopwatch() {
             if (stopwatch != null) {
                 stopwatch.reset().start();
+            }
+        }
+    }
+
+    private abstract static class AbstractIdleTask implements Runnable {
+
+        private final ChannelHandlerContext ctx;
+
+        AbstractIdleTask(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
+        }
+
+        @Override
+        public void run() {
+            if (!ctx.channel().isOpen()) {
+                return;
+            }
+
+            run(ctx);
+        }
+
+        protected abstract void run(ChannelHandlerContext ctx);
+    }
+
+    private final class ConnectionIdleTimeoutTask extends AbstractIdleTask {
+
+        private boolean warn;
+
+        ConnectionIdleTimeoutTask(ChannelHandlerContext ctx) {
+            super(ctx);
+        }
+
+        @Override
+        protected void run(ChannelHandlerContext ctx) {
+
+            final long lastConnectionIdleTime = KeepAliveHandler.this.lastConnectionIdleTime;
+            final long nextDelay = connectionIdleTimeNanos - (System.nanoTime() - lastConnectionIdleTime);
+            if (nextDelay <= 0) {
+                // Both reader and writer are idle - set a new timeout and
+                // notify the callback.
+                connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
+                                                            TimeUnit.NANOSECONDS);
+
+                final boolean first = firstConnectionIdleEvent;
+                firstConnectionIdleEvent = false;
+                final IdleStateEvent event = newIdleStateEvent(IdleState.CONNECTION_IDLE, first);
+                try {
+                    onIdleEvent(ctx, event);
+                } catch (Exception e) {
+                    if (!warn) {
+                        logger.warn("An error occurred while notifying an all idle event", e);
+                        warn = true;
+                    }
+                }
+            } else {
+                // Either read or write occurred before the connection idle timeout - set a new
+                // timeout with shorter delay.
+                connectionIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+            }
+        }
+    }
+
+    private final class PingIdleTimeoutTask extends AbstractIdleTask {
+
+        private boolean warn;
+
+        PingIdleTimeoutTask(ChannelHandlerContext ctx) {
+            super(ctx);
+        }
+
+        @Override
+        protected void run(ChannelHandlerContext ctx) {
+
+            final long lastPingIdleTime = KeepAliveHandler.this.lastPingIdleTime;
+            final long nextDelay = pingIdleTimeNanos - (System.nanoTime() - lastPingIdleTime);
+            if (nextDelay <= 0) {
+                // PING is idle - set a new timeout and notify the callback.
+                pingIdleTimeout = executor().schedule(this, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
+
+                final boolean first = firstPingIdleEvent;
+                firstPingIdleEvent = false;
+
+                final IdleStateEvent event = newIdleStateEvent(IdleState.PING_IDLE, first);
+                try {
+                    onIdleEvent(ctx, event);
+                } catch (Exception e) {
+                    if (!warn) {
+                        logger.warn("An error occurred while notifying a ping idle event", e);
+                        warn = true;
+                    }
+                }
+            } else {
+                // A PING was sent or received within the ping interval
+                // - set a new timeout with shorter delay.
+                pingIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
             }
         }
     }

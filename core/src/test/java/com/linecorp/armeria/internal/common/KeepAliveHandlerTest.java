@@ -22,13 +22,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.internal.common.KeepAliveHandler.State;
+import com.linecorp.armeria.internal.common.KeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import io.netty.channel.ChannelFuture;
@@ -57,6 +63,96 @@ class KeepAliveHandlerTest {
         channel.finish();
     }
 
+    @CsvSource({
+            "1000, 0, CONNECTION_IDLE",
+            "0, 1000, PING_IDLE",
+    })
+    @ParameterizedTest
+    void testIdle(long connectionIdleTimeout, long pingInterval, IdleState state) {
+        final long tolerance = 50;
+        final AtomicLong lastIdleEventTime = new AtomicLong();
+        final AtomicInteger counter = new AtomicInteger();
+        final long idleTime = state == IdleState.CONNECTION_IDLE ? connectionIdleTimeout : pingInterval;
+
+        final KeepAliveHandler idleTimeoutScheduler =
+                new KeepAliveHandler(channel, "test", connectionIdleTimeout, pingInterval) {
+                    @Override
+                    void onIdleEvent(ChannelHandlerContext ctx, IdleStateEvent evt) {
+                        final long oldIdleEventTime = lastIdleEventTime.getAndSet(System.nanoTime());
+                        assertThat(evt.state()).isEqualTo(state);
+                        assertThat(TimeUnit.NANOSECONDS.toMillis(lastIdleEventTime.get() - oldIdleEventTime))
+                                .isBetween(idleTime - tolerance, idleTime + tolerance);
+                        counter.incrementAndGet();
+                    }
+
+                    @Override
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        return null;
+                    }
+
+                    @Override
+                    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+                        return false;
+                    }
+                };
+
+        lastIdleEventTime.set(System.nanoTime());
+        idleTimeoutScheduler.initialize(ctx);
+        await().timeout(20, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(10));
+
+        idleTimeoutScheduler.destroy();
+    }
+
+    @CsvSource({
+            "1000, 0, CONNECTION_IDLE",
+            "0, 1000, PING_IDLE",
+    })
+    @ParameterizedTest
+    void testKeepAlive(long connectionIdleTimeout, long pingInterval, IdleState state)
+            throws InterruptedException {
+        final long tolerance = 200;
+        final AtomicLong lastIdleEventTime = new AtomicLong();
+        final AtomicInteger counter = new AtomicInteger();
+        final long idleTime = state == IdleState.CONNECTION_IDLE ? connectionIdleTimeout : pingInterval;
+        final Consumer<KeepAliveHandler> activator =
+                state == IdleState.CONNECTION_IDLE ?
+                KeepAliveHandler::onReadOrWrite : KeepAliveHandler::onPing;
+
+        final KeepAliveHandler idleTimeoutScheduler =
+                new KeepAliveHandler(channel, "test", connectionIdleTimeout, pingInterval) {
+                    @Override
+                    void onIdleEvent(ChannelHandlerContext ctx, IdleStateEvent evt) {
+                        final long oldIdleEventTime = lastIdleEventTime.getAndSet(System.nanoTime());
+                        assertThat(evt.state()).isEqualTo(state);
+                        assertThat(TimeUnit.NANOSECONDS.toMillis(lastIdleEventTime.get() - oldIdleEventTime))
+                                .isBetween(idleTime - tolerance, idleTime + tolerance);
+                        counter.incrementAndGet();
+                    }
+
+                    @Override
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        return null;
+                    }
+
+                    @Override
+                    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+                        return false;
+                    }
+                };
+
+        lastIdleEventTime.set(System.nanoTime());
+        idleTimeoutScheduler.initialize(ctx);
+
+        await().timeout(10, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(5));
+        for (int i = 0; i < 5; i++) {
+            activator.accept(idleTimeoutScheduler);
+            Thread.sleep(idleTime - 100);
+        }
+        await().timeout(10, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(5));
+
+        idleTimeoutScheduler.destroy();
+    }
+
     @ParameterizedTest
     @CsvSource({ "true", "false" })
     void checkReadOrWrite(boolean hasRequests) throws InterruptedException {
@@ -76,22 +172,22 @@ class KeepAliveHandlerTest {
                     }
                 };
 
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         keepAliveHandler.initialize(ctx);
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         keepAliveHandler.onReadOrWrite();
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         Thread.sleep(idleTimeout / 2);
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         Thread.sleep(idleTimeout);
         if (hasRequests) {
-            assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+            assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
         } else {
-            assertThat(keepAliveHandler.state()).isEqualTo(State.SHUTDOWN);
+            assertThat(keepAliveHandler.state()).isEqualTo(PingState.SHUTDOWN);
         }
     }
 
@@ -114,24 +210,24 @@ class KeepAliveHandlerTest {
                     }
                 };
 
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         keepAliveHandler.initialize(ctx);
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         keepAliveHandler.onReadOrWrite();
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         keepAliveHandler.writePing(ctx);
-        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(State.PING_SCHEDULED));
+        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(PingState.PING_SCHEDULED));
 
         promise.setSuccess();
-        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(State.PENDING_PING_ACK));
+        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(PingState.PENDING_PING_ACK));
 
         keepAliveHandler.onPing();
-        assertThat(keepAliveHandler.state()).isEqualTo(State.IDLE);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
 
         Thread.sleep(pingInterval * 2);
-        assertThat(keepAliveHandler.state()).isEqualTo(State.PENDING_PING_ACK);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.PENDING_PING_ACK);
     }
 }

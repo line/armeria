@@ -71,25 +71,25 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        maybeKeepAliveInitialize(ctx);
+        maybeInitializeKeepAliveHandler(ctx);
         super.handlerAdded(ctx);
     }
 
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        keepAliveDestroy();
+        destroyKeepAliveHandler();
         super.handlerRemoved0(ctx);
     }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        maybeKeepAliveInitialize(ctx);
+        maybeInitializeKeepAliveHandler(ctx);
         super.channelRegistered(ctx);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        maybeKeepAliveInitialize(ctx);
+        maybeInitializeKeepAliveHandler(ctx);
 
         super.channelActive(ctx);
         // NB: Http2ConnectionHandler does not flush the preface string automatically.
@@ -103,17 +103,17 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        keepAliveDestroy();
+        destroyKeepAliveHandler();
         super.channelInactive(ctx);
     }
 
-    private void maybeKeepAliveInitialize(ChannelHandlerContext ctx) {
+    private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
             keepAliveHandler.initialize(ctx);
         }
     }
 
-    private void keepAliveDestroy() {
+    private void destroyKeepAliveHandler() {
         if (keepAliveHandler != null) {
             keepAliveHandler.destroy();
         }

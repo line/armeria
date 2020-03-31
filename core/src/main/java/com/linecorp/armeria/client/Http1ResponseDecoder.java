@@ -90,7 +90,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
         this.keepAliveHandler = keepAliveHandler;
-        maybeKeepAliveInitialize(ctx);
+        maybeInitializeKeepAliveHandler(ctx);
     }
 
     private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
@@ -106,17 +106,17 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        maybeKeepAliveInitialize(ctx);
+        maybeInitializeKeepAliveHandler(ctx);
     }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        keepAliveDestroy();
+        destroyKeepAliveHandler();
     }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        maybeKeepAliveInitialize(ctx);
+        maybeInitializeKeepAliveHandler(ctx);
         ctx.fireChannelRegistered();
     }
 
@@ -127,7 +127,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        maybeKeepAliveInitialize(ctx);
+        maybeInitializeKeepAliveHandler(ctx);
         ctx.fireChannelActive();
     }
 
@@ -136,7 +136,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         if (res != null) {
             res.close(ClosedSessionException.get());
         }
-        keepAliveDestroy();
+        destroyKeepAliveHandler();
         ctx.fireChannelInactive();
     }
 
@@ -285,13 +285,13 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         ctx.fireExceptionCaught(cause);
     }
 
-    private void maybeKeepAliveInitialize(ChannelHandlerContext ctx) {
-        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+    private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
+        if (keepAliveHandler != null && ctx.channel().isActive()) {
             keepAliveHandler.initialize(ctx);
         }
     }
 
-    private void keepAliveDestroy() {
+    private void destroyKeepAliveHandler() {
         if (keepAliveHandler != null) {
             keepAliveHandler.destroy();
         }

@@ -147,4 +147,9 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
     }
+
+    @Override
+    protected boolean isPing(int id) {
+        return false;
+    }
 }

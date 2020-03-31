@@ -30,21 +30,22 @@
  */
 package com.linecorp.armeria.internal.common;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.StringUtil;
 
 /**
- * An idle state event triggered by {@link IdleTimeoutScheduler}.
+ * An idle state event triggered by {@link KeepAliveHandler}.
  */
 class IdleStateEvent {
 
     // Forked from Netty 4.1.48
     // https://github.com/netty/netty/blob/81513c3728df8add3c94fd0bdaaf9ba424925b29/handler/src/main/java/io/netty/handler/timeout/IdleStateEvent.java
 
-    public static final IdleStateEvent FIRST_ALL_IDLE_STATE_EVENT =
-            new DefaultIdleStateEvent(IdleState.ALL_IDLE, true);
-    public static final IdleStateEvent ALL_IDLE_STATE_EVENT =
-            new DefaultIdleStateEvent(IdleState.ALL_IDLE, false);
+    public static final IdleStateEvent FIRST_CONNECTION_IDLE_STATE_EVENT =
+            new DefaultIdleStateEvent(IdleState.CONNECTION_IDLE, true);
+    public static final IdleStateEvent CONNECTION_IDLE_STATE_EVENT =
+            new DefaultIdleStateEvent(IdleState.CONNECTION_IDLE, false);
     public static final IdleStateEvent FIRST_PING_IDLE_STATE_EVENT =
             new DefaultIdleStateEvent(IdleState.PING_IDLE, true);
     public static final IdleStateEvent PING_IDLE_STATE_EVENT =
@@ -60,7 +61,7 @@ class IdleStateEvent {
      * @param first {@code true} if its the first idle event for the {@link IdleStateEvent}.
      */
     IdleStateEvent(IdleState state, boolean first) {
-        this.state = ObjectUtil.checkNotNull(state, "state");
+        this.state = requireNonNull(state, "state");
         this.first = first;
     }
 
@@ -72,7 +73,7 @@ class IdleStateEvent {
     }
 
     /**
-     * Returns {@code true} if this was the first event for the {@link io.netty.handler.timeout.IdleState}.
+     * Returns {@code true} if this was the first event for the {@link IdleState}.
      */
     boolean isFirst() {
         return first;
