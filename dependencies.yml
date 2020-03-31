@@ -24,9 +24,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.10.1'
+    version: '3.10.2'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.10.1/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.10.2/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -57,7 +57,7 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.54.0' }
+  gax-grpc: { version: '1.55.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -112,7 +112,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.12' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.30' }
+  checkstyle: { version: '8.31' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.0' }
@@ -128,7 +128,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.8.0'
+    version: &RETROFIT2_VERSION '2.8.1'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -138,37 +138,37 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.2'
+    version: &DROPWIZARD_VERSION '2.0.5'
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-core/2.0.2/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-core/2.0.5/
   dropwizard-jackson:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jackson/2.0.2/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jackson/2.0.5/
   dropwizard-lifecycle:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-lifecycle/2.0.2/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-lifecycle/2.0.5/
   dropwizard-jersey:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jersey/2.0.2/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jersey/2.0.5/
   dropwizard-jetty:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/2.0.2/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/2.0.5/
   dropwizard-testing:
     version: *DROPWIZARD_VERSION
     javadocs:
-      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/2.0.2/
+      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/2.0.5/
   dropwizard-util:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-util/2.0.2/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-util/2.0.5/
   dropwizard-validation:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-validation/2.0.2/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-validation/2.0.5/
 
 io.dropwizard.metrics:
   metrics-core:
@@ -301,7 +301,7 @@ net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.16.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.16.2' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -310,6 +310,8 @@ net.sf.proguard:
 net.shibboleth.utilities:
   java-support: { version: '7.5.1' }
 
+# Ensure that we use the same ZooKeeper version as what Curator depends on.
+# See: https://github.com/apache/curator/blob/master/pom.xml
 org.apache.curator:
   curator-recipes:
     version: '4.3.0'
@@ -359,7 +361,7 @@ org.apache.tomcat.embed:
 
 org.apache.zookeeper:
   zookeeper:
-    version: '3.6.0'
+    version: '3.5.7'
     exclusions:
     - io.netty:netty-all
     - log4j:log4j
@@ -485,7 +487,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.2.5.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.2.6.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
