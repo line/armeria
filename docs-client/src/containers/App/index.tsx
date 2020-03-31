@@ -375,15 +375,10 @@ const App: React.FunctionComponent<Props> = props => {
 
   const navigateTo = useCallback(
     (to: string) => {
-      const params = new URLSearchParams(props.location.search);
-      params.delete('args');
-      const url = params.has('http_headers_sticky')
-        ? `${to}?${params.toString()}`
-        : to;
-      props.history.push(url);
+      props.history.push(to);
       setMobileDrawerOpen(false);
     },
-    [props.location.search, props.history],
+    [props.history],
   );
 
   const toggleMobileDrawer = useCallback(() => {

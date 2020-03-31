@@ -119,14 +119,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [debugResponse, setDebugResponse] = useState('');
   const [additionalQueriesOpen, toggleAdditionalQueriesOpen] = useReducer(
     toggle,
-    false,
+    true,
   );
   const [additionalQueries, setAdditionalQueries] = useState('');
   const [endpointPathOpen, toggleEndpointPathOpen] = useReducer(toggle, true);
   const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeadersOpen, toggleAdditionalHeadersOpen] = useReducer(
     toggle,
-    false,
+    true,
   );
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
@@ -144,35 +144,18 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
     }
 
-    const urlHeaders = urlParams.has('http_headers')
-      ? jsonPrettify(urlParams.get('http_headers')!)
-      : undefined;
-
     const urlPath =
       isAnnotatedService && exactPathMapping
         ? method.endpoints[0].pathMapping.substring('exact:'.length)
         : urlParams.get('endpoint_path') || '';
-
     const urlQueries = isAnnotatedService ? urlParams.get('queries') : '';
-
-    const stateHeaders = stickyHeaders ? additionalHeaders : undefined;
-
-    const headersOpen = !!(urlHeaders || stateHeaders);
 
     setDebugResponse('');
     setSnackbarOpen(false);
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
-    setAdditionalHeaders(urlHeaders || stateHeaders || '');
-    setAdditionalQueries(urlQueries || '');
-    toggleAdditionalQueriesOpen(exampleQueries.length > 0 || urlQueries);
     setAdditionalPath(urlPath || '');
-    toggleAdditionalHeadersOpen(headersOpen);
-
-    if (urlParams.has('http_headers_sticky') && !stickyHeaders) {
-      toggleStickyHeaders(undefined);
-    }
+    setAdditionalQueries(urlQueries || '');
   }, [
-    additionalHeaders,
     exactPathMapping,
     exampleQueries.length,
     isAnnotatedService,
@@ -180,9 +163,27 @@ const DebugPage: React.FunctionComponent<Props> = ({
     match.params,
     method.endpoints,
     method.exampleRequests,
-    stickyHeaders,
     useRequestBody,
   ]);
+
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+
+    if (urlParams.has('http_headers_sticky')) {
+      toggleStickyHeaders(true);
+    }
+
+    let headers = urlParams.has('http_headers')
+      ? jsonPrettify(urlParams.get('http_headers')!)
+      : undefined;
+
+    if (!headers) {
+      headers = stickyHeaders ? additionalHeaders : '';
+    }
+    setAdditionalHeaders(headers);
+  }, [match.params]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const showSnackbar = useCallback((text: string) => {
     setSnackbarOpen(true);
