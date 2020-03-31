@@ -192,7 +192,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                 "ClientCall started after deadline exceeded: " +
                                 callOptions.getDeadline());
                 close(status, new Metadata());
-                return;
             } else {
                 ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, remainingMillis);
                 ctx.setResponseTimeoutHandler(() -> {
