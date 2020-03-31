@@ -1245,7 +1245,8 @@ class GrpcClientTest {
 
         final String grpcTimeout = CLIENT_HEADERS_CAPTURE.get().get(GrpcHeaderNames.GRPC_TIMEOUT);
         // grpc-timeout header value is computed when the request has started processing and will be lower
-        // than the 500ms specified in the stub factory above since some time will have passed.
+        // than the 500ms specified in the stub factory above since some time will have passed. Our default is
+        // 10s though so this should still verify the header was computed correctly.
         assertThat(TimeoutHeaderUtil.fromHeaderValue(grpcTimeout))
                 .isLessThan(TimeUnit.MILLISECONDS.toNanos(500));
 
