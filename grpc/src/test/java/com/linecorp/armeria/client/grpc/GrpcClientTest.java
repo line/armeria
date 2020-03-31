@@ -1228,7 +1228,7 @@ class GrpcClientTest {
     @Test
     void deadlineInFuture() throws Exception {
         final TestServiceGrpc.TestServiceStub stub =
-                asyncStub.withDeadlineAfter(100, TimeUnit.MILLISECONDS);
+                asyncStub.withDeadlineAfter(500, TimeUnit.MILLISECONDS);
         final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
         stub.streamingOutputCall(
                 StreamingOutputCallRequest
@@ -1240,6 +1240,15 @@ class GrpcClientTest {
                         .build(),
                 responseObserver);
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
+
+        await().untilAsserted(() -> assertThat(CLIENT_HEADERS_CAPTURE.get()).isNotNull());
+
+        final String grpcTimeout = CLIENT_HEADERS_CAPTURE.get().get(GrpcHeaderNames.GRPC_TIMEOUT);
+        // grpc-timeout header value is computed when the request has started processing and will be lower
+        // than the 500ms specified in the stub factory above since some time will have passed.
+        assertThat(TimeoutHeaderUtil.fromHeaderValue(grpcTimeout))
+                .isLessThan(TimeUnit.MILLISECONDS.toNanos(500));
+
         assertThat(responseObserver.getError()).isInstanceOfSatisfying(
                 StatusRuntimeException.class, t -> {
                     assertThat(t.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
