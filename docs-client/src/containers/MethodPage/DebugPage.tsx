@@ -434,7 +434,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
 
       if (isAnnotatedService) {
-        params.set('queries', queries);
+        if (queries) {
+          params.set('queries', queries);
+        }
         if (!exactPathMapping) {
           validateEndpointPath(additionalPath);
           params.set('endpoint_path', additionalPath);
