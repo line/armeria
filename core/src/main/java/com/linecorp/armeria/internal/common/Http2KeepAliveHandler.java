@@ -102,7 +102,7 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     private boolean isGoodPingAck(long data) {
-        // This condition can be true when channel read some data other than PING ACK frame
+        // 'isPendingPingAck()' can return false when channel read some data other than PING ACK frame
         // or a PING ACK is received without sending PING in first place.
         if (!isPendingPingAck()) {
             logger.debug("{} PING(ACK=1, DATA={}) ignored", channel, data);

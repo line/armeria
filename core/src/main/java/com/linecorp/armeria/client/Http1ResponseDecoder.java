@@ -301,6 +301,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         if (msg instanceof LastHttpContent) {
             onPingComplete();
         } else {
+            assert keepAliveHandler != null;
             keepAliveHandler.onPing();
         }
     }

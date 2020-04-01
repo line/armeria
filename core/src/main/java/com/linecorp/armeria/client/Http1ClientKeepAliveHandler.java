@@ -30,33 +30,31 @@ final class Http1ClientKeepAliveHandler extends KeepAliveHandler {
 
     private static final RequestHeaders HTTP1_PING_REQUEST = RequestHeaders.of(HttpMethod.OPTIONS, "*");
 
-    private final Channel channel;
+    private final HttpSession httpSession;
     private final ClientHttp1ObjectEncoder encoder;
     private final Http1ResponseDecoder decoder;
 
     Http1ClientKeepAliveHandler(Channel channel, ClientHttp1ObjectEncoder encoder, Http1ResponseDecoder decoder,
                                 long idleTimeoutMillis, long pingIntervalMillis) {
         super(channel, "client", idleTimeoutMillis, pingIntervalMillis);
-        this.channel = requireNonNull(channel, "channel");
+        httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.encoder = requireNonNull(encoder, "encoder");
         this.decoder = requireNonNull(decoder, "decoder");
     }
 
     @Override
     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
-        final HttpSession httpSession = HttpSession.get(channel);
         final int id = httpSession.incrementAndGetNumRequestsSent();
-        final int streamId = (id << 1) + 1;
 
         decoder.setPingReqId(id);
-        final ChannelFuture future = encoder.writeHeaders(id, streamId, HTTP1_PING_REQUEST, true);
+        final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true);
         ctx.flush();
         return future;
     }
 
     @Override
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
-        return HttpSession.get(ctx.channel()).hasUnfinishedResponses();
+        return httpSession.hasUnfinishedResponses();
     }
 
     boolean isPing(int id) {

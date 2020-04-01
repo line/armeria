@@ -115,7 +115,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
         return keepAliveHandler;
     }
 
-    public void setKeepAliveHandler(Http1ClientKeepAliveHandler keepAliveHandler) {
+    void setKeepAliveHandler(Http1ClientKeepAliveHandler keepAliveHandler) {
         this.keepAliveHandler = keepAliveHandler;
     }
 

@@ -461,7 +461,7 @@ public final class ServerBuilder {
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
-     * {@code 0} means the server will not send PING frames on a HTTP/2 connection.
+     * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      */
     public ServerBuilder pingIntervalMillis(long pingIntervalMillis) {
         this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
@@ -470,7 +470,7 @@ public final class ServerBuilder {
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
-     * {@code 0} means the server will not send PING frames on a HTTP/2 connection.
+     * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      */
     public ServerBuilder pingInterval(Duration pingInterval) {
         requireNonNull(pingInterval, "pingInterval");

@@ -69,8 +69,6 @@ public abstract class KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(KeepAliveHandler.class);
 
-    private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
-
     private static IdleStateEvent newIdleStateEvent(IdleState state, boolean first) {
         switch (state) {
             case CONNECTION_IDLE:
@@ -78,7 +76,7 @@ public abstract class KeepAliveHandler {
             case PING_IDLE:
                 return first ? FIRST_PING_IDLE_STATE_EVENT : PING_IDLE_STATE_EVENT;
             default:
-                throw new IllegalArgumentException("Unhandled: state=" + state + ", first=" + first);
+                throw new IllegalArgumentException("Unhandled: initialized=" + state + ", first=" + first);
         }
     }
 
@@ -102,14 +100,13 @@ public abstract class KeepAliveHandler {
     private long lastPingIdleTime;
     private boolean firstPingIdleEvent = true;
 
-    private byte state; // 0 - none, 1 - initialized, 2 - destroyed
+    private boolean isInitialized;
     private PingState pingState = PingState.IDLE;
 
     @Nullable
     private ChannelFuture pingWriteFuture;
     @Nullable
     private Future<?> shutdownFuture;
-
 
     protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channel = channel;
@@ -118,26 +115,22 @@ public abstract class KeepAliveHandler {
         if (idleTimeoutMillis <= 0) {
             connectionIdleTimeNanos = 0;
         } else {
-            connectionIdleTimeNanos = Math.max(TimeUnit.MILLISECONDS.toNanos(idleTimeoutMillis),
-                                               MIN_TIMEOUT_NANOS);
+            connectionIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(idleTimeoutMillis);
         }
         if (pingIntervalMillis <= 0) {
             pingIdleTimeNanos = 0;
         } else {
-            pingIdleTimeNanos = Math.max(TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis), MIN_TIMEOUT_NANOS);
+            pingIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis);
         }
     }
 
     public final void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
-        switch (state) {
-            case 1:
-            case 2:
-                return;
+        if (isInitialized) {
+            return;
         }
-
-        state = 1;
+        isInitialized = true;
 
         if (connectionIdleTimeNanos > 0) {
             connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
@@ -150,7 +143,7 @@ public abstract class KeepAliveHandler {
     }
 
     public final void destroy() {
-        state = 2;
+        isInitialized = true;
         if (connectionIdleTimeout != null) {
             connectionIdleTimeout.cancel(false);
             connectionIdleTimeout = null;
@@ -193,6 +186,7 @@ public abstract class KeepAliveHandler {
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 
+    @Nullable
     protected final Future<?> shutdownFuture() {
         return shutdownFuture;
     }
@@ -340,9 +334,9 @@ public abstract class KeepAliveHandler {
                 connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
                                                             TimeUnit.NANOSECONDS);
 
-                final boolean first = firstConnectionIdleEvent;
+                final IdleStateEvent event = newIdleStateEvent(IdleState.CONNECTION_IDLE,
+                                                               firstConnectionIdleEvent);
                 firstConnectionIdleEvent = false;
-                final IdleStateEvent event = newIdleStateEvent(IdleState.CONNECTION_IDLE, first);
                 try {
                     onIdleEvent(ctx, event);
                 } catch (Exception e) {
@@ -376,10 +370,8 @@ public abstract class KeepAliveHandler {
                 // PING is idle - set a new timeout and notify the callback.
                 pingIdleTimeout = executor().schedule(this, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
 
-                final boolean first = firstPingIdleEvent;
+                final IdleStateEvent event = newIdleStateEvent(IdleState.PING_IDLE, firstPingIdleEvent);
                 firstPingIdleEvent = false;
-
-                final IdleStateEvent event = newIdleStateEvent(IdleState.PING_IDLE, first);
                 try {
                     onIdleEvent(ctx, event);
                 } catch (Exception e) {
