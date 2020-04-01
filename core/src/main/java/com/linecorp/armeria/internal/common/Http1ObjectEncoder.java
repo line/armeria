@@ -351,6 +351,10 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         }
         closed = true;
 
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
         if (pendingWritesMap.isEmpty()) {
             return;
         }

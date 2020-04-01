@@ -110,6 +110,10 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     @Override
     public final void close() {
         closed = true;
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
     }
 
     @Override
