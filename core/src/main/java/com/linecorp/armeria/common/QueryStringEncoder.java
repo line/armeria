@@ -65,6 +65,9 @@ final class QueryStringEncoder {
     }
 
     static void encodeParams(StringBuilder buf, QueryParamGetters params) {
+        if (params.isEmpty()) {
+            return;
+        }
         for (Entry<String, String> e : params) {
             encodeComponent(buf, e.getKey()).append('=');
             encodeComponent(buf, e.getValue()).append('&');
