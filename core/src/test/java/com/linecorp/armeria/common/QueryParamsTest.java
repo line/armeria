@@ -252,6 +252,7 @@ class QueryParamsTest {
     @Test
     @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     void testDefaultEncoding() throws Exception {
+        assertThat(QueryParams.of().toQueryString()).isEmpty();
         assertThat(QueryParams.of("a", "b=c").toQueryString()).isEqualTo("a=b%3Dc");
         assertThat(QueryParams.of("a", "\u00A5").toQueryString()).isEqualTo("a=%C2%A5");
         assertThat(QueryParams.of("a", "1", "b", "2").toQueryString()).isEqualTo("a=1&b=2");
