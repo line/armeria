@@ -298,11 +298,12 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     private void onPingRead(Object msg) {
-        if (msg instanceof LastHttpContent) {
-            onPingComplete();
-        } else {
+        if (msg instanceof HttpResponse) {
             assert keepAliveHandler != null;
             keepAliveHandler.onPing();
+        }
+        if (msg instanceof LastHttpContent) {
+            onPingComplete();
         }
     }
 

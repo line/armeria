@@ -43,6 +43,11 @@ final class Http1ClientKeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
+    public void onReadOrWrite() {
+        onReadOrWrite0(false);
+    }
+
+    @Override
     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
         final int id = httpSession.incrementAndGetNumRequestsSent();
 

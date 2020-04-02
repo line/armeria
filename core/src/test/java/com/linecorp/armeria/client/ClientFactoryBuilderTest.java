@@ -127,14 +127,20 @@ class ClientFactoryBuilderTest {
         }).build();
     }
 
-    @Test
-    void pingIntervalShouldBeLessThenIdleTimeout() {
-        assertThatThrownBy(() -> {
-            ClientFactory.builder()
-                  .idleTimeoutMillis(1000)
-                  .pingIntervalMillis(2000)
-                  .build();
-        }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("(expected: idleTimeoutMillis > pingIntervalMillis)");
+    @CsvSource({
+            "0,    2000,    0, 2000",
+            "2000, 2000, 2000, 0",
+            "3000, 2000, 3000, 2000",
+    })
+    @ParameterizedTest
+    void pingIntervalShouldBeLessThanIdleTimeout(long idleTimeoutMillis, long pingIntervalMillis,
+                                                 long expectedIdleTimeoutMillis,
+                                                 long expectedPingIntervalMillis) {
+        final ClientFactory factory1 = ClientFactory.builder()
+                                                    .idleTimeoutMillis(idleTimeoutMillis)
+                                                    .pingIntervalMillis(pingIntervalMillis)
+                                                    .build();
+        assertThat(factory1.options().idleTimeoutMillis()).isEqualTo(expectedIdleTimeoutMillis);
+        assertThat(factory1.options().pingIntervalMillis()).isEqualTo(expectedPingIntervalMillis);
     }
 }

@@ -706,7 +706,7 @@ public final class Flags {
      * is sent for HTTP/2 server and client.
      *
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
-     * {@link #defaultClientIdleTimeoutMillis()} for client are greater than 0.
+     * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_PING_INTERVAL_MILLIS} milliseconds.
      * Specify the {@code -Dcom.linecorp.armeria.defaultPingIntervalMillis=<integer>} JVM option to override

@@ -86,6 +86,11 @@ class KeepAliveHandlerTest {
                     }
 
                     @Override
+                    public void onReadOrWrite() {
+                        onReadOrWrite0(true);
+                    }
+
+                    @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return null;
                     }
@@ -130,6 +135,11 @@ class KeepAliveHandlerTest {
                     }
 
                     @Override
+                    public void onReadOrWrite() {
+                        onReadOrWrite0(true);
+                    }
+
+                    @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return null;
                     }
@@ -161,6 +171,11 @@ class KeepAliveHandlerTest {
         final ChannelFuture channelFuture = channel.newPromise();
         final KeepAliveHandler keepAliveHandler =
                 new KeepAliveHandler(channel, "test", idleTimeout, pingInterval) {
+                    @Override
+                    public void onReadOrWrite() {
+                        onReadOrWrite0(true);
+                    }
+
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return channelFuture;
@@ -200,6 +215,11 @@ class KeepAliveHandlerTest {
         final KeepAliveHandler keepAliveHandler =
                 new KeepAliveHandler(channel, "test", idleTimeout, pingInterval) {
                     @Override
+                    public void onReadOrWrite() {
+                        onReadOrWrite0(true);
+                    }
+
+                    @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return promise;
                     }
@@ -229,5 +249,44 @@ class KeepAliveHandlerTest {
 
         Thread.sleep(pingInterval * 2);
         assertThat(keepAliveHandler.state()).isEqualTo(PingState.PENDING_PING_ACK);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void resetPing(boolean resetPing) throws InterruptedException {
+        final long idleTimeout = 10000;
+        final long pingInterval = 1000;
+        final ChannelPromise promise = channel.newPromise();
+        final KeepAliveHandler keepAliveHandler =
+                new KeepAliveHandler(channel, "test", idleTimeout, pingInterval) {
+                    @Override
+                    public void onReadOrWrite() {
+                        onReadOrWrite0(resetPing);
+                    }
+
+                    @Override
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        return promise;
+                    }
+
+                    @Override
+                    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+                        return true;
+                    }
+                };
+
+        keepAliveHandler.initialize(ctx);
+        assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
+
+        keepAliveHandler.writePing(ctx);
+        await().untilAsserted(() -> assertThat(keepAliveHandler.state()).isEqualTo(PingState.PING_SCHEDULED));
+
+        if (resetPing) {
+            keepAliveHandler.onReadOrWrite();
+            assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
+        } else {
+            keepAliveHandler.onReadOrWrite();
+            assertThat(keepAliveHandler.state()).isEqualTo(PingState.PING_SCHEDULED);
+        }
     }
 }

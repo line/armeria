@@ -461,6 +461,8 @@ public final class ServerBuilder {
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      */
     public ServerBuilder pingIntervalMillis(long pingIntervalMillis) {
@@ -470,6 +472,8 @@ public final class ServerBuilder {
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      */
     public ServerBuilder pingInterval(Duration pingInterval) {
@@ -1393,11 +1397,8 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
-            checkArgument(idleTimeoutMillis > pingIntervalMillis,
-                          "idleTimeoutMillis: %s, pingIntervalMillis: %s " +
-                          "(expected: idleTimeoutMillis > pingIntervalMillis)",
-                          idleTimeoutMillis, pingIntervalMillis);
+        if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
+            pingIntervalMillis = 0;
         }
 
         final AnnotatedServiceExtensions extensions =

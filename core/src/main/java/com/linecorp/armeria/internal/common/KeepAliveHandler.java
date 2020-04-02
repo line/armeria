@@ -156,17 +156,26 @@ public abstract class KeepAliveHandler {
         cancelFutures();
     }
 
-    public final void onReadOrWrite() {
+    public abstract void onReadOrWrite();
+
+    protected final void onReadOrWrite0(boolean resetPing) {
         if (pingState == PingState.SHUTDOWN) {
             return;
         }
 
-        if (connectionIdleTimeNanos > 0 || pingIdleTimeNanos > 0) {
-            lastConnectionIdleTime = lastPingIdleTime = System.nanoTime();
-            firstConnectionIdleEvent = firstPingIdleEvent = true;
+        if (connectionIdleTimeNanos > 0) {
+            lastConnectionIdleTime = System.nanoTime();
+            firstConnectionIdleEvent = true;
         }
-        pingState = PingState.IDLE;
-        cancelFutures();
+
+        if (resetPing) {
+            if (pingIdleTimeNanos > 0) {
+                lastPingIdleTime = System.nanoTime();
+                firstPingIdleEvent = true;
+            }
+            pingState = PingState.IDLE;
+            cancelFutures();
+        }
     }
 
     public final void onPing() {

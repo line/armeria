@@ -77,6 +77,11 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
+    public void onReadOrWrite() {
+        onReadOrWrite0(true);
+    }
+
+    @Override
     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
         lastPingPayload = random.nextLong();
         final ChannelFuture future = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise());

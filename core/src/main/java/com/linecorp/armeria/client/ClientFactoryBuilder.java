@@ -424,6 +424,9 @@ public final class ClientFactoryBuilder {
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1,
      * or a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     *
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      * {@code 0} means the client will not send a PING.
      */
     public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
@@ -439,6 +442,9 @@ public final class ClientFactoryBuilder {
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1,
      * or a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     *
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      * {@code 0} means the client will not send a PING.
      */
     public ClientFactoryBuilder pingInterval(Duration pingInterval) {
@@ -558,11 +564,8 @@ public final class ClientFactoryBuilder {
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
         final long pingIntervalMillis = newOptions.pingIntervalMillis();
-        if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
-            checkArgument(idleTimeoutMillis > pingIntervalMillis,
-                          "idleTimeoutMillis: %s, pingIntervalMillis: %s " +
-                          "(expected: idleTimeoutMillis > pingIntervalMillis)",
-                          idleTimeoutMillis, pingIntervalMillis);
+        if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
+            return ClientFactoryOptions.of(newOptions, ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(0L));
         }
         return newOptions;
     }

@@ -28,6 +28,11 @@ class Http1ServerKeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
+    public void onReadOrWrite() {
+        onReadOrWrite0(false);
+    }
+
+    @Override
     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
         throw new UnsupportedOperationException();
     }
