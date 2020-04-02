@@ -194,6 +194,14 @@ final class StructContext extends PairContext {
                     classMap.put(fieldName, ((EnumMetaData) elementMetaData).enumClass);
                 } else if (elementMetaData instanceof StructMetaData) {
                     classMap.put(fieldName, ((StructMetaData) elementMetaData).structClass);
+                } else {
+                    // Workaround a bug where the generated 'FieldMetaData' does not provide
+                    // a fully qualified class name.
+                    final String fqcn = clazz.getPackage().getName() + '.' + elementMetaData.getTypedefName();
+                    try {
+                        classMap.put(fieldName, Class.forName(fqcn));
+                    } catch (ClassNotFoundException ignored) {
+                    }
                 }
 
                 // Workaround a bug in the generated thrift message read()
