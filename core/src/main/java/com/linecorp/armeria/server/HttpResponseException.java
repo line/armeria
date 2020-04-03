@@ -50,10 +50,10 @@ public final class HttpResponseException extends RuntimeException {
     /**
      * Returns a new {@link HttpResponseException} instance with the specified {@link HttpStatus}.
      */
-    public static HttpResponseException of(HttpStatus httpStatus, String message) {
+    public static HttpResponseException of(HttpStatus httpStatus, Throwable cause) {
         requireNonNull(httpStatus, "httpStatus");
-        requireNonNull(message, "message");
-        return new HttpResponseException(HttpResponse.of(httpStatus), message);
+        requireNonNull(cause, "cause");
+        return new HttpResponseException(HttpResponse.of(httpStatus), cause);
     }
 
     /**
@@ -77,8 +77,8 @@ public final class HttpResponseException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@link HttpResponse}.
      */
-    private HttpResponseException(HttpResponse httpResponse, @Nullable String message) {
-        super(message);
+    private HttpResponseException(HttpResponse httpResponse, @Nullable Throwable cause) {
+        super(cause);
         this.httpResponse = requireNonNull(httpResponse, "httpResponse");
     }
 

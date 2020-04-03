@@ -43,13 +43,13 @@ class HttpResponseExceptionTest {
     }
 
     @Test
-    void testMessage() {
-        final String message = "no method for you!";
+    void testCause() {
+        final IllegalStateException cause = new IllegalStateException("not ready");
         final HttpResponseException exception =
-            HttpResponseException.of(HttpStatus.METHOD_NOT_ALLOWED, message);
+            HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, cause);
 
         final AggregatedHttpResponse response = exception.httpResponse().aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
-        assertThat(exception.getMessage()).isEqualTo(message);
+        assertThat(exception.getCause()).isEqualTo(cause);
     }
 }
