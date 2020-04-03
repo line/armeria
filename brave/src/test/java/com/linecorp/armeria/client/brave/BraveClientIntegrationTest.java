@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.brave;
 
+import brave.propagation.CurrentTraceContext;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -43,9 +44,6 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import brave.http.HttpTracing;
-import brave.propagation.StrictScopeDecorator;
-import brave.sampler.Sampler;
 import brave.test.http.ITHttpAsyncClient;
 import okhttp3.Protocol;
 
@@ -59,15 +57,8 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
-    private final StrictScopeDecorator strictScopeDecorator = StrictScopeDecorator.create();
 
     public BraveClientIntegrationTest(SessionProtocol sessionProtocol) {
-        this.currentTraceContext = RequestContextCurrentTraceContext.builder()
-            .addScopeDecorator(strictScopeDecorator)
-            .build();
-        this.tracing = tracingBuilder(Sampler.ALWAYS_SAMPLE).build();
-        this.httpTracing = HttpTracing.create(tracing);
-
         this.sessionProtocol = sessionProtocol;
         if (sessionProtocol == SessionProtocol.H2C) {
             protocols = ImmutableList.of(Protocol.H2_PRIOR_KNOWLEDGE);
@@ -76,16 +67,16 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
         }
     }
 
-    @Override
-    protected void checkForLeakedScopes() {
-        strictScopeDecorator.close();
-    }
-
     @Before
     @Override
     public void setup() throws IOException {
         server.setProtocols(protocols);
         super.setup();
+    }
+
+    @Override
+    protected CurrentTraceContext.Builder currentTraceContextBuilder() {
+        return RequestContextCurrentTraceContext.builder();
     }
 
     @Override
