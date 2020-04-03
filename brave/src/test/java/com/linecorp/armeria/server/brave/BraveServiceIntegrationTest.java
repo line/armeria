@@ -20,10 +20,10 @@ import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import brave.propagation.CurrentTraceContext;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+
 import javax.annotation.Nullable;
 
 import org.junit.After;
@@ -43,6 +43,7 @@ import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
+import brave.propagation.CurrentTraceContext;
 import brave.test.http.ITHttpServer;
 
 public class BraveServiceIntegrationTest extends ITHttpServer {
@@ -92,13 +93,10 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             return HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "happy");
         });
         sb.service("/baggage", (ctx, req) -> {
-            String value = String.valueOf(BAGGAGE_FIELD.getValue());
+            final String value = String.valueOf(BAGGAGE_FIELD.getValue());
             return HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, value);
         });
 
-        sb.service("/extra",
-            (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8,
-                String.valueOf(req.headers().get(BAGGAGE_FIELD.name()))));
         sb.service("/badrequest", (ctx, req) -> HttpResponse.of(BAD_REQUEST));
 
         sb.decorator(BraveService.newDecorator(httpTracing));

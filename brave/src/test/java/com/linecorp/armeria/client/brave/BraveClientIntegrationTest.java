@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.brave;
 
-import brave.propagation.CurrentTraceContext;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -44,6 +43,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import brave.propagation.CurrentTraceContext;
 import brave.test.http.ITHttpAsyncClient;
 import okhttp3.Protocol;
 
@@ -114,7 +114,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     @Ignore("TODO: maybe integrate with brave's clock")
     public void clientTimestampAndDurationEnclosedByParent() {
-
     }
 
     @Test
@@ -141,11 +140,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     }
 
     @Override
-    protected void post(WebClient client, String pathIncludingQuery, String body) {
-        client.post(pathIncludingQuery, body).aggregate().join();
-    }
-
-    @Override
     protected void get(WebClient client, String path, BiConsumer<Integer, Throwable> callback) {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             final HttpResponse res = client.get(path);
@@ -161,6 +155,11 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
                 return null;
             });
         }
+    }
+
+    @Override
+    protected void post(WebClient client, String pathIncludingQuery, String body) {
+        client.post(pathIncludingQuery, body).aggregate().join();
     }
 
     /**
