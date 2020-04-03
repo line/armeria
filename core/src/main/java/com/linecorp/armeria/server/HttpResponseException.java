@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import javax.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised to send an HTTP response with the content specified
@@ -43,7 +44,16 @@ public final class HttpResponseException extends RuntimeException {
      */
     public static HttpResponseException of(HttpStatus httpStatus) {
         requireNonNull(httpStatus, "httpStatus");
-        return new HttpResponseException(HttpResponse.of(httpStatus));
+        return new HttpResponseException(HttpResponse.of(httpStatus), null);
+    }
+
+    /**
+     * Returns a new {@link HttpResponseException} instance with the specified {@link HttpStatus}.
+     */
+    public static HttpResponseException of(HttpStatus httpStatus, String message) {
+        requireNonNull(httpStatus, "httpStatus");
+        requireNonNull(message, "message");
+        return new HttpResponseException(HttpResponse.of(httpStatus), message);
     }
 
     /**
@@ -57,7 +67,7 @@ public final class HttpResponseException extends RuntimeException {
      * Returns a new {@link HttpResponseException} instance with the specified {@link HttpResponse}.
      */
     public static HttpResponseException of(HttpResponse httpResponse) {
-        return new HttpResponseException(httpResponse);
+        return new HttpResponseException(httpResponse, null);
     }
 
     private static final long serialVersionUID = 3487991462085151316L;
@@ -67,7 +77,8 @@ public final class HttpResponseException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@link HttpResponse}.
      */
-    private HttpResponseException(HttpResponse httpResponse) {
+    private HttpResponseException(HttpResponse httpResponse, @Nullable String message) {
+        super(message);
         this.httpResponse = requireNonNull(httpResponse, "httpResponse");
     }
 

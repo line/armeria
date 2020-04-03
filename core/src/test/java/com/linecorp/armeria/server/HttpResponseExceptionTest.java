@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 class HttpResponseExceptionTest {
 
     @Test
-    void testHttpResponse() throws Exception {
+    void testHttpResponse() {
         final HttpResponseWriter response = HttpResponse.streaming();
         final HttpResponseException exception = HttpResponseException.of(response);
         response.write(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -40,5 +40,16 @@ class HttpResponseExceptionTest {
         final AggregatedHttpResponse message = exception.httpResponse().aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(message.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+    }
+
+    @Test
+    void testMessage() {
+        final String message = "no method for you!";
+        final HttpResponseException exception =
+            HttpResponseException.of(HttpStatus.METHOD_NOT_ALLOWED, message);
+
+        final AggregatedHttpResponse response = exception.httpResponse().aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        assertThat(exception.getMessage()).isEqualTo(message);
     }
 }

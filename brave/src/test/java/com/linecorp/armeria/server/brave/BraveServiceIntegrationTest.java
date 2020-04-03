@@ -73,12 +73,10 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             future.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "bar"))));
 
         sb.service("/exception", (ctx, req) -> {
-            // TODO: HttpResponseException.of(status, "not ready")
-            throw HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE);
+            throw HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, "not ready");
         });
         sb.service("/exceptionAsync", (ctx, req) -> asyncResponse(future ->
-            // TODO: HttpResponseException.of(status, "not ready")
-            future.completeExceptionally(HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE))));
+            future.completeExceptionally(HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, "not ready"))));
 
         sb.service("/items/:itemId",
                    (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8,
@@ -86,7 +84,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         sb.service("/async_items/:itemId", (ctx, req) -> asyncResponse(future ->
             future.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8,
                                                 String.valueOf(ctx.pathParam("itemId"))))));
-        // TODO: how do we mount "/items/:itemId" under the prefix "/nested"?
+        // "/nested" left out as there's no sub-routing feature at the moment.
 
         sb.service("/child", (ctx, req) -> {
             tracing.tracer().nextSpan().name("child").start().finish();
@@ -116,30 +114,6 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     @Override
     public void notFound() {
         throw new AssumptionViolatedException("Armeria cannot decorate a non-existent path mapping.");
-    }
-
-    @Test
-    @Override
-    public void errorTag_exceptionOverridesHttpStatus() {
-        throw new AssumptionViolatedException("TODO: HttpResponseException cannot set message");
-    }
-
-    @Test
-    @Override
-    public void errorTag_exceptionOverridesHttpStatus_async() {
-        throw new AssumptionViolatedException("TODO: HttpResponseException cannot set message");
-    }
-
-    @Test
-    @Override
-    public void finishedSpanHandlerSeesException() {
-        throw new AssumptionViolatedException("TODO: HttpResponseException cannot set message");
-    }
-
-    @Test
-    @Override
-    public void finishedSpanHandlerSeesException_async() {
-        throw new AssumptionViolatedException("TODO: HttpResponseException cannot set message");
     }
 
     @After
