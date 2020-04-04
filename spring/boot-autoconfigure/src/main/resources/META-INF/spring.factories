@@ -1,2 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.linecorp.armeria.spring.ArmeriaAutoConfiguration
+
+org.springframework.context.ApplicationContextInitializer=\
+  com.linecorp.armeria.internal.spring.ArmeriaServerPortInfoApplicationContextInitializer

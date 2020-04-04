@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.web.reactive.server.AbstractReactiveWebServerFactory;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
@@ -51,6 +50,7 @@ import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.http.server.reactive.HttpHandler;
 
 import com.google.common.base.Strings;
@@ -86,13 +86,13 @@ import reactor.core.Disposable;
 public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
 
-    private final ConfigurableListableBeanFactory beanFactory;
+    private final ConfigurableApplicationContext applicationContext;
 
     /**
-     * Creates a new factory instance with the specified {@link ConfigurableListableBeanFactory}.
+     * Creates a new factory instance with the specified {@link ConfigurableApplicationContext}.
      */
-    public ArmeriaReactiveWebServerFactory(ConfigurableListableBeanFactory beanFactory) {
-        this.beanFactory = requireNonNull(beanFactory, "beanFactory");
+    public ArmeriaReactiveWebServerFactory(ConfigurableApplicationContext applicationContext) {
+        this.applicationContext = requireNonNull(applicationContext, "applicationContext");
     }
 
     private static com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
@@ -203,7 +203,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        return new ArmeriaWebServer(server, protocol, address, port);
+        return new ArmeriaWebServer(server, protocol, address, port, applicationContext);
     }
 
     private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,
@@ -277,7 +277,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     @Nullable
     private <T> T findBean(Class<T> clazz) {
         try {
-            return beanFactory.getBean(clazz);
+            return applicationContext.getBean(clazz);
         } catch (NoUniqueBeanDefinitionException e) {
             throw new IllegalStateException("Too many " + clazz.getSimpleName() + " beans: (expected: 1)", e);
         } catch (NoSuchBeanDefinitionException e) {
@@ -286,12 +286,12 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     }
 
     private <T> List<T> findBeans(Class<T> clazz) {
-        final String[] names = beanFactory.getBeanNamesForType(clazz);
+        final String[] names = applicationContext.getBeanNamesForType(clazz);
         if (names.length == 0) {
             return ImmutableList.of();
         }
         return Arrays.stream(names)
-                     .map(name -> beanFactory.getBean(name, clazz))
+                     .map(name -> applicationContext.getBean(name, clazz))
                      .collect(toImmutableList());
     }
 

@@ -21,13 +21,14 @@ import static org.assertj.core.api.Assertions.fail;
 
 import java.util.function.Consumer;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -55,7 +56,7 @@ class ArmeriaReactiveWebServerFactoryTest {
 
     static final String POST_BODY = "Hello, world!";
 
-    private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+    private final GenericApplicationContext context = new GenericApplicationContext();
     private final ClientFactory clientFactory =
             ClientFactory.builder()
                          .tlsNoVerify()
@@ -63,7 +64,7 @@ class ArmeriaReactiveWebServerFactoryTest {
                          .build();
 
     private ArmeriaReactiveWebServerFactory factory() {
-        return new ArmeriaReactiveWebServerFactory(beanFactory);
+        return new ArmeriaReactiveWebServerFactory(context);
     }
 
     private WebClient httpsClient(WebServer server) {
@@ -76,6 +77,11 @@ class ArmeriaReactiveWebServerFactoryTest {
         return WebClient.builder("http://example.com:" + server.getPort())
                         .factory(clientFactory)
                         .build();
+    }
+
+    @BeforeEach
+    void before() {
+        context.refresh();
     }
 
     @Test
@@ -232,13 +238,13 @@ class ArmeriaReactiveWebServerFactoryTest {
         final ArmeriaReactiveWebServerFactory factory = factory();
 
         RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
-        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+        context.registerBeanDefinition("armeriaSettings", rbd);
 
         rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
-        beanFactory.registerBeanDefinition("meterRegistry1", rbd);
+        context.registerBeanDefinition("meterRegistry1", rbd);
 
         rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
-        beanFactory.registerBeanDefinition("meterRegistry2", rbd);
+        context.registerBeanDefinition("meterRegistry2", rbd);
 
         assertThatThrownBy(() -> runEchoServer(factory, server -> fail("Should never reach here")))
                 .isInstanceOf(IllegalStateException.class);
@@ -249,14 +255,14 @@ class ArmeriaReactiveWebServerFactoryTest {
         final ArmeriaReactiveWebServerFactory factory = factory();
 
         RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
-        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+        context.registerBeanDefinition("armeriaSettings", rbd);
 
         rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
-        beanFactory.registerBeanDefinition("meterRegistry1", rbd);
+        context.registerBeanDefinition("meterRegistry1", rbd);
 
         rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
         rbd.setPrimary(true);
-        beanFactory.registerBeanDefinition("meterRegistry2", rbd);
+        context.registerBeanDefinition("meterRegistry2", rbd);
 
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);

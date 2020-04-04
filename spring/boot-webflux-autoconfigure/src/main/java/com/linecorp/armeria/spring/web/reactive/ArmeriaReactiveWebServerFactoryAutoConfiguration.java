@@ -15,13 +15,13 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -46,7 +46,7 @@ public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
      */
     @Bean
     public ArmeriaReactiveWebServerFactory armeriaReactiveWebServerFactory(
-            ConfigurableListableBeanFactory beanFactory) {
-        return new ArmeriaReactiveWebServerFactory(beanFactory);
+            ConfigurableApplicationContext applicationContext) {
+        return new ArmeriaReactiveWebServerFactory(applicationContext);
     }
 }

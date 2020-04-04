@@ -34,12 +34,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.spring.ArmeriaServerInitializedEvent;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -79,7 +81,8 @@ public class ArmeriaAutoConfiguration {
             Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBeans,
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
             Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans,
-            Optional<List<DocServiceConfigurator>> docServiceConfigurators)
+            Optional<List<DocServiceConfigurator>> docServiceConfigurators,
+            ApplicationEventPublisher eventPublisher)
             throws InterruptedException {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -157,6 +160,8 @@ public class ArmeriaAutoConfiguration {
             }
             return result;
         }).join();
+
+        eventPublisher.publishEvent(new ArmeriaServerInitializedEvent(server));
         logger.info("Armeria server started at ports: {}", server.activePorts());
         return server;
     }
