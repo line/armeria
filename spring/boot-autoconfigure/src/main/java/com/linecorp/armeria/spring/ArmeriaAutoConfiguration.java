@@ -41,7 +41,6 @@ import org.springframework.context.annotation.Configuration;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.spring.ArmeriaServerInitializedEvent;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -82,7 +81,7 @@ public class ArmeriaAutoConfiguration {
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
             Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans,
             Optional<List<DocServiceConfigurator>> docServiceConfigurators,
-            ApplicationEventPublisher eventPublisher)
+            Optional<ApplicationEventPublisher> eventPublisher)
             throws InterruptedException {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -90,7 +89,8 @@ public class ArmeriaAutoConfiguration {
             !thriftServiceRegistrationBeans.isPresent() &&
             !grpcServiceRegistrationBeans.isPresent() &&
             !httpServiceRegistrationBeans.isPresent() &&
-            !annotatedServiceRegistrationBeans.isPresent()) {
+            !annotatedServiceRegistrationBeans.isPresent() &&
+            !eventPublisher.isPresent()) {
             // No services to register, no need to start up armeria server.
             return null;
         }
@@ -161,7 +161,7 @@ public class ArmeriaAutoConfiguration {
             return result;
         }).join();
 
-        eventPublisher.publishEvent(new ArmeriaServerInitializedEvent(server));
+        eventPublisher.get().publishEvent(new ArmeriaServerInitializedEvent(server));
         logger.info("Armeria server started at ports: {}", server.activePorts());
         return server;
     }

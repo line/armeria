@@ -34,6 +34,7 @@ import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaServerInitializedEvent;
 
 /**
  * {@link ApplicationContextInitializer} that sets {@link Environment} properties for the

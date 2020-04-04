@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import org.springframework.context.ApplicationEvent;
 
@@ -26,10 +26,16 @@ import com.linecorp.armeria.server.Server;
  */
 public class ArmeriaServerInitializedEvent extends ApplicationEvent {
 
+    /**
+     * Creates a new instance.
+     */
     public ArmeriaServerInitializedEvent(Server server) {
         super(server);
     }
 
+    /**
+     * Returns the {@link Server}.
+     */
     public Server getServer() {
         return getSource();
     }
