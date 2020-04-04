@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -41,12 +42,16 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.SslContextBuilder;
+import reactor.core.scheduler.Schedulers;
 
 class ServerBuilderTest {
 
@@ -487,5 +492,17 @@ class ServerBuilderTest {
               })
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
+    }
+
+    @Test
+    void monitorBlockingTaskExecutorAndSchedulersTogetherWithPrometheus() {
+        final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        Metrics.addRegistry(registry);
+        Server.builder()
+              .meterRegistry(registry)
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .build();
+        Schedulers.enableMetrics();
+        Schedulers.decorateExecutorService(Schedulers.single(), Executors.newSingleThreadScheduledExecutor());
     }
 }

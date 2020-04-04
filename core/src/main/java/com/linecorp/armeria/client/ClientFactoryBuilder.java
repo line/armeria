@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -76,6 +77,10 @@ import io.netty.resolver.dns.DnsNameResolverBuilder;
  * }</pre>
  */
 public final class ClientFactoryBuilder {
+
+    static {
+        RequestContextUtil.init();
+    }
 
     private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
 

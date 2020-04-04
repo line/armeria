@@ -18,13 +18,17 @@ package com.linecorp.armeria.server.encoding;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -51,5 +55,18 @@ class HttpEncodedResponseTest {
 
         // 'buf' should be released.
         assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
+    void doNotEncodeWhenContentShouldBeEmpty() {
+        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.NO_CONTENT).contentType(
+                MediaType.PLAIN_TEXT_UTF_8).build();
+        // Add CONTINUE not to validate when creating HttpResponse.
+        final HttpResponse orig = HttpResponse.of(ResponseHeaders.of(HttpStatus.CONTINUE), headers,
+                                                  HttpData.ofUtf8("foo"));
+        final HttpEncodedResponse encoded = new HttpEncodedResponse(
+                orig, HttpEncodingType.DEFLATE, mediaType -> true, 1);
+        final List<HttpObject> join = encoded.drainAll().join();
+        assertThat(((HttpData) join.get(2)).toStringUtf8()).isEqualTo("foo");
     }
 }

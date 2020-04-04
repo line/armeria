@@ -35,11 +35,11 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
@@ -76,18 +76,13 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             final ResponseHeaders headers = (ResponseHeaders) obj;
 
             // Skip informational headers.
-            final String status = headers.get(HttpHeaderNames.STATUS);
-            if (ArmeriaHttpUtil.isInformational(status)) {
+            final HttpStatus status = headers.status();
+            if (status.isInformational()) {
                 return obj;
             }
 
             if (headersSent) {
                 // Trailers, no modification.
-                return obj;
-            }
-
-            if (status == null) {
-                // Follow-up headers for informational headers, no modification.
                 return obj;
             }
 
@@ -173,7 +168,10 @@ class HttpEncodedResponse extends FilteredHttpResponse {
         }
     }
 
-    private boolean shouldEncodeResponse(HttpHeaders headers) {
+    private boolean shouldEncodeResponse(ResponseHeaders headers) {
+        if (headers.status().isContentAlwaysEmpty()) {
+            return false;
+        }
         if (headers.contains(HttpHeaderNames.CONTENT_ENCODING)) {
             // We don't do automatic encoding if the user-supplied headers contain
             // Content-Encoding.

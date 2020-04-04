@@ -120,6 +120,10 @@ public final class Flags {
 
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
+    @Nullable
+    private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
+            System.getProperty(PREFIX + "requestContextStorageProvider");
+
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
@@ -412,6 +416,20 @@ public final class Flags {
      */
     public static boolean verboseResponses() {
         return VERBOSE_RESPONSES;
+    }
+
+    /**
+     * Returns the fully qualified class name of {@link RequestContextStorageProvider} that is used to choose
+     * when multiple {@link RequestContextStorageProvider}s exist.
+     *
+     * <p>The default value of this flag is {@code null}, which means only one
+     * {@link RequestContextStorageProvider} must be found via Java SPI. If there are more than one,
+     * you must specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option to
+     * choose the {@link RequestContextStorageProvider}.
+     */
+    @Nullable
+    public static String requestContextStorageProvider() {
+        return REQUEST_CONTEXT_STORAGE_PROVIDER;
     }
 
     /**

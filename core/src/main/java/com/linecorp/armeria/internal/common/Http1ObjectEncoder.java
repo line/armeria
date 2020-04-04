@@ -25,6 +25,7 @@ import java.util.Queue;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 
@@ -38,16 +39,14 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
-public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
+public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     /**
      * The maximum allowed length of an HTTP chunk when TLS is enabled.
@@ -68,6 +67,8 @@ public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
 
     private final Channel ch;
     private final SessionProtocol protocol;
+
+    private volatile boolean closed;
 
     /**
      * The ID of the request which is at its turn to send a response.
@@ -95,7 +96,7 @@ public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected final Channel channel() {
+    public final Channel channel() {
         return ch;
     }
 
@@ -115,13 +116,8 @@ public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
         return f;
     }
 
-    protected static void removeHttpExtensionHeaders(HttpHeaders outHeaders) {
-        outHeaders.remove(ExtensionHeaderNames.STREAM_ID.text());
-        outHeaders.remove(ExtensionHeaderNames.PATH.text());
-    }
-
     @Override
-    protected final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
+    public final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (!isWritable(id)) {
             ReferenceCountUtil.safeRelease(data);
             return newClosedSessionFuture();
@@ -141,7 +137,7 @@ public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
                 // Cleartext connection or data.length() <= MAX_TLS_DATA_LENGTH
                 return doWriteUnsplitData(id, data, endStream);
             } else {
-                // TLS and data.length() > MAX_TLS_DATA_LENGTH
+                // TLS or data.length() > MAX_TLS_DATA_LENGTH
                 return doWriteSplitData(id, data, endStream);
             }
         } catch (Throwable t) {
@@ -278,7 +274,30 @@ public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
+    public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
+        if (!isWritable(id)) {
+            return newClosedSessionFuture();
+        }
+
+        return write(id, convertTrailers(headers), true);
+    }
+
+    private LastHttpContent convertTrailers(HttpHeaders inputHeaders) {
+        if (inputHeaders.isEmpty()) {
+            return LastHttpContent.EMPTY_LAST_CONTENT;
+        }
+
+        final LastHttpContent lastContent = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, false);
+        final io.netty.handler.codec.http.HttpHeaders outputHeaders = lastContent.trailingHeaders();
+        convertTrailers(inputHeaders, outputHeaders);
+        return lastContent;
+    }
+
+    protected abstract void convertTrailers(HttpHeaders inputHeaders,
+                                            io.netty.handler.codec.http.HttpHeaders outputHeaders);
+
+    @Override
+    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
         // NB: this.minClosedId can be overwritten more than once when 3+ pipelined requests are received
         //     and they are handled by different threads simultaneously.
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
@@ -318,7 +337,12 @@ public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected final void doClose() {
+    public final void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+
         if (pendingWritesMap.isEmpty()) {
             return;
         }
@@ -336,6 +360,11 @@ public abstract class Http1ObjectEncoder extends HttpObjectEncoder {
         }
 
         pendingWritesMap.clear();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closed;
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

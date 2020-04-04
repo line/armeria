@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -136,6 +137,43 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     @Override
     public DecoratingServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
         return (DecoratingServiceBindingBuilder) super.produces(produceTypes);
+    }
+
+    @Override
+    public DecoratingServiceBindingBuilder matchesParams(String... paramPredicates) {
+        return (DecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public DecoratingServiceBindingBuilder matchesParams(Iterable<String> paramPredicates) {
+        return (DecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public DecoratingServiceBindingBuilder matchesParams(String paramName,
+                                                         Predicate<? super String> valuePredicate) {
+        return (DecoratingServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
+    }
+
+    @Override
+    public DecoratingServiceBindingBuilder matchesHeaders(String... headerPredicates) {
+        return (DecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public DecoratingServiceBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
+        return (DecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public DecoratingServiceBindingBuilder matchesHeaders(CharSequence headerName,
+                                                          Predicate<? super String> valuePredicate) {
+        return (DecoratingServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
+    }
+
+    @Override
+    public DecoratingServiceBindingBuilder addRoute(Route route) {
+        return (DecoratingServiceBindingBuilder) super.addRoute(route);
     }
 
     /**

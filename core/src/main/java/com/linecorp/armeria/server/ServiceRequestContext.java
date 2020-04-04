@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -212,22 +212,22 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @Override
     default SafeCloseable push() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
             return noopSafeCloseable();
         }
 
-        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
-            return () -> RequestContextThreadLocal.set(oldCtx);
+        if (oldCtx == null) {
+            return () -> RequestContextUtil.pop(this, null);
         }
 
-        if (oldCtx == null) {
-            return RequestContextThreadLocal::remove;
+        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
+            return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
-        RequestContextThreadLocal.set(oldCtx);
+        RequestContextUtil.pop(this, oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
 
@@ -237,20 +237,40 @@ public interface ServiceRequestContext extends RequestContext {
                                             @Nullable RpcRequest rpcReq);
 
     /**
-     * Returns the {@link Server} that is handling the current {@link Request}.
+     * Returns the {@link ServiceConfig} of the {@link Service} that is handling the current {@link Request}.
      */
-    Server server();
+    ServiceConfig config();
+
+    /**
+     * Returns the {@link Server} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
+     */
+    @Deprecated
+    default Server server() {
+        return config().server();
+    }
 
     /**
      * Returns the {@link VirtualHost} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    VirtualHost virtualHost();
+    @Deprecated
+    default VirtualHost virtualHost() {
+        return config().virtualHost();
+    }
 
     /**
      * Returns the {@link Route} associated with the {@link Service} that is handling the current
      * {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    Route route();
+    @Deprecated
+    default Route route() {
+        return config().route();
+    }
 
     /**
      * Returns the {@link RoutingContext} used to find the {@link Service}.
@@ -258,7 +278,7 @@ public interface ServiceRequestContext extends RequestContext {
     RoutingContext routingContext();
 
     /**
-     * Returns the path parameters mapped by the {@link #route()} associated with the {@link Service}
+     * Returns the path parameters mapped by the {@link Route} associated with the {@link Service}
      * that is handling the current {@link Request}.
      */
     Map<String, String> pathParams();
@@ -273,8 +293,13 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the {@link HttpService} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    HttpService service();
+    @Deprecated
+    default HttpService service() {
+        return config().service();
+    }
 
     /**
      * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
@@ -634,13 +659,23 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns whether the verbose response mode is enabled. When enabled, the service responses will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the service responses will not expose such server-side details to the client.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    boolean verboseResponses();
+    @Deprecated
+    default boolean verboseResponses() {
+        return config().verboseResponses();
+    }
 
     /**
      * Returns the {@link AccessLogWriter}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    AccessLogWriter accessLogWriter();
+    @Deprecated
+    default AccessLogWriter accessLogWriter() {
+        return config().accessLogWriter();
+    }
 
     /**
      * Returns the {@link HttpHeaders} which will be included when a {@link Service} sends an

@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -52,6 +53,8 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsNameResolverTimeoutException;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -246,8 +249,8 @@ class RefreshingAddressResolverTest {
 
     @Test
     void negativeTtl() {
-        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler())
-        ) {
+        // TimeoutHandler times out only the first query.
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler())) {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder = builder(server).negativeTtl(60).queryTimeoutMillis(1000);
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
@@ -256,24 +259,60 @@ class RefreshingAddressResolverTest {
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future::isDone);
-                assertThat(future.cause()).isInstanceOf(UnknownHostException.class);
 
+                final Throwable cause = future.cause();
+                assertThat(cause).isInstanceOfAny(UnknownHostException.class,
+                                                  DnsTimeoutException.class);
+                if (cause instanceof UnknownHostException) {
+                    assertThat(cause).hasCauseInstanceOf(DnsNameResolverTimeoutException.class);
+                }
+
+                // Because it's timed out, the result is not cached.
                 final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache = group.cache();
                 assertThat(cache.size()).isZero();
 
                 final Future<InetSocketAddress> future2 = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future2::isDone);
-                assertThat(future.cause()).isInstanceOf(UnknownHostException.class);
+                assertThat(future2.cause()).isInstanceOf(UnknownHostException.class)
+                                           .hasNoCause();
+                // Because it is NXDOMAIN, the result is cached.
                 assertThat(cache.size()).isOne();
             }
         }
     }
 
-    private static DnsResolverGroupBuilder builder(TestDnsServer server) {
-        final DnsServerAddresses addrs = DnsServerAddresses.sequential(server.addr());
+    @Test
+    void timeout() {
+        try (TestDnsServer server1 = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler());
+             TestDnsServer server2 = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler());
+             TestDnsServer server3 = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler());
+             TestDnsServer server4 = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler());
+             TestDnsServer server5 = new TestDnsServer(ImmutableMap.of(
+                     new DefaultDnsQuestion("foo.com.", A),
+                     new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsResolverGroupBuilder builder = builder(server1, server2, server3, server4, server5)
+                    .negativeTtl(60)
+                    .queryTimeoutMillis(1000);
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+
+                final Future<InetSocketAddress> future = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                await().until(future::isDone);
+                assertThat(future.cause()).isInstanceOf(DnsTimeoutException.class);
+            }
+        }
+    }
+
+    private static DnsResolverGroupBuilder builder(TestDnsServer... servers) {
+        final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+                hostname -> DnsServerAddresses.sequential(
+                        Stream.of(servers).map(TestDnsServer::addr).collect(toImmutableList())).stream();
         return new DnsResolverGroupBuilder()
-                .dnsServerAddressStreamProvider(hostname -> addrs.stream())
+                .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .traceEnabled(false);
     }

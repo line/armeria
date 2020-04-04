@@ -182,7 +182,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             compressor = Identity.NONE;
         }
         messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
-        prepareHeaders(compressor, metadata);
         listener = responseListener;
 
         if (callOptions.getDeadline() != null) {
@@ -204,6 +203,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 });
             }
         }
+
+        // Must come after handling deadline.
+        prepareHeaders(compressor, metadata);
 
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpointGroup,

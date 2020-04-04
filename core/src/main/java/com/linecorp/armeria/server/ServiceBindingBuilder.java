@@ -179,6 +179,16 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder addRoute(Route route) {
+        return (ServiceBindingBuilder) super.addRoute(route);
+    }
+
+    @Override
+    public ServiceBindingBuilder defaultLogName(String defaultLogName) {
+        return (ServiceBindingBuilder) super.defaultLogName(defaultLogName);
+    }
+
+    @Override
     public ServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return (ServiceBindingBuilder) super.requestTimeout(requestTimeout);
     }

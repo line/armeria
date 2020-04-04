@@ -20,87 +20,52 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http2.Http2Exception;
 
-public final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder {
+public final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements ClientHttpObjectEncoder {
+
     public ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol) {
         super(ch, protocol);
     }
 
     @Override
-    protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream,
-                                           HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) {
-        if (!isWritable(id)) {
-            return newClosedSessionFuture();
-        }
-
-        try {
-            final HttpObject converted;
-            final String method = headers.get(HttpHeaderNames.METHOD);
-            if (method == null) {
-                converted = convertTrailers(streamId, headers);
-            } else {
-                converted = convertHeaders(streamId, headers, endStream, additionalHeaders);
-            }
-            return writeNonInformationalHeaders(id, converted, endStream);
-        } catch (Throwable t) {
-            return newFailedFuture(t);
-        }
+    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
+        return writeNonInformationalHeaders(id, convertHeaders(headers, endStream), endStream);
     }
 
-    private static LastHttpContent convertTrailers(int streamId, HttpHeaders inHeaders) throws Http2Exception {
-        if (inHeaders.isEmpty()) {
-            return LastHttpContent.EMPTY_LAST_CONTENT;
-        }
-        final LastHttpContent lastContent = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, false);
+    private HttpObject convertHeaders(RequestHeaders headers, boolean endStream) {
+        final String method = headers.method().name();
+        final HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method),
+                                                       headers.path(), false);
+        final io.netty.handler.codec.http.HttpHeaders nettyHeaders = req.headers();
+        ArmeriaHttpUtil.toNettyHttp1ClientHeader(headers, nettyHeaders);
 
-        ArmeriaHttpUtil.toNettyHttp1ClientTrailer(streamId, inHeaders, lastContent.trailingHeaders());
-
-        removeHttpExtensionHeaders(lastContent.trailingHeaders());
-        return lastContent;
-    }
-
-    private HttpObject convertHeaders(int streamId, HttpHeaders headers, boolean endStream,
-                                      HttpHeaders additionalHeaders) throws Http2Exception {
-        final String method = headers.get(HttpHeaderNames.METHOD);
-        final String path = headers.get(HttpHeaderNames.PATH);
-        assert path != null;
-        final HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method), path,
-                                                       false);
-        ArmeriaHttpUtil.toNettyHttp1ClientHeader(streamId, headers, additionalHeaders, req.headers(),
-                                                 HttpVersion.HTTP_1_1);
-
-        removeHttpExtensionHeaders(req.headers());
-
-        if (!req.headers().contains(HttpHeaderNames.USER_AGENT)) {
-            req.headers().add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
+        if (!nettyHeaders.contains(HttpHeaderNames.USER_AGENT)) {
+            nettyHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
         }
 
-        if (!req.headers().contains(HttpHeaderNames.HOST)) {
+        if (!nettyHeaders.contains(HttpHeaderNames.HOST)) {
             final InetSocketAddress remoteAddress = (InetSocketAddress) channel().remoteAddress();
-            req.headers().add(HttpHeaderNames.HOST, ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostName(),
-                                                                                    remoteAddress.getPort(),
-                                                                                    protocol().defaultPort()));
+            nettyHeaders.add(HttpHeaderNames.HOST, ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostName(),
+                                                                                   remoteAddress.getPort(),
+                                                                                   protocol().defaultPort()));
         }
 
         if (endStream) {
-            req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+            nettyHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
             // Set or remove the 'content-length' header depending on request method.
             // See: https://tools.ietf.org/html/rfc7230#section-3.3.2
@@ -117,17 +82,23 @@ public final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder {
                 case "POST":
                 case "PUT":
                 case "PATCH":
-                    req.headers().set(HttpHeaderNames.CONTENT_LENGTH, "0");
+                    nettyHeaders.set(HttpHeaderNames.CONTENT_LENGTH, "0");
                     break;
                 default:
-                    req.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+                    nettyHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
             }
         } else if (HttpUtil.getContentLength(req, -1L) >= 0) {
             // Avoid the case where both 'content-length' and 'transfer-encoding' are set.
-            req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+            nettyHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
         } else {
-            req.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+            nettyHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         }
         return req;
+    }
+
+    @Override
+    protected void convertTrailers(HttpHeaders inputHeaders,
+                                   io.netty.handler.codec.http.HttpHeaders outputHeaders) {
+        ArmeriaHttpUtil.toNettyHttp1ClientTrailer(inputHeaders, outputHeaders);
     }
 }

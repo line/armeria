@@ -38,10 +38,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.internal.common.metric.ExecutorServiceMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import io.micrometer.core.instrument.internal.TimedExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
@@ -158,9 +157,10 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (!(blockingTaskExecutor instanceof TimedExecutorService)) {
-            blockingTaskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                                                  "armeriaBlockingTaskExecutor");
+        if (!ExecutorServiceMetrics.isMonitoredExecutor(blockingTaskExecutor)) {
+            blockingTaskExecutor =
+                    ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
+                                                   "blockingTaskExecutor", "armeria.executor");
         }
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
@@ -601,7 +601,7 @@ public final class ServerConfig {
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop(),
-                    meterRegistry(),channelOptions(), childChannelOptions(),
+                    meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled());

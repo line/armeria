@@ -45,11 +45,11 @@ public class RoutersBenchmark {
     static {
         SERVICES = ImmutableList.of(
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
-                                  SERVICE, 0, 0, false, AccessLogWriter.disabled(), false),
+                                  SERVICE, null, 0, 0, false, AccessLogWriter.disabled(), false),
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
-                                  SERVICE, 0, 0, false, AccessLogWriter.disabled(), false)
+                                  SERVICE, null, 0, 0, false, AccessLogWriter.disabled(), false)
         );
-        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, 0, 0, false,
+        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, null, 0, 0, false,
                                              AccessLogWriter.disabled(), false);
         HOST = new VirtualHost(
                 "localhost", "localhost", null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,

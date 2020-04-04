@@ -19,7 +19,7 @@ package com.linecorp.armeria.internal.server;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
@@ -28,10 +28,8 @@ import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
@@ -39,10 +37,8 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http2.Http2Exception;
 
-public final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder {
+public final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
@@ -54,75 +50,31 @@ public final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder {
     }
 
     @Override
-    protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream,
-                                           HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) {
+    public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                        boolean isTrailersEmpty) {
         if (!isWritable(id)) {
             return newClosedSessionFuture();
         }
 
-        try {
-            final HttpObject converted;
-            final String status = headers.get(HttpHeaderNames.STATUS);
-            if (status == null) {
-                // Trailers
-                converted = convertTrailers(streamId, headers, endStream, additionalTrailers);
-                final ChannelFuture f = write(id, converted, endStream);
-                channel().flush();
-                return f;
-            }
-
-            converted = convertHeaders(streamId, headers, endStream, additionalHeaders, additionalTrailers);
-
-            if (!status.isEmpty() && status.charAt(0) == '1') {
-                // Informational status headers.
-                final ChannelFuture f = write(id, converted, false);
-                if (endStream) {
-                    // Can't end a stream with informational status in HTTP/1.
-                    f.addListener(ChannelFutureListener.CLOSE);
-                }
-                channel().flush();
-                return f;
-            }
-
-            // Non-informational status headers.
-            return writeNonInformationalHeaders(id, converted, endStream);
-        } catch (Throwable t) {
-            return newFailedFuture(t);
+        final HttpObject converted = convertHeaders(headers, endStream, isTrailersEmpty);
+        if (headers.status().isInformational()) {
+            return write(id, converted, false);
         }
+        return writeNonInformationalHeaders(id, converted, endStream);
     }
 
-    private static LastHttpContent convertTrailers(int streamId, HttpHeaders inHeaders, boolean endStream,
-                                                   HttpHeaders additionalTrailers) throws Http2Exception {
-        if (inHeaders.isEmpty()) {
-            return LastHttpContent.EMPTY_LAST_CONTENT;
-        }
-
-        final LastHttpContent lastContent = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, false);
-
-        ArmeriaHttpUtil.toNettyHttp1ServerTrailer(streamId, inHeaders, additionalTrailers,
-                                                  lastContent.trailingHeaders(), endStream);
-
-        removeHttpExtensionHeaders(lastContent.trailingHeaders());
-        return lastContent;
-    }
-
-    private HttpObject convertHeaders(
-            int streamId, HttpHeaders headers, boolean endStream,
-            HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) throws Http2Exception {
-        final String status = headers.get(HttpHeaderNames.STATUS);
-        final HttpResponse res;
-        final int statusCode = Integer.parseInt(status);
-        final boolean informational = HttpStatusClass.INFORMATIONAL.contains(statusCode);
+    private HttpObject convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
+        final int statusCode = headers.status().code();
         final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
 
-        if (endStream || informational) {
-            res = new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, nettyStatus,
-                    Unpooled.EMPTY_BUFFER, false);
-
+        final HttpResponse res;
+        if (headers.status().isInformational()) {
+            res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
+            ArmeriaHttpUtil.toNettyHttp1ServerHeader(headers, res.headers());
+        } else if (endStream) {
+            res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
-            convertHeaders0(streamId, headers, outHeaders, endStream,
-                            additionalHeaders, additionalTrailers);
+            convertHeaders(headers, outHeaders, isTrailersEmpty);
 
             if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
                 if (statusCode == 304) {
@@ -141,34 +93,17 @@ public final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder {
             }
         } else {
             res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
-            // Perform conversion.
-            convertHeaders0(streamId, headers, res.headers(), endStream,
-                            additionalHeaders, additionalTrailers);
-            setTransferEncoding(res);
+            convertHeaders(headers, res.headers(), isTrailersEmpty);
+            maybeSetTransferEncoding(res);
         }
         return res;
     }
 
-    private static void setTransferEncoding(HttpMessage out) {
-        final io.netty.handler.codec.http.HttpHeaders outHeaders = out.headers();
-        final long contentLength = HttpUtil.getContentLength(out, -1L);
-        if (contentLength < 0) {
-            // Use chunked encoding.
-            outHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-        }
-    }
+    private void convertHeaders(HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
+                                boolean isTrailersEmpty) {
+        ArmeriaHttpUtil.toNettyHttp1ServerHeader(inHeaders, outHeaders);
 
-    private void convertHeaders0(
-            int streamId, HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
-            boolean endStream, HttpHeaders additionalHeaders, HttpHeaders additionalTrailers)
-            throws Http2Exception {
-        ArmeriaHttpUtil.toNettyHttp1ServerHeader(streamId, inHeaders, additionalHeaders, additionalTrailers,
-                                                 outHeaders, HttpVersion.HTTP_1_1, endStream);
-        removeHttpExtensionHeaders(outHeaders);
-
-        if (!additionalTrailers.isEmpty() &&
-            outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+        if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
             // prevent the trailers from being sent so we go ahead and remove content-length to
             // force chunked encoding.
@@ -182,5 +117,21 @@ public final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder {
         if (enableDateHeader && !outHeaders.contains(HttpHeaderNames.DATE)) {
             outHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
         }
+    }
+
+    private static void maybeSetTransferEncoding(HttpMessage out) {
+        final io.netty.handler.codec.http.HttpHeaders outHeaders = out.headers();
+        final long contentLength = HttpUtil.getContentLength(out, -1L);
+        if (contentLength < 0) {
+            // Use chunked encoding.
+            outHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+        }
+    }
+
+    @Override
+    protected void convertTrailers(HttpHeaders inputHeaders,
+                                   io.netty.handler.codec.http.HttpHeaders outputHeaders) {
+        ArmeriaHttpUtil.toNettyHttp1ServerTrailer(inputHeaders, outputHeaders);
     }
 }

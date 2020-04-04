@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -99,14 +100,14 @@ class SubscriberThrowingExceptionTest {
         assertThat(data2.refCnt()).isZero();
 
         final DefaultStreamMessage<Object> publisher = new DefaultStreamMessage<>();
-        data = newUnpooledBuffer();
-        publisher.write(data);
+        final ByteBuf data3 = newUnpooledBuffer();
+        publisher.write(data3);
         final PublisherBasedStreamMessage<Object> publisherBasedStreamMessage =
                 new PublisherBasedStreamMessage<>(publisher);
         subscribeAndValidate(publisherBasedStreamMessage, throwExceptionOnOnSubscribe);
-        assertThat(data.refCnt()).isZero();
         assertThatThrownBy(() -> publisher.whenComplete().join())
                 .hasCauseInstanceOf(CancelledSubscriptionException.class);
+        await().until(() -> data3.refCnt() == 0);
     }
 
     private void subscribeAndValidate(StreamMessage<Object> stream, boolean throwExceptionOnOnSubscribe) {

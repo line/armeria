@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -172,10 +174,14 @@ public final class HealthCheckService implements TransientHttpService {
             pendingHealthyResponses = null;
             pendingUnhealthyResponses = null;
 
-            if (maxLongPollingTimeoutMillis > 0) {
-                logger.warn("Long-polling support has been disabled for {} " +
-                            "because some of the specified {}s are not listenable.",
-                            getClass().getSimpleName(), HealthChecker.class.getSimpleName());
+            if (maxLongPollingTimeoutMillis > 0 && logger.isWarnEnabled()) {
+                logger.warn("Long-polling support has been disabled " +
+                            "because some of the specified {}s do not implement {}: {}",
+                            HealthChecker.class.getSimpleName(),
+                            ListenableHealthChecker.class.getSimpleName(),
+                            this.healthCheckers.stream()
+                                               .filter(e -> !(e instanceof ListenableHealthChecker))
+                                               .collect(toImmutableList()));
             }
         }
 

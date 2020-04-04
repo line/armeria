@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientHttp1ObjectEncoder;
 import com.linecorp.armeria.internal.client.ClientHttp2ObjectEncoder;
-import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.client.ClientHttpObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -52,6 +52,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyConnectionEvent;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
@@ -87,7 +88,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Nullable
     private HttpResponseDecoder responseDecoder;
     @Nullable
-    private HttpObjectEncoder requestEncoder;
+    private ClientHttpObjectEncoder requestEncoder;
 
     /**
      * The maximum number of unfinished requests. In HTTP/2, this value is identical to MAX_CONCURRENT_STREAMS.
@@ -350,6 +351,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        if (cause instanceof ProxyConnectException) {
+            setPendingException(ctx, new UnprocessedRequestException(cause));
+            return;
+        }
         setPendingException(ctx, new ClosedSessionException(cause));
         if (!(cause instanceof IOException)) {
             ctx.close();

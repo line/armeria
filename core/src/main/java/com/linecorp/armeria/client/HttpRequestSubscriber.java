@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpSessionHandler.MAX_NUM_REQUESTS_SENT;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeRequestHeaders;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -41,13 +42,14 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.client.ClientHttpObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
@@ -61,7 +63,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private final Channel ch;
-    private final HttpObjectEncoder encoder;
+    private final ClientHttpObjectEncoder encoder;
     private final HttpResponseDecoder responseDecoder;
     private final HttpRequest request;
     private final DecodedHttpResponse originalRes;
@@ -82,7 +84,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private boolean isSubscriptionCompleted;
     private boolean loggedRequestFirstBytesTransferred;
 
-    HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
+    HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                           HttpRequest request, DecodedHttpResponse originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
         this.ch = ch;
@@ -129,7 +131,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 return;
             }
 
-            failAndReset(future.cause());
+            if (!loggedRequestFirstBytesTransferred) {
+                final Throwable cause = future.cause();
+                if (cause instanceof UnprocessedRequestException) {
+                    fail(cause);
+                } else {
+                    fail(new UnprocessedRequestException(cause));
+                }
+            } else {
+                failAndReset(future.cause());
+            }
         }
     }
 
@@ -191,15 +202,15 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        logBuilder.requestHeaders(firstHeaders);
-
         if (request.isEmpty()) {
             state = State.DONE;
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
-        final ChannelFuture future = encoder.writeHeaders(id, streamId(), firstHeaders, request.isEmpty(),
-                                                          ctx.additionalRequestHeaders(), HttpHeaders.of());
+
+        final RequestHeaders merged = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
+        logBuilder.requestHeaders(firstHeaders);
+        final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, request.isEmpty());
         future.addListener(this);
         ch.flush();
     }
@@ -277,9 +288,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final ChannelFuture future;
         if (o instanceof HttpHeaders) {
-            // trailers
-            future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream,
-                                          HttpHeaders.of(), HttpHeaders.of());
+            future = encoder.writeTrailers(id, streamId(), (HttpHeaders) o);
         } else {
             future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
         }
@@ -334,6 +343,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void failAndReset(Throwable cause) {
+        if (cause instanceof ProxyConnectException) {
+            // ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+            return;
+        }
+
         fail(cause);
 
         final Http2Error error;

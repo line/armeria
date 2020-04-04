@@ -102,14 +102,14 @@ public interface MeterIdPrefixFunction {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
                     tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "hostnamePattern"
                                                                           : "hostname.pattern",
-                                              sCtx.virtualHost().hostnamePattern()));
+                                              sCtx.config().virtualHost().hostnamePattern()));
                 }
 
                 tagListBuilder.add(Tag.of("method", methodName));
 
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                    tagListBuilder.add(Tag.of("route", sCtx.route().meterTag()));
+                    tagListBuilder.add(Tag.of("route", sCtx.config().route().meterTag()));
                 }
             }
         };

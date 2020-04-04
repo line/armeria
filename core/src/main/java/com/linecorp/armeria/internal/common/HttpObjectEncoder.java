@@ -32,43 +32,37 @@ import io.netty.util.ReferenceCountUtil;
 /**
  * Converts an {@link HttpObject} into a protocol-specific object and writes it into a {@link Channel}.
  */
-public abstract class HttpObjectEncoder {
+public interface HttpObjectEncoder {
 
-    private volatile boolean closed;
+    Channel channel();
 
-    protected abstract Channel channel();
-
-    protected EventLoop eventLoop() {
+    default EventLoop eventLoop() {
         return channel().eventLoop();
     }
 
     /**
-     * Writes an {@link HttpHeaders}.
+     * Writes an HTTP trailers.
      */
-    public final ChannelFuture writeHeaders(int id, int streamId, HttpHeaders headers, boolean endStream,
-                                            HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) {
+    default ChannelFuture writeTrailers(int id, int streamId, HttpHeaders headers) {
         assert eventLoop().inEventLoop();
 
-        if (closed) {
+        if (isClosed()) {
             return newClosedSessionFuture();
         }
 
-        return doWriteHeaders(id, streamId, headers, endStream, additionalHeaders, additionalTrailers);
+        return doWriteTrailers(id, streamId, headers);
     }
 
-    protected abstract ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers,
-                                                    boolean endStream,
-                                                    HttpHeaders additionalHeaders,
-                                                    HttpHeaders additionalTrailers);
+    ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers);
 
     /**
      * Writes an {@link HttpData}.
      */
-    public final ChannelFuture writeData(int id, int streamId, HttpData data, boolean endStream) {
+    default ChannelFuture writeData(int id, int streamId, HttpData data, boolean endStream) {
 
         assert eventLoop().inEventLoop();
 
-        if (closed) {
+        if (isClosed()) {
             ReferenceCountUtil.safeRelease(data);
             return newClosedSessionFuture();
         }
@@ -76,52 +70,48 @@ public abstract class HttpObjectEncoder {
         return doWriteData(id, streamId, data, endStream);
     }
 
-    protected abstract ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream);
+    ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream);
 
     /**
      * Resets the specified stream. If the session protocol does not support multiplexing or the connection
      * is in unrecoverable state, the connection will be closed. For example, in an HTTP/1 connection, this
      * will lead the connection to be closed immediately or after the previous requests that are not reset.
      */
-    public final ChannelFuture writeReset(int id, int streamId, Http2Error error) {
+    default ChannelFuture writeReset(int id, int streamId, Http2Error error) {
 
-        if (closed) {
+        if (isClosed()) {
             return newClosedSessionFuture();
         }
 
         return doWriteReset(id, streamId, error);
     }
 
-    protected abstract ChannelFuture doWriteReset(int id, int streamId, Http2Error error);
+    ChannelFuture doWriteReset(int id, int streamId, Http2Error error);
 
     /**
      * Releases the resources related with this encoder and fails any unfinished writes.
      */
-    public void close() {
-        if (closed) {
-            return;
-        }
+    void close();
 
-        closed = true;
-        doClose();
-    }
+    /**
+     * Returns {@code true} if {@link #close()} is called.
+     */
+    boolean isClosed();
 
     /**
      * Returns {@code true} if the specified {@code id} and {@code streamId} is writable.
      */
-    public abstract boolean isWritable(int id, int streamId);
+    boolean isWritable(int id, int streamId);
 
-    protected abstract void doClose();
-
-    protected final ChannelFuture newClosedSessionFuture() {
+    default ChannelFuture newClosedSessionFuture() {
         return newFailedFuture(ClosedSessionException.get());
     }
 
-    protected final ChannelFuture newFailedFuture(Throwable cause) {
+    default ChannelFuture newFailedFuture(Throwable cause) {
         return channel().newFailedFuture(cause);
     }
 
-    protected final ByteBuf toByteBuf(HttpData data) {
+    default ByteBuf toByteBuf(HttpData data) {
         if (data instanceof ByteBufHolder) {
             return ((ByteBufHolder) data).content();
         }

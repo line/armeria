@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -160,10 +159,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        final Http1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(p.channel(),
-                                                                                SessionProtocol.H1C,
-                                                                                config.isServerHeaderEnabled(),
-                                                                                config.isDateHeaderEnabled());
+        final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
+                p.channel(), SessionProtocol.H1C, config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
         configureIdleTimeoutHandler(p, false);
@@ -405,9 +402,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
-            final Http1ObjectEncoder writer = new ServerHttp1ObjectEncoder(ch, SessionProtocol.H1,
-                                                                           config.isServerHeaderEnabled(),
-                                                                           config.isDateHeaderEnabled());
+            final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
+                    ch, SessionProtocol.H1, config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
@@ -450,11 +446,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final class Http2PrefaceOrHttpHandler extends ByteToMessageDecoder {
 
-        private final Http1ObjectEncoder responseEncoder;
+        private final ServerHttp1ObjectEncoder responseEncoder;
         @Nullable
         private String name;
 
-        Http2PrefaceOrHttpHandler(Http1ObjectEncoder responseEncoder) {
+        Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder) {
             this.responseEncoder = responseEncoder;
         }
 
