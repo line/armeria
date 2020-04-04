@@ -73,11 +73,11 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             future.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "bar"))));
 
         sb.service("/exception", (ctx, req) -> {
-            IllegalStateException ex = new IllegalStateException("not ready");
+            final IllegalStateException ex = new IllegalStateException("not ready");
             throw HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, ex);
         });
         sb.service("/exceptionAsync", (ctx, req) -> asyncResponse(future -> {
-            IllegalStateException ex = new IllegalStateException("not ready");
+            final IllegalStateException ex = new IllegalStateException("not ready");
             future.completeExceptionally(HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, ex));
         }));
 
@@ -122,13 +122,15 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     @Test
     @Override
     public void errorTag_exceptionOverridesHttpStatus() {
-        throw new AssumptionViolatedException("TODO: HttpResponseException cause swallowed by HttpServerHandler");
+        throw new AssumptionViolatedException(
+            "TODO: HttpResponseException cause swallowed by HttpServerHandler");
     }
 
     @Test
     @Override
     public void finishedSpanHandlerSeesException() {
-        throw new AssumptionViolatedException("TODO: HttpResponseException cause swallowed by HttpServerHandler");
+        throw new AssumptionViolatedException(
+            "TODO: HttpResponseException cause swallowed by HttpServerHandler");
     }
 
     @After
