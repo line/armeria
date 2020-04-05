@@ -30,9 +30,9 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.spring.ArmeriaServerInitializedEvent;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.spring.ArmeriaServerInitializedEvent;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 
 /**
