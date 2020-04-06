@@ -103,8 +103,8 @@ final class ClientRequestContextAdapter {
         }
     }
 
-    static brave.http.HttpClientResponse asHttpClientResponse(
-        RequestLog log, brave.http.HttpClientRequest request) {
+    static brave.http.HttpClientResponse asHttpClientResponse(RequestLog log,
+        brave.http.HttpClientRequest request) {
         return new HttpClientResponse(log, request);
     }
 
