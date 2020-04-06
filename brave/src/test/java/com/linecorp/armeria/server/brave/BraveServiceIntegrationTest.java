@@ -77,6 +77,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         sb.service("/exceptionAsync", (ctx, req) -> asyncResponse(future -> {
             future.completeExceptionally(new IllegalStateException("not ready"));
         }));
+        sb.service("/badrequest", (ctx, req) -> HttpResponse.of(BAD_REQUEST));
 
         sb.service("/items/:itemId",
                    (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8,
