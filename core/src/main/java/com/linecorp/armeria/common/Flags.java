@@ -701,9 +701,10 @@ public final class Flags {
 
     /**
      * Returns the default value for the PING interval.
-     * An <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1 client, or a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
-     * is sent for HTTP/2 server and client.
+     * A <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
+     * is sent for HTTP/2 server and client or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1 client.
      *
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
      * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.

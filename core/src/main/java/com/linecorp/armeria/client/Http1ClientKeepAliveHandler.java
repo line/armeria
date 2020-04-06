@@ -43,11 +43,6 @@ final class Http1ClientKeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
-    public void onReadOrWrite() {
-        onReadOrWrite0(false);
-    }
-
-    @Override
     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
         final int id = httpSession.incrementAndGetNumRequestsSent();
 
@@ -55,6 +50,11 @@ final class Http1ClientKeepAliveHandler extends KeepAliveHandler {
         final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true);
         ctx.flush();
         return future;
+    }
+
+    @Override
+    protected boolean pingResetsPreviousPing() {
+        return false;
     }
 
     @Override

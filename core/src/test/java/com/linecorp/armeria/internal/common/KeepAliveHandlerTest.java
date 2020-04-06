@@ -86,8 +86,8 @@ class KeepAliveHandlerTest {
                     }
 
                     @Override
-                    public void onReadOrWrite() {
-                        onReadOrWrite0(true);
+                    protected boolean pingResetsPreviousPing() {
+                        return true;
                     }
 
                     @Override
@@ -135,8 +135,8 @@ class KeepAliveHandlerTest {
                     }
 
                     @Override
-                    public void onReadOrWrite() {
-                        onReadOrWrite0(true);
+                    protected boolean pingResetsPreviousPing() {
+                        return true;
                     }
 
                     @Override
@@ -172,13 +172,13 @@ class KeepAliveHandlerTest {
         final KeepAliveHandler keepAliveHandler =
                 new KeepAliveHandler(channel, "test", idleTimeout, pingInterval) {
                     @Override
-                    public void onReadOrWrite() {
-                        onReadOrWrite0(true);
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        return channelFuture;
                     }
 
                     @Override
-                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
-                        return channelFuture;
+                    protected boolean pingResetsPreviousPing() {
+                        return true;
                     }
 
                     @Override
@@ -215,13 +215,13 @@ class KeepAliveHandlerTest {
         final KeepAliveHandler keepAliveHandler =
                 new KeepAliveHandler(channel, "test", idleTimeout, pingInterval) {
                     @Override
-                    public void onReadOrWrite() {
-                        onReadOrWrite0(true);
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        return promise;
                     }
 
                     @Override
-                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
-                        return promise;
+                    protected boolean pingResetsPreviousPing() {
+                        return true;
                     }
 
                     @Override
@@ -260,13 +260,13 @@ class KeepAliveHandlerTest {
         final KeepAliveHandler keepAliveHandler =
                 new KeepAliveHandler(channel, "test", idleTimeout, pingInterval) {
                     @Override
-                    public void onReadOrWrite() {
-                        onReadOrWrite0(resetPing);
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        return promise;
                     }
 
                     @Override
-                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
-                        return promise;
+                    protected boolean pingResetsPreviousPing() {
+                        return resetPing;
                     }
 
                     @Override

@@ -77,11 +77,6 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
-    public void onReadOrWrite() {
-        onReadOrWrite0(true);
-    }
-
-    @Override
     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
         lastPingPayload = random.nextLong();
         final ChannelFuture future = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise());
@@ -104,6 +99,11 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
             }
         }
         logger.debug("{} PING(ACK=1, DATA={}) received in {} ns", channel, lastPingPayload, elapsed);
+    }
+
+    @Override
+    protected boolean pingResetsPreviousPing() {
+        return true;
     }
 
     private boolean isGoodPingAck(long data) {

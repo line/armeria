@@ -156,9 +156,7 @@ public abstract class KeepAliveHandler {
         cancelFutures();
     }
 
-    public abstract void onReadOrWrite();
-
-    protected final void onReadOrWrite0(boolean resetPing) {
+    public final void onReadOrWrite() {
         if (pingState == PingState.SHUTDOWN) {
             return;
         }
@@ -168,7 +166,7 @@ public abstract class KeepAliveHandler {
             firstConnectionIdleEvent = true;
         }
 
-        if (resetPing) {
+        if (pingResetsPreviousPing()) {
             if (pingIdleTimeNanos > 0) {
                 lastPingIdleTime = System.nanoTime();
                 firstPingIdleEvent = true;
@@ -192,6 +190,8 @@ public abstract class KeepAliveHandler {
     }
 
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);
+
+    protected abstract boolean pingResetsPreviousPing();
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 

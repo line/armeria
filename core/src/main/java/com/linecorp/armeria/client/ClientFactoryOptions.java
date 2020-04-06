@@ -221,9 +221,9 @@ public final class ClientFactoryOptions
     /**
      * Returns the PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1,
-     * or a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2.
+     * is sent for HTTP/1.
      */
     public long pingIntervalMillis() {
         return get(ClientFactoryOption.PING_INTERVAL_MILLIS);
