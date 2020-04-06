@@ -18,30 +18,35 @@ package com.linecorp.armeria.spring;
 
 import org.springframework.context.ApplicationEvent;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.server.Server;
 
 /**
  * Event to be published after the application context is refreshed and the {@link Server} is ready.
  * Useful for obtaining the local port of a running server.
  */
-public class ArmeriaServerInitializedEvent extends ApplicationEvent {
+public class ArmeriaServerStartedEvent extends ApplicationEvent {
 
     /**
      * Creates a new instance.
      */
-    public ArmeriaServerInitializedEvent(Server server) {
+    public ArmeriaServerStartedEvent(Server server) {
         super(server);
     }
 
     /**
      * Returns the {@link Server}.
      */
-    public Server getServer() {
-        return getSource();
-    }
-
     @Override
     public Server getSource() {
         return (Server) super.getSource();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("source", getSource())
+                          .toString();
     }
 }

@@ -34,12 +34,12 @@ import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaServerInitializedEvent;
+import com.linecorp.armeria.spring.ArmeriaServerStartedEvent;
 
 /**
  * {@link ApplicationContextInitializer} that sets {@link Environment} properties for the
- * ports that {@link Server} servers are actually listening on. The properties
- * {@literal "local.armeria.port"}, {@literal "local.armeria.ports"} can be injected directly into tests using
+ * ports that Armeria {@link Server}s are actually listening on. The properties
+ * {@code "local.armeria.port"}, {@code "local.armeria.ports"} can be injected directly into tests using
  * {@link Value @Value} or obtained via the {@link Environment}.
  * Properties are automatically propagated up to any parent context.
  */
@@ -51,7 +51,7 @@ public class ArmeriaServerPortInfoApplicationContextInitializer
         applicationContext.addApplicationListener(new Listener(applicationContext));
     }
 
-    private static class Listener implements ApplicationListener<ArmeriaServerInitializedEvent> {
+    private static class Listener implements ApplicationListener<ArmeriaServerStartedEvent> {
 
         private static final String LOCAL_ARMERIA_PORT = "local.armeria.port";
         private static final String LOCAL_ARMERIA_PORTS = "local.armeria.ports";
@@ -63,9 +63,9 @@ public class ArmeriaServerPortInfoApplicationContextInitializer
         }
 
         @Override
-        public void onApplicationEvent(ArmeriaServerInitializedEvent event) {
-            setPortProperty(applicationContext, event.getServer().activeLocalPort());
-            setPortProperty(applicationContext, event.getServer().activePorts().values().stream()
+        public void onApplicationEvent(ArmeriaServerStartedEvent event) {
+            setPortProperty(applicationContext, event.getSource().activeLocalPort());
+            setPortProperty(applicationContext, event.getSource().activePorts().values().stream()
                                                      .map(p -> p.localAddress().getPort())
                                                      .collect(toList()));
         }

@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.spring.ArmeriaServerInitializedEvent;
+import com.linecorp.armeria.spring.ArmeriaServerStartedEvent;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 
 /**
@@ -58,7 +58,7 @@ public final class ArmeriaWebServer implements WebServer {
      * @param protocol the session protocol which is used for the primary port
      * @param address the primary local address that the server will be bound to
      * @param port the primary local port that the server will be bound to
-     * @param publisher the application event publisher will deliver {@link ArmeriaServerInitializedEvent} to
+     * @param publisher the application event publisher will deliver {@link ArmeriaServerStartedEvent} to
      *                  the application context.
      */
     public ArmeriaWebServer(Server server, SessionProtocol protocol, @Nullable InetAddress address, int port,
@@ -89,7 +89,7 @@ public final class ArmeriaWebServer implements WebServer {
                     assert port.isPresent() : "the primary port doest not exist.";
                     this.port = port.get().localAddress().getPort();
                 }
-                publisher.publishEvent(new ArmeriaServerInitializedEvent(server));
+                publisher.publishEvent(new ArmeriaServerStartedEvent(server));
                 isRunning = true;
             }
         } catch (Exception cause) {

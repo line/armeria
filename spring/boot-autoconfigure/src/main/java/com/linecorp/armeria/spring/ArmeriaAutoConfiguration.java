@@ -81,7 +81,7 @@ public class ArmeriaAutoConfiguration {
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
             Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans,
             Optional<List<DocServiceConfigurator>> docServiceConfigurators,
-            Optional<ApplicationEventPublisher> eventPublisher)
+            ApplicationEventPublisher eventPublisher)
             throws InterruptedException {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -89,8 +89,7 @@ public class ArmeriaAutoConfiguration {
             !thriftServiceRegistrationBeans.isPresent() &&
             !grpcServiceRegistrationBeans.isPresent() &&
             !httpServiceRegistrationBeans.isPresent() &&
-            !annotatedServiceRegistrationBeans.isPresent() &&
-            !eventPublisher.isPresent()) {
+            !annotatedServiceRegistrationBeans.isPresent()) {
             // No services to register, no need to start up armeria server.
             return null;
         }
@@ -161,7 +160,7 @@ public class ArmeriaAutoConfiguration {
             return result;
         }).join();
 
-        eventPublisher.get().publishEvent(new ArmeriaServerInitializedEvent(server));
+        eventPublisher.publishEvent(new ArmeriaServerStartedEvent(server));
         logger.info("Armeria server started at ports: {}", server.activePorts());
         return server;
     }
