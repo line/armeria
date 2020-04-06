@@ -242,13 +242,13 @@ public abstract class KeepAliveHandler {
             return;
         }
         logger.debug("{} Closing an idle channel", channel);
+        pingState = PingState.SHUTDOWN;
         channel.close().addListener(future -> {
             if (future.isSuccess()) {
                 logger.debug("{} Closed an idle channel", channel);
             } else {
                 logger.debug("{} Failed to close an idle channel", channel, future.cause());
             }
-            pingState = PingState.SHUTDOWN;
         });
     }
 

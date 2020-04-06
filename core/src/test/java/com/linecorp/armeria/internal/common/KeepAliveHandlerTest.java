@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -33,6 +34,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+
+import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.internal.common.KeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
@@ -246,9 +249,10 @@ class KeepAliveHandlerTest {
 
         keepAliveHandler.onPing();
         assertThat(keepAliveHandler.state()).isEqualTo(PingState.IDLE);
-
-        Thread.sleep(pingInterval * 2);
-        assertThat(keepAliveHandler.state()).isEqualTo(PingState.PENDING_PING_ACK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        await().until(keepAliveHandler::state, Matchers.is(PingState.SHUTDOWN));
+        final Duration elapsed = stopwatch.elapsed();
+        assertThat(elapsed.toMillis()).isBetween(pingInterval, idleTimeout - 1000);
     }
 
     @ParameterizedTest
