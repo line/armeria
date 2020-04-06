@@ -47,7 +47,7 @@ public final class TByteBufTransport extends TTransport {
     @Override
     public int read(byte[] buf, int off, int len) {
         final int bytesRemaining = this.buf.readableBytes();
-        final int amtToRead = len > bytesRemaining ? bytesRemaining : len;
+        final int amtToRead = Math.min(len, bytesRemaining);
         if (amtToRead > 0) {
             this.buf.readBytes(buf, off, amtToRead);
         }
