@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
@@ -39,7 +38,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -52,7 +50,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     private Server server;
     @Nullable
     final ListeningExecutorService executorService =
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2));
+            MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2));
 
     @Override
     protected CurrentTraceContext.Builder currentTraceContextBuilder() {
@@ -69,24 +67,24 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             return HttpResponse.of(HttpStatus.NOT_FOUND);
         });
         sb.service("/foo", (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "bar"));
-        sb.service("/async", (ctx, req) -> asyncResponse(future ->
-            future.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "bar"))));
+        sb.service("/async", (ctx, req) -> asyncResponse(future -> {
+            future.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "bar"));
+        }));
 
         sb.service("/exception", (ctx, req) -> {
-            final IllegalStateException ex = new IllegalStateException("not ready");
-            throw HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, ex);
+            throw new IllegalStateException("not ready");
         });
         sb.service("/exceptionAsync", (ctx, req) -> asyncResponse(future -> {
-            final IllegalStateException ex = new IllegalStateException("not ready");
-            future.completeExceptionally(HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, ex));
+            future.completeExceptionally(new IllegalStateException("not ready"));
         }));
 
         sb.service("/items/:itemId",
                    (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8,
                                                  String.valueOf(ctx.pathParam("itemId"))));
-        sb.service("/async_items/:itemId", (ctx, req) -> asyncResponse(future ->
+        sb.service("/async_items/:itemId", (ctx, req) -> asyncResponse(future -> {
             future.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8,
-                                                String.valueOf(ctx.pathParam("itemId"))))));
+                                            String.valueOf(ctx.pathParam("itemId"))));
+        }));
         // "/nested" left out as there's no sub-routing feature at the moment.
 
         sb.service("/child", (ctx, req) -> {
@@ -116,21 +114,8 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     @Test
     @Override
     public void notFound() {
-        throw new AssumptionViolatedException("Armeria cannot decorate a non-existent path mapping.");
-    }
-
-    @Test
-    @Override
-    public void errorTag_exceptionOverridesHttpStatus() {
         throw new AssumptionViolatedException(
-            "TODO: HttpResponseException cause swallowed by HttpServerHandler");
-    }
-
-    @Test
-    @Override
-    public void finishedSpanHandlerSeesException() {
-        throw new AssumptionViolatedException(
-            "TODO: HttpResponseException cause swallowed by HttpServerHandler");
+                "Armeria yields 'get /*' as a span name for a non-existent mapping.");
     }
 
     @After
