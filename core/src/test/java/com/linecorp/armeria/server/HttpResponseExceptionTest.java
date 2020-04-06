@@ -30,26 +30,15 @@ import com.linecorp.armeria.common.ResponseHeaders;
 class HttpResponseExceptionTest {
 
     @Test
-    void testHttpResponse() {
+    void testHttpResponse() throws Exception {
         final HttpResponseWriter response = HttpResponse.streaming();
         final HttpResponseException exception = HttpResponseException.of(response);
         response.write(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                                          HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
+            HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
         response.close();
 
         final AggregatedHttpResponse message = exception.httpResponse().aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(message.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-    }
-
-    @Test
-    void testCause() {
-        final IllegalStateException cause = new IllegalStateException("not ready");
-        final HttpResponseException exception =
-                HttpResponseException.of(HttpStatus.BAD_REQUEST, cause);
-
-        final AggregatedHttpResponse response = exception.httpResponse().aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(exception.getCause()).isEqualTo(cause);
     }
 }
