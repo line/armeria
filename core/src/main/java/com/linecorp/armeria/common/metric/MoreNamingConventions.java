@@ -176,7 +176,7 @@ public final class MoreNamingConventions {
             }
             buf.setLength(buf.length() - 1);
 
-            if (type == Type.TIMER) {
+            if (type == Type.TIMER || type == Type.LONG_TASK_TIMER) {
                 baseUnit = SUFFIX_SECONDS;
             }
 
