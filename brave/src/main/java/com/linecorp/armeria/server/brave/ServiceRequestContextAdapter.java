@@ -57,7 +57,7 @@ final class ServiceRequestContextAdapter {
         @Override
         public boolean parseClientIpAndPort(Span span) {
             return parseClientIpFromXForwardedFor(span) ||
-                   SpanTags.updateRemoteEndpoint(span, ctx);
+                SpanTags.updateRemoteEndpoint(span, ctx);
         }
 
         @Override
@@ -118,8 +118,8 @@ final class ServiceRequestContextAdapter {
         }
     }
 
-    static brave.http.HttpServerResponse asHttpServerResponse(
-            RequestLog log, brave.http.HttpServerRequest request) {
+    static brave.http.HttpServerResponse asHttpServerResponse(RequestLog log,
+        brave.http.HttpServerRequest request) {
         return new HttpServerResponse(log, request);
     }
 

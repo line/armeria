@@ -13,14 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.brave;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-import org.jetbrains.annotations.NotNull;
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -167,7 +165,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
      *
      * <p>Note: this could probably be rewritten as a test rule..
      */
-    @NotNull static SafeCloseable pushServerContext() {
+    static SafeCloseable pushServerContext() {
         return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).push();
     }
 }

@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;

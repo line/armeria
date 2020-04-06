@@ -36,8 +36,8 @@ import brave.http.HttpClientAdapter;
  * brave.http.HttpClientRequest}.
  */
 final class ClientRequestContextAdapter {
-    static brave.http.HttpClientRequest asHttpClientRequest(
-            ClientRequestContext ctx, RequestHeadersBuilder headersBuilder) {
+    static brave.http.HttpClientRequest asHttpClientRequest(ClientRequestContext ctx,
+        RequestHeadersBuilder headersBuilder) {
         return new HttpClientRequest(ctx, headersBuilder);
     }
 
@@ -104,7 +104,7 @@ final class ClientRequestContextAdapter {
     }
 
     static brave.http.HttpClientResponse asHttpClientResponse(
-            RequestLog log, brave.http.HttpClientRequest request) {
+        RequestLog log, brave.http.HttpClientRequest request) {
         return new HttpClientResponse(log, request);
     }
 
