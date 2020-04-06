@@ -37,6 +37,9 @@ includeWithFlags ':zookeeper',                          'java', 'publish', 'relo
 includeWithFlags ':saml',                               'java', 'publish', 'relocate'
 includeWithFlags ':bucket4j',                           'java', 'publish', 'relocate'
 
+// Published Javadoc-only projects
+includeWithFlags ':javadoc',                            'java', 'publish', 'no_aggregation'
+
 // Unpublished Java projects
 includeWithFlags ':benchmarks',               'java'
 includeWithFlags ':it:context-storage',       'java'
