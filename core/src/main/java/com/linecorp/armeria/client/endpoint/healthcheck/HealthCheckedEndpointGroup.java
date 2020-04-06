@@ -163,30 +163,29 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void refreshContexts() {
-        synchronized (contexts) {
-            if (isClosing()) {
-                return;
-            }
+        if (isRefreshingContexts.get() != null || isClosing()) {
+            return;
+        }
 
-            final List<Endpoint> newSelectedEndpoints = healthCheckStrategy.getSelectedEndpoints();
+        isRefreshingContexts.set(Boolean.TRUE);
+        try {
+            synchronized (contexts) {
+                final List<Endpoint> newSelectedEndpoints = healthCheckStrategy.getSelectedEndpoints();
 
-            // Stop the health checkers whose endpoints disappeared and destroy their contexts.
-            for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i = contexts.entrySet()
-                                                                                              .iterator();
-                 i.hasNext();) {
-                final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
-                if (newSelectedEndpoints.contains(e.getKey())) {
-                    // Not a removed endpoint.
-                    continue;
+                // Stop the health checkers whose endpoints disappeared and destroy their contexts.
+                for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i =
+                     contexts.entrySet().iterator(); i.hasNext();) {
+                    final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
+                    if (newSelectedEndpoints.contains(e.getKey())) {
+                        // Not a removed endpoint.
+                        continue;
+                    }
+
+                    i.remove();
+                    e.getValue().destroy();
                 }
 
-                i.remove();
-                e.getValue().destroy();
-            }
-
-            // Start the health checkers with new contexts for newly appeared endpoints.
-            isRefreshingContexts.set(Boolean.TRUE);
-            try {
+                // Start the health checkers with new contexts for newly appeared endpoints.
                 for (Endpoint e : newSelectedEndpoints) {
                     if (contexts.containsKey(e)) {
                         // Not a new endpoint.
@@ -196,9 +195,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     ctx.init(checkerFactory.apply(ctx));
                     contexts.put(e, ctx);
                 }
-            } finally {
-                isRefreshingContexts.remove();
             }
+        } finally {
+            isRefreshingContexts.remove();
         }
     }
 
@@ -368,8 +367,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 refreshEndpoints();
             }
 
-            if (healthCheckStrategy.updateHealth(originalEndpoint, health) &&
-                isRefreshingContexts.get() == null) {
+            if (healthCheckStrategy.updateHealth(originalEndpoint, health)) {
                 refreshContexts();
             }
 
