@@ -46,10 +46,10 @@ class HttpResponseExceptionTest {
     void testCause() {
         final IllegalStateException cause = new IllegalStateException("not ready");
         final HttpResponseException exception =
-            HttpResponseException.of(HttpStatus.SERVICE_UNAVAILABLE, cause);
+                HttpResponseException.of(HttpStatus.BAD_REQUEST, cause);
 
         final AggregatedHttpResponse response = exception.httpResponse().aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(exception.getCause()).isEqualTo(cause);
     }
 }
