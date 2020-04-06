@@ -10,7 +10,7 @@ Requirements
 
 .. note::
 
-    Use Java 11 (or later) if you are a contributor who tries to build Armeria itself.
+    Use Java 13 (or later) if you are a contributor who tries to build Armeria itself.
     See `CONTRIBUTING.md <https://github.com/line/armeria/blob/master/CONTRIBUTING.md>`_ for more information.
 
 Choosing the artifacts
