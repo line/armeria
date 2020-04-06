@@ -34,7 +34,7 @@ class HttpResponseExceptionTest {
         final HttpResponseWriter response = HttpResponse.streaming();
         final HttpResponseException exception = HttpResponseException.of(response);
         response.write(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR,
-            HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
+                                          HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
         response.close();
 
         final AggregatedHttpResponse message = exception.httpResponse().aggregate().join();
