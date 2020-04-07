@@ -137,7 +137,9 @@ const MethodPage: React.FunctionComponent<Props> = props => {
   }
 
   const method = service.methods.find(
-    m => m.name === props.match.params.methodName,
+    m =>
+      m.name === props.match.params.methodName &&
+      m.httpMethod === props.match.params.httpMethod,
   );
   if (!method) {
     return <>Not found.</>;
