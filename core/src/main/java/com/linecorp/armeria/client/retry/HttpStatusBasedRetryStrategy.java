@@ -35,12 +35,13 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
  */
 final class HttpStatusBasedRetryStrategy implements RetryStrategy {
 
-    private final BiFunction<HttpStatus, Throwable, Backoff> backoffFunction;
+    private final BiFunction<? super HttpStatus, ? super Throwable, ? extends Backoff> backoffFunction;
 
     /**
      * Creates a new instance.
      */
-    HttpStatusBasedRetryStrategy(BiFunction<HttpStatus, Throwable, Backoff> backoffFunction) {
+    HttpStatusBasedRetryStrategy(
+            BiFunction<? super HttpStatus, ? super Throwable, ? extends Backoff> backoffFunction) {
         this.backoffFunction = requireNonNull(backoffFunction, "backoffFunction");
     }
 
