@@ -63,7 +63,11 @@ export default class AnnotatedHttpTransport extends Transport {
     const response = await httpResponse.text();
     if (response.length > 0) {
       if (applicationType.indexOf('json') > -1) {
-        return prettify(response);
+        const prettified = prettify(response);
+        if (prettified.length === 0) {
+          return response;
+        }
+        return prettified;
       }
       return response;
     }
