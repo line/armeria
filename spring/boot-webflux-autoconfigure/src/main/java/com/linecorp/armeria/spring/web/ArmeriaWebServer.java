@@ -58,7 +58,7 @@ public final class ArmeriaWebServer implements WebServer {
      * @param protocol the session protocol which is used for the primary port
      * @param address the primary local address that the server will be bound to
      * @param port the primary local port that the server will be bound to
-     * @param publisher the application event publisher will deliver {@link ArmeriaServerStartedEvent} to
+     * @param publisher the application event publisher that delivers {@link ArmeriaServerStartedEvent} to
      *                  the application context.
      */
     public ArmeriaWebServer(Server server, SessionProtocol protocol, @Nullable InetAddress address, int port,

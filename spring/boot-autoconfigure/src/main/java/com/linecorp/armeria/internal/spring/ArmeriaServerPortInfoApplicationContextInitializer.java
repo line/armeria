@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.spring;
 
-import static java.util.stream.Collectors.toList;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.HashMap;
 import java.util.List;
@@ -64,10 +64,11 @@ public class ArmeriaServerPortInfoApplicationContextInitializer
 
         @Override
         public void onApplicationEvent(ArmeriaServerStartedEvent event) {
-            setPortProperty(applicationContext, event.getSource().activeLocalPort());
-            setPortProperty(applicationContext, event.getSource().activePorts().values().stream()
-                                                     .map(p -> p.localAddress().getPort())
-                                                     .collect(toList()));
+            final Server source = event.getSource();
+            setPortProperty(applicationContext, source.activeLocalPort());
+            setPortProperty(applicationContext, source.activePorts().values().stream()
+                                                      .map(p -> p.localAddress().getPort())
+                                                      .collect(toImmutableList()));
         }
 
         private void setPortProperty(ApplicationContext context, int port) {
@@ -90,7 +91,7 @@ public class ArmeriaServerPortInfoApplicationContextInitializer
         }
 
         @SuppressWarnings("unchecked")
-        private void setPortProperty(int port, PropertySource<?> source) {
+        private static void setPortProperty(int port, PropertySource<?> source) {
             ((Map<String, Object>) source.getSource()).put(LOCAL_ARMERIA_PORT, port);
         }
 
@@ -114,7 +115,7 @@ public class ArmeriaServerPortInfoApplicationContextInitializer
         }
 
         @SuppressWarnings("unchecked")
-        private void setPortProperty(List<Integer> ports, PropertySource<?> source) {
+        private static void setPortProperty(List<Integer> ports, PropertySource<?> source) {
             ((Map<String, Object>) source.getSource()).put(LOCAL_ARMERIA_PORTS, ports);
         }
     }

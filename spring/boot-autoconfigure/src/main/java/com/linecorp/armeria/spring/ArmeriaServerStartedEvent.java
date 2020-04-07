@@ -26,7 +26,7 @@ import com.linecorp.armeria.server.Server;
  * Event to be published after the application context is refreshed and the {@link Server} is ready.
  * Useful for obtaining the local port of a running server.
  */
-public class ArmeriaServerStartedEvent extends ApplicationEvent {
+public final class ArmeriaServerStartedEvent extends ApplicationEvent {
 
     /**
      * Creates a new instance.
