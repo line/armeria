@@ -42,6 +42,7 @@ import java.util.stream.Stream;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -445,11 +446,25 @@ public class AnnotatedDocServiceTest {
         public HttpResponse multi() {
             return HttpResponse.of(200);
         }
+
+        @Path("/json")
+        @Post
+        @Put
+        public String json(JsonRequest request) {
+           return request.bar;
+        }
     }
 
     private enum MyEnum {
         A,
         B,
         C
+    }
+
+    private static class JsonRequest {
+        @JsonProperty
+        private int foo;
+        @JsonProperty
+        private String bar;
     }
 }
