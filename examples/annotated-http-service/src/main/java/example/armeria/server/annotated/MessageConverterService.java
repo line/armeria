@@ -18,7 +18,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Post;
@@ -47,11 +46,9 @@ public class MessageConverterService {
     /**
      * Returns a {@link JsonNode} which is converted from a {@link Response} object. The {@link JsonNode}
      * will be converted as JSON string by the {@link JacksonResponseConverterFunction}.
-     * @param input The input (JD)
-     *              this is also multiline...
      */
     @Post("/node/node")
-    public JsonNode json1(@RequestObject @Description("The input (annotation)") JsonNode input) {
+    public JsonNode json1(@RequestObject JsonNode input) {
         final JsonNode name = input.get("name");
         return mapper.valueToTree(new Response(Response.SUCCESS, name.textValue()));
     }
@@ -59,7 +56,6 @@ public class MessageConverterService {
     /**
      * Returns a {@link Response} object. The {@link ProducesJson} annotation makes an object be converted
      * as JSON string by the {@link JacksonResponseConverterFunction}.
-     * @param input The input (JD)
      */
     @Post("/node/obj")
     @ProducesJson
@@ -92,7 +88,7 @@ public class MessageConverterService {
      */
     @Post("/obj/obj")
     @ProducesJson
-    public Response json3(@RequestObject @Description("The request") Request request) {
+    public Response json3(@RequestObject Request request) {
         return new Response(Response.SUCCESS, request.name());
     }
 
@@ -103,10 +99,6 @@ public class MessageConverterService {
      * <p>Note that the {@link ServiceRequestContext} of the request is also automatically injected. See
      * <a href="https://line.github.io/armeria/server-annotated-service.html#other-classes-automatically-injected">
      * Other classes automatically injected</a> for more information.
-     * @param request This is a request
-     *                with multiline description
-     * @param ctx This is a context
-     *            also with multiline
      */
     @Post("/obj/future")
     @ProducesJson

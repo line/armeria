@@ -9,8 +9,6 @@ dependencies {
     testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-
-    annotationProcessor project(':core')
 }
 
 application {

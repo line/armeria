@@ -177,7 +177,7 @@ public class DocumentationProcessor extends AbstractProcessor {
      * @return The used file name.
      */
     public static String getFileName(String className) {
-        return className + "-generated-docs.properties";
+        return "com.linecorp.armeria.docstrings.annotated" + className + ".properties";
     }
 
     private enum JavaDocParserState {
