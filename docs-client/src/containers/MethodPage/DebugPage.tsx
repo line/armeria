@@ -23,7 +23,6 @@ import Typography from '@material-ui/core/Typography';
 import CloseIcon from '@material-ui/icons/Close';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
-import CodeIcon from '@material-ui/icons/Code';
 import React, {
   ChangeEvent,
   useCallback,
@@ -368,15 +367,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     }
   }, [debugResponse, showSnackbar]);
 
-  const onPrettify = useCallback(() => {
-    const response = debugResponse;
-    try {
-      setDebugResponse(jsonPrettify(response));
-    } catch {
-      // ignored
-    }
-  }, [debugResponse]);
-
   const onClear = useCallback(() => {
     setDebugResponse('');
   }, []);
@@ -566,16 +556,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
                   disabled={debugResponse.length === 0}
                 >
                   <DeleteSweepIcon />
-                </IconButton>
-              </div>
-            </Tooltip>
-            <Tooltip title="Prettify JSON">
-              <div>
-                <IconButton
-                  onClick={onPrettify}
-                  disabled={debugResponse.length === 0}
-                >
-                  <CodeIcon />
                 </IconButton>
               </div>
             </Tooltip>
