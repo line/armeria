@@ -507,9 +507,11 @@ class ServerBuilderTest {
     }
 
     @CsvSource({
-            "0,    2000, 0,    2000",
-            "2000, 2000, 2000, 0",
-            "3000, 2000, 3000, 2000",
+            "0,     2000,  0,     10000",
+            "2000,  2000,  2000,  0",
+            "10000, 2000,  10000, 0",
+            "15000, 2000,  15000, 10000",
+            "20000, 15000, 20000, 15000",
     })
     @ParameterizedTest
     void pingIntervalShouldBeLessThanIdleTimeout(long idleTimeoutMillis, long pingIntervalMillis,

@@ -78,8 +78,12 @@ import io.netty.resolver.dns.DnsNameResolverBuilder;
  */
 public final class ClientFactoryBuilder {
 
-    private static final ClientFactoryOptionValue<Long> PING_INTERVAL_ZERO =
+    private static final ClientFactoryOptionValue<Long> ZERO_PING_INTERVAL =
             ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(0L);
+
+    private static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    private static final ClientFactoryOptionValue<Long> MIN_PING_INTERVAL =
+            ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
 
     static {
         RequestContextUtil.init();
@@ -428,6 +432,8 @@ public final class ClientFactoryBuilder {
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
+     * <p>If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
+     *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      * {@code 0} means the client will not send a PING.
@@ -445,6 +451,8 @@ public final class ClientFactoryBuilder {
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
+     *
+     * <p>If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -567,8 +575,14 @@ public final class ClientFactoryBuilder {
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
         final long pingIntervalMillis = newOptions.pingIntervalMillis();
-        if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
-            return ClientFactoryOptions.of(newOptions, PING_INTERVAL_ZERO);
+        final long minPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
+        if (idleTimeoutMillis > 0) {
+            if (minPingIntervalMillis >= idleTimeoutMillis) {
+                return ClientFactoryOptions.of(newOptions, ZERO_PING_INTERVAL);
+            }
+            if (minPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                return ClientFactoryOptions.of(newOptions, MIN_PING_INTERVAL);
+            }
         }
         return newOptions;
     }

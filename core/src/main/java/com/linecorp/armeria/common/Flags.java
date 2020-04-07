@@ -711,7 +711,7 @@ public final class Flags {
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_PING_INTERVAL_MILLIS} milliseconds.
      * Specify the {@code -Dcom.linecorp.armeria.defaultPingIntervalMillis=<integer>} JVM option to override
-     * the default value.
+     * the default value. If the specified value was smaller than 10 seconds, bumps PING interval to 10 seconds.
      */
     public static long defaultPingIntervalMillis() {
         return DEFAULT_PING_INTERVAL_MILLIS;

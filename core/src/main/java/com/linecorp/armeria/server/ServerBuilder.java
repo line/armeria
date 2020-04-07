@@ -461,7 +461,9 @@ public final class ServerBuilder {
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
-     * Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
+     *
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      */
@@ -472,7 +474,9 @@ public final class ServerBuilder {
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
-     * Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
+     *
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      */
@@ -1397,6 +1401,7 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        long pingIntervalMillis = Math.max(this.pingIntervalMillis, 10_000L);
         if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
             pingIntervalMillis = 0;
         }
