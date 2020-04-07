@@ -142,6 +142,7 @@ public class AnnotatedDocServiceTest {
         addConsumesMethodInfo(methodInfos);
         addBeanMethodInfo(methodInfos);
         addMultiMethodInfo(methodInfos);
+        addJsonMethodInfo(methodInfos);
         final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
@@ -289,6 +290,21 @@ public class AnnotatedDocServiceTest {
                 "multi", TypeSignature.ofBase("HttpResponse"), ImmutableList.of(), ImmutableList.of(),
                 ImmutableList.of(endpoint1, endpoint2), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addJsonMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint1 = EndpointInfo.builder("*", "exact:/service/json")
+                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                   .build();
+        final MethodInfo methodInfo1 = new MethodInfo(
+                "json", STRING, ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(endpoint1), HttpMethod.POST, null);
+        final MethodInfo methodInfo2 = new MethodInfo(
+                "json", STRING, ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(endpoint1), HttpMethod.PUT, null);
+        final Set<MethodInfo> methods = methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>());
+        methods.add(methodInfo1);
+        methods.add(methodInfo2);
     }
 
     private static void addExamples(JsonNode json) {
