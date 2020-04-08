@@ -144,6 +144,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
         if (isPing()) {
             onPingRead(msg);
+            ReferenceCountUtil.release(msg);
             return;
         }
 
