@@ -578,10 +578,13 @@ public final class ClientFactoryBuilder {
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
         final long pingIntervalMillis = newOptions.pingIntervalMillis();
-        final long minPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
-        if (idleTimeoutMillis > 0) {
+        if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
+            final long minPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
             if (minPingIntervalMillis >= idleTimeoutMillis) {
                 return ClientFactoryOptions.of(newOptions, ZERO_PING_INTERVAL);
+            }
+            if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                return newOptions;
             }
             if (minPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 return ClientFactoryOptions.of(newOptions, MIN_PING_INTERVAL);

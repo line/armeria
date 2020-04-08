@@ -211,7 +211,7 @@ public abstract class KeepAliveHandler {
 
     @VisibleForTesting
     void onIdleEvent(ChannelHandlerContext ctx, IdleStateEvent evt) {
-        if (evt.state() == IdleState.CONNECTION_IDLE && evt.isFirst()) {
+        if (evt.state() == IdleState.CONNECTION_IDLE) {
             if (!hasRequestsInProgress(ctx)) {
                 pingState = PingState.SHUTDOWN;
                 logger.debug("{} Closing an idle {} connection", ctx.channel(), name);

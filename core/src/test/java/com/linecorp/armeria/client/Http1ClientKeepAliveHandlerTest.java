@@ -38,8 +38,8 @@ class Http1ClientKeepAliveHandlerTest {
             final int port = ss.getLocalPort();
 
             final ClientFactory factory = ClientFactory.builder()
-                                                       .idleTimeoutMillis(10000)
-                                                       .pingIntervalMillis(2000)
+                                                       .idleTimeoutMillis(20000)
+                                                       .pingIntervalMillis(10000)
                                                        .useHttp1Pipelining(true)
                                                        .build();
             final WebClient client = WebClient.builder("h1c://127.0.0.1:" + port)
@@ -69,7 +69,7 @@ class Http1ClientKeepAliveHandlerTest {
                 assertThat(in.readLine()).isEmpty();
 
                 // Send another request before the PING timeout
-                Thread.sleep(1000);
+                Thread.sleep(5000);
                 client.get("/").aggregate();
 
                 String line;

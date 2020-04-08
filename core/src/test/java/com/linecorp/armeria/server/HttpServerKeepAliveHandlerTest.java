@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,8 +46,8 @@ import io.netty.util.AttributeMap;
 
 class HttpServerKeepAliveHandlerTest {
 
-    private static final long serverIdleTimeout = 5000;
-    private static final long serverPingInterval = 1000;
+    private static final long serverIdleTimeout = 20000;
+    private static final long serverPingInterval = 10000;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -55,6 +57,17 @@ class HttpServerKeepAliveHandlerTest {
             sb.pingIntervalMillis(serverPingInterval);
             sb.decorator(LoggingService.newDecorator())
               .service("/", (ctx, req) -> HttpResponse.of("OK"));
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension serverWithNoIdleTimeout = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.idleTimeoutMillis(0);
+            sb.pingIntervalMillis(0);
+            sb.decorator(LoggingService.newDecorator())
+              .service("/streaming", (ctx, req) -> HttpResponse.streaming());
         }
     };
 
@@ -83,13 +96,7 @@ class HttpServerKeepAliveHandlerTest {
     @CsvSource({ "H1C", "H2C" })
     void closeByClientIdleTimeout(SessionProtocol protocol) throws InterruptedException {
         final long clientIdleTimeout = 2000;
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .idleTimeoutMillis(clientIdleTimeout)
-                                                   .connectionPoolListener(listener)
-                                                   .build();
-        final WebClient client = WebClient.builder(server.uri(protocol))
-                                          .factory(factory)
-                                          .build();
+        final WebClient client = newWebClient(clientIdleTimeout, server.uri(protocol));
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/").aggregate().join();
@@ -104,22 +111,43 @@ class HttpServerKeepAliveHandlerTest {
     @Test
     void http1CloseByServerIdleTimeout() throws InterruptedException {
         // longer than the idle timeout of the server.
-        final long clientIdleTimeout = 10000;
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .idleTimeoutMillis(clientIdleTimeout)
-                                                   .connectionPoolListener(listener)
-                                                   .build();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
-                                          .factory(factory)
-                                          .build();
+        final long clientIdleTimeout = serverIdleTimeout + 5000;
+        final WebClient client = newWebClient(clientIdleTimeout, server.uri(SessionProtocol.H1C));
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/").aggregate().join();
         assertThat(counter).hasValue(1);
 
         // The connection should be closed by server
-        await().untilAtomic(counter, Matchers.is(0));
+        await().timeout(Duration.ofMillis(clientIdleTimeout + 5000)).untilAtomic(counter, Matchers.is(0));
         final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
         assertThat(elapsed).isBetween(serverIdleTimeout, clientIdleTimeout - 1000);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "H1C", "H2C" })
+    void shouldCloseConnectionWheNoActiveRequests(SessionProtocol protocol) throws InterruptedException {
+        final long clientIdleTimeout = 2000;
+        final WebClient client = newWebClient(clientIdleTimeout, serverWithNoIdleTimeout.uri(protocol));
+
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        client.get("/streaming").aggregate().join();
+        assertThat(counter).hasValue(1);
+
+        // After the request is closed by RequestTimeoutException,
+        // if no requests is in progress, the connection should be closed by idle timeout scheduler
+        await().untilAtomic(counter, Matchers.is(0));
+        final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+        assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
+    }
+
+    private WebClient newWebClient(long clientIdleTimeout, URI uri) {
+        final ClientFactory factory = ClientFactory.builder()
+                                                   .idleTimeoutMillis(clientIdleTimeout)
+                                                   .connectionPoolListener(listener)
+                                                   .build();
+        return WebClient.builder(uri)
+                        .factory(factory)
+                        .build();
     }
 }
