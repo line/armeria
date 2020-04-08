@@ -53,6 +53,8 @@ public class ArmeriaServerPortInfoApplicationContextInitializer
 
     private static class Listener implements ApplicationListener<ArmeriaServerStartedEvent> {
 
+        // The following naming conventions are referenced here.
+        // https://github.com/spring-projects/spring-boot/blob/2.2.x/spring-boot-project/spring-boot/src/main/java/org/springframework/boot/web/context/ServerPortInfoApplicationContextInitializer.java.
         private static final String LOCAL_ARMERIA_PORT = "local.armeria.port";
         private static final String LOCAL_ARMERIA_PORTS = "local.armeria.ports";
 
