@@ -38,6 +38,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
@@ -81,7 +82,8 @@ public final class ClientFactoryBuilder {
     private static final ClientFactoryOptionValue<Long> ZERO_PING_INTERVAL =
             ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(0L);
 
-    private static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    @VisibleForTesting
+    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
     private static final ClientFactoryOptionValue<Long> MIN_PING_INTERVAL =
             ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
 
@@ -432,15 +434,18 @@ public final class ClientFactoryBuilder {
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
-     * <p>If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
-     *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
-     * {@code 0} means the client will not send a PING.
+     *
+     * <p>The minimum PING interval is 10 seconds. {@code 0} means the client will not send a PING.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis}
+     *                                  is smaller than 10000 milliseconds.
      */
     public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
-        checkArgument(pingIntervalMillis >= 0,
-                      "pingIntervalMillis: %s (expected: >= 0)", pingIntervalMillis);
+        checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
+                      "pingIntervalMillis: %s (expected: >= %s or == 0)", pingIntervalMillis,
+                      MIN_PING_INTERVAL_MILLIS);
         option(ClientFactoryOption.PING_INTERVAL_MILLIS, pingIntervalMillis);
         return this;
     }
@@ -452,17 +457,15 @@ public final class ClientFactoryBuilder {
      * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
-     * <p>If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
-     *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
-     * {@code 0} means the client will not send a PING.
+     *
+     * <p>The minimum PING interval is 10 seconds. {@code 0} means the client will not send a PING.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than 10 seconds.
      */
     public ClientFactoryBuilder pingInterval(Duration pingInterval) {
-        requireNonNull(pingInterval, "pingInterval");
-        checkArgument(pingInterval.toMillis() >= 0,
-                      "pingInterval: %s (expected: >= 0)", pingInterval.toMillis());
-        pingIntervalMillis(pingInterval.toMillis());
+        pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
         return this;
     }
 

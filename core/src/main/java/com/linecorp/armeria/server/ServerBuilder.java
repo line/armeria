@@ -150,6 +150,9 @@ public final class ServerBuilder {
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
 
+    @VisibleForTesting
+    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+
     static {
         RequestContextUtil.init();
     }
@@ -461,28 +464,38 @@ public final class ServerBuilder {
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
-     * If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum PING interval is 10 seconds.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis}
+     *                                  is smaller than 10000 milliseconds.
      */
     public ServerBuilder pingIntervalMillis(long pingIntervalMillis) {
-        this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
+        checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
+                      "pingIntervalMillis: %s (expected: >= %s or == 0)", pingIntervalMillis,
+                      MIN_PING_INTERVAL_MILLIS);
+        this.pingIntervalMillis = pingIntervalMillis;
         return this;
     }
 
     /**
      * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
-     * If the specified value is smaller than 10 seconds, bumps PING interval to 10 seconds.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum PING interval is 10 seconds.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis}
+     *                                  is smaller than 10000 milliseconds.
      */
     public ServerBuilder pingInterval(Duration pingInterval) {
-        requireNonNull(pingInterval, "pingInterval");
-        pingIntervalMillis = validateNonNegative(pingInterval.toMillis(), "pingInterval");
+        pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
         return this;
     }
 
@@ -1401,11 +1414,6 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        long pingIntervalMillis = Math.max(this.pingIntervalMillis, 10_000L);
-        if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
-            pingIntervalMillis = 0;
-        }
-
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1467,6 +1475,14 @@ public final class ServerBuilder {
             }
             sslContexts = mappingBuilder.build();
         }
+
+        if (pingIntervalMillis > 0) {
+            pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
+            if (pingIntervalMillis >= idleTimeoutMillis) {
+                pingIntervalMillis = 0;
+            }
+        }
+
 
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
