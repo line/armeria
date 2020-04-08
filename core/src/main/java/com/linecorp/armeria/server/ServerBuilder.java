@@ -1483,7 +1483,6 @@ public final class ServerBuilder {
             }
         }
 
-
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
