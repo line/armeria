@@ -18,7 +18,7 @@ For example, the following configuration:
       <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
           <pattern>%d{HH:mm:ss.SSS} %X{remote.ip} %X{tls.cipher}
-                   %X{req.http_headers.user-agent} %X{attrs.some_value} %msg%n</pattern>
+                   %X{req.headers.user-agent} %X{attrs.some_value} %msg%n</pattern>
         </encoder>
       </appender>
 
@@ -26,11 +26,11 @@ For example, the following configuration:
         <appender-ref ref="CONSOLE" />
         <export>remote.ip</export>
         <export>tls.cipher</export>
-        <export>req.http_headers.user-agent</export>
+        <export>req.headers.user-agent</export>
         <export>attrs.some_value:com.example.AttrKeys#SOME_KEY</export>
         <!-- ... or alternatively:
         <exports>remote.ip, remote.port, tls.cipher,
-                 req.http_headers.user-agent,
+                 req.headers.user-agent,
                  attrs.some_value:com.example.AttrKeys#SOME_KEY</exports>
         -->
         <!-- ... or with wildcard:
@@ -38,7 +38,7 @@ For example, the following configuration:
         -->
         <!-- ... or with custom MDC key:
         <export>remote_id=remote.id</export>
-        <export>UA=req.http_headers.user-agent</export>
+        <export>UA=req.headers.user-agent</export>
         <export>some_value=attr:com.example.AttrKeys#SOME_KEY</exports>
         -->
       </appender>
@@ -55,7 +55,7 @@ will define an appender called ``RCEA`` which exports the following:
 
   - the SSL/TLS cipher suite of the connection,
 
-- ``req.http_headers.user-agent``
+- ``req.headers.user-agent``
 
   - the user agent of the client,
 
@@ -80,11 +80,11 @@ You can also use wildcard character ``*`` instead of listing all properties. For
 HTTP request and response headers
 ---------------------------------
 When the session protocol of the current connection is HTTP, a user can export HTTP headers of the current
-request and response. The MDC key of the exported header is ``"req.http_headers.<lower-case header name>"`` or
-``"res.http_headers.<lower-case header name>"``. For example:
+request and response. The MDC key of the exported header is ``"req.headers.<lower-case header name>"`` or
+``"res.headers.<lower-case header name>"``. For example:
 
-- ``"req.http_headers.user-agent"``
-- ``"res.http_headers.set-cookie"``
+- ``"req.headers.user-agent"``
+- ``"res.headers.set-cookie"``
 
 Custom attributes
 -----------------
@@ -153,7 +153,7 @@ For example, if you want to change ``req.id`` to ``request_id``, use ``request_i
       <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
         ...
         <export>remote_id=remote.id</export>
-        <export>UA=req.http_headers.user-agent</export>
+        <export>UA=req.headers.user-agent</export>
         <export>some_value=attr:com.example.AttrKeys#SOME_KEY</exports>
         ...
       </appender>
