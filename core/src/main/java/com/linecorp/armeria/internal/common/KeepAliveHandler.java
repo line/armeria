@@ -31,11 +31,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.common.IdleStateEvent.CONNECTION_IDLE_STATE_EVENT;
-import static com.linecorp.armeria.internal.common.IdleStateEvent.FIRST_CONNECTION_IDLE_STATE_EVENT;
-import static com.linecorp.armeria.internal.common.IdleStateEvent.FIRST_PING_IDLE_STATE_EVENT;
-import static com.linecorp.armeria.internal.common.IdleStateEvent.PING_IDLE_STATE_EVENT;
-
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -69,17 +64,6 @@ public abstract class KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(KeepAliveHandler.class);
 
-    private static IdleStateEvent newIdleStateEvent(IdleState state, boolean first) {
-        switch (state) {
-            case CONNECTION_IDLE:
-                return first ? FIRST_CONNECTION_IDLE_STATE_EVENT : CONNECTION_IDLE_STATE_EVENT;
-            case PING_IDLE:
-                return first ? FIRST_PING_IDLE_STATE_EVENT : PING_IDLE_STATE_EVENT;
-            default:
-                throw new IllegalArgumentException("Unhandled: initialized=" + state + ", first=" + first);
-        }
-    }
-
     @Nullable
     private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final ChannelFutureListener pingWriteListener = new PingWriteListener();
@@ -92,12 +76,13 @@ public abstract class KeepAliveHandler {
     private ScheduledFuture<?> connectionIdleTimeout;
     private final long connectionIdleTimeNanos;
     private long lastConnectionIdleTime;
-    private boolean firstConnectionIdleEvent = true;
+    private boolean isLastConnectionIdleTimeSet;
 
     @Nullable
     private ScheduledFuture<?> pingIdleTimeout;
     private final long pingIdleTimeNanos;
     private long lastPingIdleTime;
+    private boolean isLastPingIdleTimeSet;
     private boolean firstPingIdleEvent = true;
 
     private boolean isInitialized;
@@ -163,12 +148,13 @@ public abstract class KeepAliveHandler {
 
         if (connectionIdleTimeNanos > 0) {
             lastConnectionIdleTime = System.nanoTime();
-            firstConnectionIdleEvent = true;
+            isLastConnectionIdleTimeSet = true;
         }
 
         if (pingResetsPreviousPing()) {
             if (pingIdleTimeNanos > 0) {
                 lastPingIdleTime = System.nanoTime();
+                isLastPingIdleTimeSet = true;
                 firstPingIdleEvent = true;
             }
             pingState = PingState.IDLE;
@@ -207,23 +193,6 @@ public abstract class KeepAliveHandler {
     @VisibleForTesting
     final PingState state() {
         return pingState;
-    }
-
-    @VisibleForTesting
-    void onIdleEvent(ChannelHandlerContext ctx, IdleStateEvent evt) {
-        if (evt.state() == IdleState.CONNECTION_IDLE) {
-            if (!hasRequestsInProgress(ctx)) {
-                pingState = PingState.SHUTDOWN;
-                logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
-                ctx.channel().close();
-            }
-            return;
-        }
-
-        if (pingIdleTimeNanos > 0 && evt.state() == IdleState.PING_IDLE && evt.isFirst()) {
-            pingState = PingState.PING_SCHEDULED;
-            writePing(ctx).addListener(pingWriteListener);
-        }
     }
 
     private void cancelFutures() {
@@ -336,18 +305,23 @@ public abstract class KeepAliveHandler {
         protected void run(ChannelHandlerContext ctx) {
 
             final long lastConnectionIdleTime = KeepAliveHandler.this.lastConnectionIdleTime;
-            final long nextDelay = connectionIdleTimeNanos - (System.nanoTime() - lastConnectionIdleTime);
+            final long nextDelay;
+            if (!isLastConnectionIdleTimeSet) {
+                nextDelay = Long.MIN_VALUE;
+            } else {
+                nextDelay = connectionIdleTimeNanos - (System.nanoTime() - lastConnectionIdleTime);
+            }
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
                 connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
                                                             TimeUnit.NANOSECONDS);
-
-                final IdleStateEvent event = newIdleStateEvent(IdleState.CONNECTION_IDLE,
-                                                               firstConnectionIdleEvent);
-                firstConnectionIdleEvent = false;
                 try {
-                    onIdleEvent(ctx, event);
+                    if (!hasRequestsInProgress(ctx)) {
+                        pingState = PingState.SHUTDOWN;
+                        logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
+                        ctx.channel().close();
+                    }
                 } catch (Exception e) {
                     if (!warn) {
                         logger.warn("An error occurred while notifying an all idle event", e);
@@ -374,15 +348,23 @@ public abstract class KeepAliveHandler {
         protected void run(ChannelHandlerContext ctx) {
 
             final long lastPingIdleTime = KeepAliveHandler.this.lastPingIdleTime;
-            final long nextDelay = pingIdleTimeNanos - (System.nanoTime() - lastPingIdleTime);
+            final long nextDelay;
+            if (!isLastPingIdleTimeSet) {
+                nextDelay = Long.MIN_VALUE;
+            } else {
+                nextDelay = pingIdleTimeNanos - (System.nanoTime() - lastPingIdleTime);
+            }
             if (nextDelay <= 0) {
                 // PING is idle - set a new timeout and notify the callback.
                 pingIdleTimeout = executor().schedule(this, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
 
-                final IdleStateEvent event = newIdleStateEvent(IdleState.PING_IDLE, firstPingIdleEvent);
+                final boolean isFirst = firstPingIdleEvent;
                 firstPingIdleEvent = false;
                 try {
-                    onIdleEvent(ctx, event);
+                    if (pingIdleTimeNanos > 0 && isFirst) {
+                        pingState = PingState.PING_SCHEDULED;
+                        writePing(ctx).addListener(pingWriteListener);
+                    }
                 } catch (Exception e) {
                     if (!warn) {
                         logger.warn("An error occurred while notifying a ping idle event", e);

@@ -468,11 +468,11 @@ public final class ServerBuilder {
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      *
-     * <p>The minimum PING interval is 10 seconds.
+     * <p>The minimum PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      *
-     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis}
-     *                                  is smaller than 10000 milliseconds.
+     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
     public ServerBuilder pingIntervalMillis(long pingIntervalMillis) {
         checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
@@ -488,11 +488,11 @@ public final class ServerBuilder {
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      *
-     * <p>The minimum PING interval is 10 seconds.
+     * <p>The minimum PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      *
-     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis}
-     *                                  is smaller than 10000 milliseconds.
+     * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
     public ServerBuilder pingInterval(Duration pingInterval) {
         pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
