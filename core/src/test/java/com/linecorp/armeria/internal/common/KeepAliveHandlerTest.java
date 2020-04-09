@@ -121,6 +121,7 @@ class KeepAliveHandlerTest {
                 };
 
         idleTimeoutScheduler.initialize(ctx);
+        await().until(stopwatch::isRunning, Matchers.is(false));
         final Duration elapsed = stopwatch.elapsed();
         assertThat(elapsed.toMillis()).isBetween(1000L, 5000L);
         idleTimeoutScheduler.destroy();
