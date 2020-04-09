@@ -329,6 +329,14 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     /**
+     * Returns the result of {@link CompletableFuture} which is completed after the {@link #close()} or
+     * {@link #closeAsync()} operation is completed.
+     */
+    public Object blockUntilShutdown() throws Exception {
+        return whenClosed().get();
+    }
+
+    /**
      * Sets up the version metrics.
      */
     @VisibleForTesting
