@@ -186,6 +186,24 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     /**
+     * Returns the primary {@link ServerPort} that this {@link Server} is listening to. This method is useful
+     * when a {@link Server} listens to only one {@link ServerPort}.
+     *
+     * @return the primary {@link ServerPort}, or {@code null} if this {@link Server} did not start.
+     */
+    @Nullable
+    public ServerPort activePort(SessionProtocol protocol) {
+        synchronized (activePorts) {
+            for (ServerPort serverPort : activePorts.values()) {
+                if (serverPort.hasProtocol(protocol)) {
+                    return serverPort;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns the local {@link ServerPort} that this {@link Server} is listening to.
      *
      * @throws IllegalStateException if there is no active local port available

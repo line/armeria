@@ -1,0 +1,250 @@
+/*
+ * Copyright 2020 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package com.linecorp.armeria.internal.common.eureka;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_DURATION;
+import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_RENEWAL_INTERVAL;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Map;
+
+import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.eureka.DataCenterName;
+import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
+import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
+
+import io.netty.util.NetUtil;
+
+/**
+ * Builds an {@link InstanceInfo}.
+ */
+public final class InstanceInfoBuilder {
+
+    /**
+     * The {@link PortWrapper} which represent that the port is disabled.
+     */
+    public static final PortWrapper disabledPort = new PortWrapper(false, 0);
+
+    private int renewalIntervalSeconds = DEFAULT_LEASE_RENEWAL_INTERVAL;
+    private int leaseDurationSeconds = DEFAULT_LEASE_DURATION;
+
+    private final String instanceId;
+
+    @Nullable
+    private String hostname;
+
+    @Nullable
+    private String appName;
+
+    @Nullable
+    private String appGroupName;
+
+    @Nullable
+    private String ipAddr;
+    private PortWrapper port = disabledPort;
+    private PortWrapper securePort = disabledPort;
+
+    @Nullable
+    private String vipAddress;
+    @Nullable
+    private String secureVipAddress;
+    @Nullable
+    private String homePageUrl;
+    @Nullable
+    private String statusPageUrl;
+    @Nullable
+    private String healthCheckUrl;
+    @Nullable
+    private String secureHealthCheckUrl;
+    private Map<String, String> metadata = ImmutableMap.of();
+
+    private DataCenterName dataCenterName = DataCenterName.MyOwn;
+    private Map<String, String> dataCenterMetadata = ImmutableMap.of();
+
+    /**
+     * Creates a new instance.
+     */
+    public InstanceInfoBuilder(String instanceId) {
+        this.instanceId = requireNonNull(instanceId, "instanceId");
+    }
+
+    /**
+     * Sets the interval between renewal in seconds.
+     */
+    public InstanceInfoBuilder renewalIntervalSeconds(int renewalIntervalSeconds) {
+        checkArgument(renewalIntervalSeconds > 0,
+                      "renewalIntervalInSecs: %s (expected: > 0)", renewalIntervalSeconds);
+        this.renewalIntervalSeconds = renewalIntervalSeconds;
+        return this;
+    }
+
+    /**
+     * Sets the lease duration in seconds.
+     */
+    public InstanceInfoBuilder leaseDurationSeconds(int leaseDurationSeconds) {
+        checkArgument(leaseDurationSeconds > 0,
+                      "durationInSecs: %s (expected: > 0)", leaseDurationSeconds);
+        this.leaseDurationSeconds = leaseDurationSeconds;
+        return this;
+    }
+
+    /**
+     * Sets the hostname.
+     */
+    public InstanceInfoBuilder hostname(String hostname) {
+        this.hostname = requireNonNull(hostname, "hostname");
+        return this;
+    }
+
+    /**
+     * Sets the name of the application.
+     */
+    public InstanceInfoBuilder appName(String appName) {
+        this.appName = requireNonNull(appName, "appName");
+        return this;
+    }
+
+    /**
+     * Sets the group name of the application.
+     */
+    public InstanceInfoBuilder appGroupName(String appGroupName) {
+        this.appGroupName = requireNonNull(appGroupName, "appGroupName");
+        return this;
+    }
+
+    /**
+     * Sets the IP address.
+     */
+    public InstanceInfoBuilder ipAddr(String ipAddr) {
+        requireNonNull(ipAddr, "ipAddr");
+        validateIpAddr(ipAddr, "ipAddr");
+        this.ipAddr = ipAddr;
+        return this;
+    }
+
+    /**
+     * Sets the port used for {@link SessionProtocol#HTTP}.
+     */
+    public InstanceInfoBuilder port(int port) {
+        checkArgument(port > 0, "port: %s (expected: > 0)", port);
+        this.port = new PortWrapper(true, port);
+        return this;
+    }
+
+    /**
+     * Sets the port used for {@link SessionProtocol#HTTPS}.
+     */
+    public InstanceInfoBuilder securePort(int securePort) {
+        checkArgument(securePort > 0, "securePort: %s (expected: > 0)", securePort);
+        this.securePort = new PortWrapper(true, securePort);
+        return this;
+    }
+
+    /**
+     * Sets the VIP address.
+     */
+    public InstanceInfoBuilder vipAddress(String vipAddress) {
+        this.vipAddress = requireNonNull(vipAddress, "vipAddress");
+        return this;
+    }
+
+    /**
+     * Sets the secure VIP address.
+     */
+    public InstanceInfoBuilder secureVipAddress(String secureVipAddress) {
+        this.secureVipAddress = requireNonNull(secureVipAddress, "secureVipAddress");
+        return this;
+    }
+
+    /**
+     * Sets the home page URL.
+     */
+    public InstanceInfoBuilder homePageUrl(String homePageUrl) {
+        this.homePageUrl = requireNonNull(homePageUrl, "homePageUrl");
+        return this;
+    }
+
+    /**
+     * Sets the status page URL.
+     */
+    public InstanceInfoBuilder statusPageUrl(String statusPageUrl) {
+        this.statusPageUrl = requireNonNull(statusPageUrl, "statusPageUrl");
+        return this;
+    }
+
+    /**
+     * Sets the health check URL.
+     */
+    public InstanceInfoBuilder healthCheckUrl(String healthCheckUrl) {
+        this.healthCheckUrl = requireNonNull(healthCheckUrl, "healthCheckUrl");
+        return this;
+    }
+
+    /**
+     * Sets the secure health check URL.
+     */
+    public InstanceInfoBuilder secureHealthCheckUrl(String secureHealthCheckUrl) {
+        this.secureHealthCheckUrl = requireNonNull(secureHealthCheckUrl, "secureHealthCheckUrl");
+        return this;
+    }
+
+    /**
+     * Sets the metadata.
+     */
+    public InstanceInfoBuilder metadata(Map<String, String> metadata) {
+        this.metadata = requireNonNull(metadata, "metadata");
+        return this;
+    }
+
+    /**
+     * Sets the name of the data center.
+     */
+    public InstanceInfoBuilder dataCenterName(DataCenterName dataCenterName) {
+        this.dataCenterName = requireNonNull(dataCenterName, "dataCenterName");
+        return this;
+    }
+
+    /**
+     * Sets the metadata of the data center.
+     */
+    public InstanceInfoBuilder dataCenterMetadata(Map<String, String> dataCenterMetadata) {
+        this.dataCenterMetadata = requireNonNull(dataCenterMetadata, "dataCenterMetadata");
+        return this;
+    }
+
+    /**
+     * Returns a newly-created {@link InstanceInfo} based on the properties of this builder.
+     */
+    public InstanceInfo build() {
+        final LeaseInfo leaseInfo = new LeaseInfo(renewalIntervalSeconds, leaseDurationSeconds);
+        return new InstanceInfo(instanceId, appName, appGroupName, hostname, ipAddr, vipAddress,
+                                secureVipAddress, port, securePort, InstanceStatus.UP,
+                                homePageUrl, statusPageUrl, healthCheckUrl, secureHealthCheckUrl,
+                                new DataCenterInfo(dataCenterName, dataCenterMetadata),
+                                leaseInfo, metadata);
+    }
+
+    private static void validateIpAddr(String ipAddr, String name) {
+        if (!NetUtil.isValidIpV4Address(ipAddr) && !NetUtil.isValidIpV6Address(ipAddr)) {
+            throw new IllegalArgumentException("Invalid " + name + ": " + ipAddr);
+        }
+    }
+}

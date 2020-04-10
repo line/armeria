@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -40,6 +39,8 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
  * A skeletal builder implementation for creating a new {@link HealthCheckedEndpointGroup}.
  */
 public abstract class AbstractHealthCheckedEndpointGroupBuilder {
+
+    static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
 
     private final EndpointGroup delegate;
 
