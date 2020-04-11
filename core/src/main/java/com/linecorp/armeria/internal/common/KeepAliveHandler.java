@@ -76,13 +76,11 @@ public abstract class KeepAliveHandler {
     private ScheduledFuture<?> connectionIdleTimeout;
     private final long connectionIdleTimeNanos;
     private long lastConnectionIdleTime;
-    private boolean isLastConnectionIdleTimeSet;
 
     @Nullable
     private ScheduledFuture<?> pingIdleTimeout;
     private final long pingIdleTimeNanos;
     private long lastPingIdleTime;
-    private boolean isLastPingIdleTimeSet;
     private boolean firstPingIdleEvent = true;
 
     private boolean isInitialized;
@@ -116,6 +114,7 @@ public abstract class KeepAliveHandler {
             return;
         }
         isInitialized = true;
+        lastConnectionIdleTime = lastPingIdleTime = System.nanoTime();
 
         if (connectionIdleTimeNanos > 0) {
             connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
@@ -148,13 +147,11 @@ public abstract class KeepAliveHandler {
 
         if (connectionIdleTimeNanos > 0) {
             lastConnectionIdleTime = System.nanoTime();
-            isLastConnectionIdleTimeSet = true;
         }
 
         if (pingResetsPreviousPing()) {
             if (pingIdleTimeNanos > 0) {
                 lastPingIdleTime = System.nanoTime();
-                isLastPingIdleTimeSet = true;
                 firstPingIdleEvent = true;
             }
             pingState = PingState.IDLE;
@@ -306,11 +303,7 @@ public abstract class KeepAliveHandler {
 
             final long lastConnectionIdleTime = KeepAliveHandler.this.lastConnectionIdleTime;
             final long nextDelay;
-            if (!isLastConnectionIdleTimeSet) {
-                nextDelay = Long.MIN_VALUE;
-            } else {
-                nextDelay = connectionIdleTimeNanos - (System.nanoTime() - lastConnectionIdleTime);
-            }
+            nextDelay = connectionIdleTimeNanos - (System.nanoTime() - lastConnectionIdleTime);
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
@@ -349,11 +342,7 @@ public abstract class KeepAliveHandler {
 
             final long lastPingIdleTime = KeepAliveHandler.this.lastPingIdleTime;
             final long nextDelay;
-            if (!isLastPingIdleTimeSet) {
-                nextDelay = Long.MIN_VALUE;
-            } else {
-                nextDelay = pingIdleTimeNanos - (System.nanoTime() - lastPingIdleTime);
-            }
+            nextDelay = pingIdleTimeNanos - (System.nanoTime() - lastPingIdleTime);
             if (nextDelay <= 0) {
                 // PING is idle - set a new timeout and notify the callback.
                 pingIdleTimeout = executor().schedule(this, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
