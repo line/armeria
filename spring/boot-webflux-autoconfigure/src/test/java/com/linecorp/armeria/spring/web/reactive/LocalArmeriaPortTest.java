@@ -26,7 +26,7 @@ import org.springframework.boot.web.server.LocalServerPort;
 import com.linecorp.armeria.spring.LocalArmeriaPort;
 
 /**
- * Tests for {@link LocalArmeriaPort @LocalArmeriaPort}.
+ * Tests for {@link LocalArmeriaPort}.
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class LocalArmeriaPortTest {

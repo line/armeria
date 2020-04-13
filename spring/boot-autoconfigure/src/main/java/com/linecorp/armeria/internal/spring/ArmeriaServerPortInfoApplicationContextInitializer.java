@@ -66,9 +66,9 @@ public class ArmeriaServerPortInfoApplicationContextInitializer
 
         @Override
         public void onApplicationEvent(ArmeriaServerStartedEvent event) {
-            final Server source = event.getSource();
-            setPortProperty(applicationContext, source.activeLocalPort());
-            setPortProperty(applicationContext, source.activePorts().values().stream()
+            final Server server = event.getSource();
+            setPortProperty(applicationContext, server.activeLocalPort());
+            setPortProperty(applicationContext, server.activePorts().values().stream()
                                                       .map(p -> p.localAddress().getPort())
                                                       .collect(toImmutableList()));
         }

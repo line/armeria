@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.spring;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
 
 import com.google.common.base.MoreObjects;
@@ -23,8 +24,8 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.server.Server;
 
 /**
- * Event to be published after the application context is refreshed and the {@link Server} is ready.
- * Useful for obtaining the local port of a running server.
+ * An {@link ApplicationEvent} that is published after an {@link ApplicationContext} is refreshed
+ * and the {@link Server} is ready. Useful for obtaining the local port of a running server.
  */
 public final class ArmeriaServerStartedEvent extends ApplicationEvent {
 

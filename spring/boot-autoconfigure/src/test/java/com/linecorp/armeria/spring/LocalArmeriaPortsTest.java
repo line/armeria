@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.LocalArmeriaPortTest.TestConfiguration;
 
 /**
- * Tests for {@link LocalArmeriaPorts @LocalArmeriaPorts}.
+ * Tests for {@link LocalArmeriaPorts}.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
