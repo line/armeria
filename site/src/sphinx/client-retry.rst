@@ -46,15 +46,28 @@ an exception is raised.
 ``RetryStrategy``
 -----------------
 
-You can customize the ``strategy`` by implementing :api:`RetryStrategy`.
+You can build your own :api:`RetryStrategy`.
+
+.. code-block:: java
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.ResponseTimeoutException;
+    import com.linecorp.armeria.common.HttpStatus;
+
+    RetryStrategy.builder()
+                 .onUnProcessed()
+                 .onException(ResponseTimeoutException.class)
+                 .onStatus(HttpStatus.CONFLICT)
+                 .build();
+
+Or you can customize the ``strategy`` by implementing :api:`RetryStrategy`.
 
 .. code-block:: java
 
     import com.linecorp.armeria.client.ClientRequestContext;
-    import com.linecorp.armeria.client.ResponseTimeoutException;
     import com.linecorp.armeria.client.UnprocessedRequestException;
     import com.linecorp.armeria.client.retry.Backoff;
-    import com.linecorp.armeria.common.HttpStatus;
 
     new RetryStrategy() {
         Backoff backoff = Backoff.ofDefault();

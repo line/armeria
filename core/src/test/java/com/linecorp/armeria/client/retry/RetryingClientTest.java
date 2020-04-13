@@ -36,12 +36,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -91,6 +98,13 @@ class RetryingClientTest {
 
     private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
+    private AtomicInteger reqCount;
+
+    @BeforeEach
+    void setUp() {
+        reqCount = new AtomicInteger();
+    }
+
     @AfterAll
     static void destroy() {
         clientFactory.close();
@@ -106,8 +120,6 @@ class RetryingClientTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/retry-content", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -124,8 +136,6 @@ class RetryingClientTest {
             });
 
             sb.service("/500-then-success", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -138,8 +148,6 @@ class RetryingClientTest {
             });
 
             sb.service("/503-then-success", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -152,8 +160,6 @@ class RetryingClientTest {
             });
 
             sb.service("/retry-after-1-second", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -168,8 +174,6 @@ class RetryingClientTest {
             });
 
             sb.service("/retry-after-with-http-date", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -211,8 +215,6 @@ class RetryingClientTest {
             });
 
             sb.service("/1sleep-then-success", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -372,16 +374,19 @@ class RetryingClientTest {
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
-    @Test
-    void differentBackoffBasedOnStatus() {
-        final WebClient client = client(RetryStrategy.onStatus(statusBasedBackoff()));
+    @ArgumentsSource(RetryStrategiesProvider.class)
+    @ParameterizedTest
+    void differentBackoffBasedOnStatus(RetryStrategy retryStrategy) {
+        final WebClient client = client(retryStrategy);
 
         final Stopwatch sw = Stopwatch.createStarted();
         AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isBetween((long) (10 * 0.9), (long) (1000 * 1.1));
 
+        reqCount.set(0);
         sw.reset().start();
+
         res = client.get("/500-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo((long) (1000 * 0.9));
@@ -643,6 +648,34 @@ class RetryingClientTest {
                 }
                 return null;
             });
+        }
+    }
+
+    private static class RetryStrategiesProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            final Backoff backoffOn503 = Backoff.fixed(10).withMaxAttempts(2);
+            final Backoff backoffOn500 = Backoff.fixed(1000).withMaxAttempts(2);
+
+            final RetryStrategy retryStrategyByFactory = RetryStrategy.onStatus((status, unused) -> {
+                if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+                    return backoffOn503;
+                }
+                if (status == HttpStatus.INTERNAL_SERVER_ERROR) {
+                    return backoffOn500;
+                }
+                return null;
+            });
+
+            final RetryStrategy retryStrategyByBuilder =
+                    RetryStrategy.builder()
+                                 .onStatus(HttpStatus.SERVICE_UNAVAILABLE, backoffOn503)
+                                 .onStatus(HttpStatus.INTERNAL_SERVER_ERROR, backoffOn500)
+                                 .build();
+
+            return Stream.of(retryStrategyByFactory, retryStrategyByBuilder)
+                         .map(Arguments::of);
         }
     }
 }

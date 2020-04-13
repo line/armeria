@@ -32,7 +32,10 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 /**
  * Provides a {@link RetryStrategy} that decides to retry the request based on the {@link HttpStatus} of
  * its response or the {@link Exception} raised while processing the {@link HttpResponse}.
+ *
+ * @deprecated Use {@link RetryStrategy#builder()}
  */
+@Deprecated
 final class HttpStatusBasedRetryStrategy implements RetryStrategy {
 
     private final BiFunction<? super HttpStatus, ? super Throwable, ? extends Backoff> backoffFunction;

@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -37,6 +38,13 @@ import com.linecorp.armeria.common.util.Exceptions;
  */
 @FunctionalInterface
 public interface RetryStrategy {
+
+    /**
+     * Returns a new {@link RetryStrategyBuilder}.
+     */
+    static RetryStrategyBuilder builder() {
+        return new RetryStrategyBuilder();
+    }
 
     /**
      * Returns a {@link RetryStrategy} that never retries.
@@ -59,14 +67,14 @@ public interface RetryStrategy {
      */
     static RetryStrategy onUnprocessed(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return onException(cause -> cause instanceof UnprocessedRequestException ? backoff : null);
+        return builder().onUnProcessed(backoff).build();
     }
 
     /**
      * Returns a {@link RetryStrategy} that retries with {@link Backoff#ofDefault()} on any {@link Exception}.
      */
     static RetryStrategy onException() {
-        return onException(cause -> Backoff.ofDefault());
+        return builder().onException().build();
     }
 
     /**
@@ -74,7 +82,10 @@ public interface RetryStrategy {
      *
      * @param backoffFunction A {@link Function} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link Throwable}
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onException(Class, Backoff)}
+     *             or {@link RetryStrategyBuilder#onException(Predicate, Backoff)}
      */
+    @Deprecated
     static RetryStrategy onException(Function<? super Throwable, ? extends Backoff> backoffFunction) {
         requireNonNull(backoffFunction, "backoffFunction");
         return onStatus((status, thrown) -> {
@@ -87,7 +98,7 @@ public interface RetryStrategy {
 
     /**
      * Returns a {@link RetryStrategy} that retries with the {@link Backoff#ofDefault()}
-     * when the response status is 5xx (server error) or an {@link Exception} is raised.
+     * when the response status is 5xx (server error).
      */
     static RetryStrategy onServerErrorStatus() {
         return onServerErrorStatus(Backoff.ofDefault());
@@ -95,16 +106,11 @@ public interface RetryStrategy {
 
     /**
      * Returns the {@link RetryStrategy} that retries the request with the specified {@code backoff}
-     * when the response status is 5xx (server error) or an {@link Exception} is raised.
+     * when the response status is 5xx (server error).
      */
     static RetryStrategy onServerErrorStatus(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return onStatus((status, thrown) -> {
-            if (thrown != null || (status != null && status.isServerError())) {
-                return backoff;
-            }
-            return null;
-        });
+        return builder().onServerErrorStatus(backoff).build();
     }
 
     /**
@@ -112,10 +118,13 @@ public interface RetryStrategy {
      *
      * @param backoffFunction A {@link BiFunction} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link HttpStatus} and {@link Throwable}
+     *
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onStatus(HttpStatus, Backoff)}
+     *             or {@link RetryStrategyBuilder#onException(Class, Backoff)}
      */
+    @Deprecated
     static RetryStrategy onStatus(
             BiFunction<? super HttpStatus, ? super Throwable, ? extends Backoff> backoffFunction) {
-        // TODO(trustin): Apply a different backoff for UnprocessedRequestException.
         return new HttpStatusBasedRetryStrategy(backoffFunction);
     }
 
