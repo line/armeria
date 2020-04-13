@@ -468,7 +468,7 @@ public final class ServerBuilder {
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      *
-     * <p>The minimum PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      *
      * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
@@ -488,7 +488,7 @@ public final class ServerBuilder {
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      *
-     * <p>The minimum PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
      *
      * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than

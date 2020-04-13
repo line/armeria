@@ -437,7 +437,7 @@ public final class ClientFactoryBuilder {
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      *
-     * <p>The minimum PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      * {@code 0} means the client will not send a PING.
      *
      * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
@@ -461,7 +461,7 @@ public final class ClientFactoryBuilder {
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
      *
-     * <p>The minimum PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      * {@code 0} means the client will not send a PING.
      *
      * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than
@@ -582,14 +582,14 @@ public final class ClientFactoryBuilder {
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
         final long pingIntervalMillis = newOptions.pingIntervalMillis();
         if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
-            final long minPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
-            if (minPingIntervalMillis >= idleTimeoutMillis) {
+            final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
+            if (clampedPingIntervalMillis >= idleTimeoutMillis) {
                 return ClientFactoryOptions.of(newOptions, ZERO_PING_INTERVAL);
             }
             if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 return newOptions;
             }
-            if (minPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+            if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 return ClientFactoryOptions.of(newOptions, MIN_PING_INTERVAL);
             }
         }
