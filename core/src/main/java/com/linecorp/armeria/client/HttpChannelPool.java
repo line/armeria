@@ -83,6 +83,8 @@ final class HttpChannelPool implements AsyncCloseable {
     private final Bootstrap[] bootstraps;
     private final int connectTimeoutMillis;
     private final boolean useHttp1Pipelining;
+    private final long idleTimeoutMillis;
+    private final long pingIntervalMillis;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
@@ -127,6 +129,8 @@ final class HttpChannelPool implements AsyncCloseable {
         connectTimeoutMillis = (Integer) baseBootstrap.config().options()
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         useHttp1Pipelining = clientFactory.useHttp1Pipelining();
+        idleTimeoutMillis = clientFactory.idleTimeoutMillis();
+        pingIntervalMillis = clientFactory.pingIntervalMillis();
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
@@ -447,8 +451,9 @@ final class HttpChannelPool implements AsyncCloseable {
             }
         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
 
-        ch.pipeline().addLast(new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture,
-                                                     useHttp1Pipelining));
+        ch.pipeline().addLast(
+                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture,
+                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,

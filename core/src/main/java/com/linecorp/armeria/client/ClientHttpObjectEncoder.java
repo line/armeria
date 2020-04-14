@@ -14,10 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server;
+package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 
 import io.netty.channel.Channel;
@@ -26,31 +27,22 @@ import io.netty.channel.ChannelFuture;
 /**
  * Converts an {@link HttpObject} into a protocol-specific object and writes it into a {@link Channel}.
  */
-public interface ServerHttpObjectEncoder extends HttpObjectEncoder {
+interface ClientHttpObjectEncoder extends HttpObjectEncoder {
 
     /**
-     * Writes a {@link ResponseHeaders}.
+     * Writes a {@link RequestHeaders}.
      */
-    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream) {
-        return writeHeaders(id, streamId, headers, endStream, true);
-    }
-
-    /**
-     * Writes a {@link ResponseHeaders}.
-     */
-    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                       boolean isTrailersEmpty) {
+    default ChannelFuture writeHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
         assert eventLoop().inEventLoop();
         if (isClosed()) {
-            return newClosedSessionFuture();
+            return newFailedFuture(new UnprocessedRequestException(ClosedSessionException.get()));
         }
 
-        return doWriteHeaders(id, streamId, headers, endStream, isTrailersEmpty);
+        return doWriteHeaders(id, streamId, headers, endStream);
     }
 
     /**
-     * Writes a {@link ResponseHeaders}.
+     * Writes a {@link RequestHeaders}.
      */
-    ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                 boolean isTrailersEmpty);
+    ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream);
 }

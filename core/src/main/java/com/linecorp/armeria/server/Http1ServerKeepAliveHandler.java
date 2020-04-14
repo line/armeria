@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,20 +14,32 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.internal.common.IdleTimeoutHandler;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
-final class HttpClientIdleTimeoutHandler extends IdleTimeoutHandler {
+class Http1ServerKeepAliveHandler extends KeepAliveHandler {
+    Http1ServerKeepAliveHandler(Channel channel, long idleTimeoutMillis) {
+        super(channel, "server", idleTimeoutMillis, 0);
+    }
 
-    HttpClientIdleTimeoutHandler(long idleTimeoutMillis, boolean isHttp2, boolean sendHttp2Ping) {
-        super("client", idleTimeoutMillis, isHttp2, sendHttp2Ping);
+    @Override
+    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean pingResetsPreviousPing() {
+        return false;
     }
 
     @Override
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
-        return HttpSession.get(ctx.channel()).hasUnfinishedResponses();
+        final HttpServer server = HttpServer.get(ctx);
+        return server != null && server.unfinishedRequests() != 0;
     }
 }

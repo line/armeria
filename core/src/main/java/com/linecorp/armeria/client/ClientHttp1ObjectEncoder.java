@@ -14,16 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client;
+package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.client.HttpHeaderUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -35,9 +39,12 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 
-public final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements ClientHttpObjectEncoder {
+final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements ClientHttpObjectEncoder {
 
-    public ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol) {
+    @Nullable
+    private Http1ClientKeepAliveHandler keepAliveHandler;
+
+    ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol) {
         super(ch, protocol);
     }
 
@@ -100,5 +107,20 @@ public final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implement
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
         ArmeriaHttpUtil.toNettyHttp1ClientTrailer(inputHeaders, outputHeaders);
+    }
+
+    @Nullable
+    @Override
+    public KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
+
+    void setKeepAliveHandler(Http1ClientKeepAliveHandler keepAliveHandler) {
+        this.keepAliveHandler = keepAliveHandler;
+    }
+
+    @Override
+    protected boolean isPing(int id) {
+        return keepAliveHandler != null && keepAliveHandler.isPing(id);
     }
 }

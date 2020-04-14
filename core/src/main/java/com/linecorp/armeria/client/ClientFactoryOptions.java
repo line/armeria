@@ -219,18 +219,14 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout in milliseconds.
+     * Returns the PING interval in milliseconds.
+     * When neither read nor write was performed for the specified period of time,
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1.
      */
-    public long http2PingTimeoutMillis() {
-        return get(ClientFactoryOption.HTTP2_PING_TIMEOUT_MILLIS);
-    }
-
-    /**
-     * Returns whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> on
-     * no active HTTP/2 streams.
-     */
-    public boolean useHttp2PingWhenNoActiveStreams() {
-        return get(ClientFactoryOption.USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS);
+    public long pingIntervalMillis() {
+        return get(ClientFactoryOption.PING_INTERVAL_MILLIS);
     }
 
     /**

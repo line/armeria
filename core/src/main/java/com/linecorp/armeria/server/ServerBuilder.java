@@ -150,6 +150,9 @@ public final class ServerBuilder {
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
 
+    @VisibleForTesting
+    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+
     static {
         RequestContextUtil.init();
     }
@@ -168,8 +171,7 @@ public final class ServerBuilder {
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
-    private long http2PingTimeoutMillis = Flags.defaultHttp2PingTimeoutMillis();
-    private boolean useHttp2PingWhenNoActiveStreams = Flags.defaultUseHttp2PingWhenNoActiveStreams();
+    private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -461,33 +463,39 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
      *
-     * @param http2PingTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
-    public ServerBuilder http2PingTimeoutMillis(long http2PingTimeoutMillis) {
-        this.http2PingTimeoutMillis = validateNonNegative(http2PingTimeoutMillis, "http2PingTimeoutMillis");
+    public ServerBuilder pingIntervalMillis(long pingIntervalMillis) {
+        checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
+                      "pingIntervalMillis: %s (expected: >= %s or == 0)", pingIntervalMillis,
+                      MIN_PING_INTERVAL_MILLIS);
+        this.pingIntervalMillis = pingIntervalMillis;
         return this;
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
      *
-     * @param http2PingTimeoutMillis the timeout. {@code 0} disables the timeout.
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@code 0} means the server will not send PING frames on an HTTP/2 connection.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
-    public ServerBuilder http2PingTimeoutMillis(Duration http2PingTimeoutMillis) {
-        requireNonNull(http2PingTimeoutMillis, "http2PingTimeoutMillis");
-        this.http2PingTimeoutMillis =
-                validateNonNegative(http2PingTimeoutMillis.toMillis(), "http2PingTimeoutMillis");
-        return this;
-    }
-
-    /**
-     * Sets whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
-     * when there are no active streams open.
-     */
-    public ServerBuilder useHttp2PingWhenNoActiveStreams(boolean useHttp2PingWhenNoActiveStreams) {
-        this.useHttp2PingWhenNoActiveStreams = useHttp2PingWhenNoActiveStreams;
+    public ServerBuilder pingInterval(Duration pingInterval) {
+        pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
         return this;
     }
 
@@ -1468,11 +1476,18 @@ public final class ServerBuilder {
             sslContexts = mappingBuilder.build();
         }
 
+        if (pingIntervalMillis > 0) {
+            pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
+            if (pingIntervalMillis >= idleTimeoutMillis) {
+                pingIntervalMillis = 0;
+            }
+        }
+
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, http2PingTimeoutMillis, useHttp2PingWhenNoActiveStreams,
-                http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                idleTimeoutMillis, pingIntervalMillis, http2InitialConnectionWindowSize,
+                http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,

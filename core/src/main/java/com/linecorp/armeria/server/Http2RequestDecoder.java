@@ -75,16 +75,16 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     @Nullable
-    private final Http2KeepAliveHandler keepAlive;
+    private final Http2KeepAliveHandler keepAliveHandler;
     private int nextId;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme,
-                        @Nullable Http2KeepAliveHandler keepAlive) {
+                        @Nullable Http2KeepAliveHandler keepAliveHandler) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
         this.scheme = scheme;
-        this.keepAlive = keepAlive;
+        this.keepAliveHandler = keepAliveHandler;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         goAwayHandler = new Http2GoAwayHandler();
@@ -326,19 +326,21 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onPingAckRead(final ChannelHandlerContext ctx, final long data) {
-        if (keepAlive != null) {
-            keepAlive.onPingAck(data);
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPingAck(data);
         }
     }
 
     @Override
     public void onPingRead(ChannelHandlerContext ctx, long data) {
-        keepAliveChannelRead();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPing();
+        }
     }
 
     private void keepAliveChannelRead() {
-        if (keepAlive != null) {
-            keepAlive.onChannelRead();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
         }
     }
 }
