@@ -37,10 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.server.ServerHttp1ObjectEncoder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -159,20 +159,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        final long idleTimeoutMillis = config.idleTimeoutMillis();
+        final KeepAliveHandler keepAliveHandler =
+                idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis) : null;
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), SessionProtocol.H1C, config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
+                p.channel(), SessionProtocol.H1C, keepAliveHandler, config.isDateHeaderEnabled(),
+                config.isServerHeaderEnabled()
+        );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        configureIdleTimeoutHandler(p, false);
         p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, responseEncoder,
                                         SessionProtocol.H1C, proxiedAddresses));
-    }
-
-    private void configureIdleTimeoutHandler(ChannelPipeline p, boolean isHttp2) {
-        if (config.idleTimeoutMillis() > 0) {
-            p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis(), isHttp2,
-                                                        config.http2PingTimeoutMillis() > 0));
-        }
     }
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
@@ -394,7 +391,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            configureIdleTimeoutHandler(p, true);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null,
                                             SessionProtocol.H2, proxiedAddresses));
         }
@@ -402,14 +398,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
+            final long idleTimeoutMillis = config.idleTimeoutMillis();
+            final KeepAliveHandler keepAliveHandler =
+                    idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis) : null;
             final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
-                    ch, SessionProtocol.H1, config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
+                    ch, SessionProtocol.H1, keepAliveHandler, config.isDateHeaderEnabled(),
+                    config.isServerHeaderEnabled());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
-            configureIdleTimeoutHandler(p, false);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer,
                                             SessionProtocol.H1, proxiedAddresses));
         }
@@ -448,20 +447,38 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private final ServerHttp1ObjectEncoder responseEncoder;
         @Nullable
+        private final KeepAliveHandler keepAliveHandler;
+        @Nullable
         private String name;
 
         Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder) {
             this.responseEncoder = responseEncoder;
+            keepAliveHandler = responseEncoder.keepAliveHandler();
         }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            if (keepAliveHandler != null) {
+                keepAliveHandler.initialize(ctx);
+            }
             super.handlerAdded(ctx);
             name = ctx.name();
         }
 
         @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            if (keepAliveHandler != null) {
+                keepAliveHandler.destroy();
+            }
+            super.channelInactive(ctx);
+        }
+
+        @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            if (keepAliveHandler != null) {
+                keepAliveHandler.onReadOrWrite();
+            }
+
             if (in.readableBytes() < 4) {
                 return;
             }

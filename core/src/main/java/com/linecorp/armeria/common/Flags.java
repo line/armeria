@@ -197,10 +197,10 @@ public final class Flags {
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS = 0; // Disabled
-    private static final long DEFAULT_HTTP2_PING_TIMEOUT_MILLIS =
-            getLong("defaultHttp2PingTimeoutMillis",
-                    DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS,
+    private static final long DEFAULT_DEFAULT_PING_INTERVAL_MILLIS = 0; // Disabled
+    private static final long DEFAULT_PING_INTERVAL_MILLIS =
+            getLong("defaultPingIntervalMillis",
+                    DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -257,8 +257,6 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
-    private static final boolean DEFAULT_USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS =
-            getBoolean("defaultUseHttp2PingWhenNoActiveStreams", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -702,36 +700,21 @@ public final class Flags {
     }
 
     /**
-     * Returns whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
-     * frames on a HTTP/2 connection when it is idle and there are no active HTTP/2 stream.
+     * Returns the default value for the PING interval.
+     * A <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
+     * is sent for HTTP/2 server and client or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1 client.
      *
-     * <p>A connection is considered having no active streams means that are no requests and responses pending.
-     * This does not necessarily indicate end of life of a HTTP/2 connection.
-     * A client could create a new stream if it intends to use the same connection.
+     * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
+     * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.
      *
-     * <p>Note that this flag is only in effect when {@link Flags#defaultHttp2PingTimeoutMillis()}
-     * is set greater than zero.
-     *
-     * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingWhenActiveStreams=true} JVM option to enable it.
-     *
-     * @see Flags#defaultHttp2PingTimeoutMillis()
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_PING_INTERVAL_MILLIS} milliseconds.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultPingIntervalMillis=<integer>} JVM option to override
+     * the default value. If the specified value was smaller than 10 seconds, bumps PING interval to 10 seconds.
      */
-    public static boolean defaultUseHttp2PingWhenNoActiveStreams() {
-        return DEFAULT_USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS;
-    }
-
-    /**
-     * Returns the default value for HTTP2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
-     * Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
-     * {@link #defaultClientIdleTimeoutMillis()} for client are greater than 0.
-     *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS} milliseconds.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2PingTimeoutMillis=<integer>} JVM option to override
-     * the default value.
-     */
-    public static long defaultHttp2PingTimeoutMillis() {
-        return DEFAULT_HTTP2_PING_TIMEOUT_MILLIS;
+    public static long defaultPingIntervalMillis() {
+        return DEFAULT_PING_INTERVAL_MILLIS;
     }
 
     /**

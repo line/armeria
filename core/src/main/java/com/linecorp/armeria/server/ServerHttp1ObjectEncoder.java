@@ -14,7 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server;
+package com.linecorp.armeria.server;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -23,6 +25,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.buffer.Unpooled;
@@ -38,13 +41,17 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 
-public final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
+final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
+    @Nullable
+    private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
-    public ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
-                                    boolean enableServerHeader, boolean enableDateHeader) {
+    ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
+                             @Nullable KeepAliveHandler keepAliveHandler,
+                             boolean enableDateHeader, boolean enableServerHeader) {
         super(ch, protocol);
+        this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
     }
@@ -133,5 +140,16 @@ public final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implement
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
         ArmeriaHttpUtil.toNettyHttp1ServerTrailer(inputHeaders, outputHeaders);
+    }
+
+    @Nullable
+    @Override
+    public KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
+
+    @Override
+    protected boolean isPing(int id) {
+        return false;
     }
 }

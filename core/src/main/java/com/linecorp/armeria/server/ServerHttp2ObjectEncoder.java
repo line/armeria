@@ -14,7 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server;
+package com.linecorp.armeria.server;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -22,6 +24,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
@@ -29,13 +32,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Headers;
 
-public final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
+final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
+    @Nullable
+    private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
-    public ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                                    boolean enableServerHeader, boolean enableDateHeader) {
+    ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
+                             @Nullable KeepAliveHandler keepAliveHandler,
+                             boolean enableDateHeader, boolean enableServerHeader) {
         super(ctx, encoder);
+        this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
     }
@@ -51,6 +58,7 @@ public final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implement
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
+        onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, endStream, ctx().newPromise());
     }
 
@@ -73,6 +81,12 @@ public final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implement
         return outHeaders;
     }
 
+    @Nullable
+    @Override
+    public KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
+
     @Override
     public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
         if (!isStreamPresentAndWritable(streamId)) {
@@ -83,6 +97,14 @@ public final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implement
         }
 
         final Http2Headers converted = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(headers);
+        onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, true, ctx().newPromise());
+    }
+
+    private void onKeepAliveReadOrWrite() {
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
+        }
     }
 }

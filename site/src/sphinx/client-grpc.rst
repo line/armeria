@@ -51,7 +51,8 @@ Making a call starts from creating a client:
     assert reply.getMessage().equals("Hello, Armerian World!");
 
 Note that we added the serialization format of the call using the ``+`` operator in the scheme part of the URI.
-Because we are calling a gRPC_ server, we should choose: ``gproto`` or ``gjson``.
+Because we are calling a gRPC_ server, we can choose: ``gproto`` or ``gjson``. If you are using gRPC-web_, you can
+ use ``gproto-web`` or ``gjson-web``.
 
 Since we specified ``HelloServiceBlockingStub.class`` as the client type, ``Clients.newClient()`` will return a
 synchronous client implementation.  If we specified ``HelloServiceFutureStub``, the calling code would have
