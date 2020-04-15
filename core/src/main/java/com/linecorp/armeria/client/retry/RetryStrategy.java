@@ -98,19 +98,32 @@ public interface RetryStrategy {
 
     /**
      * Returns a {@link RetryStrategy} that retries with the {@link Backoff#ofDefault()}
-     * when the response status is 5xx (server error).
+     * when the response status is 5xx (server error) or an {@link Exception} is raised.
+     *
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onServerErrorStatus()}
+     *             and {@link RetryStrategyBuilder#onException()}
      */
+    @Deprecated
     static RetryStrategy onServerErrorStatus() {
         return onServerErrorStatus(Backoff.ofDefault());
     }
 
     /**
      * Returns the {@link RetryStrategy} that retries the request with the specified {@code backoff}
-     * when the response status is 5xx (server error).
+     * when the response status is 5xx (server error) or an {@link Exception} is raised.
+     *
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onServerErrorStatus(Backoff)}
+     *             and {@link RetryStrategyBuilder#onException(Backoff)}
      */
+    @Deprecated
     static RetryStrategy onServerErrorStatus(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return builder().onServerErrorStatus(backoff).build();
+        return onStatus((status, thrown) -> {
+            if (thrown != null || (status != null && status.isServerError())) {
+                return backoff;
+            }
+            return null;
+        });
     }
 
     /**

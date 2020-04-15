@@ -40,22 +40,29 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
  */
 public class RetryStrategyBindingBuilder {
 
+    private static final Backoff NO_RETRY = new Backoff() {
+        @Override
+        public long nextDelayMillis(int numAttemptsSoFar) {
+            return -1;
+        }
+    };
+
     private static final Set<HttpMethod> IDEMPOTENT_METHODS =
             ImmutableSet.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.PUT, HttpMethod.DELETE);
 
-    private final RetryStrategyBuilder retryStrategyBuilder;
     private final ImmutableSet.Builder<HttpStatusClass> statusClassesBuilder = ImmutableSet.builder();
     private final ImmutableSet.Builder<HttpStatus> statusesBuilder = ImmutableSet.builder();
 
+    private Backoff backoff = Backoff.ofDefault();
     private Set<HttpMethod> methods = HttpMethod.knownMethods();
     private boolean isMethodsSet;
 
     @Nullable
+    private Predicate<HttpStatus> statusFilter;
+    @Nullable
     private Predicate<Throwable> exceptionFilter;
 
-    RetryStrategyBindingBuilder(RetryStrategyBuilder retryStrategyBuilder) {
-        this.retryStrategyBuilder = retryStrategyBuilder;
-    }
+    RetryStrategyBindingBuilder() {}
 
     /**
      * Adds the idempotent HTTP methods for a {@link RetryStrategy} which will retry
@@ -94,15 +101,15 @@ public class RetryStrategyBindingBuilder {
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
-    public RetryStrategyBindingBuilder onStatusClass(HttpStatusClass... statusClasses) {
-        return onStatusClass(ImmutableSet.copyOf(requireNonNull(statusClasses, "statusClasses")));
+    public RetryStrategyBindingBuilder statusClass(HttpStatusClass... statusClasses) {
+        return statusClass(ImmutableSet.copyOf(requireNonNull(statusClasses, "statusClasses")));
     }
 
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
-    public RetryStrategyBindingBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
+    public RetryStrategyBindingBuilder statusClass(Iterable<HttpStatusClass> statusClasses) {
         requireNonNull(statusClasses, "statusClasses");
         checkArgument(!Iterables.isEmpty(statusClasses), "statusClasses can't be empty");
 
@@ -114,15 +121,15 @@ public class RetryStrategyBindingBuilder {
      * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
      * if the response status is one of the specified {@link HttpStatus}es.
      */
-    public RetryStrategyBindingBuilder onStatus(HttpStatus... statuses) {
-        return onStatus(ImmutableSet.copyOf(requireNonNull(statuses, "statuses")));
+    public RetryStrategyBindingBuilder status(HttpStatus... statuses) {
+        return status(ImmutableSet.copyOf(requireNonNull(statuses, "statuses")));
     }
 
     /**
      * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
      * if the response status is one of the specified {@link HttpStatus}es.
      */
-    public RetryStrategyBindingBuilder onStatus(Iterable<HttpStatus> statuses) {
+    public RetryStrategyBindingBuilder status(Iterable<HttpStatus> statuses) {
         requireNonNull(statuses, "statuses");
         checkArgument(!Iterables.isEmpty(statuses), "statuses can't be empty");
 
@@ -131,19 +138,35 @@ public class RetryStrategyBindingBuilder {
     }
 
     /**
+     * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
+     * if the response status is one of the specified {@link HttpStatus}es.
+     */
+    public RetryStrategyBindingBuilder status(Predicate<? super HttpStatus> statusFilter) {
+        requireNonNull(statusFilter, "statuses");
+        if (this.statusFilter != null) {
+            this.statusFilter = this.statusFilter.or(statusFilter);
+        } else {
+            @SuppressWarnings("unchecked")
+            final Predicate<HttpStatus> cast = (Predicate<HttpStatus>) statusFilter;
+            this.statusFilter = cast;
+        }
+        return this;
+    }
+
+    /**
      * Adds the specified exception type for a {@link RetryStrategy} which will retry
      * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
      */
-    public RetryStrategyBindingBuilder onException(Class<? extends Throwable> exception) {
+    public RetryStrategyBindingBuilder exception(Class<? extends Throwable> exception) {
         requireNonNull(exception, "exception");
-        return onException(exception::isInstance);
+        return exception(exception::isInstance);
     }
 
     /**
      * Adds the specified {@code exceptionFilter} for a {@link RetryStrategy} which will retry
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
-    public RetryStrategyBindingBuilder onException(Predicate<? super Throwable> exceptionFilter) {
+    public RetryStrategyBindingBuilder exception(Predicate<? super Throwable> exceptionFilter) {
         requireNonNull(exceptionFilter, "exceptionFilter");
         if (this.exceptionFilter != null) {
             this.exceptionFilter = this.exceptionFilter.or(exceptionFilter);
@@ -156,27 +179,53 @@ public class RetryStrategyBindingBuilder {
     }
 
     /**
+     * Sets the specified {@link Backoff} for a {@link RetryStrategy}.
+     */
+    public RetryStrategyBindingBuilder backOff(Backoff backoff) {
+        this.backoff = requireNonNull(backoff, "backoff");
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed attempts without backoff for a {@link RetryStrategy}.
+     */
+    public RetryStrategyBindingBuilder noBackOff(int maxAttempts) {
+        checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
+        this.backoff = Backoff.withoutDelay().withMaxAttempts(maxAttempts);
+        return this;
+    }
+
+    /**
+     * Disables retry for a {@link RetryStrategy} that this {@link RetryStrategyBindingBuilder} is created from.
+     */
+    public RetryStrategyBindingBuilder noRetry() {
+        this.backoff = NO_RETRY;
+        return this;
+    }
+
+    /**
      * Sets the specified {@link Backoff} and returns the {@link RetryStrategyBuilder} that this
      * {@link RetryStrategyBindingBuilder} was created from.
      *
      * @throws IllegalStateException if none of {@link HttpStatus}, {@link HttpStatusClass} or
      *                               an expected {@code exception} type is specified
      */
-    public RetryStrategyBuilder build(Backoff backoff) {
-        requireNonNull(backoff, "backoff");
-
+    RetryStrategy build() {
         final Set<HttpMethod> methods = Sets.immutableEnumSet(this.methods);
         final Set<HttpStatusClass> statusClasses = Sets.immutableEnumSet(statusClassesBuilder.build());
         final Set<HttpStatus> statuses = statusesBuilder.build();
+        final Predicate<HttpStatus> statusFilter = this.statusFilter;
         final Predicate<Throwable> exceptionFilter = this.exceptionFilter;
+        final Backoff backoff = this.backoff;
 
-        if (exceptionFilter == null && statuses.isEmpty() && statusClasses.isEmpty()) {
+        if (backoff != NO_RETRY && exceptionFilter == null && statusFilter == null &&
+            statuses.isEmpty() && statusClasses.isEmpty()) {
             throw new IllegalStateException(
-                    "Should set at least one strategy of status, status class and an expected exception type " +
-                    "before calling this.");
+                    "Should set at least one of status, status class and an expected exception type " +
+                    "before calling this unless no backoff is set.");
         }
 
-        final RetryStrategy retryStrategy = (ctx, cause) -> {
+        return (ctx, cause) -> {
             if (!methods.contains(ctx.request().method())) {
                 return NULL_BACKOFF;
             }
@@ -190,23 +239,12 @@ public class RetryStrategyBindingBuilder {
                 if (statusClasses != null && statusClasses.contains(responseStatus.codeClass())) {
                     return CompletableFuture.completedFuture(backoff);
                 }
-                if (statuses != null && statuses.contains(responseStatus)) {
+                if ((statuses != null && statuses.contains(responseStatus)) ||
+                    (statusFilter != null && statusFilter.test(responseStatus))) {
                     return CompletableFuture.completedFuture(backoff);
                 }
             }
             return NULL_BACKOFF;
         };
-        return retryStrategyBuilder.addRetryStrategy(retryStrategy);
-    }
-
-    /**
-     * Sets the {@link Backoff#ofDefault() default backoff} and returns the {@link RetryStrategyBuilder}
-     * that this {@link RetryStrategyBindingBuilder} was created from.
-     *
-     * @throws IllegalStateException if none of {@link HttpStatus}, {@link HttpStatusClass}
-     *                               or an expected {@code exception} type is specified
-     */
-    public RetryStrategyBuilder build() {
-        return build(Backoff.ofDefault());
     }
 }

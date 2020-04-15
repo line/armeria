@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
@@ -50,10 +51,13 @@ public final class RetryStrategyBuilder {
     RetryStrategyBuilder() {}
 
     /**
-     * Returns a {@link RetryStrategyBindingBuilder} which is for binding an {@link RetryStrategy} fluently.
+     * Creates a {@link RetryStrategy} fluently that will be added to this {@link RetryStrategy}.
      */
-    public RetryStrategyBindingBuilder route() {
-        return new RetryStrategyBindingBuilder(this);
+    public RetryStrategyBuilder on(Consumer<RetryStrategyBindingBuilder> customizer) {
+        final RetryStrategyBindingBuilder bindingBuilder = new RetryStrategyBindingBuilder();
+        customizer.accept(bindingBuilder);
+        addRetryStrategy(bindingBuilder.build());
+        return this;
     }
 
     /**
