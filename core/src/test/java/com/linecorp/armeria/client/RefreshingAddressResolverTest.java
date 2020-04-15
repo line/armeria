@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 import static io.netty.handler.codec.dns.DnsRecordType.A;
+import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -50,6 +51,7 @@ import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.ResolvedAddressTypes;
@@ -307,6 +309,91 @@ class RefreshingAddressResolverTest {
         }
     }
 
+    @Test
+    void returnDnsQuestionsWhenAllQueryTimeout() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new AlwaysTimeoutHandler())) {
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsResolverGroupBuilder builder = builder(server)
+                    .queryTimeoutMillis(1000)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final Future<InetSocketAddress> future = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                await().until(future::isDone);
+                assertThat(future.cause()).isInstanceOf(DnsTimeoutException.class);
+            }
+        }
+    }
+
+    @Test
+    void returnPartialDnsQuestions() throws Exception {
+        // Returns IPv6 correctly and make IPv4 timeout.
+        try (TestDnsServer server = new TestDnsServer(
+                ImmutableMap.of(
+                        new DefaultDnsQuestion("foo.com.", AAAA),
+                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1", 1))))
+        ) {
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsResolverGroupBuilder builder = builder(server)
+                    .queryTimeoutMillis(1000)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final Future<InetSocketAddress> future = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                await().until(future::isDone);
+                assertThat(future.getNow().getAddress().getHostAddress()).isEqualTo("0:0:0:0:0:0:0:1");
+            }
+        }
+    }
+
+    @Test
+    void preferredOrderIpv4() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(
+                ImmutableMap.of(
+                        new DefaultDnsQuestion("foo.com.", A),
+                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1")),
+                        new DefaultDnsQuestion("foo.com.", AAAA),
+                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1", 1))),
+                new DelayHandler(A))
+        ) {
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsResolverGroupBuilder builder = builder(server)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final Future<InetSocketAddress> future = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                await().until(future::isSuccess);
+                assertThat(future.getNow().getAddress().getHostAddress()).isEqualTo("1.1.1.1");
+            }
+        }
+    }
+
+    @Test
+    void preferredOrderIpv6() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(
+                ImmutableMap.of(
+                        new DefaultDnsQuestion("foo.com.", A),
+                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1")),
+                        new DefaultDnsQuestion("foo.com.", AAAA),
+                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1", 1))),
+                new DelayHandler(AAAA))
+        ) {
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsResolverGroupBuilder builder = builder(server)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV6_PREFERRED);
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final Future<InetSocketAddress> future = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                await().until(future::isSuccess);
+                assertThat(future.getNow().getAddress().getHostAddress()).isEqualTo("0:0:0:0:0:0:0:1");
+            }
+        }
+    }
+
     private static DnsResolverGroupBuilder builder(TestDnsServer... servers) {
         final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
                 hostname -> DnsServerAddresses.sequential(
@@ -328,6 +415,44 @@ class RefreshingAddressResolverTest {
                 if (dnsRecord.type() == A && recordACount++ == 0) {
                     // Just release the msg and return so that the client request is timed out.
                     ReferenceCountUtil.safeRelease(msg);
+                    return;
+                }
+            }
+            super.channelRead(ctx, msg);
+        }
+    }
+
+    private static class AlwaysTimeoutHandler extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof DatagramDnsQuery) {
+                // Just release the msg and return so that the client request is timed out.
+                ReferenceCountUtil.safeRelease(msg);
+                return;
+            }
+            super.channelRead(ctx, msg);
+        }
+    }
+
+    private static class DelayHandler extends ChannelInboundHandlerAdapter {
+        private final DnsRecordType delayType;
+
+        DelayHandler(DnsRecordType delayType) {
+            this.delayType = delayType;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof DatagramDnsQuery) {
+                final DatagramDnsQuery dnsQuery = (DatagramDnsQuery) msg;
+                final DnsRecord dnsRecord = dnsQuery.recordAt(DnsSection.QUESTION, 0);
+                if (dnsRecord.type() == delayType) {
+                    ctx.executor().schedule(() -> {
+                        try {
+                            super.channelRead(ctx, msg);
+                        } catch (Exception ignore) {
+                        }
+                    }, 1, TimeUnit.SECONDS);
                     return;
                 }
             }

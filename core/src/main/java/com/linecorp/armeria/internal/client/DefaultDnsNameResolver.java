@@ -17,10 +17,12 @@
 package com.linecorp.armeria.internal.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +39,7 @@ import com.linecorp.armeria.client.DnsTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -96,12 +99,17 @@ public class DefaultDnsNameResolver {
 
                 if (--remaining == 0) {
                     if (!records.isEmpty()) {
+                        final List<DnsRecordType> preferredOrder =
+                                questions.stream().map(DnsRecord::type).collect(toImmutableList());
+                        records.sort(Comparator.comparingInt(record -> preferredOrder.indexOf(record.type())));
                         aggregatedPromise.setSuccess(records);
                     } else {
                         final Throwable aggregatedCause;
                         if (causes == null) {
                             aggregatedCause = new UnknownHostException("Failed to resolve: " + questions +
                                                                        " (empty result)");
+                        } else if (causes.stream().allMatch(c -> c instanceof DnsTimeoutException)) {
+                            aggregatedCause = causes.get(0);
                         } else {
                             aggregatedCause = new UnknownHostException("Failed to resolve: " + questions);
                             for (Throwable c : causes) {
@@ -140,9 +148,8 @@ public class DefaultDnsNameResolver {
             final DnsTimeoutException exception = new DnsTimeoutException(
                     '[' + logPrefix + "] " + questions + " are timed out after " +
                     queryTimeoutMillis + " milliseconds.");
-            result.setFailure(exception);
             promises.forEach(promise -> {
-                promise.cancel(true);
+                promise.tryFailure(exception);
             });
         }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
