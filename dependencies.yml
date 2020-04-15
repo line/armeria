@@ -197,6 +197,8 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
+  grpc-kotlin-stub:  { version: &GRPC_KOTLIN_VERSION '0.1.1' }
+  protoc-gen-grpc-kotlin: {version: *GRPC_KOTLIN_VERSION}
 
 io.micrometer:
   micrometer-core:
