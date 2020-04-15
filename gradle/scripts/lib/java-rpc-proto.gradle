@@ -1,6 +1,7 @@
 buildscript {
     repositories {
         gradlePluginPortal()
+
     }
     dependencies {
         classpath "com.google.protobuf:protobuf-gradle-plugin:${managedVersions['com.google.protobuf:protobuf-gradle-plugin']}"
@@ -36,6 +37,12 @@ configure(projectsWithFlags('java')) {
                             artifact = "com.salesforce.servicelibs:rxgrpc:${managedVersions['com.salesforce.servicelibs:reactor-grpc']}"
                         }
                     }
+
+                    if (project.ext.hasFlag('grpc-kotlin')) {
+                        grpckt {
+                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}"
+                        }
+                    }
                 }
                 generateProtoTasks {
                     all()*.plugins {
@@ -47,6 +54,9 @@ configure(projectsWithFlags('java')) {
                         }
                         if (project.ext.hasFlag('rxgrpc') && managedVersions.containsKey('com.salesforce.servicelibs:rxgrpc')) {
                             rxgrpc {}
+                        }
+                        if (project.ext.hasFlag('grpc-kotlin') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
+                            grpckt {}
                         }
                     }
                     all().each { task ->
