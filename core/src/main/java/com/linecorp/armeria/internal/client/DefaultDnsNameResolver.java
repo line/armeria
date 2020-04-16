@@ -89,9 +89,12 @@ public class DefaultDnsNameResolver {
 
                 if (--remaining == 0) {
                     if (!records.isEmpty()) {
-                        final List<DnsRecordType> preferredOrder =
-                                questions.stream().map(DnsRecord::type).collect(toImmutableList());
-                        records.sort(Comparator.comparingInt(record -> preferredOrder.indexOf(record.type())));
+                        if (records.size() > 1) {
+                            final List<DnsRecordType> preferredOrder =
+                                    questions.stream().map(DnsRecord::type).collect(toImmutableList());
+                            records.sort(Comparator.comparingInt(
+                                    record -> preferredOrder.indexOf(record.type())));
+                        }
                         aggregatedPromise.setSuccess(records);
                     } else {
                         final Throwable aggregatedCause;
