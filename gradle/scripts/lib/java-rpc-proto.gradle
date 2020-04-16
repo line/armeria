@@ -1,7 +1,6 @@
 buildscript {
     repositories {
         gradlePluginPortal()
-
     }
     dependencies {
         classpath "com.google.protobuf:protobuf-gradle-plugin:${managedVersions['com.google.protobuf:protobuf-gradle-plugin']}"
@@ -38,7 +37,7 @@ configure(projectsWithFlags('java')) {
                         }
                     }
 
-                    if (project.ext.hasFlag('grpc-kotlin')) {
+                    if (project.ext.hasFlag('grpc-kotlin') && managedVersions.containsKey('io.grpc:protoc-gen-grpc-kotlin')) {
                         grpckt {
                             artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}"
                         }
