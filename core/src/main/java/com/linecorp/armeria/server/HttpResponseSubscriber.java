@@ -351,8 +351,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {
         final State oldState = setDone();
-
-
         final int id = req.id();
         final int streamId = req.streamId();
 
