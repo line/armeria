@@ -133,7 +133,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             return;
         }
 
-        if (isStreamOrSessionClosed()) {
+        if (failIfStreamOrSessionClosed()) {
             ReferenceCountUtil.safeRelease(o);
             return;
         }
@@ -233,9 +233,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 break;
             }
             case DONE:
-                // Cancel the subscription if any message comes here after the state has been changed to DONE.
-                assert subscription != null;
-                subscription.cancel();
                 ReferenceCountUtil.safeRelease(o);
                 return;
         }
@@ -243,7 +240,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         ctx.flush();
     }
 
-    private boolean isStreamOrSessionClosed() {
+    private boolean failIfStreamOrSessionClosed() {
         // Make sure that a stream exists before writing data.
         // The following situation may cause the data to be written to a closed stream.
         // 1. A connection that has pending outbound buffers receives GOAWAY frame.
@@ -262,6 +259,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private State setDone() {
+        if (subscription != null) {
+            subscription.cancel();
+        }
         cancelTimeout();
         final State oldState = state;
         state = State.DONE;
@@ -333,9 +333,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         if (tryComplete()) {
             setDone();
             logBuilder().endResponse(cause);
-            // unlike failAndRespond and failAndReset, subscription cannot be null at this time.
-            assert subscription != null;
-            subscription.cancel();
             reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
         }
     }
@@ -354,9 +351,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {
         final State oldState = setDone();
-        if (subscription != null) {
-            subscription.cancel();
-        }
+
 
         final int id = req.id();
         final int streamId = req.streamId();
@@ -388,10 +383,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void failAndReset(Throwable cause) {
         final State oldState = setDone();
-        if (subscription != null) {
-            subscription.cancel();
-        }
-
         final ChannelFuture future =
                 responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL);
 
@@ -512,13 +503,15 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         if (isSuccess) {
             maybeLogFirstResponseBytesTransferred();
 
-            if (endOfStream && tryComplete()) {
-                logBuilder().endResponse();
-                reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+            if (endOfStream) {
+                if (tryComplete()) {
+                    logBuilder().endResponse();
+                    reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                }
+            } else {
+                assert subscription != null;
+                subscription.request(1);
             }
-
-            assert subscription != null;
-            subscription.request(1);
             return;
         }
 
