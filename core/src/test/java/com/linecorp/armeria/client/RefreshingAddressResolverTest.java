@@ -311,9 +311,10 @@ class RefreshingAddressResolverTest {
 
     @Test
     void returnDnsQuestionsWhenAllQueryTimeout() throws Exception {
-        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new AlwaysTimeoutHandler())) {
+        try (TestDnsServer server1 = new TestDnsServer(ImmutableMap.of(), new AlwaysTimeoutHandler());
+             TestDnsServer server2 = new TestDnsServer(ImmutableMap.of(), new AlwaysTimeoutHandler())) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            final DnsResolverGroupBuilder builder = builder(server)
+            final DnsResolverGroupBuilder builder = builder(server1, server2)
                     .queryTimeoutMillis(1000)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
