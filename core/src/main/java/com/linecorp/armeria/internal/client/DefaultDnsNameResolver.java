@@ -24,6 +24,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -66,17 +67,6 @@ public class DefaultDnsNameResolver {
         requireNonNull(questions, "questions");
         requireNonNull(logPrefix, "logPrefix");
         final int numQuestions = questions.size();
-        if (numQuestions == 1) {
-            // Simple case of single query
-            final DnsQuestion question = questions.get(0);
-            logger.debug("[{}] Sending a DNS query: {}", logPrefix, question);
-            final Promise<List<DnsRecord>> promise = eventLoop.newPromise();
-            delegate.resolveAll(question, EMPTY_ADDITIONALS, promise);
-            configureTimeout(questions, logPrefix, promise, ImmutableList.of(promise));
-            return promise;
-        }
-
-        // Multiple queries
         logger.debug("[{}] Sending DNS queries: {}", logPrefix, questions);
         final Promise<List<DnsRecord>> aggregatedPromise = eventLoop.newPromise();
         final FutureListener<List<DnsRecord>> listener = new FutureListener<List<DnsRecord>>() {
@@ -108,8 +98,10 @@ public class DefaultDnsNameResolver {
                         if (causes == null) {
                             aggregatedCause = new UnknownHostException("Failed to resolve: " + questions +
                                                                        " (empty result)");
-                        } else if (causes.stream().allMatch(c -> c instanceof DnsTimeoutException)) {
-                            aggregatedCause = causes.get(0);
+                        } else if (causes.stream().allMatch(c -> c instanceof CancellationException)) {
+                            aggregatedCause = new DnsTimeoutException(
+                                    '[' + logPrefix + "] " + questions + " are timed out after " +
+                                    queryTimeoutMillis + " milliseconds.");
                         } else {
                             aggregatedCause = new UnknownHostException("Failed to resolve: " + questions);
                             for (Throwable c : causes) {
@@ -145,12 +137,7 @@ public class DefaultDnsNameResolver {
                 // Received a response before the query times out.
                 return;
             }
-            final DnsTimeoutException exception = new DnsTimeoutException(
-                    '[' + logPrefix + "] " + questions + " are timed out after " +
-                    queryTimeoutMillis + " milliseconds.");
-            promises.forEach(promise -> {
-                promise.tryFailure(exception);
-            });
+            promises.forEach(promise -> promise.cancel(true));
         }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
