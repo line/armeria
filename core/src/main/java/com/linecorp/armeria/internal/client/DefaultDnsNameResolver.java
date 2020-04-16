@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -52,7 +53,7 @@ public class DefaultDnsNameResolver {
     private static final Iterable<DnsRecord> EMPTY_ADDITIONALS = ImmutableList.of();
 
     private final DnsNameResolver delegate;
-    private final Ordering<DnsRecord> preferredOrder;
+    private final Comparator<DnsRecordType> preferredOrder;
     private final EventLoop eventLoop;
     private final long queryTimeoutMillis;
 
@@ -68,7 +69,7 @@ public class DefaultDnsNameResolver {
         } else {
             recordTypes = ImmutableList.of(DnsRecordType.A, DnsRecordType.AAAA);
         }
-        preferredOrder = Ordering.explicit(recordTypes).onResultOf(DnsRecord::type);
+        preferredOrder = Ordering.explicit(recordTypes);
     }
 
     public Future<List<DnsRecord>> sendQueries(List<DnsQuestion> questions, String logPrefix) {
@@ -109,7 +110,7 @@ public class DefaultDnsNameResolver {
                 if (--remaining == 0 && !aggregatedPromise.isDone()) {
                     if (!records.isEmpty()) {
                         if (records.size() > 1) {
-                            records.sort(preferredOrder);
+                            records.sort(Comparator.comparing(DnsRecord::type, preferredOrder));
                         }
                         aggregatedPromise.trySuccess(records);
                     } else {
