@@ -197,6 +197,8 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.1' }
+  protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
   micrometer-core:
@@ -420,7 +422,7 @@ org.jctools:
     - from: org.jctools
       to: com.linecorp.armeria.internal.shaded.jctools
 
-# If you want to change `org.jetbrains.kotlin:kotlin-allopen` version, 
+# If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
   kotlin-allopen: { version: &KOTLIN_VERSION '1.3.71' }

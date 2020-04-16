@@ -36,6 +36,11 @@ configure(projectsWithFlags('java')) {
                             artifact = "com.salesforce.servicelibs:rxgrpc:${managedVersions['com.salesforce.servicelibs:reactor-grpc']}"
                         }
                     }
+                    if (project.ext.hasFlag('kotlin-grpc')) {
+                        kotlinGrpc {
+                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}"
+                        }
+                    }
                 }
                 generateProtoTasks {
                     all()*.plugins {
@@ -47,6 +52,9 @@ configure(projectsWithFlags('java')) {
                         }
                         if (project.ext.hasFlag('rxgrpc') && managedVersions.containsKey('com.salesforce.servicelibs:rxgrpc')) {
                             rxgrpc {}
+                        }
+                        if (project.ext.hasFlag('kotlin-grpc') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
+                            kotlinGrpc {}
                         }
                     }
                     all().each { task ->
