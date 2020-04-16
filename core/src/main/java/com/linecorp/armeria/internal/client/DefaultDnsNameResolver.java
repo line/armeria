@@ -63,13 +63,11 @@ public class DefaultDnsNameResolver {
         checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
         this.queryTimeoutMillis = queryTimeoutMillis;
 
-        final List<DnsRecordType> recordTypes;
         if (delegate.resolvedAddressTypes() == ResolvedAddressTypes.IPV6_PREFERRED) {
-            recordTypes = ImmutableList.of(DnsRecordType.AAAA, DnsRecordType.A);
+            preferredOrder = Ordering.explicit(DnsRecordType.AAAA, DnsRecordType.A);
         } else {
-            recordTypes = ImmutableList.of(DnsRecordType.A, DnsRecordType.AAAA);
+            preferredOrder = Ordering.explicit(DnsRecordType.A, DnsRecordType.AAAA);
         }
-        preferredOrder = Ordering.explicit(recordTypes);
     }
 
     public Future<List<DnsRecord>> sendQueries(List<DnsQuestion> questions, String logPrefix) {
