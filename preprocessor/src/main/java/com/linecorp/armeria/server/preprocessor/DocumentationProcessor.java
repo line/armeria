@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation.processor;
+package com.linecorp.armeria.server.preprocessor;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 

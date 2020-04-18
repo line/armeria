@@ -36,7 +36,10 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
-    configurations["kapt"].dependencies.add(project(":core"))
+    // Preprocessor that enables you to use KDoc to add description to REST API parameters.
+    // If you don't want to use it, you can use the annotation
+    // com.linecorp.armeria.server.annotation.Description otherwise.
+    configurations["kapt"].dependencies.add(project(":preprocessor"))
 }
 
 tasks.withType<KotlinCompile> {

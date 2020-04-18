@@ -18,6 +18,6 @@
  * Annotation processors for RESTful services.
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.annotation.processor;
+package com.linecorp.armeria.server.preprocessor;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

@@ -36,6 +36,7 @@ includeWithFlags ':tomcat8.5',                          'java', 'publish', 'relo
 includeWithFlags ':zookeeper',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                               'java', 'publish', 'relocate'
 includeWithFlags ':bucket4j',                           'java', 'publish', 'relocate'
+includeWithFlags ':preprocessor',                       'java', 'publish', 'relocate'
 
 // Published Javadoc-only projects
 includeWithFlags ':javadoc',                            'java', 'publish', 'no_aggregation'
@@ -80,3 +81,5 @@ includeWithFlags ':examples:spring-boot-minimal-kotlin',         'java'
 includeWithFlags ':examples:spring-boot-tomcat',                 'java'
 includeWithFlags ':examples:spring-boot-webflux',                'java'
 includeWithFlags ':examples:static-files',                       'java'
+include 'preprocessor'
+
