@@ -15,6 +15,7 @@ buildscript {
 plugins {
     id("org.jetbrains.kotlin.jvm")
 
+    // required if you want to use preprocessors
     kotlin("kapt") apply true
 }
 

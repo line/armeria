@@ -81,5 +81,3 @@ includeWithFlags ':examples:spring-boot-minimal-kotlin',         'java'
 includeWithFlags ':examples:spring-boot-tomcat',                 'java'
 includeWithFlags ':examples:spring-boot-webflux',                'java'
 includeWithFlags ':examples:static-files',                       'java'
-include 'preprocessor'
-
