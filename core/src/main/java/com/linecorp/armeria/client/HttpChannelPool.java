@@ -425,7 +425,7 @@ final class HttpChannelPool implements AsyncCloseable {
             if (future.isSuccess()) {
                 initSession(desiredProtocol, future, sessionPromise);
             } else {
-                sessionPromise.setFailure(future.cause());
+                sessionPromise.tryFailure(future.cause());
             }
         });
     }
