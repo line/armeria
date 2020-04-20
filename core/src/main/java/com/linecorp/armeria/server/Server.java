@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -332,7 +333,7 @@ public final class Server implements ListenableAsyncCloseable {
      * Waits until the result of {@link CompletableFuture} which is completed after the {@link #close()} or
      * {@link #closeAsync()} operation is completed.
      */
-    public void blockUntilShutdown() throws Exception {
+    public void blockUntilShutdown() throws ExecutionException, InterruptedException {
         whenClosed().get();
     }
 
