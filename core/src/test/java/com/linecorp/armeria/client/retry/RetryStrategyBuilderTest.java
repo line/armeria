@@ -75,18 +75,24 @@ class RetryStrategyBuilderTest {
 
     @Test
     void onStatus() {
-        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
-        final Backoff backoff = Backoff.fixed(1000);
+        final Backoff backoff500 = Backoff.fixed(1000);
+        final Backoff backoff502 = Backoff.fixed(1000);
         final RetryStrategy strategy = RetryStrategy.builder()
-                                                    .onStatus(HttpStatus.INTERNAL_SERVER_ERROR, backoff)
+                                                    .onStatus(HttpStatus.INTERNAL_SERVER_ERROR, backoff500)
+                                                    .onStatus(HttpStatus.BAD_GATEWAY::equals, backoff502)
                                                     .build();
 
-        assertFutureValue(strategy.shouldRetry(ctx, null)).isSameAs(backoff);
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+        assertFutureValue(strategy.shouldRetry(ctx1, null)).isSameAs(backoff500);
 
         final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.GATEWAY_TIMEOUT));
-        assertFutureValue(strategy.shouldRetry(ctx2, null)).isNull();
+        ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.BAD_GATEWAY));
+        assertFutureValue(strategy.shouldRetry(ctx2, null)).isSameAs(backoff502);
+
+        final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx3.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.GATEWAY_TIMEOUT));
+        assertFutureValue(strategy.shouldRetry(ctx3, null)).isNull();
     }
 
     @Test

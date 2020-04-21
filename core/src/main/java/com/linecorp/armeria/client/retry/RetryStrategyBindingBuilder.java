@@ -138,8 +138,8 @@ public class RetryStrategyBindingBuilder {
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * Adds the specified {@code statusFilter} for a {@link RetryStrategy} which will retry
+     * if the response status matches the specified {@code statusFilter}.
      */
     public RetryStrategyBindingBuilder status(Predicate<? super HttpStatus> statusFilter) {
         requireNonNull(statusFilter, "statuses");
@@ -179,7 +179,7 @@ public class RetryStrategyBindingBuilder {
     }
 
     /**
-     * Sets the specified {@link Backoff} for a {@link RetryStrategy}.
+     * Sets the specified {@link Backoff}.
      */
     public RetryStrategyBindingBuilder backOff(Backoff backoff) {
         this.backoff = requireNonNull(backoff, "backoff");
@@ -187,7 +187,7 @@ public class RetryStrategyBindingBuilder {
     }
 
     /**
-     * Sets the maximum allowed attempts without backoff for a {@link RetryStrategy}.
+     * Sets the maximum allowed attempts with no backoff.
      */
     public RetryStrategyBindingBuilder noBackOff(int maxAttempts) {
         checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
@@ -196,7 +196,7 @@ public class RetryStrategyBindingBuilder {
     }
 
     /**
-     * Disables retry for a {@link RetryStrategy} that this {@link RetryStrategyBindingBuilder} is created from.
+     * Disables retry for a {@link RetryStrategy}.
      */
     public RetryStrategyBindingBuilder noRetry() {
         this.backoff = NO_RETRY;
@@ -204,11 +204,8 @@ public class RetryStrategyBindingBuilder {
     }
 
     /**
-     * Sets the specified {@link Backoff} and returns the {@link RetryStrategyBuilder} that this
-     * {@link RetryStrategyBindingBuilder} was created from.
-     *
-     * @throws IllegalStateException if none of {@link HttpStatus}, {@link HttpStatusClass} or
-     *                               an expected {@code exception} type is specified
+     * Returns a newly-created {@link RetryStrategy} that this {@link RetryStrategyBindingBuilder}
+     * was created from.
      */
     RetryStrategy build() {
         final Set<HttpMethod> methods = Sets.immutableEnumSet(this.methods);

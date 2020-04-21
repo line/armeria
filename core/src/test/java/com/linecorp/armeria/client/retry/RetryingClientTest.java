@@ -651,7 +651,7 @@ class RetryingClientTest {
         }
     }
 
-    private static class RetryStrategiesProvider implements ArgumentsProvider {
+    private static final class RetryStrategiesProvider implements ArgumentsProvider {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {

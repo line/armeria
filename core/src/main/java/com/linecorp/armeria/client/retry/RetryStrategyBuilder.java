@@ -51,16 +51,6 @@ public final class RetryStrategyBuilder {
     RetryStrategyBuilder() {}
 
     /**
-     * Creates a {@link RetryStrategy} fluently that will be added to this {@link RetryStrategy}.
-     */
-    public RetryStrategyBuilder on(Consumer<RetryStrategyBindingBuilder> customizer) {
-        final RetryStrategyBindingBuilder bindingBuilder = new RetryStrategyBindingBuilder();
-        customizer.accept(bindingBuilder);
-        addRetryStrategy(bindingBuilder.build());
-        return this;
-    }
-
-    /**
      * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
      * when the class of the response status is the specified {@link HttpStatusClass}.
      */
@@ -108,6 +98,26 @@ public final class RetryStrategyBuilder {
 
     /**
      * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
+     * when the response status matches the specified {@code statusFilter}.
+     */
+    public RetryStrategyBuilder onStatus(Predicate<? super HttpStatus> statusFilter, Backoff backoff) {
+        requireNonNull(statusFilter, "status");
+        requireNonNull(backoff, "backoff");
+
+        final RetryStrategy retryStrategy = (ctx, cause) -> {
+            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                final HttpStatus responseStatus = ctx.log().partial().responseHeaders().status();
+                if (statusFilter.test(responseStatus)) {
+                    return CompletableFuture.completedFuture(backoff);
+                }
+            }
+            return NULL_BACKOFF;
+        };
+        return addRetryStrategy(retryStrategy);
+    }
+
+    /**
+     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
      * when the response status is the specified {@link HttpStatus}.
      */
     public RetryStrategyBuilder onStatus(HttpStatus status, Backoff backoff) {
@@ -116,16 +126,7 @@ public final class RetryStrategyBuilder {
         checkArgument(!statuses.contains(status), "%s is already set", status);
         statuses.add(status);
 
-        final RetryStrategy retryStrategy = (ctx, cause) -> {
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                final HttpStatus responseStatus = ctx.log().partial().responseHeaders().status();
-                if (status == responseStatus) {
-                    return CompletableFuture.completedFuture(backoff);
-                }
-            }
-            return NULL_BACKOFF;
-        };
-        return addRetryStrategy(retryStrategy);
+        return onStatus(status::equals, backoff);
     }
 
     /**
@@ -207,6 +208,16 @@ public final class RetryStrategyBuilder {
      */
     public RetryStrategyBuilder onUnProcessed() {
         return onException(UnprocessedRequestException.class, Backoff.ofDefault());
+    }
+
+    /**
+     * Add a {@link RetryStrategy} fluently.
+     */
+    public RetryStrategyBuilder on(Consumer<RetryStrategyBindingBuilder> customizer) {
+        final RetryStrategyBindingBuilder bindingBuilder = new RetryStrategyBindingBuilder();
+        customizer.accept(bindingBuilder);
+        addRetryStrategy(bindingBuilder.build());
+        return this;
     }
 
     /**
