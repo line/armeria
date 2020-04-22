@@ -1,1 +1,1 @@
-DocumentationProcessor
+com.linecorp.armeria.server.annotation.processor.DocumentationProcessor
