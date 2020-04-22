@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -60,6 +61,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
@@ -332,9 +334,15 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Waits until the result of {@link CompletableFuture} which is completed after the {@link #close()} or
      * {@link #closeAsync()} operation is completed.
+     *
+     * @throws InterruptedException
      */
-    public void blockUntilShutdown() throws ExecutionException, InterruptedException {
-        whenClosed().get();
+    public void blockUntilShutdown() throws InterruptedException {
+        try {
+            whenClosed().get();
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.toString(), Exceptions.peel(e));
+        }
     }
 
     /**
