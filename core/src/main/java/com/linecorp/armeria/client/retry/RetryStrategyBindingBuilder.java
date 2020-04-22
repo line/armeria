@@ -51,7 +51,8 @@ public final class RetryStrategyBindingBuilder extends AbstractRetryStrategyBind
     }
 
     /**
-     * Sets a {@link Backoff} that will never wait and limit the number of attempts up to the specified value.
+     * Sets a {@link Backoff} that limits the number of attempts up to the specified value and
+     * never waits between attempts.
      * Returns the {@link RetryStrategyBuilder} that this {@link RetryStrategyBindingBuilder} was created from.
      */
     public RetryStrategyBuilder thenImmediately(int maxAttempts) {
@@ -59,7 +60,7 @@ public final class RetryStrategyBindingBuilder extends AbstractRetryStrategyBind
     }
 
     /**
-     * Disables retry for this {@link RetryStrategy} and returns the {@link RetryStrategyBuilder} that
+     * Disables retry for a {@link RetryStrategy} and returns the {@link RetryStrategyBuilder} that
      * this {@link RetryStrategyBindingBuilder} was created from.
      */
     public RetryStrategyBuilder thenStop() {
@@ -71,7 +72,7 @@ public final class RetryStrategyBindingBuilder extends AbstractRetryStrategyBind
         return retryStrategyBuilder;
     }
 
-    // Methods that were overridden to change the return type and delegates to retryRuleBuilder
+    // Methods that were overridden to change the return type and delegate to retryRuleBuilder
 
     @Override
     public RetryStrategyBindingBuilder onIdempotentMethods() {

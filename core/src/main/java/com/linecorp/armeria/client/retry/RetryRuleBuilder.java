@@ -171,8 +171,8 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
     }
 
     /**
-     * Sets a {@link Backoff} that will never wait and limit the number of attempts up to the specified value.
-     * Returns a newly created {@link RetryRule}.
+     * Sets a {@link Backoff} which limits the number of attempts up to the specified value and
+     * never waits between attempts. Returns a newly created {@link RetryRule}.
      */
     public RetryRule thenImmediately(int maxAttempts) {
         checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
@@ -181,7 +181,7 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
     }
 
     /**
-     * Disables retry for this {@link RetryStrategy} and returns a newly created {@link RetryRule}.
+     * Returns a newly created {@link RetryRule} that never retries.
      */
     public RetryRule thenStop() {
         return build(NO_RETRY);

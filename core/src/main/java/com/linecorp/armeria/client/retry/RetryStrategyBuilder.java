@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A builder which builds a {@link RetryStrategy}.
+ * A builder which creates a {@link RetryStrategy}.
  */
 public final class RetryStrategyBuilder extends AbstractRetryStrategyBindingBuilder {
 
@@ -125,7 +125,7 @@ public final class RetryStrategyBuilder extends AbstractRetryStrategyBindingBuil
      *              .on(RetryRule.onStatus(HttpStatus.SERVICE_UNAVAILABLE)
      *                           .onException(ex -> ex instanceof ClosedSessionException)
      *                           .onMethod(HttpMethod.GET)
-     *                           .thenBackOff(backoffOn503))
+     *                           .thenBackOff(myBackoff))
      *              .build();
      * }</pre>
      */

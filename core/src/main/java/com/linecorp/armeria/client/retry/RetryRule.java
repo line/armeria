@@ -150,7 +150,8 @@ public final class RetryRule {
 
     RetryRule(Set<HttpMethod> methods, Set<HttpStatusClass> statusClasses,
               Set<HttpStatus> statuses, Backoff backoff,
-              @Nullable Predicate<HttpStatus> statusFilter, @Nullable Predicate<Throwable> exceptionFilter) {
+              @Nullable Predicate<HttpStatus> statusFilter,
+              @Nullable Predicate<Throwable> exceptionFilter) {
         this.methods = methods;
         this.statusClasses = statusClasses;
         this.statuses = statuses;
