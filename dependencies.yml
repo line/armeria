@@ -436,6 +436,9 @@ org.jlleitschuh.gradle:
 org.jsoup:
   jsoup: { version: '1.13.1' }
 
+org.jooq:
+  joor: { version: '0.9.12' }
+
 org.mockito:
   mockito-core: { version: &MOCKITO_VERSION '3.3.3' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }

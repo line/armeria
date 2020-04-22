@@ -40,7 +40,7 @@ dependencies {
     // Preprocessor that enables you to use KDoc to add description to REST API parameters.
     // If you don't want to use it, you can use the annotation
     // com.linecorp.armeria.server.annotation.Description otherwise.
-    configurations["kapt"].dependencies.add(project(":preprocessor"))
+    configurations["kapt"].dependencies.add(project(":annotation-processor"))
 }
 
 tasks.withType<KotlinCompile> {

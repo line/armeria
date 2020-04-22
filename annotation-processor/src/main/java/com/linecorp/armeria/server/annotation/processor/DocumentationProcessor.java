@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.preprocessor;
+package com.linecorp.armeria.server.annotation.processor;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -177,7 +177,7 @@ public class DocumentationProcessor extends AbstractProcessor {
      * @return The used file name.
      */
     public static String getFileName(String className) {
-        return "com.linecorp.armeria.docstrings.annotated" + className + ".properties";
+        return "com.linecorp.armeria.docstrings.annotated." + className + ".properties";
     }
 
     private enum JavaDocParserState {

@@ -36,7 +36,7 @@ includeWithFlags ':tomcat8.5',                          'java', 'publish', 'relo
 includeWithFlags ':zookeeper',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                               'java', 'publish', 'relocate'
 includeWithFlags ':bucket4j',                           'java', 'publish', 'relocate'
-includeWithFlags ':preprocessor',                       'java', 'publish', 'relocate'
+includeWithFlags ':annotation-processor',               'java', 'publish', 'relocate'
 
 // Published Javadoc-only projects
 includeWithFlags ':javadoc',                            'java', 'publish', 'no_aggregation'
