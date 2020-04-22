@@ -670,8 +670,8 @@ class RetryingClientTest {
 
             final RetryStrategy retryStrategyByBuilder =
                     RetryStrategy.builder()
-                                 .onStatus(HttpStatus.SERVICE_UNAVAILABLE, backoffOn503)
-                                 .onStatus(HttpStatus.INTERNAL_SERVER_ERROR, backoffOn500)
+                                 .onStatus(HttpStatus.SERVICE_UNAVAILABLE).thenBackoff(backoffOn503)
+                                 .onStatus(HttpStatus.INTERNAL_SERVER_ERROR).thenBackoff(backoffOn500)
                                  .build();
 
             return Stream.of(retryStrategyByFactory, retryStrategyByBuilder)

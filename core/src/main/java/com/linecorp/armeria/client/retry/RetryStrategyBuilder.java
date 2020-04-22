@@ -16,220 +16,125 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A builder which builds {@link RetryStrategy}.
+ * A builder which builds a {@link RetryStrategy}.
  */
-public final class RetryStrategyBuilder {
+public final class RetryStrategyBuilder extends AbstractRetryStrategyBindingBuilder {
 
-    static final CompletableFuture<Backoff> NULL_BACKOFF = CompletableFuture.completedFuture(null);
+    private static final CompletableFuture<Backoff> NULL_BACKOFF = CompletableFuture.completedFuture(null);
     private static final RetryStrategy[] EMPTY_RETRY_STRATEGIES = new RetryStrategy[0];
 
     private final ImmutableList.Builder<RetryStrategy> retryStrategiesBuilder = ImmutableList.builder();
-    private final Set<HttpStatusClass> statusClasses = EnumSet.noneOf(HttpStatusClass.class);
-    private final Set<HttpStatus> statuses = new HashSet<>();
 
     RetryStrategyBuilder() {}
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
-     * when the class of the response status is the specified {@link HttpStatusClass}.
-     */
-    public RetryStrategyBuilder onStatusClass(HttpStatusClass statusClass, Backoff backoff) {
-        requireNonNull(statusClass, "statusClass");
-        requireNonNull(backoff, "backoff");
-        checkArgument(!statusClasses.contains(statusClass), "%s is already set", statusClass);
-        statusClasses.add(statusClass);
-
-        final RetryStrategy retryStrategy = (ctx, cause) -> {
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                final HttpStatusClass codeClass = ctx.log().partial().responseHeaders().status().codeClass();
-                if (codeClass == statusClass) {
-                    return CompletableFuture.completedFuture(backoff);
-                }
-            }
-            return NULL_BACKOFF;
-        };
-        return addRetryStrategy(retryStrategy);
+    @Override
+    public RetryStrategyBindingBuilder onIdempotentMethods() {
+        return newBindingBuilder().onIdempotentMethods();
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the {@linkplain Backoff#ofDefault() default backoff}
-     * when the class of response status is the specified {@link HttpStatusClass}.
-     */
-    public RetryStrategyBuilder onStatusClass(HttpStatusClass statusClass) {
-        return onStatusClass(statusClass, Backoff.ofDefault());
+    @Override
+    public RetryStrategyBindingBuilder onMethods(HttpMethod... methods) {
+        return newBindingBuilder().onMethods(methods);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
-     * when the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
-     */
-    public RetryStrategyBuilder onServerErrorStatus(Backoff backoff) {
-        return onStatusClass(HttpStatusClass.SERVER_ERROR, backoff);
+    @Override
+    public RetryStrategyBindingBuilder onMethods(Iterable<HttpMethod> methods) {
+        return newBindingBuilder().onMethods(methods);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the {@linkplain Backoff#ofDefault() default backoff}
-     * when the class of response status is {@link HttpStatusClass#SERVER_ERROR}.
-     */
-    public RetryStrategyBuilder onServerErrorStatus() {
-        return onStatusClass(HttpStatusClass.SERVER_ERROR);
+    @Override
+    public RetryStrategyBindingBuilder onStatusClass(HttpStatusClass... statusClasses) {
+        return newBindingBuilder().onStatusClass(statusClasses);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
-     * when the response status matches the specified {@code statusFilter}.
-     */
-    public RetryStrategyBuilder onStatus(Predicate<? super HttpStatus> statusFilter, Backoff backoff) {
-        requireNonNull(statusFilter, "status");
-        requireNonNull(backoff, "backoff");
-
-        final RetryStrategy retryStrategy = (ctx, cause) -> {
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                final HttpStatus responseStatus = ctx.log().partial().responseHeaders().status();
-                if (statusFilter.test(responseStatus)) {
-                    return CompletableFuture.completedFuture(backoff);
-                }
-            }
-            return NULL_BACKOFF;
-        };
-        return addRetryStrategy(retryStrategy);
+    @Override
+    public RetryStrategyBindingBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
+        return newBindingBuilder().onStatusClass(statusClasses);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
-     * when the response status is the specified {@link HttpStatus}.
-     */
-    public RetryStrategyBuilder onStatus(HttpStatus status, Backoff backoff) {
-        requireNonNull(status, "status");
-        requireNonNull(backoff, "backoff");
-        checkArgument(!statuses.contains(status), "%s is already set", status);
-        statuses.add(status);
-
-        return onStatus(status::equals, backoff);
+    @Override
+    public RetryStrategyBindingBuilder onServerErrorStatus() {
+        return newBindingBuilder().onServerErrorStatus();
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the {@linkplain Backoff#ofDefault() default backoff}
-     * when the response status is the specified {@link HttpStatus}.
-     */
-    public RetryStrategyBuilder onStatus(HttpStatus status) {
-        return onStatus(status, Backoff.ofDefault());
+    @Override
+    public RetryStrategyBindingBuilder onStatus(HttpStatus... statuses) {
+        return newBindingBuilder().onStatus(statuses);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
-     * when an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
-     */
-    public RetryStrategyBuilder onException(Predicate<? super Throwable> exceptionFilter, Backoff backoff) {
-        requireNonNull(exceptionFilter, "exceptionFilter");
-        requireNonNull(backoff, "backoff");
-
-        final RetryStrategy retryStrategy = (ctx, cause) -> {
-            if (cause != null && exceptionFilter.test(Exceptions.peel(cause))) {
-                return CompletableFuture.completedFuture(backoff);
-            }
-            return NULL_BACKOFF;
-        };
-        return addRetryStrategy(retryStrategy);
+    @Override
+    public RetryStrategyBindingBuilder onStatus(Iterable<HttpStatus> statuses) {
+        return newBindingBuilder().onStatus(statuses);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the {@linkplain Backoff#ofDefault() default backoff}
-     * when an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
-     */
-    public RetryStrategyBuilder onException(Predicate<? super Throwable> exceptionFilter) {
-        return onException(exceptionFilter, Backoff.ofDefault());
+    @Override
+    public RetryStrategyBindingBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
+        return newBindingBuilder().onStatus(statusFilter);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
-     * when an {@link Exception} is raised and that is instance of the specified {@code exception}.
-     */
-    public RetryStrategyBuilder onException(Class<? extends Throwable> exception, Backoff backoff) {
-        return onException(exception::isInstance, backoff);
+    @Override
+    public RetryStrategyBindingBuilder onException(Class<? extends Throwable> exception) {
+        return newBindingBuilder().onException(exception);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the {@link Backoff#ofDefault() default backoff}
-     * when an {@link Exception} is raised and that is instance of the specified {@code exception}.
-     */
-    public RetryStrategyBuilder onException(Class<? extends Throwable> exception) {
-        return onException(exception::isInstance, Backoff.ofDefault());
+    @Override
+    public RetryStrategyBindingBuilder onException(Predicate<? super Throwable> exceptionFilter) {
+        return newBindingBuilder().onException(exceptionFilter);
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff#ofDefault()}
-     * when any {@link Exception} is raised.
-     */
-    public RetryStrategyBuilder onException(Backoff backoff) {
-        return onException(unused -> true, backoff);
+    @Override
+    public RetryStrategyBindingBuilder onException() {
+        return newBindingBuilder().onException();
     }
 
-    /**
-     * Adds a {@link RetryStrategy} that retries with the {@link Backoff#ofDefault() default backoff}
-     * when any {@link Exception} is raised.
-     */
-    public RetryStrategyBuilder onException() {
-        return onException(Backoff.ofDefault());
-    }
-
-    /**
-     * Adds a {@link RetryStrategy} that retries with the specified {@link Backoff}
-     * when an {@link UnprocessedRequestException} is raised.
-     */
-    public RetryStrategyBuilder onUnProcessed(Backoff backoff) {
-        return onException(UnprocessedRequestException.class, backoff);
-    }
-
-    /**
-     * Adds a {@link RetryStrategy} that retries with the {@link Backoff#ofDefault() default backoff}
-     * when an {@link UnprocessedRequestException} is raised.
-     */
-    public RetryStrategyBuilder onUnProcessed() {
-        return onException(UnprocessedRequestException.class, Backoff.ofDefault());
-    }
-
-    /**
-     * Add a {@link RetryStrategy} fluently.
-     */
-    public RetryStrategyBuilder on(Consumer<RetryStrategyBindingBuilder> customizer) {
-        final RetryStrategyBindingBuilder bindingBuilder = new RetryStrategyBindingBuilder();
-        customizer.accept(bindingBuilder);
-        addRetryStrategy(bindingBuilder.build());
-        return this;
+    @Override
+    public RetryStrategyBindingBuilder onUnProcessed() {
+        return newBindingBuilder().onUnProcessed();
     }
 
     /**
      * Adds a {@link RetryStrategy}.
      */
-    public RetryStrategyBuilder addRetryStrategy(RetryStrategy retryStrategy) {
+    public RetryStrategyBuilder add(RetryStrategy retryStrategy) {
         retryStrategiesBuilder.add(requireNonNull(retryStrategy, "retryStrategy"));
         return this;
     }
 
     /**
-     * Returns a newly-created {@link RetryStrategy} based on the {@link RetryStrategy}s set so far.
+     * Adds a {@link RetryRule}.
+     *
+     * <p><pre>{@code
+     * RetryStrategy.builder()
+     *              .on(RetryRule.onStatus(HttpStatus.SERVICE_UNAVAILABLE)
+     *                           .onException(ex -> ex instanceof ClosedSessionException)
+     *                           .onMethod(HttpMethod.GET)
+     *                           .thenBackOff(backoffOn503))
+     *              .build();
+     * }</pre>
+     */
+    RetryStrategyBuilder on(RetryRule retryRule) {
+        return add(build(requireNonNull(retryRule, "retryRule")));
+    }
+
+    /**
+     * Returns a newly-created {@link RetryStrategy} based on the strategies set so far.
      */
     public RetryStrategy build() {
         final RetryStrategy[] retryStrategies = retryStrategiesBuilder.build().toArray(EMPTY_RETRY_STRATEGIES);
@@ -248,5 +153,39 @@ public final class RetryStrategyBuilder {
             }
             return NULL_BACKOFF;
         };
+    }
+
+    private static RetryStrategy build(RetryRule rule) {
+        return (ctx, cause) -> {
+            if (!rule.methods().contains(ctx.request().method())) {
+                return NULL_BACKOFF;
+            }
+
+            final Backoff backoff = rule.backoff();
+            final Predicate<Throwable> exceptionFilter = rule.exceptionFilter();
+            if (cause != null && exceptionFilter != null && exceptionFilter.test(Exceptions.peel(cause))) {
+                return CompletableFuture.completedFuture(backoff);
+            }
+
+            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                final HttpStatus responseStatus = ctx.log().partial().responseHeaders().status();
+                final Set<HttpStatusClass> statusClasses = rule.statusClasses();
+                if (statusClasses != null && statusClasses.contains(responseStatus.codeClass())) {
+                    return CompletableFuture.completedFuture(backoff);
+                }
+
+                final Set<HttpStatus> statuses = rule.statuses();
+                final Predicate<HttpStatus> statusFilter = rule.statusFilter();
+                if ((statuses != null && statuses.contains(responseStatus)) ||
+                    (statusFilter != null && statusFilter.test(responseStatus))) {
+                    return CompletableFuture.completedFuture(backoff);
+                }
+            }
+            return NULL_BACKOFF;
+        };
+    }
+
+    private RetryStrategyBindingBuilder newBindingBuilder() {
+        return new RetryStrategyBindingBuilder(this);
     }
 }

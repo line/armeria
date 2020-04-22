@@ -35,17 +35,15 @@ import com.linecorp.armeria.common.ResponseHeaders;
 class RetryStrategyBindingBuilderTest {
     @Test
     void methodFilter() {
-        assertThatThrownBy(() -> RetryStrategy.builder()
-                                              .on(retryWithMethod -> retryWithMethod.methods(HttpMethod.HEAD)))
+        assertThatThrownBy(() -> RetryStrategy.builder().onMethods(HttpMethod.HEAD).thenDefaultBackoff())
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Should set at least one strategy");
+                .hasMessageContaining("Should set at least one");
 
         final RetryStrategy strategy =
                 RetryStrategy.builder()
-                             .on(retryWithServerError -> {
-                                 retryWithServerError.methods(HttpMethod.HEAD)
-                                                     .status(HttpStatus.INTERNAL_SERVER_ERROR);
-                             })
+                             .onMethods(HttpMethod.HEAD)
+                             .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                             .thenDefaultBackoff()
                              .build();
 
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.HEAD, "/"));
@@ -59,14 +57,13 @@ class RetryStrategyBindingBuilderTest {
         final Backoff unprocessedBackoff = Backoff.fixed(200);
         final RetryStrategy strategy =
                 RetryStrategy.builder()
-                             .on(safeRetryBuilder -> {
-                                 safeRetryBuilder.idempotentMethods()
-                                                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                                 .exception(ClosedChannelException.class)
-                                                 .statusClass(HttpStatusClass.CLIENT_ERROR)
-                                                 .backOff(idempotentBackoff);
-                             })
-                             .onUnProcessed(unprocessedBackoff)
+                             .onIdempotentMethods()
+                             .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                             .onException(ClosedChannelException.class)
+                             .onStatusClass(HttpStatusClass.CLIENT_ERROR)
+                             .thenBackoff(idempotentBackoff)
+                             .onUnProcessed()
+                             .thenBackoff(unprocessedBackoff)
                              .build();
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -91,8 +88,8 @@ class RetryStrategyBindingBuilderTest {
     void noRetry() {
         final RetryStrategy strategy =
                 RetryStrategy.builder()
-                             .on(noRetryOnPost -> noRetryOnPost.noRetry().methods(HttpMethod.POST))
-                             .on(retryEveryOnError -> retryEveryOnError.exception(ex -> true))
+                             .onMethods(HttpMethod.POST).thenStop()
+                             .onException().thenDefaultBackoff()
                              .build();
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -107,11 +104,9 @@ class RetryStrategyBindingBuilderTest {
         final int maxAttempts = 10;
         final RetryStrategy strategy =
                 RetryStrategy.builder()
-                             .on(retryWithoutDelay -> {
-                                 retryWithoutDelay.status(status -> status == HttpStatus.BAD_REQUEST ||
-                                                                    status == HttpStatus.TOO_MANY_REQUESTS)
-                                                  .noBackOff(maxAttempts);
-                             })
+                             .onStatus(status -> status == HttpStatus.BAD_REQUEST ||
+                                                 status == HttpStatus.TOO_MANY_REQUESTS)
+                             .thenImmediately(maxAttempts)
                              .build();
 
         for (int i = 1; i < maxAttempts; i++) {

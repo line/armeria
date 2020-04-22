@@ -46,7 +46,7 @@ an exception is raised.
 ``RetryStrategy``
 -----------------
 
-You can build your own :api:`RetryStrategy`.
+You can fluently build your own :api:`RetryStrategy`.
 
 .. code-block:: java
 
@@ -55,10 +55,12 @@ You can build your own :api:`RetryStrategy`.
     import com.linecorp.armeria.client.ResponseTimeoutException;
     import com.linecorp.armeria.common.HttpStatus;
 
+    Backoff myBackoff = ...;
+    int maxAttempts = ...;
     RetryStrategy.builder()
-                 .onUnProcessed()
-                 .onException(ResponseTimeoutException.class)
-                 .onStatus(HttpStatus.CONFLICT)
+                 .onUnProcessed().thenBackoff(myBackoff)
+                 .onException(ResponseTimeoutException.class).thenDefaultBackoff()
+                 .onStatus(HttpStatus.CONFLICT).thenImmediately(maxAttempts)
                  .build();
 
 Or you can customize the ``strategy`` by implementing :api:`RetryStrategy`.

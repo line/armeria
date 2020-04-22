@@ -67,14 +67,14 @@ public interface RetryStrategy {
      */
     static RetryStrategy onUnprocessed(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return builder().onUnProcessed(backoff).build();
+        return builder().onUnProcessed().thenBackoff(backoff).build();
     }
 
     /**
      * Returns a {@link RetryStrategy} that retries with {@link Backoff#ofDefault()} on any {@link Exception}.
      */
     static RetryStrategy onException() {
-        return builder().onException().build();
+        return builder().onException().thenDefaultBackoff().build();
     }
 
     /**
@@ -82,8 +82,9 @@ public interface RetryStrategy {
      *
      * @param backoffFunction A {@link Function} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link Throwable}
-     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onException(Class, Backoff)}
-     *             or {@link RetryStrategyBuilder#onException(Predicate, Backoff)}
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onException(Class)}
+     *             or {@link RetryStrategyBuilder#onException(Predicate)} and
+     *             {@link RetryStrategyBindingBuilder#thenBackoff(Backoff)}
      */
     @Deprecated
     static RetryStrategy onException(Function<? super Throwable, ? extends Backoff> backoffFunction) {
@@ -112,8 +113,17 @@ public interface RetryStrategy {
      * Returns the {@link RetryStrategy} that retries the request with the specified {@code backoff}
      * when the response status is 5xx (server error) or an {@link Exception} is raised.
      *
-     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onServerErrorStatus(Backoff)}
-     *             and {@link RetryStrategyBuilder#onException(Backoff)}
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onServerErrorStatus()},
+     *             {@link RetryStrategyBuilder#onException()} and
+     *             {@link RetryStrategyBindingBuilder#thenBackoff(Backoff)}
+     *             For example:
+     *             <pre>{@code
+     *             RetryStrategy.builder()
+     *                          .onServerErrorStatus()
+     *                          .onException()
+     *                          .thenBackoff(myBackoff)
+     *                          .build();
+     *             }</pre>
      */
     @Deprecated
     static RetryStrategy onServerErrorStatus(Backoff backoff) {
@@ -132,8 +142,9 @@ public interface RetryStrategy {
      * @param backoffFunction A {@link BiFunction} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link HttpStatus} and {@link Throwable}
      *
-     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onStatus(HttpStatus, Backoff)}
-     *             or {@link RetryStrategyBuilder#onException(Class, Backoff)}
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#onStatus(HttpStatus...)}
+     *             or {@link RetryStrategyBuilder#onException(Class)}
+     *             and {@link RetryStrategyBindingBuilder#thenBackoff(Backoff)}
      */
     @Deprecated
     static RetryStrategy onStatus(
