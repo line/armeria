@@ -59,7 +59,11 @@ public enum SessionProtocol {
     /**
      * <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> - v1 or v2.
      */
-    PROXY("proxy", false, false, 0);
+    PROXY("proxy", false, false, 0),
+    /**
+     * None.
+     */
+    NONE("none", false, false, -1);
 
     private static final Set<SessionProtocol> HTTP_VALUES = Sets.immutableEnumSet(HTTP, H1C, H2C);
 

@@ -21,7 +21,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * Specifies an active local port of an Armeria server.
@@ -29,6 +29,10 @@ import org.springframework.beans.factory.annotation.Value;
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Value("${local.armeria.port}")
 public @interface LocalArmeriaPort {
+
+    /**
+     * TBD.
+     */
+    SessionProtocol value() default SessionProtocol.NONE;
 }
