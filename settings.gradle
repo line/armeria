@@ -8,6 +8,7 @@ includeWithFlags ':bom',                       'bom', 'publish'
 // Published Java projects
 includeWithFlags ':brave',                              'java', 'publish', 'relocate'
 includeWithFlags ':core',                               'java', 'publish', 'shade', 'trim'
+includeWithFlags ':discovery:zookeeper',                'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                               'java', 'publish', 'relocate'
 includeWithFlags ':grpc-protocol',                      'java', 'publish', 'relocate'
 includeWithFlags ':jetty',                              'java', 'publish', 'relocate'
@@ -33,7 +34,6 @@ includeWithFlags ':thrift',                             'java', 'publish', 'relo
 includeWithFlags ':thrift0.9',                          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat',                             'java', 'publish', 'relocate'
 includeWithFlags ':tomcat8.5',                          'java', 'publish', 'relocate', 'no_aggregation'
-includeWithFlags ':zookeeper',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                               'java', 'publish', 'relocate'
 includeWithFlags ':bucket4j',                           'java', 'publish', 'relocate'
 
