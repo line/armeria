@@ -181,7 +181,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             try {
                 listener.onInitialized(name());
             } catch (Throwable t) {
-                logger.warn("An error occurred when notifying a Initialized event", t);
+                logger.warn("An error occurred when notifying an Initialized event", t);
             }
             notifyCountUpdated(listener, EventCount.ZERO);
         });
