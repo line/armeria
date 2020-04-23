@@ -59,6 +59,10 @@ final class CircuitBreakerMetrics {
                                           idPrefix.tags());
     }
 
+    void onInitialized() {
+        transitionsToClosed.increment();
+    }
+
     void onStateChanged(CircuitState state) {
         switch (state) {
             case CLOSED:

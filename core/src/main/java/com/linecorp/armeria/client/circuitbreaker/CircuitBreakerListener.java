@@ -22,6 +22,11 @@ package com.linecorp.armeria.client.circuitbreaker;
 public interface CircuitBreakerListener {
 
     /**
+     * Invoked when the circuit breaker is initialized.
+     */
+    void onInitialized(String circuitBreakerName) throws Exception;
+
+    /**
      * Invoked when the circuit state is changed.
      */
     void onStateChanged(String circuitBreakerName, CircuitState state) throws Exception;

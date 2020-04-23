@@ -23,6 +23,9 @@ package com.linecorp.armeria.client.circuitbreaker;
 public class CircuitBreakerListenerAdapter implements CircuitBreakerListener {
 
     @Override
+    public void onInitialized(String circuitBreakerName) throws Exception { }
+
+    @Override
     public void onStateChanged(String circuitBreakerName, CircuitState state) throws Exception {}
 
     @Override

@@ -79,6 +79,11 @@ public final class MetricCollectingCircuitBreakerListener implements CircuitBrea
     }
 
     @Override
+    public void onInitialized(String circuitBreakerName) {
+        metricsOf(circuitBreakerName).onInitialized();
+    }
+
+    @Override
     public void onStateChanged(String circuitBreakerName, CircuitState state) {
         metricsOf(circuitBreakerName).onStateChanged(state);
     }
