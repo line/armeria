@@ -23,6 +23,7 @@ public interface CircuitBreakerListener {
 
     /**
      * Invoked when the circuit breaker is initialized.
+     * Initial state is always CLOSED.
      */
     void onInitialized(String circuitBreakerName) throws Exception;
 
