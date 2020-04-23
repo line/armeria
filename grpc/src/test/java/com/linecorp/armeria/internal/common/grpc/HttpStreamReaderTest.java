@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -155,6 +156,14 @@ public class HttpStreamReaderTest {
         reader.apply(null, null);
         verify(deframer).deframe(HttpData.empty(), true);
         verify(deframer).closeWhenComplete();
+    }
+
+    @Test
+    public void onComplete_when_deframer_isClosing() {
+        when(deframer.isClosing()).thenReturn(true);
+        reader.onComplete();
+        verify(deframer, never()).deframe(HttpData.empty(), true);
+        verify(deframer, never()).closeWhenComplete();
     }
 
     @Test

@@ -200,7 +200,15 @@ public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunctio
     }
 
     void closeDeframer() {
-        if (!deframer.isClosed()) {
+        // closeDeframer() could be called when deframer.isClosing() due to a race condition like the following:
+        //
+        // 1) HttpStreamReader received all data from publisher and added them to unprocessed of deframer.
+        // 2) A gRPC client does not request next messages yet, so deframer still has unprocessedBytes and
+        //    is not stalled.
+        // 3) HttpStreamReader receives onCompleted signal and closes deframer.
+        // 4) A gRPC client requests a message and the received message contains trailers,
+        //    so ArmeriaClientCall tries to close deframer.
+        if (!deframer.isClosing() && !deframer.isClosed()) {
             deframer.deframe(HttpData.empty(), true);
             deframer.closeWhenComplete();
         }
