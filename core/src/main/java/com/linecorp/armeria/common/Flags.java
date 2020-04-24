@@ -48,7 +48,6 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
-import com.linecorp.armeria.common.util.InetUtil;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -90,6 +89,9 @@ public final class Flags {
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
 
+    @Nullable
+    private static final Predicate<InetAddress> PREFERRED_IP_V4;
+
     static {
         final String spec = getNormalized("verboseExceptions", DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
             if ("true".equals(val) || "false".equals(val)) {
@@ -119,6 +121,32 @@ public final class Flags {
             default:
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
                 VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
+        }
+
+        final List<Predicate<InetAddress>> preferredIpV4s =
+        CSV_SPLITTER.splitToList(getNormalized("preferredIpV4", "", unused -> true))
+                    .stream()
+                    .map(cidr -> {
+                        try {
+                            return InetAddressPredicates.ofCidr(cidr);
+                        } catch (Exception e) {
+                            logger.warn("Failed to parse a preferred IPv4: {}", cidr);
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(toImmutableList());
+        if (preferredIpV4s.isEmpty()) {
+            PREFERRED_IP_V4 = null;
+        } else {
+            PREFERRED_IP_V4 = inetAddress -> {
+                for (Predicate<InetAddress> preferredIpV4 : preferredIpV4s) {
+                    if (preferredIpV4.test(inetAddress)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
         }
     }
 
@@ -323,20 +351,6 @@ public final class Flags {
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
-
-    private static final List<Predicate<InetAddress>> PREFERRED_IP_V4_CIDR =
-            CSV_SPLITTER.splitToList(getNormalized("preferredIpV4Cidr", "", unused -> true))
-                        .stream()
-                        .map(cidr -> {
-                            try {
-                                return InetAddressPredicates.ofCidr(cidr);
-                            } catch (Exception e) {
-                                logger.warn("Failed to parse a preferred ip CIDR: {}", cidr);
-                            }
-                            return null;
-                        })
-                        .filter(Objects::nonNull)
-                        .collect(toImmutableList());
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
@@ -951,18 +965,19 @@ public final class Flags {
     }
 
     /**
-     * Returns the list of {@link Predicate}s that is used to choose the non loopback IP v4 address in
-     * {@link InetUtil#findFirstNonLoopbackIpV4Address()}.
+     * Returns the {@link Predicate} that is used to choose the non-loopback IP v4 address in
+     * {@link SystemInfo#defaultNonLoopbackIpV4Address()}.
      *
-     * <p>The default value of this flag is an emtpy {@link List}, which means all valid IPv4 addresses are
+     * <p>The default value of this flag is an empty {@link List}, which means all valid IPv4 addresses are
      * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Cidr=<csv>} JVM option
      * to override the default value. The {@code csv} should be
-     * <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing (CIDR)</a>s separated
-     * with commas.
-     * For example, {@code -Dcom.linecorp.armeria.preferredIpV4Cidr=10.0.0.0/8,192.168.1.0/24}.
+     * <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing(CIDR)</a>s and
+     * exact IP addresses separated by commas.
+     * For example, {@code -Dcom.linecorp.armeria.preferredIpV4Cidr=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
      */
-    public static List<Predicate<InetAddress>> preferredIpV4Cidr() {
-        return PREFERRED_IP_V4_CIDR;
+    @Nullable
+    public static Predicate<InetAddress> preferredIpV4() {
+        return PREFERRED_IP_V4;
     }
 
     /**
