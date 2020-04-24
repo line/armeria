@@ -334,8 +334,6 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Waits until the result of {@link CompletableFuture} which is completed after the {@link #close()} or
      * {@link #closeAsync()} operation is completed.
-     *
-     * @throws InterruptedException
      */
     public void blockUntilShutdown() throws InterruptedException {
         try {
