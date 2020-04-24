@@ -60,6 +60,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -510,6 +511,24 @@ class ServerTest {
                                          .gauge();
         assertThat(gauge).isNotNull();
         assertThat(gauge.value()).isOne();
+    }
+
+    @Test
+    void blockUntilShutdown() throws Exception {
+        final AtomicBoolean stopped = new AtomicBoolean();
+        final Server server = Server.builder()
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .serverListener(new ServerListenerAdapter() {
+                                        @Override
+                                        public void serverStopping(Server server) throws Exception {
+                                            stopped.set(true);
+                                        }
+                                    })
+                                    .build();
+        server.start().join();
+        CommonPools.blockingTaskExecutor().schedule(server::close, 1, TimeUnit.SECONDS);
+        server.blockUntilShutdown();
+        assertThat(stopped).isTrue();
     }
 
     private static void testSimple(
