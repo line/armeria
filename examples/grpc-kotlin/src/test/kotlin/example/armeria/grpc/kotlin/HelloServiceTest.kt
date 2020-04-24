@@ -13,7 +13,6 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 
 class HelloServiceTest {
