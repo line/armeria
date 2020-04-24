@@ -143,7 +143,7 @@ public final class RetryRuleBuilder {
      * if the response status matches the specified {@code statusFilter}.
      */
     public RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
-        requireNonNull(statusFilter, "statuses");
+        requireNonNull(statusFilter, "statusFilter");
         if (this.statusFilter != null) {
             this.statusFilter = this.statusFilter.or(statusFilter);
         } else {
@@ -250,6 +250,7 @@ public final class RetryRuleBuilder {
                 .add("methods", methods)
                 .add("statusFilter", statusFilter)
                 .add("exceptionFilter", exceptionFilter)
+                .omitNullValues()
                 .toString();
     }
 }
