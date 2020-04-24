@@ -131,8 +131,8 @@ public final class RetryRule {
     /**
      * Makes a {@link RetryStrategy} retry on an {@link UnprocessedRequestException}.
      */
-    public static RetryRuleBuilder onUnProcessed() {
-        return newRuleBuilder().onUnProcessed();
+    public static RetryRuleBuilder onUnprocessed() {
+        return newRuleBuilder().onUnprocessed();
     }
 
     private static RetryRuleBuilder newRuleBuilder() {

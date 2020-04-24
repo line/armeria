@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -36,9 +37,9 @@ import com.linecorp.armeria.common.HttpStatusClass;
 /**
  * A builder which creates a {@link RetryRule} used for building {@link RetryStrategy}.
  *
- * @see RetryStrategyBuilder#on(RetryRule)
+ * @see RetryStrategyBuilder#rule(RetryRule)
  */
-public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder {
+public final class RetryRuleBuilder {
 
     private static final Backoff NO_RETRY = numAttemptsSoFar -> -1;
 
@@ -56,17 +57,26 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
     @Nullable
     private Predicate<Throwable> exceptionFilter;
 
-    @Override
+    /**
+     * Adds the idempotent HTTP methods for a {@link RetryStrategy} which will retry
+     * if the request HTTP method is idempotent.
+     */
     public RetryRuleBuilder onIdempotentMethods() {
         return onMethods(IDEMPOTENT_METHODS);
     }
 
-    @Override
+    /**
+     * Adds the specified HTTP methods for a {@link RetryStrategy} which will retry
+     * if the request HTTP method is one of the specified HTTP methods.
+     */
     public RetryRuleBuilder onMethods(HttpMethod... methods) {
         return onMethods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
     }
 
-    @Override
+    /**
+     * Adds the specified HTTP methods for a {@link RetryStrategy} which will retry
+     * if the request HTTP method is one of the specified HTTP methods.
+     */
     public RetryRuleBuilder onMethods(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "methods can't be empty");
@@ -80,12 +90,18 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
         return this;
     }
 
-    @Override
+    /**
+     * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
+     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     */
     public RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
         return onStatusClass(ImmutableSet.copyOf(requireNonNull(statusClasses, "statusClasses")));
     }
 
-    @Override
+    /**
+     * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
+     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     */
     public RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
         requireNonNull(statusClasses, "statusClasses");
         checkArgument(!Iterables.isEmpty(statusClasses), "statusClasses can't be empty");
@@ -94,17 +110,26 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
         return this;
     }
 
-    @Override
+    /**
+     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryStrategy} which will retry
+     * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     */
     public RetryRuleBuilder onServerErrorStatus() {
         return onStatusClass(HttpStatusClass.SERVER_ERROR);
     }
 
-    @Override
+    /**
+     * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
+     * if the response status is one of the specified {@link HttpStatus}es.
+     */
     public RetryRuleBuilder onStatus(HttpStatus... statuses) {
         return onStatus(ImmutableSet.copyOf(requireNonNull(statuses, "statuses")));
     }
 
-    @Override
+    /**
+     * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
+     * if the response status is one of the specified {@link HttpStatus}es.
+     */
     public RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
         requireNonNull(statuses, "statuses");
         checkArgument(!Iterables.isEmpty(statuses), "statuses can't be empty");
@@ -113,7 +138,10 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
         return this;
     }
 
-    @Override
+    /**
+     * Adds the specified {@code statusFilter} for a {@link RetryStrategy} which will retry
+     * if the response status matches the specified {@code statusFilter}.
+     */
     public RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
         requireNonNull(statusFilter, "statuses");
         if (this.statusFilter != null) {
@@ -126,13 +154,19 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
         return this;
     }
 
-    @Override
+    /**
+     * Adds the specified exception type for a {@link RetryStrategy} which will retry
+     * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
+     */
     public RetryRuleBuilder onException(Class<? extends Throwable> exception) {
         requireNonNull(exception, "exception");
         return onException(exception::isInstance);
     }
 
-    @Override
+    /**
+     * Adds the specified {@code exceptionFilter} for a {@link RetryStrategy} which will retry
+     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     */
     public RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
         requireNonNull(exceptionFilter, "exceptionFilter");
         if (this.exceptionFilter != null) {
@@ -145,20 +179,24 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
         return this;
     }
 
-    @Override
+    /**
+     * Makes a {@link RetryStrategy} retry on any {@link Exception}.
+     */
     public RetryRuleBuilder onException() {
         return onException(unused -> true);
     }
 
-    @Override
-    public RetryRuleBuilder onUnProcessed() {
+    /**
+     * Makes a {@link RetryStrategy} retry on an {@link UnprocessedRequestException}.
+     */
+    public RetryRuleBuilder onUnprocessed() {
         return onException(UnprocessedRequestException.class);
     }
 
     /**
      * Sets the {@linkplain Backoff#ofDefault() default backoff} and returns a newly created {@link RetryRule}.
      */
-    public RetryRule thenDefaultBackoff() {
+    public RetryRule thenBackoff() {
         return thenBackoff(Backoff.ofDefault());
     }
 
@@ -202,5 +240,16 @@ public final class RetryRuleBuilder extends AbstractRetryStrategyBindingBuilder 
         }
 
         return new RetryRule(methods, statusClasses, statuses, backoff, statusFilter, exceptionFilter);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("statusClasses", statusClassesBuilder.build())
+                .add("statuses", statusesBuilder.build())
+                .add("methods", methods)
+                .add("statusFilter", statusFilter)
+                .add("exceptionFilter", exceptionFilter)
+                .toString();
     }
 }

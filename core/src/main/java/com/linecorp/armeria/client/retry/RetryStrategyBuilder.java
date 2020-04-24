@@ -26,7 +26,6 @@ import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -35,7 +34,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 /**
  * A builder which creates a {@link RetryStrategy}.
  */
-public final class RetryStrategyBuilder extends AbstractRetryStrategyBindingBuilder {
+public final class RetryStrategyBuilder {
 
     private static final CompletableFuture<Backoff> NULL_BACKOFF = CompletableFuture.completedFuture(null);
     private static final RetryStrategy[] EMPTY_RETRY_STRATEGIES = new RetryStrategy[0];
@@ -43,71 +42,6 @@ public final class RetryStrategyBuilder extends AbstractRetryStrategyBindingBuil
     private final ImmutableList.Builder<RetryStrategy> retryStrategiesBuilder = ImmutableList.builder();
 
     RetryStrategyBuilder() {}
-
-    @Override
-    public RetryStrategyBindingBuilder onIdempotentMethods() {
-        return newBindingBuilder().onIdempotentMethods();
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onMethods(HttpMethod... methods) {
-        return newBindingBuilder().onMethods(methods);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onMethods(Iterable<HttpMethod> methods) {
-        return newBindingBuilder().onMethods(methods);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onStatusClass(HttpStatusClass... statusClasses) {
-        return newBindingBuilder().onStatusClass(statusClasses);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
-        return newBindingBuilder().onStatusClass(statusClasses);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onServerErrorStatus() {
-        return newBindingBuilder().onServerErrorStatus();
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onStatus(HttpStatus... statuses) {
-        return newBindingBuilder().onStatus(statuses);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onStatus(Iterable<HttpStatus> statuses) {
-        return newBindingBuilder().onStatus(statuses);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
-        return newBindingBuilder().onStatus(statusFilter);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onException(Class<? extends Throwable> exception) {
-        return newBindingBuilder().onException(exception);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onException(Predicate<? super Throwable> exceptionFilter) {
-        return newBindingBuilder().onException(exceptionFilter);
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onException() {
-        return newBindingBuilder().onException();
-    }
-
-    @Override
-    public RetryStrategyBindingBuilder onUnProcessed() {
-        return newBindingBuilder().onUnProcessed();
-    }
 
     /**
      * Adds a {@link RetryStrategy}.
@@ -122,14 +56,14 @@ public final class RetryStrategyBuilder extends AbstractRetryStrategyBindingBuil
      *
      * <p><pre>{@code
      * RetryStrategy.builder()
-     *              .on(RetryRule.onStatus(HttpStatus.SERVICE_UNAVAILABLE)
-     *                           .onException(ex -> ex instanceof ClosedSessionException)
-     *                           .onMethod(HttpMethod.GET)
-     *                           .thenBackOff(myBackoff))
+     *              .rule(RetryRule.onStatus(HttpStatus.SERVICE_UNAVAILABLE)
+     *                             .onException(ex -> ex instanceof ClosedSessionException)
+     *                             .onMethod(HttpMethod.GET)
+     *                             .thenBackOff(myBackoff))
      *              .build();
      * }</pre>
      */
-    RetryStrategyBuilder on(RetryRule retryRule) {
+    public RetryStrategyBuilder rule(RetryRule retryRule) {
         return add(build(requireNonNull(retryRule, "retryRule")));
     }
 
@@ -183,9 +117,5 @@ public final class RetryStrategyBuilder extends AbstractRetryStrategyBindingBuil
             }
             return NULL_BACKOFF;
         };
-    }
-
-    private RetryStrategyBindingBuilder newBindingBuilder() {
-        return new RetryStrategyBindingBuilder(this);
     }
 }

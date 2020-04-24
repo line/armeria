@@ -21,15 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.stream.Stream;
 
 import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -47,7 +41,7 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 class RetryStrategyBuilderTest {
 
     private static final Backoff statusErrorBackOff = Backoff.fixed(2000);
-    private static final Backoff unProcessBackOff = Backoff.exponential(4000, 40000);
+    private static final Backoff unprocessBackOff = Backoff.exponential(4000, 40000);
     private static final Backoff statusBackOff = Backoff.fibonacci(5000, 10000);
     private static final Backoff clientErrorBackOff = Backoff.fixed(3000);
 
@@ -57,10 +51,10 @@ class RetryStrategyBuilderTest {
 
     @Test
     void onStatusClass() {
-        final RetryStrategy strategy = RetryStrategy.builder()
-                                                    .onStatusClass(HttpStatusClass.CLIENT_ERROR)
-                                                    .thenDefaultBackoff()
-                                                    .build();
+        final RetryStrategy strategy =
+                RetryStrategy.builder()
+                             .rule(RetryRule.onStatusClass(HttpStatusClass.CLIENT_ERROR).thenBackoff())
+                             .build();
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.BAD_REQUEST));
@@ -75,8 +69,7 @@ class RetryStrategyBuilderTest {
     void onStatusErrorStatus() {
         final Backoff backoff = Backoff.fixed(2000);
         final RetryStrategy strategy = RetryStrategy.builder()
-                                                    .onServerErrorStatus()
-                                                    .thenBackoff(backoff)
+                                                    .rule(RetryRule.onServerErrorStatus().thenBackoff(backoff))
                                                     .build();
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -92,12 +85,11 @@ class RetryStrategyBuilderTest {
     void onStatus() {
         final Backoff backoff500 = Backoff.fixed(1000);
         final Backoff backoff502 = Backoff.fixed(1000);
-        final RetryStrategy strategy = RetryStrategy.builder()
-                                                    .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-                                                    .thenBackoff(backoff500)
-                                                    .onStatus(HttpStatus.BAD_GATEWAY::equals)
-                                                    .thenBackoff(backoff502)
-                                                    .build();
+        final RetryStrategy strategy =
+                RetryStrategy.builder()
+                             .rule(RetryRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR).thenBackoff(backoff500))
+                             .rule(RetryRule.onStatus(HttpStatus.BAD_GATEWAY::equals).thenBackoff(backoff502))
+                             .build();
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -119,8 +111,10 @@ class RetryStrategyBuilderTest {
         final Backoff backoff2 = Backoff.fixed(2000);
         final RetryStrategy strategy =
                 RetryStrategy.builder()
-                             .onException(ClosedSessionException.class).thenBackoff(backoff1)
-                             .onException(WriteTimeoutException.class::isInstance).thenBackoff(backoff2)
+                             .rule(RetryRule.onException(ClosedSessionException.class)
+                                            .thenBackoff(backoff1))
+                             .rule(RetryRule.onException(WriteTimeoutException.class::isInstance)
+                                            .thenBackoff(backoff2))
                              .build();
 
         assertFutureValue(strategy.shouldRetry(ctx, ClosedSessionException.get())).isSameAs(backoff1);
@@ -136,21 +130,39 @@ class RetryStrategyBuilderTest {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Backoff backoff1 = Backoff.fixed(1000);
         final Backoff backoff2 = Backoff.fixed(2000);
-        final RetryStrategy strategy = RetryStrategy.builder()
-                                                    .onException()
-                                                    .thenBackoff(backoff1)
-                                                    .onException(ClosedSessionException.class)
-                                                    .thenBackoff(backoff2)
-                                                    .build();
+        final RetryStrategy strategy =
+                RetryStrategy.builder()
+                             .rule(RetryRule.onException().thenBackoff(backoff1))
+                             .rule(RetryRule.onException(ClosedSessionException.class).thenBackoff(backoff2))
+                             .build();
 
         assertFutureValue(strategy.shouldRetry(ctx, ClosedSessionException.get())).isSameAs(backoff1);
         assertFutureValue(strategy.shouldRetry(ctx, new RuntimeException())).isNotNull();
         assertFutureValue(strategy.shouldRetry(ctx, null)).isNull();
     }
 
-    @ArgumentsSource(RetryStrategiesProvider.class)
-    @ParameterizedTest
-    void multipleStrategy(RetryStrategy strategy) {
+    @Test
+    void multipleStrategy() {
+        final RetryStrategy retryStrategy = (ctx, cause) -> {
+            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                final HttpStatus responseStatus =
+                        ctx.log().partial().responseHeaders().status();
+                if (responseStatus.isClientError()) {
+                    return CompletableFuture.completedFuture(clientErrorBackOff);
+                }
+            }
+            return CompletableFuture.completedFuture(null);
+        };
+        final RetryStrategy strategy =
+                RetryStrategy.builder()
+                             .rule(RetryRule.onUnprocessed().thenBackoff(unprocessBackOff))
+                             .rule(RetryRule.onException().thenBackoff())
+                             .rule(RetryRule.onServerErrorStatus().thenBackoff(statusErrorBackOff))
+                             .rule(RetryRule.onStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                            .thenBackoff(statusBackOff))
+                             .add(retryStrategy)
+                             .build();
+
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
         assertFutureValue(strategy.shouldRetry(ctx1, null)).isSameAs(statusErrorBackOff);
@@ -163,7 +175,7 @@ class RetryStrategyBuilderTest {
         final CompletionException ex =
                 new CompletionException(new UnprocessedRequestException(ClosedStreamException.get()));
         assertFutureValue(strategy.shouldRetry(ctx3, ex))
-                .isSameAs(unProcessBackOff);
+                .isSameAs(unprocessBackOff);
 
         final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertFutureValue(strategy.shouldRetry(ctx4, new RuntimeException())).isSameAs(Backoff.ofDefault());
@@ -171,40 +183,5 @@ class RetryStrategyBuilderTest {
         final ClientRequestContext ctx5 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx5.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.CONFLICT));
         assertFutureValue(strategy.shouldRetry(ctx5, null)).isSameAs(clientErrorBackOff);
-    }
-
-    private static class RetryStrategiesProvider implements ArgumentsProvider {
-
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            final RetryStrategy retryStrategy = (ctx, cause) -> {
-                if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                    final HttpStatus responseStatus =
-                            ctx.log().partial().responseHeaders().status();
-                    if (responseStatus.isClientError()) {
-                        return CompletableFuture.completedFuture(clientErrorBackOff);
-                    }
-                }
-                return CompletableFuture.completedFuture(null);
-            };
-            final RetryStrategy strategyWithFluent =
-                    RetryStrategy.builder()
-                                 .onUnProcessed().thenBackoff(unProcessBackOff)
-                                 .onException().thenDefaultBackoff()
-                                 .onServerErrorStatus().thenBackoff(statusErrorBackOff)
-                                 .onStatus(HttpStatus.TOO_MANY_REQUESTS).thenBackoff(statusBackOff)
-                                 .add(retryStrategy)
-                                 .build();
-            final RetryStrategy strategyWithRule =
-                    RetryStrategy.builder()
-                                 .on(RetryRule.onUnProcessed().thenBackoff(unProcessBackOff))
-                                 .on(RetryRule.onException().thenDefaultBackoff())
-                                 .on(RetryRule.onServerErrorStatus().thenBackoff(statusErrorBackOff))
-                                 .on(RetryRule.onStatus(HttpStatus.TOO_MANY_REQUESTS)
-                                              .thenBackoff(statusBackOff))
-                                 .add(retryStrategy)
-                                 .build();
-            return Stream.of(strategyWithFluent, strategyWithRule).map(Arguments::of);
-        }
     }
 }
