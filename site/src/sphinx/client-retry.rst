@@ -58,9 +58,9 @@ You can fluently build your own :api:`RetryStrategy`.
     Backoff myBackoff = ...;
     int maxAttempts = ...;
     RetryStrategy.builder()
-                 .onUnProcessed().thenBackoff(myBackoff)
-                 .onException(ResponseTimeoutException.class).thenDefaultBackoff()
-                 .onStatus(HttpStatus.CONFLICT).thenImmediately(maxAttempts)
+                 .rule(RetryRule.onUnProcessed().thenBackoff(myBackoff))
+                 .rule(RetryRule.onException(ResponseTimeoutException.class).thenBackoff())
+                 .rule(RetryRule.onStatus(HttpStatus.CONFLICT).thenImmediately(maxAttempts))
                  .build();
 
 Or you can customize the ``strategy`` by implementing :api:`RetryStrategy`.

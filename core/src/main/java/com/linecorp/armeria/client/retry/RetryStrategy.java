@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -82,11 +83,12 @@ public interface RetryStrategy {
      * @param backoffFunction A {@link Function} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link Throwable}
      *
-     * @deprecated Use {@link #builder()} and {@link RetryStrategyBuilder#rule(RetryRule)}.
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#rule(RetryRule)}
+     *             and {@link RetryRuleBuilder#onException(Predicate)}}.
      *             For example:
      *             <pre>{@code
      *             RetryStrategy.builder()
-     *                          .rule(RetryRule.onException(ClosedSessionException.class)
+     *                          .rule(RetryRule.onException(ex -> ex instanceof ClosedSessionException)
      *                                         .thenBackoff(myBackoff))
      *                          .build();
      *             }</pre>
@@ -150,7 +152,9 @@ public interface RetryStrategy {
      * @param backoffFunction A {@link BiFunction} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link HttpStatus} and {@link Throwable}
      *
-     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#rule(RetryRule)}}.
+     * @deprecated Use {@link #builder()} with {@link RetryStrategyBuilder#rule(RetryRule)}},
+     *             {@link RetryRuleBuilder#onStatus(Predicate)} and
+     *             {@link RetryRuleBuilder#onException(Predicate)}.
      *             For example:
      *             <pre>{@code
      *             RetryStrategy.builder()
