@@ -117,7 +117,7 @@ class HelloServiceTest {
         }
 
         private fun uri(): String {
-            return "gjson+http://127.0.0.1:" + server.activeLocalPort() + '/'
+            return "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/'
         }
     }
 }
