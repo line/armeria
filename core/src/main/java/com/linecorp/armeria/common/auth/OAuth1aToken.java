@@ -261,7 +261,7 @@ public final class OAuth1aToken {
             encodeComponent(builder, entry.getValue());
             builder.append('"');
         }
-        return builder.toString();
+        return headerValueStr = builder.toString();
     }
 
     @Override
@@ -273,6 +273,9 @@ public final class OAuth1aToken {
             return false;
         }
         final OAuth1aToken that = (OAuth1aToken) o;
+        if (headerValueStr != null && headerValueStr == that.headerValueStr) {
+            return true;
+        }
 
         // Do not short-circuit to make it hard to guess anything from timing.
         boolean equals = true;
