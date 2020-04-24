@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -49,6 +50,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
 
 import okhttp3.HttpUrl;
 import retrofit2.Call;
@@ -377,5 +379,25 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     public ArmeriaRetrofitBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (ArmeriaRetrofitBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder basicAuth(String username, String password) {
+        return (ArmeriaRetrofitBuilder) super.basicAuth(username, password);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder basicAuth(String username, String password, Charset charset) {
+        return (ArmeriaRetrofitBuilder) super.basicAuth(username, password, charset);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder oAuth1a(OAuth1aToken token) {
+        return (ArmeriaRetrofitBuilder) super.oAuth1a(token);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder oAuth2(String accessToken) {
+        return (ArmeriaRetrofitBuilder) super.oAuth2(accessToken);
     }
 }

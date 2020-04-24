@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
 
 /**
  * A utility class that provides singleton instances of authorization token extractor functions.

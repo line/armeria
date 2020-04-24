@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static com.linecorp.armeria.internal.common.util.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -54,7 +55,7 @@ public final class OAuth2Token {
             return false;
         }
         final OAuth2Token that = (OAuth2Token) o;
-        return BasicToken.secureEquals(accessToken, that.accessToken);
+        return secureEquals(accessToken, that.accessToken);
     }
 
     @Override

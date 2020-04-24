@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static com.linecorp.armeria.internal.common.util.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
@@ -70,17 +71,6 @@ public final class BasicToken {
         // Note that we used '&' intentionally to make it hard to guess anything from timing.
         return secureEquals(username, that.username) &
                secureEquals(password, that.password);
-    }
-
-    static boolean secureEquals(@Nullable String a, @Nullable String b) {
-        final int aLength = a != null ? a.length() : 0;
-        final int bLength = b != null ? b.length() : 0;
-        final int length = Math.min(aLength, bLength);
-        int result = 0;
-        for (int i = 0; i < length; i++) {
-            result |= a.charAt(i) ^ b.charAt(i);
-        }
-        return result == 0 && aLength == bLength;
     }
 
     @Override

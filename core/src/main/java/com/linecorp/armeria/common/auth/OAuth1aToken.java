@@ -14,7 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.auth;
+package com.linecorp.armeria.common.auth;
+
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.linecorp.armeria.internal.common.PercentEncoder.encodeComponent;
+import static com.linecorp.armeria.internal.common.util.AuthUtil.secureEquals;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -25,10 +29,11 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * The bearer token of <a href="https://oauth.net/core/1.0a/#anchor12">OAuth 1.0a authentication</a>.
@@ -109,6 +114,9 @@ public final class OAuth1aToken {
 
     private final Map<String, String> params;
 
+    @Nullable
+    private String headerValueStr;
+
     private OAuth1aToken(Map<String, String> params) {
         // Map builder with default version value.
         final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
@@ -118,7 +126,7 @@ public final class OAuth1aToken {
             final String value = param.getValue();
 
             // Empty values are ignored.
-            if (!Strings.isNullOrEmpty(value)) {
+            if (!isNullOrEmpty(value)) {
                 final String lowerCased = Ascii.toLowerCase(key);
                 if (DEFINED_PARAM_KEYS.contains(lowerCased)) {
                     // If given parameter is defined by Oauth1a protocol, add with lower-cased key.
@@ -215,6 +223,47 @@ public final class OAuth1aToken {
         return builder.build();
     }
 
+    /**
+     * Returns the string that is sent as the value of the authorization header.
+     */
+    public String toHeaderValueString() {
+        if (headerValueStr != null) {
+            return headerValueStr;
+        }
+        final StringBuilder builder = TemporaryThreadLocals.get().stringBuilder();
+        builder.append("OAuth ");
+        final String realm = realm();
+        if (!isNullOrEmpty(realm())) {
+            builder.append("realm=\"");
+            encodeComponent(builder, realm);
+            builder.append("\",");
+        }
+        builder.append("oauth_consumer_key=\"");
+        encodeComponent(builder, consumerKey());
+        builder.append("\",oauth_token=\"");
+        encodeComponent(builder, token());
+        builder.append("\",oauth_signature_method=\"");
+        encodeComponent(builder, signatureMethod());
+        builder.append("\",oauth_signature=\"");
+        encodeComponent(builder, signature());
+        builder.append("\",oauth_timestamp=\"");
+        encodeComponent(builder, timestamp());
+        builder.append("\",oauth_nonce=\"");
+        encodeComponent(builder, nonce());
+        builder.append("\",version=\"");
+        // Do not have to encode the version.
+        builder.append(version());
+        builder.append('"');
+        for (Entry<String, String> entry : additionals().entrySet()) {
+            builder.append("\",");
+            encodeComponent(builder, entry.getKey());
+            builder.append("=\"");
+            encodeComponent(builder, entry.getValue());
+            builder.append('"');
+        }
+        return builder.toString();
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {
@@ -228,7 +277,7 @@ public final class OAuth1aToken {
         // Do not short-circuit to make it hard to guess anything from timing.
         boolean equals = true;
         for (Entry<String, String> e : params.entrySet()) {
-            equals &= BasicToken.secureEquals(that.params.get(e.getKey()), e.getValue());
+            equals &= secureEquals(that.params.get(e.getKey()), e.getValue());
         }
 
         return equals && params.size() == that.params.size();

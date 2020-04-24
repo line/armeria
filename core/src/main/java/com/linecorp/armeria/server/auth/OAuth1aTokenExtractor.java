@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static com.linecorp.armeria.internal.common.PercentDecoder.decodeComponent;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -32,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
 
 import io.netty.util.AsciiString;
 
@@ -74,7 +76,7 @@ final class OAuth1aTokenExtractor implements Function<RequestHeaders, OAuth1aTok
             }
             final String key = token.substring(0, sep);
             final String value = token.substring(sep + 2, token.length() - 1);
-            builder.put(key, value);
+            builder.put(decodeComponent(key), decodeComponent(value));
         }
 
         return OAuth1aToken.of(builder.build());

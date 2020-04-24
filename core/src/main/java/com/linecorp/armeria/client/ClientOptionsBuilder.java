@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -22,6 +23,7 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
 
 /**
  * Creates a new {@link ClientOptions} using the builder pattern.
@@ -153,5 +155,25 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     public ClientOptionsBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (ClientOptionsBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ClientOptionsBuilder basicAuth(String username, String password) {
+        return (ClientOptionsBuilder) super.basicAuth(username, password);
+    }
+
+    @Override
+    public ClientOptionsBuilder basicAuth(String username, String password, Charset charset) {
+        return (ClientOptionsBuilder) super.basicAuth(username, password, charset);
+    }
+
+    @Override
+    public ClientOptionsBuilder oAuth1a(OAuth1aToken token) {
+        return (ClientOptionsBuilder) super.oAuth1a(token);
+    }
+
+    @Override
+    public ClientOptionsBuilder oAuth2(String accessToken) {
+        return (ClientOptionsBuilder) super.oAuth2(accessToken);
     }
 }

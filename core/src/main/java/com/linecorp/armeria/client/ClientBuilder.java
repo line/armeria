@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -225,5 +227,25 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     public ClientBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (ClientBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ClientBuilder basicAuth(String username, String password) {
+        return (ClientBuilder) super.basicAuth(username, password);
+    }
+
+    @Override
+    public ClientBuilder basicAuth(String username, String password, Charset charset) {
+        return (ClientBuilder) super.basicAuth(username, password, charset);
+    }
+
+    @Override
+    public ClientBuilder oAuth1a(OAuth1aToken token) {
+        return (ClientBuilder) super.oAuth1a(token);
+    }
+
+    @Override
+    public ClientBuilder oAuth2(String accessToken) {
+        return (ClientBuilder) super.oAuth2(accessToken);
     }
 }
