@@ -29,8 +29,8 @@ dependencies {
     runtimeOnly("org.slf4j:slf4j-simple")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation(kotlin("kotlin-reflect"))
-    implementation(kotlin("kotlin-stdlib-jdk8"))
+    implementation(kotlin("reflect"))
+    implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("io.grpc:grpc-kotlin-stub")
 
