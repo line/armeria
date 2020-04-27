@@ -18,10 +18,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -36,7 +33,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * A skeletal builder implementation for {@link ClientOptions}.
@@ -306,49 +305,40 @@ public class AbstractClientOptionsBuilder {
     /**
      * Sets the
      * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>
-     * header using {@link StandardCharsets#UTF_8}.
+     * header using {@link HttpHeaderNames#AUTHORIZATION}.
      */
-    public AbstractClientOptionsBuilder basicAuth(String username, String password) {
-        return basicAuth(username, password, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Sets the
-     * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>
-     * header. The specified {@link Charset} must be compatible with US-ASCII.
-     */
-    public AbstractClientOptionsBuilder basicAuth(String username, String password, Charset charset) {
-        requireNonNull(username, "username");
-        requireNonNull(password, "password");
-        requireNonNull(charset, "charset");
-        checkState(!oAuth1aSet || !oAuth2Set, "cannot set basic auth with %s.", oAuth1aSet ? "OAuth 1.0"
-                                                                                           : "OAuth 2.0");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION,
-                        "Basic " + Base64.getEncoder().encodeToString(
-                                (username + ':' + password).getBytes(charset)));
-        return this;
-    }
-
-    /**
-     * Sets the <a href="https://oauth.net/core/1.0a/">OAuth Core 1.0 Revision A</a> header.
-     */
-    public AbstractClientOptionsBuilder oAuth1a(OAuth1aToken token) {
+    public AbstractClientOptionsBuilder auth(BasicToken token) {
         requireNonNull(token, "token");
-        checkState(!basicAuthSet || !oAuth2Set, "cannot set OAuth 1.0 with %s.", basicAuthSet ? "basic auth"
-                                                                                              : "OAuth 2.0");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValueString());
+        checkState(!oAuth1aSet || !oAuth2Set,
+                   "cannot set basic auth with %s.", oAuth1aSet ? "OAuth 1.0" : "OAuth 2.0");
+        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        basicAuthSet = true;
         return this;
     }
 
     /**
-     * Sets the <a href="https://www.oauth.com/">OAuth 2.0</a> header. Note that the specified
-     * {@code accessToken} is sent using {@link HttpHeaderNames#AUTHORIZATION} header, not post body parameters.
+     * Sets the <a href="https://oauth.net/core/1.0a/">OAuth Core 1.0 Revision A</a> header
+     * using {@link HttpHeaderNames#AUTHORIZATION}.
      */
-    public AbstractClientOptionsBuilder oAuth2(String accessToken) {
-        requireNonNull(accessToken, "accessToken");
-        checkState(!basicAuthSet || !oAuth1aSet, "cannot set OAuth 2.0 with %s.", basicAuthSet ? "basic auth"
-                                                                                               : "OAuth 1.0");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, "Bearer " + accessToken);
+    public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
+        requireNonNull(token, "token");
+        checkState(!basicAuthSet || !oAuth2Set,
+                   "cannot set OAuth 1.0 with %s.", basicAuthSet ? "basic auth" : "OAuth 2.0");
+        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        oAuth1aSet = true;
+        return this;
+    }
+
+    /**
+     * Sets the <a href="https://www.oauth.com/">OAuth 2.0</a> header using
+     * {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractClientOptionsBuilder auth(OAuth2Token token) {
+        requireNonNull(token, "token");
+        checkState(!basicAuthSet || !oAuth1aSet,
+                   "cannot set OAuth 2.0 with %s.", basicAuthSet ? "basic auth" : "OAuth 1.0");
+        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        oAuth2Set = true;
         return this;
     }
 

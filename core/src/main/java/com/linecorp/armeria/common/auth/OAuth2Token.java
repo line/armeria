@@ -14,12 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.auth;
+package com.linecorp.armeria.common.auth;
 
 import static com.linecorp.armeria.internal.common.util.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.HttpHeaderNames;
 
 /**
  * The bearer token of <a href="https://tools.ietf.org/html/rfc6750">OAuth 2.0 authentication</a>.
@@ -44,6 +46,13 @@ public final class OAuth2Token {
      */
     public String accessToken() {
         return accessToken;
+    }
+
+    /**
+     * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
+     */
+    public String toHeaderValue() {
+        return "Bearer " + accessToken;
     }
 
     @Override

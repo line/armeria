@@ -45,7 +45,9 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -222,7 +224,7 @@ class AuthServiceTest {
     @Test
     void testBasicAuth() throws Exception {
         final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .basicAuth("brown", "cony")
+                                             .auth(BasicToken.of("brown", "cony"))
                                              .build();
         assertThat(webClient.get("/basic").aggregate().join().status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -260,7 +262,7 @@ class AuthServiceTest {
                 .put("version", "1.0")
                 .build();
         final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .oAuth1a(OAuth1aToken.of(passToken))
+                                             .auth(OAuth1aToken.of(passToken))
                                              .build();
         assertThat(webClient.get("/oauth1a").aggregate().join().status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -289,7 +291,7 @@ class AuthServiceTest {
     @Test
     void testOAuth2() throws Exception {
         final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .oAuth2("dummy_oauth2_token")
+                                             .auth(OAuth2Token.of("dummy_oauth2_token"))
                                              .build();
         assertThat(webClient.get("/oauth2").aggregate().join().status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {

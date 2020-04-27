@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -37,7 +36,9 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * Creates a new web client that connects to the specified {@link URI} using the builder pattern.
@@ -269,22 +270,17 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public WebClientBuilder basicAuth(String username, String password) {
-        return (WebClientBuilder) super.basicAuth(username, password);
+    public WebClientBuilder auth(BasicToken token) {
+        return (WebClientBuilder) super.auth(token);
     }
 
     @Override
-    public WebClientBuilder basicAuth(String username, String password, Charset charset) {
-        return (WebClientBuilder) super.basicAuth(username, password, charset);
+    public WebClientBuilder auth(OAuth1aToken token) {
+        return (WebClientBuilder) super.auth(token);
     }
 
     @Override
-    public WebClientBuilder oAuth1a(OAuth1aToken token) {
-        return (WebClientBuilder) super.oAuth1a(token);
-    }
-
-    @Override
-    public WebClientBuilder oAuth2(String accessToken) {
-        return (WebClientBuilder) super.oAuth2(accessToken);
+    public WebClientBuilder auth(OAuth2Token token) {
+        return (WebClientBuilder) super.auth(token);
     }
 }

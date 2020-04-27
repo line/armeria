@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.auth.OAuth2Token;
+
 class OAuth2TokenTest {
     @Test
     void testEquals() {

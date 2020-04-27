@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -115,7 +116,7 @@ public final class OAuth1aToken {
     private final Map<String, String> params;
 
     @Nullable
-    private String headerValueStr;
+    private String headerValue;
 
     private OAuth1aToken(Map<String, String> params) {
         // Map builder with default version value.
@@ -224,11 +225,11 @@ public final class OAuth1aToken {
     }
 
     /**
-     * Returns the string that is sent as the value of the authorization header.
+     * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
      */
-    public String toHeaderValueString() {
-        if (headerValueStr != null) {
-            return headerValueStr;
+    public String toHeaderValue() {
+        if (headerValue != null) {
+            return headerValue;
         }
         final StringBuilder builder = TemporaryThreadLocals.get().stringBuilder();
         builder.append("OAuth ");
@@ -261,7 +262,7 @@ public final class OAuth1aToken {
             encodeComponent(builder, entry.getValue());
             builder.append('"');
         }
-        return headerValueStr = builder.toString();
+        return headerValue = builder.toString();
     }
 
     @Override
@@ -273,9 +274,6 @@ public final class OAuth1aToken {
             return false;
         }
         final OAuth1aToken that = (OAuth1aToken) o;
-        if (headerValueStr != null && headerValueStr == that.headerValueStr) {
-            return true;
-        }
 
         // Do not short-circuit to make it hard to guess anything from timing.
         boolean equals = true;
