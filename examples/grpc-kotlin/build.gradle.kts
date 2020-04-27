@@ -47,11 +47,17 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+// TODO(ikhoon): gRPC-Kotlin compiler does not run well in Window. The generated stub files are added
+//               intentionally. Remove this once gRPC-Kotlin compiler supports Window as well.
+kotlin {
+    sourceSets["main"].apply {
+        kotlin.srcDir("gen-src/main/kotlinGrpc")
+    }
+}
+
 tasks.clean {
-    // TODO(ikhoon): gRPC-Kotlin compiler does not run well in Window. The generated stub files are added
-    //               intentionally. Remove this once gRPC-Kotlin compiler supports Window as well.
     for (path in delete) {
-        if (path.toString() == "$projectDir/gen-src") {
+        if (path == project.ext["genSrcDir"]) {
             delete.remove(path)
         }
     }
