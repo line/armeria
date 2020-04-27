@@ -46,3 +46,13 @@ tasks.withType<KotlinCompile> {
         freeCompilerArgs = listOf("-Xjsr305=strict", "-java-parameters")
     }
 }
+
+tasks.clean {
+    // TODO(ikhoon): gRPC-Kotlin compiler does not run well in Window. The generated stub files is added
+    //               intentionally. Remove this once gRPC-Kotlin compiler supports Window as well.
+    for (path in delete) {
+        if (path.toString() == "$projectDir/gen-src") {
+            delete.remove(path)
+        }
+    }
+}
