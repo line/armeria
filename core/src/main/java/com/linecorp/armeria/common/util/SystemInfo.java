@@ -168,6 +168,8 @@ public final class SystemInfo {
 
     /**
      * Returns the non-loopback {@link Inet4Address} whose {@link NetworkInterface#getIndex()} is the lowest.
+     *
+     * @see Flags#preferredIpV4Addrs()
      */
     @Nullable
     public static Inet4Address defaultNonLoopbackIpV4Address() {
@@ -217,7 +219,7 @@ public final class SystemInfo {
                         hostname = normalizeHostname(lines.get(0));
                     }
                     if (hostname != null) {
-                        logger.info("Hostname: {} (from /proc/sys/kernel/hostname)", hostname);
+                        logger.info("hostname: {} (from /proc/sys/kernel/hostname)", hostname);
                     } else {
                         logger.debug("/proc/sys/kernel/hostname does not contain a valid hostname: {}", lines);
                     }
@@ -405,59 +407,79 @@ public final class SystemInfo {
 
         static {
             Inet4Address result = null;
+            String nicDisplayName = null;
             try {
                 int lowest = Integer.MAX_VALUE;
                 for (final Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
                      nics.hasMoreElements();) {
-                    final NetworkInterface ifc = nics.nextElement();
-                    if (ifc.isUp()) {
-                        // The NIC whose index is the lowest will be likely the valid IPv4 address.
-                        // See https://github.com/spring-cloud/spring-cloud-commons/issues/82.
-                        if (ifc.getIndex() < lowest || result == null) {
-                            lowest = ifc.getIndex();
-                        } else if (result != null) {
+                    final NetworkInterface nic = nics.nextElement();
+                    if (!nic.isUp()) {
+                        logger.debug("{} is down. Trying next.", nic.getDisplayName());
+                        continue;
+                    }
+
+                    // The NIC whose index is the lowest will be likely the valid IPv4 address.
+                    // See https://github.com/spring-cloud/spring-cloud-commons/issues/82.
+                    if (nic.getIndex() < lowest || result == null) {
+                        lowest = nic.getIndex();
+                    } else {
+                        logger.debug("{} has higher index({}) than {}. Skip.",
+                                     nic.getDisplayName(), nic.getIndex(), result);
+                        continue;
+                    }
+
+                    for (final Enumeration<InetAddress> addrs = nic.getInetAddresses();
+                         addrs.hasMoreElements();) {
+                        final InetAddress address = addrs.nextElement();
+                        if (!(address instanceof Inet4Address)) {
+                            logger.debug("{} of {} is not Inet4Address. Trying next.",
+                                         address, nic.getDisplayName());
                             continue;
                         }
-
-                        for (final Enumeration<InetAddress> addrs = ifc.getInetAddresses();
-                             addrs.hasMoreElements();) {
-                            final InetAddress address = addrs.nextElement();
-                            if (address instanceof Inet4Address &&
-                                !address.isLoopbackAddress() &&
-                                isPreferredAddress(address)) {
-                                result = (Inet4Address) address;
-                            }
+                        if (address.isLoopbackAddress()) {
+                            logger.debug("{} of {} is a loopback address. Trying next.",
+                                         address, nic.getDisplayName());
+                            continue;
                         }
+                        if (!isPreferredAddress(address)) {
+                            logger.debug("{} of {} is not a preferred IP address. Trying next.",
+                                         address, nic.getDisplayName());
+                            continue;
+                        }
+                        result = (Inet4Address) address;
+                        nicDisplayName = nic.getDisplayName();
                     }
                 }
             } catch (IOException ex) {
-                logger.error("Cannot get non-loopback IPv4 address.", ex);
+                logger.warn("Could not get a non-loopback IPv4 address:", ex);
             }
 
-            Inet4Address temp = null;
             if (result != null) {
-                temp = result;
+                defaultNonLoopbackIpV4Address = result;
+                logger.info("defaultNonLoopbackIpV4Address: {} from: {}",
+                            defaultNonLoopbackIpV4Address, nicDisplayName);
             } else {
+                Inet4Address temp = null;
                 try {
                     final InetAddress localHost = InetAddress.getLocalHost();
                     if (localHost instanceof Inet4Address) {
                         temp = (Inet4Address) localHost;
+                        logger.info("defaultNonLoopbackIpV4Address: {} from: InetAddress.getLocalHost()",
+                                    temp);
                     } else {
-                        logger.warn("Cannot get non-loopback IPv4 address.");
+                        logger.warn("Could not get a non-loopback IPv4 address. " +
+                                    "defaultNonLoopbackIpV4Address is set to null");
                     }
                 } catch (UnknownHostException e) {
-                    logger.warn("Unable to retrieve localhost");
+                    logger.warn("Unable to retrieve the localhost address. " +
+                                "defaultNonLoopbackIpV4Address is set to null", e);
                 }
-            }
-
-            defaultNonLoopbackIpV4Address = temp;
-            if (defaultNonLoopbackIpV4Address != null) {
-                logger.info("DefaultNonLoopbackIpV4Address: {}", defaultNonLoopbackIpV4Address);
+                defaultNonLoopbackIpV4Address = temp;
             }
         }
 
         private static boolean isPreferredAddress(InetAddress address) {
-            final Predicate<InetAddress> predicates = Flags.preferredIpV4();
+            final Predicate<InetAddress> predicates = Flags.preferredIpV4Addrs();
             if (predicates == null) {
                 return true;
             }
