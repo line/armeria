@@ -242,7 +242,7 @@ public final class SystemInfo {
                     }
 
                     if (hostname != null) {
-                        logger.info("Hostname: {} (from 'hostname' command)", hostname);
+                        logger.info("hostname: {} (from 'hostname' command)", hostname);
                     } else {
                         logger.debug("The 'hostname' command returned a non-hostname ({}); " +
                                      "using InetAddress.getLocalHost() instead", line);
@@ -265,7 +265,7 @@ public final class SystemInfo {
                         logger.warn("InetAddress.getLocalHost() returned an invalid hostname ({}); " +
                                     "using 'localhost' instead", jdkHostname);
                     } else {
-                        logger.info("Hostname: {} (from InetAddress.getLocalHost())", hostname);
+                        logger.info("hostname: {} (from InetAddress.getLocalHost())", hostname);
                     }
                 } catch (Throwable t) {
                     logger.warn("Failed to get the hostname using InetAddress.getLocalHost(); " +
