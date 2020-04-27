@@ -179,7 +179,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     private void notifyInitialized() {
         config.listeners().forEach(listener -> {
             try {
-                listener.onInitialized(name());
+                listener.onInitialized(name(), CircuitState.CLOSED);
             } catch (Throwable t) {
                 logger.warn("An error occurred when notifying an Initialized event", t);
             }
