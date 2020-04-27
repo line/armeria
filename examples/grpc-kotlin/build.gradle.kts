@@ -48,7 +48,7 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.clean {
-    // TODO(ikhoon): gRPC-Kotlin compiler does not run well in Window. The generated stub files is added
+    // TODO(ikhoon): gRPC-Kotlin compiler does not run well in Window. The generated stub files are added
     //               intentionally. Remove this once gRPC-Kotlin compiler supports Window as well.
     for (path in delete) {
         if (path.toString() == "$projectDir/gen-src") {
