@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -54,6 +55,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 
@@ -81,6 +83,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private final RequestContext ctx;
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
 
+    @Nullable
+    private RequestLogAccess parent;
     @Nullable
     private List<RequestLogAccess> children;
     private boolean hasLastChild;
@@ -135,10 +139,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private String name;
 
-    private RequestHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
+    @Nullable
+    private RequestHeaders requestHeaders;
     private HttpHeaders requestTrailers = HttpHeaders.of();
 
-    private ResponseHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+    @Nullable
+    private ResponseHeaders responseHeaders;
     private HttpHeaders responseTrailers = HttpHeaders.of();
 
     @Nullable
@@ -278,6 +284,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return ctx;
     }
 
+    @Nullable
+    @Override
+    public RequestLogAccess parent() {
+        return parent;
+    }
+
     @Override
     public List<RequestLogAccess> children() {
         return children != null ? ImmutableList.copyOf(children) : ImmutableList.of();
@@ -406,12 +418,23 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
+    private boolean isDeferredFlagSet(RequestLogProperty property) {
+        final int flag = property.flag();
+        return (deferredFlags & flag) == flag;
+    }
+
     // Methods required for adding children.
 
     @Override
     public void addChild(RequestLogAccess child) {
         checkState(!hasLastChild, "last child is already added");
         requireNonNull(child, "child");
+
+        if (child instanceof DefaultRequestLog) {
+            checkState(((DefaultRequestLog) child).parent == null, "child has parent already");
+            ((DefaultRequestLog) child).parent = this;
+        }
+
         if (children == null) {
             // first child's all request-side logging events are propagated immediately to the parent
             children = new ArrayList<>();
@@ -452,7 +475,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             requestLength(log.requestLength());
             requestContentPreview(log.requestContentPreview());
             requestTrailers(log.requestTrailers());
-            endRequest0(log.requestCause(), log.requestEndTimeNanos());
+            // Note that we do not propagate `requestCause` because otherwise the request which succeeded after
+            // retries can be considered to have failed.
+            endRequest0(/* requestCause */ null, log.requestEndTimeNanos());
         });
     }
 
@@ -497,13 +522,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
         }
 
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
-            responseContent(lastChild.responseContent(), lastChild.rawResponseContent());
-        } else {
-            lastChild.whenAvailable(RequestLogProperty.RESPONSE_CONTENT)
-                     .thenAccept(log -> responseContent(log.responseContent(), log.rawResponseContent()));
-        }
-
         if (lastChild.isComplete()) {
             propagateResponseEndData(lastChild);
         } else {
@@ -512,6 +530,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateResponseEndData(RequestLog log) {
+        responseContent(log.responseContent(), log.rawResponseContent());
         responseLength(log.responseLength());
         responseContentPreview(log.responseContentPreview());
         responseTrailers(log.responseTrailers());
@@ -601,13 +620,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.sslSession = sslSession;
         this.sessionProtocol = sessionProtocol;
         this.connectionTimings = connectionTimings;
-        if (sessionProtocol.isTls()) {
-            // Switch to the dummy headers with ':scheme=https' if the connection is TLS.
-            if (requestHeaders == DUMMY_REQUEST_HEADERS_HTTP) {
-                requestHeaders = DUMMY_REQUEST_HEADERS_HTTPS;
-            }
-        }
-
         updateFlags(RequestLogProperty.SESSION);
     }
 
@@ -648,6 +660,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             scheme = Scheme.of(serializationFormat, sessionProtocol);
             updateFlags(RequestLogProperty.SCHEME);
         }
+    }
+
+    @Override
+    public SerializationFormat serializationFormat() {
+        return serializationFormat;
     }
 
     @Override
@@ -740,6 +757,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public RequestHeaders requestHeaders() {
         ensureAvailable(RequestLogProperty.REQUEST_HEADERS);
+        assert requestHeaders != null;
         return requestHeaders;
     }
 
@@ -810,11 +828,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public boolean isDeferRequestContentSet() {
+        return isDeferredFlagSet(RequestLogProperty.REQUEST_CONTENT);
+    }
+
+    @Override
     public void deferRequestContentPreview() {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
             return;
         }
         updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+    }
+
+    @Override
+    public boolean isDeferRequestContentPreviewSet() {
+        return isDeferredFlagSet(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
     }
 
     @Override
@@ -873,19 +901,36 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         // totalRequestDuration will be 0
         startRequest(requestEndTimeNanos, SystemInfo.currentTimeMicros());
         session(null, context().sessionProtocol(), null, null);
+        assert sessionProtocol != null;
 
         if (scheme == null) {
-            assert sessionProtocol != null;
             scheme = Scheme.of(serializationFormat, sessionProtocol);
         }
 
+        if (requestHeaders == null) {
+            final HttpRequest req = context().request();
+            if (req != null) {
+                requestHeaders = req.headers();
+            } else {
+                requestHeaders = sessionProtocol.isTls() ? DUMMY_REQUEST_HEADERS_HTTPS
+                                                         : DUMMY_REQUEST_HEADERS_HTTP;
+            }
+        }
+
         if (name == null) {
+            String newName = null;
             final RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq != null) {
-                name = rpcReq.method();
+                newName = rpcReq.method();
             } else if (requestContent instanceof RpcRequest) {
-                name = ((RpcRequest) requestContent).method();
+                newName = ((RpcRequest) requestContent).method();
             }
+
+            if (newName == null && ctx instanceof ServiceRequestContext) {
+                newName = ((ServiceRequestContext) ctx).config().defaultLogName();
+            }
+
+            name = newName;
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
@@ -1031,6 +1076,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public ResponseHeaders responseHeaders() {
         ensureAvailable(RequestLogProperty.RESPONSE_HEADERS);
+        assert responseHeaders != null;
         return responseHeaders;
     }
 
@@ -1107,11 +1153,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public boolean isDeferResponseContentSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT);
+    }
+
+    @Override
     public void deferResponseContentPreview() {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
             return;
         }
         updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+    }
+
+    @Override
+    public boolean isDeferResponseContentPreviewSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1172,6 +1228,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         startResponse0(responseEndTimeNanos, SystemInfo.currentTimeMicros(), false);
 
         this.responseEndTimeNanos = responseEndTimeNanos;
+        if (responseHeaders == null) {
+            responseHeaders = DUMMY_RESPONSE_HEADERS;
+        }
         if (this.responseCause == null) {
             this.responseCause = responseCause;
         }
@@ -1236,7 +1295,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         final String sanitizedHeaders;
-        if (isAvailable(flags, RequestLogProperty.REQUEST_HEADERS)) {
+        if (requestHeaders != null) {
             sanitizedHeaders = sanitize(headersSanitizer, requestHeaders);
         } else {
             sanitizedHeaders = null;
@@ -1275,8 +1334,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         buf.append(", scheme=");
-        if (isAvailable(flags, RequestLogProperty.SCHEME)) {
-            buf.append(scheme().uriText());
+        if (scheme != null) {
+            buf.append(scheme.uriText());
         } else {
             buf.append(SerializationFormat.UNKNOWN.uriText())
                .append('+')
@@ -1287,7 +1346,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             buf.append(", name=").append(name);
         }
 
-        if (isAvailable(flags, RequestLogProperty.REQUEST_HEADERS)) {
+        if (sanitizedHeaders != null) {
             buf.append(", headers=").append(sanitizedHeaders);
         }
 
@@ -1339,7 +1398,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         final String sanitizedHeaders;
-        if (isAvailable(flags, RequestLogProperty.RESPONSE_HEADERS)) {
+        if (responseHeaders != null) {
             sanitizedHeaders = sanitize(headersSanitizer, responseHeaders);
         } else {
             sanitizedHeaders = null;
@@ -1385,8 +1444,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         if (sanitizedContent != null) {
             buf.append(", content=").append(sanitizedContent);
-        } else if (isAvailable(flags, RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
-                   responseContentPreview != null) {
+        } else if (responseContentPreview != null) {
             buf.append(", contentPreview=").append(responseContentPreview);
         }
 
@@ -1549,6 +1607,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return ctx;
         }
 
+        @Nullable
+        @Override
+        public RequestLogAccess parent() {
+            return DefaultRequestLog.this.parent();
+        }
+
         @Override
         public List<RequestLogAccess> children() {
             return DefaultRequestLog.this.children();
@@ -1615,6 +1679,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
+        public SerializationFormat serializationFormat() {
+            return serializationFormat;
+        }
+
+        @Override
         public Scheme scheme() {
             assert scheme != null;
             return scheme;
@@ -1628,6 +1697,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public RequestHeaders requestHeaders() {
+            assert requestHeaders != null;
             return requestHeaders;
         }
 
@@ -1700,6 +1770,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public ResponseHeaders responseHeaders() {
+            assert responseHeaders != null;
             return responseHeaders;
         }
 

@@ -23,15 +23,14 @@ import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
 import java.util.Map;
-import java.util.concurrent.Callable;
+import java.util.Map.Entry;
+import java.util.function.Supplier;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.KeyFactorySpi.EC;
 import org.bouncycastle.jcajce.provider.config.ConfigurableProvider;
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A downsized version of {@link BouncyCastleProvider} which provides only RSA/DSA/EC {@link KeyFactorySpi}s.
@@ -46,21 +45,16 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
      * Invokes the specified {@link Runnable} with {@link BouncyCastleKeyFactoryProvider} enabled temporarily.
      */
     public static void call(Runnable task) {
-        try {
-            call(() -> {
-                task.run();
-                return true;
-            });
-        } catch (Exception e) {
-            // It's safe to throw unsafely here because the Callable we passed never throws a checked exception.
-            Exceptions.throwUnsafely(e);
-        }
+        call(() -> {
+            task.run();
+            return true;
+        });
     }
 
     /**
-     * Invokes the specified {@link Callable} with {@link BouncyCastleKeyFactoryProvider} enabled temporarily.
+     * Invokes the specified {@link Supplier} with {@link BouncyCastleKeyFactoryProvider} enabled temporarily.
      */
-    public static synchronized <T> T call(Callable<T> task) throws Exception {
+    public static synchronized <T> T call(Supplier<T> task) {
         boolean needToAdd = true;
         for (Provider provider : Security.getProviders()) {
             if (provider instanceof BouncyCastleKeyFactoryProvider) {
@@ -72,12 +66,12 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
         if (needToAdd) {
             Security.addProvider(new BouncyCastleKeyFactoryProvider());
             try {
-                return task.call();
+                return task.get();
             } finally {
                 Security.removeProvider(PROVIDER_NAME);
             }
         } else {
-            return task.call();
+            return task.get();
         }
     }
 
@@ -125,7 +119,7 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
 
     @Override
     public void addAttributes(String key, Map<String, String> attributeMap) {
-        for (final Map.Entry<String, String> e : attributeMap.entrySet()) {
+        for (final Entry<String, String> e : attributeMap.entrySet()) {
             final String attrKey = key + ' ' + e.getKey();
             checkState(!containsKey(attrKey), "duplicate attribute: %s", attrKey);
             put(attrKey, e.getValue());

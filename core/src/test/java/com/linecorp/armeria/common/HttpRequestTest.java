@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,5 +61,26 @@ class HttpRequestTest {
         await().untilAsserted(() -> {
             assertThat(abortCauseHolder).hasValue(abortCause);
         });
+    }
+
+    @Test
+    void shouldReleaseEmptyContent() {
+        final EmptyReferenceCountedHttpData data = new EmptyReferenceCountedHttpData();
+
+        data.retain();
+        HttpRequest.of(HttpMethod.GET, "/", MediaType.PLAIN_TEXT_UTF_8, data);
+        assertThat(data.refCnt()).isOne();
+
+        data.retain();
+        HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"), data);
+        assertThat(data.refCnt()).isOne();
+
+        data.retain();
+        HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"),
+                       data,
+                       HttpHeaders.of("some-trailer", "value"));
+        assertThat(data.refCnt()).isOne();
+
+        data.release();
     }
 }

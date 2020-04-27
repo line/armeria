@@ -48,7 +48,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -66,10 +65,8 @@ import com.google.common.collect.MapMaker;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.Cookies;
-import com.linecorp.armeria.common.DefaultHttpParameters;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
@@ -77,11 +74,11 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.util.FallthroughException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Param;
@@ -565,19 +562,6 @@ final class AnnotatedValueResolver {
             return builder(annotatedElement, type)
                     .supportOptional(true)
                     .resolver((unused, ctx) -> ctx.queryParams())
-                    .aggregation(AggregationStrategy.FOR_FORM_DATA)
-                    .build();
-        }
-
-        if (actual == HttpParameters.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
-                    .resolver((unused, ctx) -> {
-                        final QueryParams src = ctx.queryParams();
-                        final HttpParameters dest = new DefaultHttpParameters(src.size());
-                        src.forEach((BiConsumer<String, String>) dest::add);
-                        return dest;
-                    })
                     .aggregation(AggregationStrategy.FOR_FORM_DATA)
                     .build();
         }

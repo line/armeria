@@ -39,6 +39,11 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.TimeoutMode;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -193,7 +198,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             ctx.clearResponseTimeout();
             return true;
         } else {
-            ctx.setResponseTimeoutAfterMillis(responseTimeoutMillis);
+            ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
             return true;
         }
     }
@@ -270,11 +275,57 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                                                             boolean initialAttempt) {
         final RequestId id = ctx.options().requestIdGenerator().get();
         final EndpointGroup endpointGroup = ctx.endpointGroup();
+        final ClientRequestContext derived;
         if (endpointGroup != null && !initialAttempt) {
-            return ctx.newDerivedContext(id, req, rpcReq, endpointGroup.select(ctx));
+            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.select(ctx));
         } else {
-            return ctx.newDerivedContext(id, req, rpcReq);
+            derived = ctx.newDerivedContext(id, req, rpcReq);
         }
+
+        final RequestLogAccess parentLog = ctx.log();
+        final RequestLog partial = parentLog.partial();
+        final RequestLogBuilder logBuilder = derived.logBuilder();
+        // serializationFormat is always not null, so this is fine.
+        logBuilder.serializationFormat(partial.serializationFormat());
+        if (parentLog.isAvailable(RequestLogProperty.NAME)) {
+            final String name = partial.name();
+            if (name != null) {
+                logBuilder.name(name);
+            }
+        }
+
+        final RequestLogBuilder parentLogBuilder = ctx.logBuilder();
+        if (parentLogBuilder.isDeferRequestContentSet()) {
+            logBuilder.deferRequestContent();
+        }
+        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT).thenApply(requestLog -> {
+            logBuilder.requestContent(requestLog.requestContent(), requestLog.rawRequestContent());
+            return null;
+        });
+        if (parentLogBuilder.isDeferRequestContentPreviewSet()) {
+            logBuilder.deferRequestContentPreview();
+        }
+        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW).thenApply(requestLog -> {
+            logBuilder.requestContentPreview(requestLog.requestContentPreview());
+            return null;
+        });
+
+        // Propagates the response content only when deferResponseContent is called.
+        if (parentLogBuilder.isDeferResponseContentSet()) {
+            logBuilder.deferResponseContent();
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT).thenApply(requestLog -> {
+                logBuilder.responseContent(requestLog.responseContent(), requestLog.rawResponseContent());
+                return null;
+            });
+        }
+        if (parentLogBuilder.isDeferResponseContentPreviewSet()) {
+            logBuilder.deferResponseContentPreview();
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW).thenApply(requestLog -> {
+                logBuilder.responseContentPreview(requestLog.responseContentPreview());
+                return null;
+            });
+        }
+        return derived;
     }
 
     private static class State {
@@ -282,6 +333,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;
         private final long deadlineNanos;
+        private final boolean isTimeoutEnabled;
 
         @Nullable
         private Backoff lastBackoff;
@@ -294,8 +346,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
             if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
+                isTimeoutEnabled = false;
             } else {
                 deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
+                isTimeoutEnabled = true;
             }
             totalAttemptNo = 1;
         }
@@ -327,7 +381,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
 
         boolean timeoutForWholeRetryEnabled() {
-            return deadlineNanos != 0;
+            return isTimeoutEnabled;
         }
 
         long actualResponseTimeoutMillis() {

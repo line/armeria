@@ -29,7 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,6 +61,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
@@ -329,6 +332,18 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     /**
+     * Waits until the result of {@link CompletableFuture} which is completed after the {@link #close()} or
+     * {@link #closeAsync()} operation is completed.
+     */
+    public void blockUntilShutdown() throws InterruptedException {
+        try {
+            whenClosed().get();
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.toString(), Exceptions.peel(e));
+        }
+    }
+
+    /**
      * Sets up the version metrics.
      */
     @VisibleForTesting
@@ -443,8 +458,9 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            meterRegistry.gauge("armeria.server.pendingResponses", gracefulShutdownSupport,
-                                GracefulShutdownSupport::pendingResponses);
+            meterRegistry.gauge(Flags.useLegacyMeterNames() ? "armeria.server.pendingResponses"
+                                                            : "armeria.server.pending.responses",
+                                gracefulShutdownSupport, GracefulShutdownSupport::pendingResponses);
             meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
                                 ConnectionLimitingHandler::numConnections);
         }

@@ -537,7 +537,7 @@ for more information.
 
    ```groovy
    // settings.gradle
-   //...
+   // ...
    includeWithFlags ':common', 'java', 'trim'
    includeWithFlags ':client', 'java', 'relocate'
    includeWithFlags ':server', 'java', 'relocate'
@@ -550,7 +550,10 @@ for more information.
    // ...
    configure(projectsWithFlags('java')) {
        dependencies {
-           compile 'com.google.guava'
+           // Except ':common' itself.
+           if (project != project(':common')) {
+               compile project(':common')
+           }
        }
    }
    ```

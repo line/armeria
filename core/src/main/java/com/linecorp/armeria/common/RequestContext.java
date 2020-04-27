@@ -38,31 +38,20 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.util.AttributeKey;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.Promise;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and related utilities.
@@ -91,7 +80,7 @@ public interface RequestContext {
      */
     @Nullable
     static <T extends RequestContext> T currentOrNull() {
-        return RequestContextThreadLocal.get();
+        return RequestContextUtil.get();
     }
 
     /**
@@ -314,36 +303,6 @@ public interface RequestContext {
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
-     *
-     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push()} and
-     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
-     *
-     * @deprecated Use {@link #push()}.
-     */
-    @Deprecated
-    static SafeCloseable push(RequestContext ctx) {
-        return ctx.push();
-    }
-
-    /**
-     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
-     *
-     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push()} and
-     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
-     *
-     * @deprecated Use {@link #push()}.
-     */
-    @Deprecated
-    static SafeCloseable push(RequestContext ctx, boolean runCallbacks) {
-        return ctx.push();
-    }
-
-    /**
-     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
      * try (SafeCloseable ignored = ctx.push()) {
@@ -358,38 +317,6 @@ public interface RequestContext {
     SafeCloseable push();
 
     /**
-     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
-     *
-     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push()} and
-     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
-     *
-     * @param runCallbacks This is not used.
-     *
-     * @deprecated Use {@link #push()}.
-     */
-    @Deprecated
-    default SafeCloseable push(boolean runCallbacks) {
-        return push();
-    }
-
-    /**
-     * Pushes this context to the thread-local stack. To pop the context from the stack,
-     * call {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
-     *
-     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push()} and
-     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
-     *
-     * @deprecated Use {@link #push()}.
-     */
-    @Deprecated
-    default SafeCloseable pushIfAbsent() {
-        return push();
-    }
-
-    /**
      * Replaces the current {@link RequestContext} in the thread-local with this context without any validation.
      * This method also does not run any callbacks.
      *
@@ -401,11 +328,8 @@ public interface RequestContext {
      * @see ServiceRequestContext#push()
      */
     default SafeCloseable replace() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
-        if (oldCtx == null) {
-            return RequestContextThreadLocal::remove;
-        }
-        return () -> RequestContextThreadLocal.set(oldCtx);
+        final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
+        return () -> RequestContextUtil.pop(this, oldCtx);
     }
 
     /**
@@ -506,51 +430,6 @@ public interface RequestContext {
     }
 
     /**
-     * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
-     * invokes the input {@code listener}.
-     *
-     * @deprecated Use {@link CompletableFuture} instead.
-     */
-    @Deprecated
-    default <T> FutureListener<T> makeContextAware(FutureListener<T> listener) {
-        return future -> {
-            try (SafeCloseable ignored = push()) {
-                listener.operationComplete(future);
-            }
-        };
-    }
-
-    /**
-     * Returns a {@link ChannelFutureListener} that makes sure the current {@link RequestContext} is set and
-     * then invokes the input {@code listener}.
-     *
-     * @deprecated Use {@link CompletableFuture} instead.
-     */
-    @Deprecated
-    default ChannelFutureListener makeContextAware(ChannelFutureListener listener) {
-        return future -> {
-            try (SafeCloseable ignored = push()) {
-                listener.operationComplete(future);
-            }
-        };
-    }
-
-    /**
-     * Returns a {@link GenericFutureListener} that makes sure the current {@link RequestContext} is set and
-     * then invokes the input {@code listener}. Unlike other versions of {@code makeContextAware}, this one will
-     * invoke the listener with the future's result even if the context has already been timed out.
-     * @deprecated Use {@link CompletableFuture} instead.
-     */
-    @Deprecated
-    default <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener) {
-        return future -> {
-            try (SafeCloseable ignored = push()) {
-                listener.operationComplete(future);
-            }
-        };
-    }
-
-    /**
      * Returns a {@link CompletionStage} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code stage}.
      */
@@ -586,94 +465,6 @@ public interface RequestContext {
      */
     default Logger makeContextAware(Logger logger) {
         return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
-    }
-
-    /**
-     * Resolves the specified {@code promise} with the specified {@code result} so that the {@code promise} is
-     * marked as 'done'. If {@code promise} is done already, this method does the following:
-     * <ul>
-     *   <li>Log a warning about the failure, and</li>
-     *   <li>Release {@code result} if it is {@linkplain ReferenceCounted a reference-counted object},
-     *       such as {@link ByteBuf} and {@link FullHttpResponse}.</li>
-     * </ul>
-     * Note that a {@link Promise} can be done already even if you did not call this method in the following
-     * cases:
-     * <ul>
-     *   <li>Invocation timeout - The invocation associated with the {@link Promise} has been timed out.</li>
-     *   <li>User error - A service implementation called any of the following methods more than once:
-     *     <ul>
-     *       <li>{@link #resolvePromise(Promise, Object)}</li>
-     *       <li>{@link #rejectPromise(Promise, Throwable)}</li>
-     *       <li>{@link Promise#setSuccess(Object)}</li>
-     *       <li>{@link Promise#setFailure(Throwable)}</li>
-     *       <li>{@link Promise#cancel(boolean)}</li>
-     *     </ul>
-     *   </li>
-     * </ul>
-     *
-     * @deprecated Use {@link CompletableFuture} instead.
-     */
-    @Deprecated
-    default void resolvePromise(Promise<?> promise, Object result) {
-        @SuppressWarnings("unchecked")
-        final Promise<Object> castPromise = (Promise<Object>) promise;
-
-        if (castPromise.trySuccess(result)) {
-            // Resolved successfully.
-            return;
-        }
-
-        try {
-            if (!(promise.cause() instanceof TimeoutException)) {
-                // Log resolve failure unless it is due to a timeout.
-                LoggerFactory.getLogger(RequestContext.class).warn(
-                        "Failed to resolve a completed promise ({}) with {}", promise, result);
-            }
-        } finally {
-            ReferenceCountUtil.safeRelease(result);
-        }
-    }
-
-    /**
-     * Rejects the specified {@code promise} with the specified {@code cause}. If {@code promise} is done
-     * already, this method logs a warning about the failure. Note that a {@link Promise} can be done already
-     * even if you did not call this method in the following cases:
-     * <ul>
-     *   <li>Invocation timeout - The invocation associated with the {@link Promise} has been timed out.</li>
-     *   <li>User error - A service implementation called any of the following methods more than once:
-     *     <ul>
-     *       <li>{@link #resolvePromise(Promise, Object)}</li>
-     *       <li>{@link #rejectPromise(Promise, Throwable)}</li>
-     *       <li>{@link Promise#setSuccess(Object)}</li>
-     *       <li>{@link Promise#setFailure(Throwable)}</li>
-     *       <li>{@link Promise#cancel(boolean)}</li>
-     *     </ul>
-     *   </li>
-     * </ul>
-     *
-     * @deprecated Use {@link CompletableFuture} instead.
-     */
-    @Deprecated
-    default void rejectPromise(Promise<?> promise, Throwable cause) {
-        if (promise.tryFailure(cause)) {
-            // Fulfilled successfully.
-            return;
-        }
-
-        final Throwable firstCause = promise.cause();
-        if (firstCause instanceof TimeoutException) {
-            // Timed out already.
-            return;
-        }
-
-        if (Exceptions.isExpected(cause)) {
-            // The exception that was thrown after firstCause (often a transport-layer exception)
-            // was a usual expected exception, not an error.
-            return;
-        }
-
-        LoggerFactory.getLogger(RequestContext.class).warn(
-                "Failed to reject a completed promise ({}) with {}", promise, cause, cause);
     }
 
     /**

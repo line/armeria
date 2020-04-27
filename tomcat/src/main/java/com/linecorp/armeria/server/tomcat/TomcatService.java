@@ -61,7 +61,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.util.AppRootFinder;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -286,103 +285,6 @@ public abstract class TomcatService implements HttpService {
         }
 
         return Paths.get(fileSystemDocBase);
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the root directory inside the
-     * JAR/WAR/directory where the caller class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link #of(Path)}.
-     */
-    @Deprecated
-    public static TomcatService forCurrentClassPath() {
-        return of(AppRootFinder.findCurrent(1));
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the specified document base directory
-     * inside the JAR/WAR/directory where the caller class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link #of(Path, String)}.
-     */
-    @Deprecated
-    public static TomcatService forCurrentClassPath(String docBase) {
-        return of(AppRootFinder.findCurrent(1), docBase);
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the root directory inside the
-     * JAR/WAR/directory where the specified class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link #of(Path)}.
-     */
-    @Deprecated
-    public static TomcatService forClassPath(Class<?> clazz) {
-        return of(AppRootFinder.find(clazz));
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the specified document base directory
-     * inside the JAR/WAR/directory where the specified class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link #of(Path, String)}.
-     */
-    @Deprecated
-    public static TomcatService forClassPath(Class<?> clazz, String docBase) {
-        return of(AppRootFinder.find(clazz), docBase);
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the specified document base, which can
-     * be a directory or a JAR/WAR file.
-     *
-     * @deprecated Use {@link #of(Path)}.
-     */
-    @Deprecated
-    public static TomcatService forFileSystem(Path docBase) {
-        return of(docBase);
-    }
-
-    /**
-     * Creates a new {@link TomcatService} from an existing {@link Tomcat} instance.
-     * If the specified {@link Tomcat} instance is not configured properly, the returned {@link TomcatService}
-     * may respond with '503 Service Not Available' error.
-     *
-     * @return a new {@link TomcatService}, which will not manage the provided {@link Tomcat} instance.
-     *
-     * @deprecated Use {@link #of(Tomcat)}.
-     */
-    @Deprecated
-    public static TomcatService forTomcat(Tomcat tomcat) {
-        return of(tomcat);
-    }
-
-    /**
-     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
-     * If the specified {@link Connector} instance is not configured properly, the returned
-     * {@link TomcatService} may respond with '503 Service Not Available' error.
-     *
-     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
-     *
-     * @deprecated Use {@link #of(Connector)}.
-     */
-    @Deprecated
-    public static TomcatService forConnector(Connector connector) {
-        return of(connector);
-    }
-
-    /**
-     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
-     * If the specified {@link Connector} instance is not configured properly, the returned
-     * {@link TomcatService} may respond with '503 Service Not Available' error.
-     *
-     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
-     *
-     * @deprecated Use {@link #of(Connector, String)}.
-     */
-    @Deprecated
-    public static TomcatService forConnector(String hostname, Connector connector) {
-        return of(connector, hostname);
     }
 
     static String toString(

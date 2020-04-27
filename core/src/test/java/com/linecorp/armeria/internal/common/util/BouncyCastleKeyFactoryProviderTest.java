@@ -19,18 +19,18 @@ import java.security.Security;
 import java.util.Arrays;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
-public class BouncyCastleKeyFactoryProviderTest {
+class BouncyCastleKeyFactoryProviderTest {
 
     /**
      * Tests if a SSLeay PKCS#5 private key is accepted.
      */
     @Test
-    public void pkcs5() {
+    void pkcs5() {
         BouncyCastleKeyFactoryProvider.call(this::loadPkcs5);
     }
 
@@ -38,7 +38,7 @@ public class BouncyCastleKeyFactoryProviderTest {
      * Tests if a PKCS#8 private key is accepted.
      */
     @Test
-    public void pkcs8() {
+    void pkcs8() {
         BouncyCastleKeyFactoryProvider.call(this::loadPkcs8);
     }
 
@@ -46,9 +46,9 @@ public class BouncyCastleKeyFactoryProviderTest {
      * Tests if everything works even if Bouncy Castle is loaded already.
      */
     @Test
-    public void bouncyCastlePreInstalled() {
-        Assume.assumeTrue(Arrays.stream(Security.getProviders())
-                                .noneMatch(p -> BouncyCastleProvider.PROVIDER_NAME.equals(p.getName())));
+    void bouncyCastlePreInstalled() {
+        Assumptions.assumeTrue(Arrays.stream(Security.getProviders())
+                                     .noneMatch(p -> BouncyCastleProvider.PROVIDER_NAME.equals(p.getName())));
 
         Security.addProvider(new BouncyCastleProvider());
         try {
@@ -60,20 +60,20 @@ public class BouncyCastleKeyFactoryProviderTest {
     }
 
     @Test
-    public void nestedInvocation() {
+    void nestedInvocation() {
         BouncyCastleKeyFactoryProvider.call(() -> BouncyCastleKeyFactoryProvider.call(this::loadPkcs5));
     }
 
     private void loadPkcs5() {
-        loadKey("pkcs5.key");
+        loadKey("/pkcs5.pem");
     }
 
     private void loadPkcs8() {
-        loadKey("pkcs8.key");
+        loadKey("/pkcs8.pem");
     }
 
     private void loadKey(String privateKeyPath) {
-        SslContextBuilder.forServer(getClass().getResourceAsStream("test.crt"),
+        SslContextBuilder.forServer(getClass().getResourceAsStream("/cert.pem"),
                                     getClass().getResourceAsStream(privateKeyPath),
                                     null);
     }

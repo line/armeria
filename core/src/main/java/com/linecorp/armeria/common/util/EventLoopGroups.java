@@ -126,17 +126,6 @@ public final class EventLoopGroups {
     }
 
     /**
-     * Returns the {@link ServerChannel} class that is available for this {@code eventLoopGroup}, for use in
-     * configuring a custom {@link Bootstrap}.
-     *
-     * @deprecated Use {@link #serverChannelType(EventLoopGroup)}.
-     */
-    @Deprecated
-    public static Class<? extends ServerChannel> serverChannelClass(EventLoopGroup eventLoopGroup) {
-        return serverChannelType(eventLoopGroup);
-    }
-
-    /**
      * Returns the available {@link SocketChannel} class for {@code eventLoopGroup}, for use in configuring a
      * custom {@link Bootstrap}.
      */

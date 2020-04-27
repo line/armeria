@@ -40,14 +40,16 @@ class SamplerTest {
         assertThat(Sampler.of("random=0")).isSameAs(Sampler.never());
         assertThat(Sampler.of("random=1")).isSameAs(Sampler.always());
         assertThat(Sampler.of("random=0.1")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
-            // 10 out of 100 traces are sampled.
-            int numTrues = 0;
-            for (int i = 0; i < 100; i++) {
-                if (sampler.sampleDecisions.get(i)) {
-                    numTrues++;
-                }
-            }
-            assertThat(numTrues).isEqualTo(10);
+            assertThat(sampler.sampleDecisions.cardinality()).isEqualTo(10);
+        });
+        assertThat(Sampler.of("random=0.1f")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
+            assertThat(sampler.sampleDecisions.cardinality()).isEqualTo(10);
+        });
+        assertThat(Sampler.of("random=0.01")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
+            assertThat(sampler.sampleDecisions.cardinality()).isOne();
+        });
+        assertThat(Sampler.of("random=0.01f")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
+            assertThat(sampler.sampleDecisions.cardinality()).isOne();
         });
 
         // 'rate-limit=<samples_per_sec>'

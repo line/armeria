@@ -8,13 +8,14 @@ includeWithFlags ':bom',                       'bom', 'publish'
 // Published Java projects
 includeWithFlags ':brave',                              'java', 'publish', 'relocate'
 includeWithFlags ':core',                               'java', 'publish', 'shade', 'trim'
-includeWithFlags ':rxjava',                             'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                               'java', 'publish', 'relocate'
 includeWithFlags ':grpc-protocol',                      'java', 'publish', 'relocate'
 includeWithFlags ':jetty',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                              'java', 'publish', 'relocate'
 includeWithFlags ':logback',                            'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                          'java', 'publish', 'relocate'
+includeWithFlags ':rxjava',                             'java', 'publish', 'relocate'
+includeWithFlags ':rxjava2',                            'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-actuator-autoconfigure', 'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-actuator-starter',       'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-autoconfigure',          'java', 'publish', 'relocate'
@@ -24,6 +25,7 @@ includeWithFlags ':spring:boot-webflux-starter',        'java', 'publish', 'relo
 includeWithFlags ':spring:boot1-autoconfigure',         'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot1-starter',               'java', 'publish', 'relocate'
 includeWithFlags ':dropwizard',                         'java', 'publish', 'relocate'
+includeWithFlags ':dropwizard1',                        'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':testing:common',                     'java', 'publish', 'relocate'
 includeWithFlags ':testing:junit',                      'java', 'publish', 'relocate'
 includeWithFlags ':testing:junit4',                     'java', 'publish', 'relocate'
@@ -33,9 +35,14 @@ includeWithFlags ':tomcat',                             'java', 'publish', 'relo
 includeWithFlags ':tomcat8.5',                          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':zookeeper',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                               'java', 'publish', 'relocate'
+includeWithFlags ':bucket4j',                           'java', 'publish', 'relocate'
+
+// Published Javadoc-only projects
+includeWithFlags ':javadoc',                            'java', 'publish', 'no_aggregation'
 
 // Unpublished Java projects
 includeWithFlags ':benchmarks',               'java'
+includeWithFlags ':it:context-storage',       'java'
 includeWithFlags ':it:server',                'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'

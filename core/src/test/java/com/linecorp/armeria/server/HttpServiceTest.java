@@ -77,7 +77,8 @@ public class HttpServiceTest {
             sb.service("/additionalTrailers", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("foo"), "baz");
+                    ctx.mutateAdditionalResponseTrailers(
+                            mutator -> mutator.add(HttpHeaderNames.of("foo"), "baz"));
                     return HttpResponse.of(HttpStatus.OK);
                 }
             });

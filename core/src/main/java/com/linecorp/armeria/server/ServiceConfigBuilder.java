@@ -33,6 +33,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private final HttpService service;
 
     @Nullable
+    private String defaultLogName;
+    @Nullable
     private Long requestTimeoutMillis;
     @Nullable
     private Long maxRequestLength;
@@ -45,6 +47,11 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
+    }
+
+    public ServiceConfigSetters defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
+        return this;
     }
 
     @Override
@@ -94,7 +101,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         boolean defaultShutdownAccessLogWriterOnStop) {
         return new ServiceConfig(
-                route, service,
+                route, service, defaultLogName,
                 requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,

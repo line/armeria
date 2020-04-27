@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -30,40 +29,51 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 public final class ClientUtil {
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
-    O initContextAndExecuteWithFallback(U delegate,
-                                        DefaultClientRequestContext ctx,
-                                        EndpointGroup endpointGroup,
-                                        BiFunction<ClientRequestContext, Throwable, O> fallback) {
+    O initContextAndExecuteWithFallback(
+            U delegate,
+            DefaultClientRequestContext ctx,
+            EndpointGroup endpointGroup,
+            BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
         requireNonNull(endpointGroup, "endpointGroup");
-        requireNonNull(fallback, "fallback");
+        requireNonNull(fallbackResponseFactory, "fallbackResponseFactory");
 
         try {
             endpointGroup = mapEndpoint(ctx, endpointGroup);
             if (ctx.init(endpointGroup)) {
                 return pushAndExecute(delegate, ctx);
             } else {
-                // Context initialization has failed, but we call the decorator chain anyway
-                // so that the request is seen by the decorators.
+                // Context initialization has failed, which means:
+                // - ctx.log() has been completed with an exception.
+                // - ctx.request() has been aborted (if not null).
+                // - the decorator chain was not invoked at all.
+                // See `init()` and `failEarly()` in `DefaultClientRequestContext`.
+
+                // Call the decorator chain anyway so that the request is seen by the decorators.
                 final O res = pushAndExecute(delegate, ctx);
+
                 // We will use the fallback response which is created from the exception
                 // raised in ctx.init(), so the response returned can be aborted.
                 if (res instanceof StreamMessage) {
                     ((StreamMessage<?>) res).abort();
                 }
-                return fallback.apply(ctx, ctx.log().partial().requestCause());
+
+                // No need to call `fail()` because failed by `DefaultRequestContext.init()` already.
+                final Throwable cause = ctx.log().partial().requestCause();
+                assert cause != null;
+                return fallbackResponseFactory.apply(ctx, cause);
             }
         } catch (Throwable cause) {
-            return failAndGetFallbackResponse(ctx, fallback, cause);
+            fail(ctx, cause);
+            return fallbackResponseFactory.apply(ctx, cause);
         }
     }
 
@@ -78,16 +88,17 @@ public final class ClientUtil {
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O executeWithFallback(U delegate, ClientRequestContext ctx,
-                          BiFunction<ClientRequestContext, Throwable, O> fallback) {
+                          BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
-        requireNonNull(fallback, "fallback");
+        requireNonNull(fallbackResponseFactory, "fallbackResponseFactory");
 
         try {
             return pushAndExecute(delegate, ctx);
         } catch (Throwable cause) {
-            return failAndGetFallbackResponse(ctx, fallback, cause);
+            fail(ctx, cause);
+            return fallbackResponseFactory.apply(ctx, cause);
         }
     }
 
@@ -100,25 +111,15 @@ public final class ClientUtil {
         }
     }
 
-    private static <O extends Response> O failAndGetFallbackResponse(
-            ClientRequestContext ctx,
-            BiFunction<ClientRequestContext, Throwable, O> fallback,
-            Throwable cause) {
+    private static void fail(ClientRequestContext ctx, Throwable cause) {
+        final HttpRequest req = ctx.request();
+        if (req != null) {
+            req.abort(cause);
+        }
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
-        if (!ctx.log().isAvailable(RequestLogProperty.SESSION)) {
-            // An exception is raised even before sending a request,
-            // so end the request with the exception.
-            logBuilder.endRequest(cause);
-
-            final HttpRequest req = ctx.request();
-            if (req != null) {
-                req.abort(cause);
-            }
-        }
+        logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);
-
-        return fallback.apply(ctx, cause);
     }
 
     private ClientUtil() {}

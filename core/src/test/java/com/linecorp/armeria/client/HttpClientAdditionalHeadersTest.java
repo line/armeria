@@ -40,10 +40,12 @@ class HttpClientAdditionalHeadersTest {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator((delegate, ctx, req) -> {
-                             ctx.addAdditionalRequestHeader(HttpHeaderNames.SCHEME, "https");
+                             ctx.setAdditionalRequestHeader(HttpHeaderNames.SCHEME, "https");
                              ctx.addAdditionalRequestHeader(HttpHeaderNames.STATUS, "503");
-                             ctx.addAdditionalRequestHeader(HttpHeaderNames.METHOD, "CONNECT");
-                             ctx.addAdditionalRequestHeader("foo", "bar");
+                             ctx.mutateAdditionalRequestHeaders(
+                                     mutator -> mutator.add(HttpHeaderNames.METHOD, "CONNECT"));
+                             ctx.mutateAdditionalRequestHeaders(
+                                     mutator -> mutator.add("foo", "bar"));
                              return delegate.execute(ctx, req);
                          })
                          .build();

@@ -19,18 +19,35 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Maps;
 
+import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptionValue;
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
+import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.HttpUrl;
@@ -46,18 +63,19 @@ import retrofit2.http.Streaming;
  *
  * @see ArmeriaRetrofit
  */
-public final class ArmeriaRetrofitBuilder {
+public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
 
     private final Retrofit.Builder retrofitBuilder;
     private final String baseWebClientHost;
     private final int baseWebClientPort;
-    private final WebClient baseWebClient;
-
+    private final WebClient webClient;
     private boolean streaming;
     private Executor callbackExecutor = CommonPools.blockingTaskExecutor();
+    @Nullable
     private BiFunction<? super SessionProtocol, ? super Endpoint, ? extends WebClient> nonBaseClientFactory;
 
     ArmeriaRetrofitBuilder(WebClient webClient) {
+        this.webClient = webClient;
         final URI uri = webClient.uri();
         final SessionProtocol protocol = webClient.scheme().sessionProtocol();
 
@@ -68,16 +86,6 @@ public final class ArmeriaRetrofitBuilder {
         retrofitBuilder = new Retrofit.Builder().baseUrl(baseUrl);
         baseWebClientHost = baseUrl.host();
         baseWebClientPort = baseUrl.port();
-
-        // Re-create the base client without a path, because Retrofit will always provide a full path.
-        baseWebClient = WebClient.builder(protocol,
-                                          webClient.endpointGroup())
-                                 .options(webClient.options())
-                                 .build();
-
-        nonBaseClientFactory = (p, url) -> WebClient.builder(p, Endpoint.of(url.host(), url.port()))
-                                                    .options(baseWebClient.options())
-                                                    .build();
     }
 
     /**
@@ -200,6 +208,20 @@ public final class ArmeriaRetrofitBuilder {
      * Returns a newly-created {@link Retrofit} based on the properties of this builder.
      */
     public Retrofit build() {
+        final SessionProtocol protocol = webClient.scheme().sessionProtocol();
+
+        final ClientOptions retrofitOptions = buildOptions(webClient.options());
+        // Re-create the base client without a path, because Retrofit will always provide a full path.
+        final WebClient baseWebClient = WebClient.builder(protocol, webClient.endpointGroup())
+                                                 .options(retrofitOptions)
+                                                 .build();
+
+        if (nonBaseClientFactory == null) {
+            nonBaseClientFactory = (p, url) -> WebClient.builder(p, Endpoint.of(url.host(), url.port()))
+                                                        .options(retrofitOptions)
+                                                        .build();
+        }
+
         retrofitBuilder.callFactory(new ArmeriaCallFactory(
                 baseWebClientHost, baseWebClientPort, baseWebClient,
                 streaming ? SubscriberFactory.streaming(callbackExecutor)
@@ -243,5 +265,117 @@ public final class ArmeriaRetrofitBuilder {
                               .add("cache", cache)
                               .toString();
         }
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public ArmeriaRetrofitBuilder options(ClientOptions options) {
+        return (ArmeriaRetrofitBuilder) super.options(options);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder options(ClientOptionValue<?>... options) {
+        return (ArmeriaRetrofitBuilder) super.options(options);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder options(Iterable<ClientOptionValue<?>> options) {
+        return (ArmeriaRetrofitBuilder) super.options(options);
+    }
+
+    @Override
+    public <T> ArmeriaRetrofitBuilder option(ClientOption<T> option, T value) {
+        return (ArmeriaRetrofitBuilder) super.option(option, value);
+    }
+
+    @Override
+    public <T> ArmeriaRetrofitBuilder option(ClientOptionValue<T> optionValue) {
+        return (ArmeriaRetrofitBuilder) super.option(optionValue);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder factory(ClientFactory factory) {
+        return (ArmeriaRetrofitBuilder) super.factory(factory);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder writeTimeout(Duration writeTimeout) {
+        return (ArmeriaRetrofitBuilder) super.writeTimeout(writeTimeout);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder writeTimeoutMillis(long writeTimeoutMillis) {
+        return (ArmeriaRetrofitBuilder) super.writeTimeoutMillis(writeTimeoutMillis);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder responseTimeout(Duration responseTimeout) {
+        return (ArmeriaRetrofitBuilder) super.responseTimeout(responseTimeout);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder responseTimeoutMillis(long responseTimeoutMillis) {
+        return (ArmeriaRetrofitBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder maxResponseLength(long maxResponseLength) {
+        return (ArmeriaRetrofitBuilder) super.maxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+        return (ArmeriaRetrofitBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder endpointRemapper(
+            Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
+        return (ArmeriaRetrofitBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder decorator(
+            Function<? super HttpClient, ? extends HttpClient> decorator) {
+        return (ArmeriaRetrofitBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder decorator(DecoratingHttpClientFunction decorator) {
+        return (ArmeriaRetrofitBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator) {
+        return (ArmeriaRetrofitBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+        return (ArmeriaRetrofitBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder addHttpHeader(CharSequence name, Object value) {
+        return (ArmeriaRetrofitBuilder) super.addHttpHeader(name, value);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder addHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (ArmeriaRetrofitBuilder) super.addHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder setHttpHeader(CharSequence name, Object value) {
+        return (ArmeriaRetrofitBuilder) super.setHttpHeader(name, value);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder setHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (ArmeriaRetrofitBuilder) super.setHttpHeaders(httpHeaders);
     }
 }

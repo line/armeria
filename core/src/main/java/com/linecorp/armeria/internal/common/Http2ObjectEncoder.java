@@ -19,64 +19,39 @@ package com.linecorp.armeria.internal.common;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.util.ReferenceCountUtil;
 
-public final class Http2ObjectEncoder extends HttpObjectEncoder {
-
+public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     private final ChannelHandlerContext ctx;
     private final Http2ConnectionEncoder encoder;
+    private volatile boolean closed;
 
-    public Http2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder) {
+    protected Http2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder) {
         this.ctx = requireNonNull(ctx, "ctx");
         this.encoder = requireNonNull(encoder, "encoder");
     }
 
     @Override
-    protected Channel channel() {
+    public final Channel channel() {
         return ctx.channel();
     }
 
     @Override
-    protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream) {
-        final Http2Connection conn = encoder.connection();
-        final boolean server = conn.isServer();
+    public final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (isStreamPresentAndWritable(streamId)) {
-            // Writing to an existing stream.
-            return encoder.writeHeaders(ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers, server),
-                                        0, endStream, ctx.newPromise());
-        }
-
-        if (server) {
-            // One of the following cases:
-            // - Stream has been closed already.
-            // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
-            return newFailedFuture(ClosedStreamException.get());
-        }
-
-        if (conn.local().mayHaveCreatedStream(streamId)) {
-            // Stream has been closed.
-            return newFailedFuture(ClosedStreamException.get());
-        }
-
-        // Client starts a new stream.
-        return encoder.writeHeaders(
-                ctx, streamId, ArmeriaHttpUtil.toNettyHttp2(headers, server), 0, endStream, ctx.newPromise());
-    }
-
-    @Override
-    protected ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
-        if (isStreamPresentAndWritable(streamId)) {
+            final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+            if (keepAliveHandler != null) {
+                keepAliveHandler.onReadOrWrite();
+            }
             // Write to an existing stream.
             return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
         }
@@ -96,7 +71,7 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
+    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
         final Http2Stream stream = encoder.connection().stream(streamId);
         // Send a RST_STREAM frame only for an active stream which did not send a RST_STREAM frame already.
         if (stream != null && !stream.isResetSent()) {
@@ -107,7 +82,7 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    public boolean isWritable(int id, int streamId) {
+    public final boolean isWritable(int id, int streamId) {
         return isStreamPresentAndWritable(streamId);
     }
 
@@ -115,7 +90,7 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
      * Returns {@code true} if the stream with the given {@code streamId} has been created and is writable.
      * Note that this method will return {@code false} for the stream which was not created yet.
      */
-    private boolean isStreamPresentAndWritable(int streamId) {
+    protected final boolean isStreamPresentAndWritable(int streamId) {
         final Http2Stream stream = encoder.connection().stream(streamId);
         if (stream == null) {
             return false;
@@ -133,5 +108,24 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected void doClose() {}
+    public final void close() {
+        closed = true;
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closed;
+    }
+
+    protected final ChannelHandlerContext ctx() {
+        return ctx;
+    }
+
+    protected final Http2ConnectionEncoder encoder() {
+        return encoder;
+    }
 }

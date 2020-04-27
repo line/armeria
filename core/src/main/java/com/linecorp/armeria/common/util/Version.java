@@ -198,31 +198,6 @@ public final class Version {
         });
     }
 
-    /**
-     * Retrieves the version information of Armeria artifacts.
-     * This method is a shortcut for {@code identify(Version.class.getClassLoader())}.
-     *
-     * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
-     *
-     * @deprecated Use {@link #getAll()}.
-     */
-    @Deprecated
-    public static Map<String, Version> identify() {
-        return getAll(Version.class.getClassLoader());
-    }
-
-    /**
-     * Retrieves the version information of Armeria artifacts using the specified {@link ClassLoader}.
-     *
-     * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
-     *
-     * @deprecated Use {@link #getAll(ClassLoader)}.
-     */
-    @Deprecated
-    public static Map<String, Version> identify(ClassLoader classLoader) {
-        return getAll(classLoader);
-    }
-
     private static long parseIso8601(String value) {
         try {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z").parse(value).getTime();
@@ -302,18 +277,6 @@ public final class Version {
     /**
      * Returns whether the repository was clean when performing the release process.
      * This method is a shortcut for {@code "clean".equals(repositoryStatus())}.
-     *
-     * @deprecated Use {@link #isRepositoryClean()}.
-     */
-    @JsonIgnore
-    @Deprecated
-    public boolean isClean() {
-        return isRepositoryClean();
-    }
-
-    /**
-     * Returns whether the repository was clean when performing the release process.
-     * This method is a shortcut for {@code "clean".equals(repositoryStatus())}.
      */
     @JsonIgnore
     public boolean isRepositoryClean() {
@@ -323,6 +286,6 @@ public final class Version {
     @Override
     public String toString() {
         return artifactId + '-' + artifactVersion + '.' + shortCommitHash +
-                (isRepositoryClean() ? "" : "(repository: " + repositoryStatus + ')');
+               (isRepositoryClean() ? "" : "(repository: " + repositoryStatus + ')');
     }
 }

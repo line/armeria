@@ -80,7 +80,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -369,21 +371,24 @@ class HttpServerTest {
             sb.service("/head-headers-only", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
             sb.service("/additional-trailers-other-trailers", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
+                ctx.mutateAdditionalResponseTrailers(
+                        mutator -> mutator.add(HttpHeaderNames.of("additional-trailer"), "value2"));
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        HttpData.ofAscii("foobar"),
                                        HttpHeaders.of(HttpHeaderNames.of("original-trailer"), "value1"));
             });
 
             sb.service("/additional-trailers-no-other-trailers", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
+                ctx.mutateAdditionalResponseTrailers(
+                        mutator -> mutator.add(HttpHeaderNames.of("additional-trailer"), "value2"));
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        HttpData.ofUtf8(payload).withEndOfStream());
             });
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
+                ctx.mutateAdditionalResponseTrailers(
+                        mutator -> mutator.add(HttpHeaderNames.of("additional-trailer"), "value2"));
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        HttpData.ofUtf8(payload).withEndOfStream());
@@ -413,7 +418,8 @@ class HttpServerTest {
                             if (serverRequestTimeoutMillis == 0) {
                                 ctx.clearRequestTimeout();
                             } else {
-                                ctx.setRequestTimeoutAfterMillis(serverRequestTimeoutMillis);
+                                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW,
+                                                            serverRequestTimeoutMillis);
                             }
                             ctx.setMaxRequestLength(serverMaxRequestLength);
                             ctx.log().whenComplete().thenAccept(log -> {
@@ -554,8 +560,13 @@ class HttpServerTest {
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.
+
+        final Class<? extends Throwable> expectedCauseType =
+                client.scheme().sessionProtocol().isMultiplex() ?
+                ClosedStreamException.class : ClosedSessionException.class;
+
         assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)
-                                  .hasCauseInstanceOf(ClosedSessionException.class);
+                                  .hasCauseInstanceOf(expectedCauseType);
     }
 
     /**
@@ -571,8 +582,13 @@ class HttpServerTest {
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.
+
+        final Class<? extends Throwable> expectedCauseType =
+                client.scheme().sessionProtocol().isMultiplex() ?
+                ClosedStreamException.class : ClosedSessionException.class;
+
         assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)
-                                  .hasCauseInstanceOf(ClosedSessionException.class);
+                                  .hasCauseInstanceOf(expectedCauseType);
     }
 
     @ParameterizedTest
@@ -916,7 +932,8 @@ class HttpServerTest {
                                          if (clientResponseTimeoutMillis == 0) {
                                             ctx.clearResponseTimeout();
                                          } else {
-                                             ctx.setResponseTimeoutAfterMillis(clientResponseTimeoutMillis);
+                                             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW,
+                                                                          clientResponseTimeoutMillis);
                                          }
                                          ctx.setMaxResponseLength(clientMaxResponseLength);
                                          return delegate.execute(ctx, req);

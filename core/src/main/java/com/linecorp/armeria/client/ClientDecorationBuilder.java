@@ -30,13 +30,17 @@ public final class ClientDecorationBuilder {
     private final List<Function<? super HttpClient, ? extends HttpClient>> decorators = new ArrayList<>();
     private final List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators = new ArrayList<>();
 
+    ClientDecorationBuilder() {}
+
     /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link ClientDecoration#builder()}.
+     * Adds the specified {@link ClientDecoration}.
      */
-    @Deprecated
-    public ClientDecorationBuilder() {}
+    public ClientDecorationBuilder add(ClientDecoration clientDecoration) {
+        requireNonNull(clientDecoration, "clientDecoration");
+        clientDecoration.decorators().forEach(this::add);
+        clientDecoration.rpcDecorators().forEach(this::addRpc);
+        return this;
+    }
 
     /**
      * Adds the specified HTTP-level {@code decorator}.
@@ -54,6 +58,7 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
     public ClientDecorationBuilder add(DecoratingHttpClientFunction decorator) {
+        requireNonNull(decorator, "decorator");
         return add(delegate -> new FunctionalDecoratingHttpClient(delegate, decorator));
     }
 
@@ -73,6 +78,7 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
     public ClientDecorationBuilder addRpc(DecoratingRpcClientFunction decorator) {
+        requireNonNull(decorator, "decorator");
         return addRpc(delegate -> new FunctionalDecoratingRpcClient(delegate, decorator));
     }
 

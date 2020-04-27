@@ -30,7 +30,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -40,6 +42,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 
@@ -75,6 +78,14 @@ class DefaultRequestLogTest {
         assertThat(headers.authority()).isEqualTo("?");
         assertThat(headers.method()).isSameAs(HttpMethod.UNKNOWN);
         assertThat(headers.path()).isEqualTo("?");
+    }
+
+    @Test
+    void endRequestWithHeadersInContext() {
+        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.request()).thenReturn(HttpRequest.of(HttpMethod.GET, "/foo"));
+        log.endRequest();
+        assertThat(log.requestHeaders()).isSameAs(ctx.request().headers());
     }
 
     @Test
@@ -189,12 +200,22 @@ class DefaultRequestLogTest {
         final String responseContent = "baz1";
         final String rawResponseContent = "qux1";
         child.responseContent(responseContent, rawResponseContent);
-        assertThat(log.responseContent()).isSameAs(responseContent);
-        assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);
 
         child.endResponse(new AnticipatedException("Oops!"));
+        assertThat(log.responseContent()).isSameAs(responseContent);
+        assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);
         assertThat(log.responseDurationNanos()).isEqualTo(child.responseDurationNanos());
         assertThat(log.totalDurationNanos()).isEqualTo(child.totalDurationNanos());
+    }
+
+    @Test
+    void setParentIdWhileAddingChild() {
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(ctx2.log().parent()).isNull();
+        ctx1.logBuilder().addChild(ctx2.log());
+        assertThat(ctx2.log().parent()).isEqualTo(ctx1.log());
+        assertThat(ctx2.log().parent().context().id()).isEqualTo(ctx1.id());
     }
 
     @Test
@@ -240,5 +261,14 @@ class DefaultRequestLogTest {
 
         log.endResponse();
         assertThat(completeFuture.isDone()).isTrue();
+    }
+
+    @Test
+    void useDefaultLogNameWhenNoNameIsSet() {
+        final String logName = "someLogName";
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                               .defaultLogName(logName).build();
+        ctx.logBuilder().endRequest();
+        assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).name()).isSameAs(logName);
     }
 }

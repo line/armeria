@@ -136,7 +136,7 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
     @Override
     public final void onError(Throwable throwable) {
         if (armeriaCall.tryFinish()) {
-            onError0(new IOException(throwable.getMessage(), throwable));
+            onError0(new IOException(throwable.toString(), throwable));
         } else {
             onError0(newCancelledException());
         }

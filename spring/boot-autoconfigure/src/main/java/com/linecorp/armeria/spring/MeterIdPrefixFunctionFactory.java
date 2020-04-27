@@ -24,14 +24,6 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 public interface MeterIdPrefixFunctionFactory {
 
     /**
-     * The default {@link MeterIdPrefixFunctionFactory} instance.
-     *
-     * @deprecated Use {@link #ofDefault()}.
-     */
-    @Deprecated
-    MeterIdPrefixFunctionFactory DEFAULT = DefaultMeterIdPrefixFunctionFactory.INSTANCE;
-
-    /**
      * Returns the default {@link MeterIdPrefixFunctionFactory} instance.
      */
     static MeterIdPrefixFunctionFactory ofDefault() {

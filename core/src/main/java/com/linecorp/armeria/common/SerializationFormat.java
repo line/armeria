@@ -32,7 +32,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
@@ -55,49 +54,6 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      */
     public static final SerializationFormat UNKNOWN;
 
-    /**
-     * Thrift TBinary serialization format.
-     *
-     * @deprecated Use {@code ThriftSerializationFormats.BINARY}. Note that the value of this field will be
-     *             {@code null} if {@code armeria-thrift} module is not loaded.
-     */
-    @Nullable
-    @Deprecated
-    public static final SerializationFormat THRIFT_BINARY;
-
-    /**
-     * Thrift TCompact serialization format.
-     *
-     * @deprecated Use {@code ThriftSerializationFormats.COMPACT}. Note that the value of this field will be
-     *             {@code null} if {@code armeria-thrift} module is not loaded.
-     */
-    @Nullable
-    @Deprecated
-    public static final SerializationFormat THRIFT_COMPACT;
-
-    /**
-     * Thrift TJSON serialization format.
-     *
-     * @deprecated Use {@code ThriftSerializationFormats.JSON}. Note that the value of this field will be
-     *             {@code null} if {@code armeria-thrift} module is not loaded.
-     */
-    @Nullable
-    @Deprecated
-    public static final SerializationFormat THRIFT_JSON;
-
-    /**
-     * Thrift TText serialization format.
-     *
-     * @deprecated Use {@code ThriftSerializationFormats.TEXT}. Note that the value of this field will be
-     *             {@code null} if {@code armeria-thrift} module is not loaded.
-     */
-    @Nullable
-    @Deprecated
-    public static final SerializationFormat THRIFT_TEXT;
-
-    @Nullable
-    private static final Set<SerializationFormat> THRIFT_FORMATS;
-
     static {
         final BiMap<String, SerializationFormat> mutableUriTextToFormats = HashBiMap.create();
         final Multimap<MediaType, SerializationFormat> mutableSimplifiedMediaTypeToFormats =
@@ -118,28 +74,6 @@ public final class SerializationFormat implements Comparable<SerializationFormat
 
         uriTextToFormats = ImmutableBiMap.copyOf(mutableUriTextToFormats);
         values = uriTextToFormats.values();
-
-        // Backward compatibility stuff
-        SerializationFormat tbinary = null;
-        SerializationFormat tcompact = null;
-        SerializationFormat tjson = null;
-        SerializationFormat ttext = null;
-        Set<SerializationFormat> thriftFormats = null;
-        try {
-            tbinary = of("tbinary");
-            tcompact = of("tcompact");
-            tjson = of("tjson");
-            ttext = of("ttext");
-            thriftFormats = ImmutableSet.of(tbinary, tcompact, tjson, ttext);
-        } catch (IllegalArgumentException e) {
-            // ThriftSerializationFormatProvider is not loaded.
-        }
-
-        THRIFT_BINARY = tbinary;
-        THRIFT_COMPACT = tcompact;
-        THRIFT_JSON = tjson;
-        THRIFT_TEXT = ttext;
-        THRIFT_FORMATS = thriftFormats;
     }
 
     private static SerializationFormat register(
@@ -162,22 +96,6 @@ public final class SerializationFormat implements Comparable<SerializationFormat
         }
 
         return value;
-    }
-
-    /**
-     * Returns the set of all known Thrift serialization formats.
-     *
-     * @deprecated Use {@code ThriftSerializationFormats.values()}.
-     *
-     * @throws IllegalStateException if {@code armeria-thrift} module is not loaded
-     */
-    @Deprecated
-    public static Set<SerializationFormat> ofThrift() {
-        if (THRIFT_FORMATS == null) {
-            throw new IllegalStateException("Thrift support not available");
-        }
-
-        return THRIFT_FORMATS;
     }
 
     /**

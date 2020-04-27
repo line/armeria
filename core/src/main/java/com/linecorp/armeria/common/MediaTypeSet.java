@@ -39,7 +39,7 @@ import com.google.common.collect.Lists;
  * <p>This {@link Set} provides {@link #match(MediaType)} and {@link #matchHeaders(CharSequence...)}
  * so that a user can find the preferred {@link MediaType} that matches the specified media ranges. For example:
  * <pre>{@code
- * MediaTypeSet set = new MediaTypeSet(MediaType.HTML_UTF_8, MediaType.PLAIN_TEXT_UTF_8);
+ * MediaTypeSet set = MediaTypeSet.of(MediaType.HTML_UTF_8, MediaType.PLAIN_TEXT_UTF_8);
  *
  * MediaType negotiated1 = set.matchHeaders("text/html; q=0.5, text/plain");
  * assert negotiated1 != null;
@@ -77,23 +77,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
         return new MediaTypeSet(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
     }
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link #of(MediaType...)}.
-     */
-    @Deprecated
-    public MediaTypeSet(MediaType... mediaTypes) {
-        this(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link #of(Iterable)}.
-     */
-    @Deprecated
-    public MediaTypeSet(Iterable<MediaType> mediaTypes) {
+    private MediaTypeSet(Iterable<MediaType> mediaTypes) {
         final Set<MediaType> mediaTypesCopy = new LinkedHashSet<>(); // Using a Set to deduplicate
         for (MediaType mediaType : requireNonNull(mediaTypes, "mediaTypes")) {
             requireNonNull(mediaType, "mediaTypes contains null.");

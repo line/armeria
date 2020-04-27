@@ -22,14 +22,13 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URL;
-import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.reflections.Configuration;
 import org.reflections.Reflections;
+import org.reflections.Store;
 import org.reflections.scanners.ResourcesScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
@@ -37,6 +36,8 @@ import org.reflections.util.FilterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 
 import com.linecorp.armeria.common.util.UnstableApi;
@@ -74,9 +75,18 @@ public abstract class DocStringExtractor {
                 .addClassLoader(classLoader)
                 .setScanners(new ResourcesScanner());
         if (configuration.getUrls() == null || configuration.getUrls().isEmpty()) {
-            return Collections.emptyMap();
+            // No resource folders were found.
+            return ImmutableMap.of();
         }
-        final Map<String, byte[]> files = new Reflections(configuration)
+
+        final Reflections reflections = new Reflections(configuration);
+        final Store store = reflections.getStore();
+        if (!store.keySet().contains(ResourcesScanner.class.getSimpleName())) {
+            // No resources were found.
+            return ImmutableMap.of();
+        }
+
+        final Map<String, byte[]> files = reflections
                 .getResources(this::acceptFile).stream()
                 .map(f -> {
                     try {
@@ -84,12 +94,13 @@ public abstract class DocStringExtractor {
                         if (url == null) {
                             throw new IllegalStateException("not found: " + f);
                         }
-                        return new SimpleImmutableEntry<>(f, Resources.toByteArray(url));
+                        return Maps.immutableEntry(f, Resources.toByteArray(url));
                     } catch (IOException e) {
                         throw new UncheckedIOException(e);
                     }
                 })
                 .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+
         return getDocStringsFromFiles(files);
     }
 

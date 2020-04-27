@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -39,12 +40,15 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.UnstableApi;
 
@@ -63,6 +67,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 @UnstableApi
 public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicator<T> {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultStreamMessageDuplicator.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<DefaultStreamMessageDuplicator> unsubscribedUpdater =
@@ -209,9 +215,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         @Override
         public void onError(Throwable cause) {
-            if (cause == null) {
-                cause = new IllegalStateException("onError() was invoked with null cause.");
-            }
             pushSignal(new CloseEvent(cause));
         }
 
@@ -240,7 +243,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     if (dataLength > allowedMaxSignalLength) {
                         final ContentTooLargeException cause = ContentTooLargeException.get();
                         upstream.abort(cause);
-                        throw cause;
+                        return;
                     }
                     signalLength += dataLength;
                 }
@@ -251,7 +254,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 signalLength -= removedLength;
             } catch (IllegalStateException e) {
                 upstream.abort(e);
-                throw e;
+                return;
             }
 
             upstreamOffset++;
@@ -289,9 +292,14 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private static void failLateProcessorSubscriber(DownstreamSubscription<?> subscription) {
             final Subscriber<?> lateSubscriber = subscription.subscriber();
-            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-            lateSubscriber.onError(
-                    new IllegalStateException("duplicator is closed or no more downstream can be added."));
+            try {
+                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                lateSubscriber.onError(
+                        new IllegalStateException("duplicator is closed or no more downstream can be added."));
+            } catch (Throwable t) {
+                throwIfFatal(t);
+                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
+            }
         }
 
         void unsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
@@ -314,8 +322,13 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             if (cause == null) {
                 try {
                     subscriber.onComplete();
-                } finally {
                     completionFuture.complete(null);
+                } catch (Throwable t) {
+                    completionFuture.completeExceptionally(t);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                                subscriber, t);
+                } finally {
                     doCleanupIfLastSubscription();
                 }
                 return;
@@ -325,8 +338,14 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                     subscriber.onError(cause);
                 }
-            } finally {
                 completionFuture.completeExceptionally(cause);
+            } catch (Throwable t) {
+                final Exception composite = new CompositeException(t, cause);
+                completionFuture.completeExceptionally(composite);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                            subscriber, composite);
+            } finally {
                 doCleanupIfLastSubscription();
             }
         }
@@ -516,8 +535,13 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             final Throwable cause = abortedOrLate(oldSubscriber);
 
             executor.execute(() -> {
-                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-                lateSubscriber.onError(cause);
+                try {
+                    lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                    lateSubscriber.onError(cause);
+                } catch (Throwable t) {
+                    throwIfFatal(t);
+                    logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
+                }
             });
         }
 
@@ -647,7 +671,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             subscriber = NeverInvokedSubscriber.get();
         }
 
-        // only called from processor.processorExecutor
+        // Called from processor.processorExecutor
         void invokeOnSubscribe() {
             if (invokedOnSubscribe) {
                 return;
@@ -655,9 +679,21 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             invokedOnSubscribe = true;
 
             if (executor.inEventLoop()) {
-                subscriber.onSubscribe(this);
+                invokeOnSubscribe0();
             } else {
-                executor.execute(() -> subscriber.onSubscribe(this));
+                executor.execute(this::invokeOnSubscribe0);
+            }
+        }
+
+        // Called from the executor of the subscriber.
+        void invokeOnSubscribe0() {
+            try {
+                subscriber.onSubscribe(this);
+            } catch (Throwable t) {
+                processor.unsubscribe(this, t);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
+                            subscriber, t);
             }
         }
 
@@ -803,6 +839,12 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 inOnNext = true;
                 try {
                     subscriber.onNext(obj);
+                } catch (Throwable t) {
+                    processor.unsubscribe(this, t);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                                obj, subscriber, t);
+                    return false;
                 } finally {
                     inOnNext = false;
                 }

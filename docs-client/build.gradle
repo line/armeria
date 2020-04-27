@@ -64,7 +64,7 @@ tasks.assemble.dependsOn copyWeb
 tasks.check.dependsOn checkWeb
 
 node {
-    version = '12.15.0'
-    yarnVersion = '1.22.0'
+    version = '12.16.1'
+    yarnVersion = '1.22.4'
     download = true
 }

@@ -74,24 +74,17 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
     private final String serviceName;
     @Nullable
     private final String serviceTagName;
-    @Nullable
-    private final String defaultServiceName;
 
     RetrofitMeterIdPrefixFunction(String name,
                                   @Nullable String serviceTagName,
-                                  @Nullable String serviceName,
-                                  @Nullable String defaultServiceName) {
+                                  @Nullable String serviceName) {
         this.name = name;
-        if (defaultServiceName != null || serviceName != null) {
-            this.serviceTagName = firstNonNull(serviceTagName, "service");
-        } else if (serviceTagName != null) {
-            defaultServiceName = "UNKNOWN";
-            this.serviceTagName = serviceTagName;
-        } else {
-            this.serviceTagName = null;
-        }
         this.serviceName = serviceName;
-        this.defaultServiceName = defaultServiceName;
+        if (serviceName != null) {
+            this.serviceTagName = firstNonNull(serviceTagName, "service");
+        } else {
+            this.serviceTagName = serviceTagName;
+        }
     }
 
     @Override
@@ -120,7 +113,7 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
             tagListBuilder.add(Tag.of("method", invocation.method().getName()));
         } else {
             if (serviceTagName != null) {
-                tagListBuilder.add(Tag.of(serviceTagName, firstNonNull(serviceName, defaultServiceName)));
+                tagListBuilder.add(Tag.of(serviceTagName, firstNonNull(serviceName, "UNKNOWN")));
             }
             tagListBuilder.add(Tag.of("method", log.requestHeaders().method().name()));
         }

@@ -24,6 +24,8 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 /**
@@ -33,15 +35,21 @@ public final class GrpcClientOptions {
 
     /**
      * The maximum size, in bytes, of messages coming in a response.
+     * The default value is {@value ArmeriaMessageDeframer#NO_MAX_INBOUND_MESSAGE_SIZE},
+     * which means 'use {@link ClientOption#MAX_RESPONSE_LENGTH}'.
      */
-    public static final ClientOption<Integer> MAX_INBOUND_MESSAGE_SIZE_BYTES = ClientOption.valueOf(
-            "MAX_INBOUND_MESSAGE_SIZE_BYTES");
+    public static final ClientOption<Integer> MAX_INBOUND_MESSAGE_SIZE_BYTES =
+            ClientOption.define("GRPC_MAX_INBOUND_MESSAGE_SIZE_BYTES",
+                                ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE);
 
     /**
      * The maximum size, in bytes, of messages sent in a request.
+     * The default value is {@value ArmeriaMessageFramer#NO_MAX_OUTBOUND_MESSAGE_SIZE},
+     * which means unlimited.
      */
-    public static final ClientOption<Integer> MAX_OUTBOUND_MESSAGE_SIZE_BYTES = ClientOption.valueOf(
-            "MAX_OUTBOUND_MESSAGE_SIZE_BYTES");
+    public static final ClientOption<Integer> MAX_OUTBOUND_MESSAGE_SIZE_BYTES =
+            ClientOption.define("GRPC_MAX_OUTBOUND_MESSAGE_SIZE_BYTES",
+                                ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE);
 
     /**
      * Enables unsafe retention of response buffers. Can improve performance when working with very large
@@ -66,7 +74,7 @@ public final class GrpcClientOptions {
      * recommended to use a streaming stub for easy access to the {@link RequestContext}.
      */
     public static final ClientOption<Boolean> UNSAFE_WRAP_RESPONSE_BUFFERS =
-            ClientOption.valueOf("UNSAFE_WRAP_RESPONSE_BUFFERS");
+            ClientOption.define("GRPC_UNSAFE_WRAP_RESPONSE_BUFFERS", false);
 
     /**
      * Sets a {@link Consumer} that can customize the JSON marshaller used when handling JSON payloads in the
@@ -75,7 +83,7 @@ public final class GrpcClientOptions {
      * {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)}.
      */
     public static final ClientOption<Consumer<MessageMarshaller.Builder>> JSON_MARSHALLER_CUSTOMIZER =
-            ClientOption.valueOf("JSON_MARSHALLER_CUSTOMIZER");
+            ClientOption.define("GRPC_JSON_MARSHALLER_CUSTOMIZER", unused -> { /* no-op */ });
 
     private GrpcClientOptions() {}
 }

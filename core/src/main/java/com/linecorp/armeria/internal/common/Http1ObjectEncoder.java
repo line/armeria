@@ -25,10 +25,8 @@ import java.util.Queue;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.ByteBuf;
@@ -38,30 +36,17 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
-public final class Http1ObjectEncoder extends HttpObjectEncoder {
+public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     /**
      * The maximum allowed length of an HTTP chunk when TLS is enabled.
@@ -81,8 +66,9 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
     private static final HttpContent EMPTY_CONTENT = new DefaultHttpContent(Unpooled.EMPTY_BUFFER);
 
     private final Channel ch;
-    private final boolean server;
-    private final boolean isTls;
+    private final SessionProtocol protocol;
+
+    private volatile boolean closed;
 
     /**
      * The ID of the request which is at its turn to send a response.
@@ -104,66 +90,18 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
      */
     private final IntObjectMap<PendingWrites> pendingWritesMap = new IntObjectHashMap<>();
 
-    public Http1ObjectEncoder(Channel ch, boolean server, boolean isTls) {
+    protected Http1ObjectEncoder(Channel ch, SessionProtocol protocol) {
         this.ch = requireNonNull(ch, "ch");
-        this.server = server;
-        this.isTls = isTls;
+        this.protocol = requireNonNull(protocol, "protocol");
     }
 
     @Override
-    protected Channel channel() {
+    public final Channel channel() {
         return ch;
     }
 
-    @Override
-    protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream) {
-        if (!isWritable(id)) {
-            return newClosedSessionFuture();
-        }
-
-        try {
-            return server ? writeServerHeaders(id, streamId, headers, endStream)
-                          : writeClientHeaders(id, streamId, headers, endStream);
-        } catch (Throwable t) {
-            return newFailedFuture(t);
-        }
-    }
-
-    private ChannelFuture writeServerHeaders(
-            int id, int streamId, HttpHeaders headers, boolean endStream) throws Http2Exception {
-
-        final HttpObject converted = convertServerHeaders(streamId, headers, endStream);
-        final String status = headers.get(HttpHeaderNames.STATUS);
-        if (status == null) {
-            // Trailers
-            final ChannelFuture f = write(id, converted, endStream);
-            ch.flush();
-            return f;
-        }
-
-        if (!status.isEmpty() && status.charAt(0) == '1') {
-            // Informational status headers.
-            final ChannelFuture f = write(id, converted, false);
-            if (endStream) {
-                // Can't end a stream with informational status in HTTP/1.
-                f.addListener(ChannelFutureListener.CLOSE);
-            }
-            ch.flush();
-            return f;
-        }
-
-        // Non-informational status headers.
-        return writeNonInformationalHeaders(id, converted, endStream);
-    }
-
-    private ChannelFuture writeClientHeaders(
-            int id, int streamId, HttpHeaders headers, boolean endStream) throws Http2Exception {
-
-        return writeNonInformationalHeaders(id, convertClientHeaders(streamId, headers, endStream), endStream);
-    }
-
-    private ChannelFuture writeNonInformationalHeaders(int id, HttpObject converted, boolean endStream) {
-
+    protected final ChannelFuture writeNonInformationalHeaders(int id, HttpObject converted,
+                                                               boolean endStream) {
         ChannelFuture f;
         if (converted instanceof LastHttpContent) {
             assert endStream;
@@ -174,145 +112,12 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                 f = write(id, LastHttpContent.EMPTY_LAST_CONTENT, true);
             }
         }
-
         ch.flush();
         return f;
     }
 
-    private HttpObject convertServerHeaders(
-            int streamId, HttpHeaders headers, boolean endStream) throws Http2Exception {
-
-        // Leading headers will always have :status, trailers will never have it.
-        final String status = headers.get(HttpHeaderNames.STATUS);
-        if (status == null) {
-            return convertTrailingHeaders(streamId, headers);
-        }
-
-        // Convert leading headers.
-        final HttpResponse res;
-        final int statusCode = Integer.parseInt(status);
-        final boolean informational = HttpStatusClass.INFORMATIONAL.contains(statusCode);
-        final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
-
-        if (endStream || informational) {
-
-            res = new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, nettyStatus,
-                    Unpooled.EMPTY_BUFFER, false);
-
-            final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
-            convert(streamId, headers, outHeaders, false, false);
-
-            if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
-                outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-            } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                // NB: Set the 'content-length' only when not set rather than always setting to 0.
-                //     It's because a response to a HEAD request can have empty content while having
-                //     non-zero 'content-length' header.
-                //     However, this also opens the possibility of sending a non-zero 'content-length'
-                //     header even when it really has to be zero. e.g. a response to a non-HEAD request
-                outHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-            }
-        } else {
-            res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
-            // Perform conversion.
-            convert(streamId, headers, res.headers(), false, false);
-            setTransferEncoding(res);
-        }
-
-        return res;
-    }
-
-    private HttpObject convertClientHeaders(int streamId, HttpHeaders headers, boolean endStream)
-            throws Http2Exception {
-
-        // Leading headers will always have :method, trailers will never have it.
-        final String method = headers.get(HttpHeaderNames.METHOD);
-        if (method == null) {
-            return convertTrailingHeaders(streamId, headers);
-        }
-
-        // Convert leading headers.
-        final String path = headers.get(HttpHeaderNames.PATH);
-        assert path != null;
-        final HttpRequest req = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1,
-                HttpMethod.valueOf(method),
-                path, false);
-
-        convert(streamId, headers, req.headers(), false, true);
-
-        if (endStream) {
-            req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
-
-            // Set or remove the 'content-length' header depending on request method.
-            // See: https://tools.ietf.org/html/rfc7230#section-3.3.2
-            //
-            // > A user agent SHOULD send a Content-Length in a request message when
-            // > no Transfer-Encoding is sent and the request method defines a meaning
-            // > for an enclosed payload body.  For example, a Content-Length header
-            // > field is normally sent in a POST request even when the value is 0
-            // > (indicating an empty payload body).  A user agent SHOULD NOT send a
-            // > Content-Length header field when the request message does not contain
-            // > a payload body and the method semantics do not anticipate such a
-            // > body.
-            switch (method) {
-                case "POST":
-                case "PUT":
-                case "PATCH":
-                    req.headers().set(HttpHeaderNames.CONTENT_LENGTH, "0");
-                    break;
-                default:
-                    req.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
-            }
-        } else if (HttpUtil.getContentLength(req, -1L) >= 0) {
-            // Avoid the case where both 'content-length' and 'transfer-encoding' are set.
-            req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
-        } else {
-            req.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-        }
-
-        return req;
-    }
-
-    private void convert(int streamId, HttpHeaders inHeaders,
-                         io.netty.handler.codec.http.HttpHeaders outHeaders, boolean trailer,
-                         boolean isRequest) throws Http2Exception {
-
-        ArmeriaHttpUtil.toNettyHttp1(
-                streamId, inHeaders, outHeaders, HttpVersion.HTTP_1_1, trailer, isRequest);
-
-        outHeaders.remove(ExtensionHeaderNames.STREAM_ID.text());
-        if (server) {
-            outHeaders.remove(ExtensionHeaderNames.SCHEME.text());
-        } else {
-            outHeaders.remove(ExtensionHeaderNames.PATH.text());
-        }
-    }
-
-    private LastHttpContent convertTrailingHeaders(int streamId, HttpHeaders headers) throws Http2Exception {
-        final LastHttpContent lastContent;
-        if (headers.isEmpty()) {
-            lastContent = LastHttpContent.EMPTY_LAST_CONTENT;
-        } else {
-            lastContent = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, false);
-            convert(streamId, headers, lastContent.trailingHeaders(), true, false);
-        }
-        return lastContent;
-    }
-
-    private static void setTransferEncoding(HttpMessage out) {
-        final io.netty.handler.codec.http.HttpHeaders outHeaders = out.headers();
-        final long contentLength = HttpUtil.getContentLength(out, -1L);
-        if (contentLength < 0) {
-            // Use chunked encoding.
-            outHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-        }
-    }
-
     @Override
-    protected ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
+    public final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (!isWritable(id)) {
             ReferenceCountUtil.safeRelease(data);
             return newClosedSessionFuture();
@@ -328,11 +133,11 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         }
 
         try {
-            if (!isTls || length <= MAX_TLS_DATA_LENGTH) {
+            if (!protocol.isTls() || length <= MAX_TLS_DATA_LENGTH) {
                 // Cleartext connection or data.length() <= MAX_TLS_DATA_LENGTH
                 return doWriteUnsplitData(id, data, endStream);
             } else {
-                // TLS and data.length() > MAX_TLS_DATA_LENGTH
+                // TLS or data.length() > MAX_TLS_DATA_LENGTH
                 return doWriteSplitData(id, data, endStream);
             }
         } catch (Throwable t) {
@@ -398,7 +203,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         }
     }
 
-    private ChannelFuture write(int id, HttpObject obj, boolean endStream) {
+    protected final ChannelFuture write(int id, HttpObject obj, boolean endStream) {
         if (id < currentId) {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
@@ -414,6 +219,12 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             }
 
             final ChannelFuture future = ch.write(obj);
+            if (!isPing(id)) {
+                final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+                if (keepAliveHandler != null) {
+                    keepAliveHandler.onReadOrWrite();
+                }
+            }
             if (endStream) {
                 currentId++;
 
@@ -469,19 +280,48 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    protected ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
+    public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
+        if (!isWritable(id)) {
+            return newClosedSessionFuture();
+        }
+
+        return write(id, convertTrailers(headers), true);
+    }
+
+    private LastHttpContent convertTrailers(HttpHeaders inputHeaders) {
+        if (inputHeaders.isEmpty()) {
+            return LastHttpContent.EMPTY_LAST_CONTENT;
+        }
+
+        final LastHttpContent lastContent = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, false);
+        final io.netty.handler.codec.http.HttpHeaders outputHeaders = lastContent.trailingHeaders();
+        convertTrailers(inputHeaders, outputHeaders);
+        return lastContent;
+    }
+
+    protected abstract void convertTrailers(HttpHeaders inputHeaders,
+                                            io.netty.handler.codec.http.HttpHeaders outputHeaders);
+
+    @Override
+    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
         // NB: this.minClosedId can be overwritten more than once when 3+ pipelined requests are received
         //     and they are handled by different threads simultaneously.
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
         minClosedId = Math.min(minClosedId, id);
-        for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
-            final PendingWrites pendingWrites = pendingWritesMap.remove(i);
-            for (;;) {
-                final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
-                if (e == null) {
-                    break;
+
+        if (minClosedId <= maxIdWithPendingWrites) {
+            final ClosedSessionException cause =
+                    new ClosedSessionException("An HTTP/1 stream has been reset: " + error);
+            for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
+                final PendingWrites pendingWrites = pendingWritesMap.remove(i);
+                for (;;) {
+                    final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
+                    if (e == null) {
+                        break;
+                    }
+
+                    e.getValue().tryFailure(cause);
                 }
-                e.getValue().tryFailure(ClosedSessionException.get());
             }
         }
 
@@ -494,16 +334,27 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
     }
 
     @Override
-    public boolean isWritable(int id, int streamId) {
+    public final boolean isWritable(int id, int streamId) {
         return isWritable(id);
     }
 
-    private boolean isWritable(int id) {
+    protected final boolean isWritable(int id) {
         return id < minClosedId;
     }
 
+    protected abstract boolean isPing(int id);
+
     @Override
-    protected void doClose() {
+    public final void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
         if (pendingWritesMap.isEmpty()) {
             return;
         }
@@ -521,6 +372,11 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         }
 
         pendingWritesMap.clear();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closed;
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {
@@ -545,5 +401,9 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         void setEndOfStream() {
             endOfStream = true;
         }
+    }
+
+    protected final SessionProtocol protocol() {
+        return protocol;
     }
 }

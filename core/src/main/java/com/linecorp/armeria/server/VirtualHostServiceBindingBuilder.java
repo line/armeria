@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -65,12 +66,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder path(String pathPattern) {
         return (VirtualHostServiceBindingBuilder) super.path(pathPattern);
-    }
-
-    @Override
-    @Deprecated
-    public VirtualHostServiceBindingBuilder pathUnder(String prefix) {
-        return (VirtualHostServiceBindingBuilder) super.pathPrefix(prefix);
     }
 
     @Override
@@ -151,6 +146,48 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
         return (VirtualHostServiceBindingBuilder) super.produces(produceTypes);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder matchesParams(String... paramPredicates) {
+        return (VirtualHostServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder matchesParams(Iterable<String> paramPredicates) {
+        return (VirtualHostServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder matchesParams(String paramName,
+                                                          Predicate<? super String> valuePredicate) {
+        return (VirtualHostServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder matchesHeaders(String... headerPredicates) {
+        return (VirtualHostServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
+        return (VirtualHostServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder matchesHeaders(CharSequence headerName,
+                                                           Predicate<? super String> valuePredicate) {
+        return (VirtualHostServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder addRoute(Route route) {
+        return (VirtualHostServiceBindingBuilder) super.addRoute(route);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder defaultLogName(String defaultLogName) {
+        return (VirtualHostServiceBindingBuilder) super.defaultLogName(defaultLogName);
     }
 
     @Override

@@ -83,18 +83,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * Sets the port where a health check request will be sent instead of the original port number
      * specified by {@link EndpointGroup}'s {@link Endpoint}s. This property is useful when your
      * server listens to health check requests on a different port.
-     *
-     * @deprecated Use {@link #port(int)}.
-     */
-    @Deprecated
-    public AbstractHealthCheckedEndpointGroupBuilder healthCheckPort(int port) {
-        return port(port);
-    }
-
-    /**
-     * Sets the port where a health check request will be sent instead of the original port number
-     * specified by {@link EndpointGroup}'s {@link Endpoint}s. This property is useful when your
-     * server listens to health check requests on a different port.
      */
     public AbstractHealthCheckedEndpointGroupBuilder port(int port) {
         checkArgument(port > 0 && port <= 65535,

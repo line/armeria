@@ -113,17 +113,6 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Sets the decorator of the annotated service object. {@code decorator} are applied to {@code service} in
-     * order.
-     * @deprecated Use {@link #setDecorators(Function[])} or {@link #setDecorators(List)} instead.
-     */
-    @Deprecated
-    public final U setDecorator(
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return setDecorators(requireNonNull(decorator, "decorator"));
-    }
-
-    /**
      * Sets the decorator of the annotated service object. {@code decorators} are applied to {@code service} in
      * order.
      */
@@ -169,6 +158,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Sets example requests for {@link #getService()}.
      */
+    @SuppressWarnings("unchecked")
     public U setExampleRequests(@NotNull V... exampleRequests) {
         return setExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
@@ -186,6 +176,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Adds example requests for {@link #getService()}.
      */
+    @SuppressWarnings("unchecked")
     public U addExampleRequests(@NotNull V... exampleRequests) {
         return addExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
@@ -226,6 +217,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Sets example HTTP headers for all service methods.
      */
+    @SuppressWarnings("unchecked")
     public U setExampleHeaders(@NotNull W... exampleHeaders) {
         return setExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
@@ -243,6 +235,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Adds example HTTP headers for all service methods.
      */
+    @SuppressWarnings("unchecked")
     public U addExampleHeaders(@NotNull W... exampleHeaders) {
         return addExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }

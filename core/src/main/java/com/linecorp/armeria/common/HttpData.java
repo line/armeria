@@ -44,14 +44,6 @@ import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 public interface HttpData extends HttpObject {
 
     /**
-     * Empty HTTP/2 data.
-     *
-     * @deprecated Use {@link #empty()}.
-     */
-    @Deprecated
-    HttpData EMPTY_DATA = empty();
-
-    /**
      * Returns an empty {@link HttpData}.
      */
     static HttpData empty() {
@@ -164,28 +156,6 @@ public interface HttpData extends HttpObject {
     }
 
     /**
-     * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
-     * array later will be visible to {@link HttpData}.
-     *
-     * @deprecated Use {@link #wrap(byte[])}.
-     */
-    @Deprecated
-    static HttpData of(byte[] data) {
-        return wrap(data);
-    }
-
-    /**
-     * Creates a new instance from the specified byte array, {@code offset} and {@code length}.
-     * The array is not copied; any changes made in the array later will be visible to {@link HttpData}.
-     *
-     * @deprecated Use {@link #wrap(byte[], int, int)}.
-     */
-    @Deprecated
-    static HttpData of(byte[] data, int offset, int length) {
-        return wrap(data, offset, length);
-    }
-
-    /**
      * Converts the specified {@code text} into an {@link HttpData}.
      *
      * @param charset the {@link Charset} to use for encoding {@code text}
@@ -230,17 +200,6 @@ public interface HttpData extends HttpObject {
         }
 
         return wrap(text.getBytes(charset));
-    }
-
-    /**
-     * Creates a new instance from the specified {@link ByteBuf} by first copying it's content. The reference
-     * count of {@link ByteBuf} will not be changed.
-     *
-     * @deprecated Use {@link #copyOf(ByteBuf)}.
-     */
-    @Deprecated
-    static HttpData of(ByteBuf buf) {
-        return copyOf(buf);
     }
 
     /**
@@ -339,16 +298,6 @@ public interface HttpData extends HttpObject {
      * Returns the underlying byte array of this data.
      */
     byte[] array();
-
-    /**
-     * Returns {@code 0}.
-     *
-     * @deprecated The offset of {@link HttpData} is always {@code 0}.
-     */
-    @Deprecated
-    default int offset() {
-        return 0;
-    }
 
     /**
      * Returns the length of this data.

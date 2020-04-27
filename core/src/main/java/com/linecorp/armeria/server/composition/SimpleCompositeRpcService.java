@@ -53,24 +53,12 @@ public final class SimpleCompositeRpcService
         return new SimpleCompositeRpcServiceBuilder();
     }
 
-    /**
-     * Creates a new instance that is composed of the specified entries.
-     *
-     * @deprecated Use {@link #of(CompositeServiceEntry[])}.
-     */
     @SafeVarargs
-    @Deprecated
-    public SimpleCompositeRpcService(CompositeServiceEntry<RpcService>... services) {
+    SimpleCompositeRpcService(CompositeServiceEntry<RpcService>... services) {
         super(services);
     }
 
-    /**
-     * Creates a new instance that is composed of the specified entries.
-     *
-     * @deprecated Use {@link #of(Iterable)}.
-     */
-    @Deprecated
-    public SimpleCompositeRpcService(Iterable<CompositeServiceEntry<RpcService>> services) {
+    SimpleCompositeRpcService(Iterable<CompositeServiceEntry<RpcService>> services) {
         super(services);
     }
 

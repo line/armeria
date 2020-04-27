@@ -120,6 +120,10 @@ public final class Flags {
 
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
+    @Nullable
+    private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
+            System.getProperty(PREFIX + "requestContextStorageProvider");
+
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
@@ -191,6 +195,12 @@ public final class Flags {
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
             getLong("defaultClientIdleTimeoutMillis",
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_PING_INTERVAL_MILLIS = 0; // Disabled
+    private static final long DEFAULT_PING_INTERVAL_MILLIS =
+            getLong("defaultPingIntervalMillis",
+                    DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -407,6 +417,20 @@ public final class Flags {
     }
 
     /**
+     * Returns the fully qualified class name of {@link RequestContextStorageProvider} that is used to choose
+     * when multiple {@link RequestContextStorageProvider}s exist.
+     *
+     * <p>The default value of this flag is {@code null}, which means only one
+     * {@link RequestContextStorageProvider} must be found via Java SPI. If there are more than one,
+     * you must specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option to
+     * choose the {@link RequestContextStorageProvider}.
+     */
+    @Nullable
+    public static String requestContextStorageProvider() {
+        return REQUEST_CONTEXT_STORAGE_PROVIDER;
+    }
+
+    /**
      * Returns whether the JNI-based {@code /dev/epoll} socket I/O is enabled. When enabled on Linux, Armeria
      * uses {@code /dev/epoll} directly for socket I/O. When disabled, {@code java.nio} socket API is used
      * instead.
@@ -455,7 +479,7 @@ public final class Flags {
         dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", false);
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
-                    SslContextBuilder.forClient(),
+                    SslContextBuilder::forClient,
                     false,
                     ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
@@ -673,6 +697,24 @@ public final class Flags {
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
+    }
+
+    /**
+     * Returns the default value for the PING interval.
+     * A <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
+     * is sent for HTTP/2 server and client or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1 client.
+     *
+     * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
+     * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_PING_INTERVAL_MILLIS} milliseconds.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultPingIntervalMillis=<integer>} JVM option to override
+     * the default value. If the specified value was smaller than 10 seconds, bumps PING interval to 10 seconds.
+     */
+    public static long defaultPingIntervalMillis() {
+        return DEFAULT_PING_INTERVAL_MILLIS;
     }
 
     /**

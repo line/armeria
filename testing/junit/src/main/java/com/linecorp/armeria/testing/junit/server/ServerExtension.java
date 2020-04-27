@@ -208,59 +208,6 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Returns the HTTP or HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it opened neither HTTP nor HTTPS port
-     *
-     * @deprecated Use {@link #httpUri()} or {@link #httpsUri()} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(String path) {
-        return delegate.uri(path);
-    }
-
-    /**
-     * Returns the URI for the {@link Server} of the specified protocol and format.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it did not open a port of the protocol.
-     *
-     * @deprecated Use {@link #uri(SessionProtocol, SerializationFormat)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(SessionProtocol protocol, SerializationFormat format, String path) {
-        return delegate.uri(protocol, format, path);
-    }
-
-    /**
-     * Returns the URI for the {@link Server} of the specified protocol.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it did not open a port of the protocol.
-     *
-     * @deprecated Use {@link #uri(SessionProtocol)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(SessionProtocol protocol, String path) {
-        return delegate.uri(protocol, path);
-    }
-
-    /**
-     * Returns the HTTP or HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it opened neither HTTP nor HTTPS port
-     *
-     * @deprecated Use {@link #httpUri(SerializationFormat)} or {@link #httpsUri(SerializationFormat)}
-     *             and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(SerializationFormat format, String path) {
-        return delegate.uri(format, path);
-    }
-
-    /**
      * Returns the HTTP {@link URI} for the {@link Server}.
      *
      * @return the absolute {@link URI} without a path.
@@ -283,30 +230,6 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Returns the HTTP URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
-     *
-     * @deprecated Use {@link #httpUri()} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpUri(String path) {
-        return delegate.httpUri(path);
-    }
-
-    /**
-     * Returns the HTTP URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
-     *
-     * @deprecated Use {@link #httpUri(SerializationFormat)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpUri(SerializationFormat format, String path) {
-        return delegate.httpUri(format, path);
-    }
-
-    /**
      * Returns the HTTPS {@link URI} for the {@link Server}.
      *
      * @return the absolute {@link URI} without a path.
@@ -326,30 +249,6 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      */
     public URI httpsUri(SerializationFormat format) {
         return delegate.httpsUri(format);
-    }
-
-    /**
-     * Returns the HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
-     *
-     * @deprecated Use {@link #httpsUri()} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpsUri(String path) {
-        return delegate.httpsUri(path);
-    }
-
-    /**
-     * Returns the HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
-     *
-     * @deprecated Use {@link #httpsUri(SerializationFormat)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpsUri(SerializationFormat format, String path) {
-        return delegate.httpsUri(format, path);
     }
 
     /**

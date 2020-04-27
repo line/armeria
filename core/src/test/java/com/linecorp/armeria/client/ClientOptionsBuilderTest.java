@@ -69,6 +69,13 @@ class ClientOptionsBuilderTest {
     }
 
     @Test
+    void testEmptyClientDecoration() {
+        assertThat(ClientDecoration.of().isEmpty()).isTrue();
+        assertThat(ClientDecoration.builder().build().isEmpty()).isTrue();
+        assertThat(ClientDecoration.of(LoggingClient.newDecorator()).isEmpty()).isFalse();
+    }
+
+    @Test
     void testDecorators() {
         final ClientOptionsBuilder b = ClientOptions.builder();
         final Function<? super HttpClient, ? extends HttpClient> decorator =

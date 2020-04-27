@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 
@@ -268,6 +270,15 @@ public interface RequestLogAccess {
      * <p>This method always returns non-{@code null} regardless of what properties are currently available.
      */
     RequestContext context();
+
+    /**
+     * Returns the {@link RequestLogAccess} that provides access to the parent {@link RequestLog}.
+     * {@code null} is returned if the {@link RequestLog} was not added as a child log.
+     *
+     * @see RequestLogBuilder#addChild(RequestLogAccess)
+     */
+    @Nullable
+    RequestLogAccess parent();
 
     /**
      * Returns the list of {@link RequestLogAccess}es that provide access to the child {@link RequestLog}s,

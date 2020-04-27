@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.util.function.Consumer;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -23,7 +25,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.common.util.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -49,14 +50,14 @@ public interface ResponseConverterFunction {
      *                If the method returns {@link HttpResult}, this headers is the same headers from
      *                {@link HttpResult#headers()}
      *                Please note that the additional headers set by
-     *                {@link ServiceRequestContext#addAdditionalResponseHeader(CharSequence, Object)}
+     *                {@link ServiceRequestContext#mutateAdditionalResponseHeaders(Consumer)}
      *                and {@link AdditionalHeader} are not included in this headers.
      * @param result The result of the service method.
      * @param trailers The HTTP trailers that you might want to use to create the {@link HttpResponse}.
      *                 If the annotated method returns {@link HttpResult}, this trailers is the same
      *                 trailers from {@link HttpResult#trailers()}.
      *                 Please note that the additional trailers set by
-     *                 {@link ServiceRequestContext#addAdditionalResponseTrailer(CharSequence, Object)}
+     *                 {@link ServiceRequestContext#mutateAdditionalResponseTrailers(Consumer)}
      *                 and {@link AdditionalTrailer} are not included in this trailers.
      */
     HttpResponse convertResponse(ServiceRequestContext ctx,

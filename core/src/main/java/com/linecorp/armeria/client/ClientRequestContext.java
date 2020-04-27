@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -34,6 +35,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
@@ -43,7 +45,8 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
+import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -319,30 +322,32 @@ public interface ClientRequestContext extends RequestContext {
      */
     @Override
     default SafeCloseable push() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
             return noopSafeCloseable();
         }
 
         if (oldCtx == null) {
-            return RequestContextThreadLocal::remove;
+            return () -> RequestContextUtil.pop(this, null);
         }
 
         final ServiceRequestContext root = root();
         if ((oldCtx instanceof ServiceRequestContext && oldCtx == root) ||
             oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
-            return () -> RequestContextThreadLocal.set(oldCtx);
+            return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
-        RequestContextThreadLocal.set(oldCtx);
+        RequestContextUtil.pop(this, oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
+     *
+     * <p>Note that this method does not copy the {@link RequestLog} properties to the derived context.
      */
     @Override
     default ClientRequestContext newDerivedContext(RequestId id,
@@ -357,6 +362,8 @@ public interface ClientRequestContext extends RequestContext {
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
      * {@link RequestLog}.
+     *
+     * <p>Note that this method does not copy the {@link RequestLog} properties to the derived context.
      */
     ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
                                            Endpoint endpoint);
@@ -425,51 +432,124 @@ public interface ClientRequestContext extends RequestContext {
     void clearResponseTimeout();
 
     /**
-     * Schedules the response timeout that is triggered when the {@link Response} is not
-     * fully received within the specified amount of time since the {@link Response} started
-     * or {@link Request} was fully sent.
+     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
+     * the specified {@link TimeoutMode} and the specified {@code responseTimeoutMillis} since
+     * the {@link Response} started or {@link Request} was fully sent.
      * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     *
+     * <table>
+     * <tr><th>Timeout mode</th><th>description</th></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
+     *     <td>Sets a given amount of timeout from the current time.</td></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_START}</td>
+     *     <td>Sets a given amount of timeout since the current {@link Response} began processing.</td></tr>
+     * <tr><td>{@link TimeoutMode#EXTEND}</td>
+     *     <td>Extends the previously scheduled timeout by the given amount of timeout.</td></tr>
+     * </table>
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * ctx.setResponseTimeoutMillis(1000);
-     * assert ctx.responseTimeoutMillis() == 1000;
-     * ctx.setResponseTimeoutMillis(2000);
+     * // Schedules a timeout from the start time of the response
+     * ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
      * assert ctx.responseTimeoutMillis() == 2000;
+     * ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
+     * assert ctx.responseTimeoutMillis() == 1000;
+     *
+     * // Schedules timeout after 3 seconds from now.
+     * ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 3000);
+     *
+     * // Extends the previously scheduled timeout.
+     * long oldResponseTimeoutMillis = ctx.responseTimeoutMillis();
+     * ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, 1000);
+     * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 1000;
+     * ctx.extendResponseTimeoutMillis(TimeoutMode.EXTEND, -500);
+     * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 500;
      * }</pre>
-     *
-     * @param responseTimeoutMillis the amount of time allowed in milliseconds from
-     *                              the beginning of the response
-     *
-     * @deprecated Use {@link #extendResponseTimeoutMillis(long)}, {@link #setResponseTimeoutAfterMillis(long)},
-     *             {@link #setResponseTimeoutAtMillis(long)} or {@link #clearResponseTimeout()}
      */
-    @Deprecated
-    void setResponseTimeoutMillis(long responseTimeoutMillis);
+    void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis);
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not
-     * fully received within the specified amount of time since the {@link Response} started
-     * or {@link Request} was fully sent.
+     * fully received within the specified amount of time from now.
+     * Note that the specified {@code responseTimeoutMillis} must be positive.
      * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * This method is a shortcut for
+     * {@code setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis)}.
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * ctx.setResponseTimeout(Duration.ofSeconds(1));
-     * assert ctx.responseTimeoutMillis() == 1000;
-     * ctx.setResponseTimeout(Duration.ofSeconds(2));
-     * assert ctx.responseTimeoutMillis() == 2000;
+     * // Schedules timeout after 1 seconds from now.
+     * ctx.setResponseTimeoutMillis(1000);
      * }</pre>
      *
-     * @param responseTimeout the amount of time allowed from the beginning of the response
-     *
-     * @deprecated Use {@link #extendResponseTimeout(Duration)}, {@link #setResponseTimeoutAfter(Duration)},
-     *             {@link #setResponseTimeoutAt(Instant)} or {@link #clearResponseTimeout()}
+     * @param responseTimeoutMillis the amount of time allowed in milliseconds from now
      */
-    @Deprecated
-    void setResponseTimeout(Duration responseTimeout);
+    default void setResponseTimeoutMillis(long responseTimeoutMillis) {
+        setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
+    }
+
+    /**
+     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
+     * the specified {@link TimeoutMode} and the specified {@code responseTimeoutMillis} since
+     * the {@link Response} started or {@link Request} was fully sent.
+     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     *
+     * <table>
+     * <tr><th>Timeout mode</th><th>description</th></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
+     *     <td>Sets a given amount of timeout from the current time.</td></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_START}</td>
+     *     <td>Sets a given amount of timeout since the current {@link Response} began processing.</td></tr>
+     * <tr><td>{@link TimeoutMode#EXTEND}</td>
+     *     <td>Extends the previously scheduled timeout by the given amount of timeout.</td></tr>
+     * </table>
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * // Schedules a timeout from the start time of the response
+     * ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, Duration.ofSeconds(2));
+     * assert ctx.responseTimeoutMillis() == 2000;
+     * ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, Duration.ofSeconds(1));
+     * assert ctx.responseTimeoutMillis() == 1000;
+     *
+     * // Schedules timeout after 3 seconds from now.
+     * ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(3));
+     *
+     * // Extends the previously scheduled timeout.
+     * long oldResponseTimeoutMillis = ctx.responseTimeoutMillis();
+     * ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, Duration.ofSeconds(1));
+     * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 1000;
+     * ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, Duration.ofMillis(-500));
+     * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 500;
+     * }</pre>
+     */
+    default void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
+        setResponseTimeoutMillis(mode, requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    /**
+     * Schedules the response timeout that is triggered when the {@link Response} is not
+     * fully received within the specified amount of time from now.
+     * Note that the specified {@code responseTimeout} must be positive.
+     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * This method is a shortcut for {@code setResponseTimeout(TimeoutMode.SET_FROM_NOW, responseTimeout)}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * // Schedules timeout after 1 seconds from now.
+     * ctx.setResponseTimeout(Duration.ofSeconds(1));
+     * }</pre>
+     *
+     * @param responseTimeout the amount of time allowed from now
+     *
+     */
+    default void setResponseTimeout(Duration responseTimeout) {
+        setResponseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
 
     /**
      * Extends the previously scheduled response timeout by
@@ -489,8 +569,13 @@ public interface ClientRequestContext extends RequestContext {
      * }</pre>
      *
      * @param adjustmentMillis the amount of time in milliseconds to extend the current timeout by
+     *
+     * @deprecated Use {@link #setResponseTimeoutMillis(TimeoutMode, long)} with {@link TimeoutMode#EXTEND}
      */
-    void extendResponseTimeoutMillis(long adjustmentMillis);
+    @Deprecated
+    default void extendResponseTimeoutMillis(long adjustmentMillis) {
+        setResponseTimeoutMillis(TimeoutMode.EXTEND, adjustmentMillis);
+    }
 
     /**
      * Extends the previously scheduled response timeout by the specified amount of {@code adjustment}.
@@ -509,8 +594,13 @@ public interface ClientRequestContext extends RequestContext {
      * }</pre>
      *
      * @param adjustment the amount of time to extend the current timeout by
+     *
+     * @deprecated Use {@link #setResponseTimeout(TimeoutMode, Duration)} with {@link TimeoutMode#EXTEND}
      */
-    void extendResponseTimeout(Duration adjustment);
+    @Deprecated
+    default void extendResponseTimeout(Duration adjustment) {
+        extendResponseTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
+    }
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not
@@ -526,8 +616,14 @@ public interface ClientRequestContext extends RequestContext {
      * }</pre>
      *
      * @param responseTimeoutMillis the amount of time allowed in milliseconds from now
+     *
+     * @deprecated Use {@link #setResponseTimeoutMillis(TimeoutMode, long)}
+     *             with {@link TimeoutMode#SET_FROM_NOW}
      */
-    void setResponseTimeoutAfterMillis(long responseTimeoutMillis);
+    @Deprecated
+    default void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
+        setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
+    }
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not
@@ -543,8 +639,13 @@ public interface ClientRequestContext extends RequestContext {
      * }</pre>
      *
      * @param responseTimeout the amount of time allowed from now
+     *
+     * @deprecated Use {@link #setResponseTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#SET_FROM_NOW}
      */
-    void setResponseTimeoutAfter(Duration responseTimeout);
+    @Deprecated
+    default void setResponseTimeoutAfter(Duration responseTimeout) {
+        setResponseTimeoutAfterMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
 
     /**
      * Schedules the response timeout that is triggered at the specified time represented
@@ -562,7 +663,11 @@ public interface ClientRequestContext extends RequestContext {
      *
      * @param responseTimeoutAtMillis the response timeout represented as the number of milliseconds
      *                                since the epoch ({@code 1970-01-01T00:00:00Z})
+     *
+     * @deprecated This method will be removed without a replacement.
+     *             Use {@link #setResponseTimeoutMillis(TimeoutMode, long)}}.
      */
+    @Deprecated
     void setResponseTimeoutAtMillis(long responseTimeoutAtMillis);
 
     /**
@@ -580,8 +685,14 @@ public interface ClientRequestContext extends RequestContext {
      *
      * @param responseTimeoutAt the response timeout represented as the number of milliseconds
      *                          since the epoch ({@code 1970-01-01T00:00:00Z})
+     *
+     * @deprecated This method will be removed without a replacement.
+     *             Use {@link #setResponseTimeout(TimeoutMode, Duration)}.
      */
-    void setResponseTimeoutAt(Instant responseTimeoutAt);
+    @Deprecated
+    default void setResponseTimeoutAt(Instant responseTimeoutAt) {
+        setResponseTimeoutAtMillis(requireNonNull(responseTimeoutAt, "responseTimeoutAt").toEpochMilli());
+    }
 
     /**
      * Returns {@link Response} timeout handler which is executed when
@@ -627,7 +738,7 @@ public interface ClientRequestContext extends RequestContext {
     void setMaxResponseLength(long maxResponseLength);
 
     /**
-     * Returns an {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
+     * Returns an {@link HttpHeaders} which will be included when a {@link Client} sends an {@link HttpRequest}.
      */
     HttpHeaders additionalRequestHeaders();
 
@@ -639,27 +750,16 @@ public interface ClientRequestContext extends RequestContext {
     void setAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
-     * {@link Client} sends an {@link HttpRequest}.
-     */
-    void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Client} sends an {@link HttpRequest}.
      */
     void addAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Client} sends an
-     * {@link HttpRequest}.
-     */
-    void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
-     * Removes all headers with the specified {@code name}.
+     * Mutates the {@link HttpHeaders} which will be included when a {@link Client} sends
+     * an {@link HttpRequest}.
      *
-     * @return {@code true} if at least one entry has been removed
+     * @param mutator the {@link Consumer} that mutates the additional request headers
      */
-    boolean removeAdditionalRequestHeader(CharSequence name);
+    void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
 }

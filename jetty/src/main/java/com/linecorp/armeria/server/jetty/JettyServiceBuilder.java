@@ -66,13 +66,7 @@ public final class JettyServiceBuilder {
     @Nullable
     private Long stopTimeoutMillis;
 
-    /**
-     * Creates a new {@link JettyServiceBuilder}.
-     *
-     * @deprecated Use {@link JettyService#builder()}.
-     */
-    @Deprecated
-    public JettyServiceBuilder() {}
+    JettyServiceBuilder() {}
 
     /**
      * Sets the default hostname of the Jetty {@link Server}.

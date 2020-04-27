@@ -16,20 +16,31 @@
 
 package com.linecorp.armeria.internal.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.Ordering;
+
+import com.linecorp.armeria.client.DnsTimeoutException;
+
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -39,16 +50,24 @@ public class DefaultDnsNameResolver {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultDnsNameResolver.class);
 
-    private final DnsNameResolver delegate;
-    private final EventLoop eventLoop;
+    private static final Iterable<DnsRecord> EMPTY_ADDITIONALS = ImmutableList.of();
 
-    public DefaultDnsNameResolver(DnsNameResolver delegate, EventLoop eventLoop) {
+    private final DnsNameResolver delegate;
+    private final Comparator<DnsRecordType> preferredOrder;
+    private final EventLoop eventLoop;
+    private final long queryTimeoutMillis;
+
+    public DefaultDnsNameResolver(DnsNameResolver delegate, EventLoop eventLoop, long queryTimeoutMillis) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-    }
+        checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
+        this.queryTimeoutMillis = queryTimeoutMillis;
 
-    public EventLoop executor() {
-        return eventLoop;
+        if (delegate.resolvedAddressTypes() == ResolvedAddressTypes.IPV6_PREFERRED) {
+            preferredOrder = Ordering.explicit(DnsRecordType.AAAA, DnsRecordType.A);
+        } else {
+            preferredOrder = Ordering.explicit(DnsRecordType.A, DnsRecordType.AAAA);
+        }
     }
 
     public Future<List<DnsRecord>> sendQueries(List<DnsQuestion> questions, String logPrefix) {
@@ -59,7 +78,10 @@ public class DefaultDnsNameResolver {
             // Simple case of single query
             final DnsQuestion question = questions.get(0);
             logger.debug("[{}] Sending a DNS query: {}", logPrefix, question);
-            return delegate.resolveAll(question);
+            final Promise<List<DnsRecord>> promise = eventLoop.newPromise();
+            delegate.resolveAll(question, EMPTY_ADDITIONALS, promise);
+            configureTimeout(questions, logPrefix, promise, ImmutableList.of(promise));
+            return promise;
         }
 
         // Multiple queries
@@ -83,9 +105,12 @@ public class DefaultDnsNameResolver {
                     causes.add(future.cause());
                 }
 
-                if (--remaining == 0) {
+                if (--remaining == 0 && !aggregatedPromise.isDone()) {
                     if (!records.isEmpty()) {
-                        aggregatedPromise.setSuccess(records);
+                        if (records.size() > 1) {
+                            records.sort(Comparator.comparing(DnsRecord::type, preferredOrder));
+                        }
+                        aggregatedPromise.trySuccess(records);
                     } else {
                         final Throwable aggregatedCause;
                         if (causes == null) {
@@ -97,14 +122,43 @@ public class DefaultDnsNameResolver {
                                 aggregatedCause.addSuppressed(c);
                             }
                         }
-                        aggregatedPromise.setFailure(aggregatedCause);
+                        aggregatedPromise.tryFailure(aggregatedCause);
                     }
                 }
             }
         };
 
-        questions.forEach(q -> delegate.resolveAll(q).addListener(listener));
+        final Builder<Promise<List<DnsRecord>>> promises =
+                ImmutableList.builderWithExpectedSize(questions.size());
+        questions.forEach(q -> {
+            final Promise<List<DnsRecord>> promise = eventLoop.newPromise();
+            promises.add(promise);
+            delegate.resolveAll(q, EMPTY_ADDITIONALS, promise);
+            promise.addListener(listener);
+        });
+        configureTimeout(questions, logPrefix, aggregatedPromise, promises.build());
         return aggregatedPromise;
+    }
+
+    private void configureTimeout(List<DnsQuestion> questions, String logPrefix,
+                                  Promise<List<DnsRecord>> result,
+                                  List<Promise<List<DnsRecord>>> promises) {
+        if (queryTimeoutMillis == 0) {
+            return;
+        }
+        eventLoop.schedule(() -> {
+            if (result.isDone()) {
+                // Received a response before the query times out.
+                return;
+            }
+            // Return DnsTimeoutException if we can cancel all of the queries.
+            if (promises.stream().noneMatch(Promise::isDone)) {
+                result.setFailure(new DnsTimeoutException(
+                        '[' + logPrefix + "] " + questions + " are timed out after " +
+                        queryTimeoutMillis + " milliseconds."));
+            }
+            promises.forEach(promise -> promise.cancel(true));
+        }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     public void close() {

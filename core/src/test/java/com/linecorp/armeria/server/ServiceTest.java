@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import javax.annotation.Nullable;
 
@@ -44,19 +43,6 @@ public class ServiceTest {
         assertDecoration(inner, outer);
     }
 
-    /**
-     * Tests {@link Service#decorate(Class)}.
-     */
-    @Test
-    void reflectionDecorator() throws Exception {
-        final FooService inner = new FooService();
-        final FooServiceDecorator outer = inner.decorate(FooServiceDecorator.class);
-
-        assertDecoration(inner, outer);
-        assertThatThrownBy(() -> inner.decorate(BadFooServiceDecorator.class))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
     private static void assertDecoration(FooService inner, HttpService outer) throws Exception {
 
         // Test if Service.as() works as expected.
@@ -65,7 +51,7 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNull();
 
         // Test if FooService.serviceAdded() is invoked.
-        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, 1, 1, true,
+        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, null, 1, 1, true,
                                                     AccessLogWriter.disabled(), false);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);

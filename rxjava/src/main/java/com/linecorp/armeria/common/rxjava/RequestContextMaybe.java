@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,9 +19,9 @@ package com.linecorp.armeria.common.rxjava;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Maybe;
-import io.reactivex.MaybeObserver;
-import io.reactivex.MaybeSource;
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.MaybeObserver;
+import io.reactivex.rxjava3.core.MaybeSource;
 
 final class RequestContextMaybe<T> extends Maybe<T> {
 

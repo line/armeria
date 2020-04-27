@@ -45,6 +45,8 @@ import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
@@ -54,12 +56,13 @@ import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
 /**
  * Utilities for handling {@link Status} in Armeria.
@@ -73,8 +76,42 @@ public final class GrpcStatus {
      * well and the protocol package.
      */
     public static Status fromThrowable(Throwable t) {
-        requireNonNull(t, "t");
+        t = unwrap(requireNonNull(t, "t"));
 
+        final Status s = Status.fromThrowable(t);
+        if (s.getCode() != Code.UNKNOWN) {
+            return s;
+        }
+
+        if (t instanceof ClosedSessionException || t instanceof ClosedChannelException) {
+            // ClosedChannelException is used any time the Netty channel is closed. Proper error
+            // processing requires remembering the error that occurred before this one and using it
+            // instead.
+            return s;
+        }
+        if (t instanceof ClosedStreamException) {
+            return Status.CANCELLED;
+        }
+        if (t instanceof UnprocessedRequestException || t instanceof IOException) {
+            return Status.UNAVAILABLE.withCause(t);
+        }
+        if (t instanceof Http2Exception) {
+            if (t instanceof Http2Exception.StreamException &&
+                ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
+                return Status.CANCELLED;
+            }
+            return Status.INTERNAL.withCause(t);
+        }
+        if (t instanceof TimeoutException) {
+            return Status.DEADLINE_EXCEEDED.withCause(t);
+        }
+        if (t instanceof ContentTooLargeException) {
+            return Status.RESOURCE_EXHAUSTED.withCause(t);
+        }
+        return s;
+    }
+
+    private static Throwable unwrap(Throwable t) {
         Throwable cause = t;
         while (cause != null) {
             if (cause instanceof ArmeriaStatusException) {
@@ -83,33 +120,7 @@ public final class GrpcStatus {
             }
             cause = cause.getCause();
         }
-
-        final Status s = Status.fromThrowable(t);
-        if (s.getCode() != Code.UNKNOWN) {
-            return s;
-        }
-        if (t instanceof StreamException) {
-            final StreamException streamException = (StreamException) t;
-            if (streamException.getMessage() != null && streamException.getMessage().contains("RST_STREAM")) {
-                return Status.CANCELLED;
-            }
-        }
-        if (t instanceof ClosedChannelException) {
-            // ClosedChannelException is used any time the Netty channel is closed. Proper error
-            // processing requires remembering the error that occurred before this one and using it
-            // instead.
-            return Status.UNKNOWN.withCause(t);
-        }
-        if (t instanceof UnprocessedRequestException || t instanceof IOException) {
-            return Status.UNAVAILABLE.withCause(t);
-        }
-        if (t instanceof Http2Exception) {
-            return Status.INTERNAL.withCause(t);
-        }
-        if (t instanceof TimeoutException) {
-            return Status.DEADLINE_EXCEEDED.withCause(t);
-        }
-        return s;
+        return t;
     }
 
     /**

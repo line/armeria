@@ -68,7 +68,7 @@ final class FallbackService implements HttpService {
         // Handle the case where '/path' (or '/path?query') doesn't exist
         // but '/path/' (or '/path/?query') exists.
         final String newPath = oldPath + '/';
-        if (!ctx.virtualHost().findServiceConfig(routingCtx.overridePath(newPath)).isPresent()) {
+        if (!ctx.config().virtualHost().findServiceConfig(routingCtx.overridePath(newPath)).isPresent()) {
             // No need to send a redirect response because '/path/' (or '/path/?query') does not exist.
             throw cause;
         }

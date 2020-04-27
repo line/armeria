@@ -38,14 +38,17 @@ import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -76,6 +79,18 @@ import io.netty.resolver.dns.DnsNameResolverBuilder;
  */
 public final class ClientFactoryBuilder {
 
+    private static final ClientFactoryOptionValue<Long> ZERO_PING_INTERVAL =
+            ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(0L);
+
+    @VisibleForTesting
+    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    private static final ClientFactoryOptionValue<Long> MIN_PING_INTERVAL =
+            ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
+
+    static {
+        RequestContextUtil.init();
+    }
+
     private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
 
     // Netty-related properties:
@@ -87,13 +102,7 @@ public final class ClientFactoryBuilder {
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link ClientFactory#builder()}.
-     */
-    @Deprecated
-    public ClientFactoryBuilder() {
+    ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
     }
 
@@ -199,16 +208,6 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets the options of sockets created by the {@link ClientFactory}.
-     *
-     * @deprecated Use {@link #channelOption(ChannelOption, Object)}.
-     */
-    @Deprecated
-    public <T> ClientFactoryBuilder socketOption(ChannelOption<T> option, T value) {
-        return channelOption(option, value);
-    }
-
-    /**
-     * Sets the options of sockets created by the {@link ClientFactory}.
      */
     public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
@@ -241,21 +240,6 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager} to configure a
-     * custom server CA or {@link SslContextBuilder#keyManager} to configure a client certificate for SSL
-     * authorization.
-     *
-     * @deprecated Use {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public ClientFactoryBuilder sslContextCustomizer(Consumer<? super SslContextBuilder> sslContextCustomizer) {
-        option(ClientFactoryOption.TLS_CUSTOMIZER,
-               requireNonNull(sslContextCustomizer, "sslContextCustomizer"));
-        return this;
-    }
-
-    /**
      * Disables the verification of server's key certificate chain. This method is a shortcut for:
      * {@code tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))}.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
@@ -276,17 +260,21 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
-        final ClientFactoryOptionValue<?> oldTlsCustomizerValue =
-                options.get(ClientFactoryOption.TLS_CUSTOMIZER);
-
         @SuppressWarnings("unchecked")
-        final Consumer<SslContextBuilder> oldTlsCustomizer =
-                oldTlsCustomizerValue == null ? ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER
-                                              : (Consumer<SslContextBuilder>) oldTlsCustomizerValue.value();
-        if (oldTlsCustomizer == ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER) {
+        final ClientFactoryOptionValue<Consumer<? super SslContextBuilder>> oldTlsCustomizerValue =
+                (ClientFactoryOptionValue<Consumer<? super SslContextBuilder>>)
+                        options.get(ClientFactoryOption.TLS_CUSTOMIZER);
+
+        final Consumer<? super SslContextBuilder> oldTlsCustomizer =
+                oldTlsCustomizerValue == null ? ClientFactoryOption.TLS_CUSTOMIZER.defaultValue()
+                                              : oldTlsCustomizerValue.value();
+        if (oldTlsCustomizer == ClientFactoryOption.TLS_CUSTOMIZER.defaultValue()) {
             option(ClientFactoryOption.TLS_CUSTOMIZER, tlsCustomizer);
         } else {
-            option(ClientFactoryOption.TLS_CUSTOMIZER, oldTlsCustomizer.andThen(tlsCustomizer));
+            option(ClientFactoryOption.TLS_CUSTOMIZER, b -> {
+                oldTlsCustomizer.accept(b);
+                tlsCustomizer.accept(b);
+            });
         }
         return this;
     }
@@ -440,6 +428,51 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the PING interval in milliseconds.
+     * When neither read nor write was performed for the given {@code pingIntervalMillis},
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1.
+     *
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@code 0} means the client will not send a PING.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     */
+    public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
+        checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
+                      "pingIntervalMillis: %s (expected: >= %s or == 0)", pingIntervalMillis,
+                      MIN_PING_INTERVAL_MILLIS);
+        option(ClientFactoryOption.PING_INTERVAL_MILLIS, pingIntervalMillis);
+        return this;
+    }
+
+    /**
+     * Sets the PING interval.
+     * When neither read nor write was performed for the given {@code pingInterval},
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1.
+     *
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@code 0} means the client will not send a PING.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     */
+    public ClientFactoryBuilder pingInterval(Duration pingInterval) {
+        pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
+        return this;
+    }
+
+    /**
      * Sets whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
      */
@@ -476,6 +509,14 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * The {@link ProxyConfig} which contains proxy related configuration.
+     */
+    public ClientFactoryBuilder proxyConfig(ProxyConfig proxyConfig) {
+        option(ClientFactoryOption.PROXY_CONFIG, proxyConfig);
+        return this;
+    }
+
+    /**
      * Adds the specified {@link ClientFactoryOption} and its {@code value}.
      */
     public <T> ClientFactoryBuilder option(ClientFactoryOption<T> option, T value) {
@@ -505,7 +546,7 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder options(ClientFactoryOptions options) {
         requireNonNull(options, "options");
-        options.asMap().values().forEach(this::option);
+        options.forEach(this::option);
         return this;
     }
 
@@ -537,7 +578,22 @@ public final class ClientFactoryBuilder {
             return ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
 
-        return ClientFactoryOptions.of(options.values());
+        final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
+        final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
+        final long pingIntervalMillis = newOptions.pingIntervalMillis();
+        if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
+            final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
+            if (clampedPingIntervalMillis >= idleTimeoutMillis) {
+                return ClientFactoryOptions.of(newOptions, ZERO_PING_INTERVAL);
+            }
+            if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                return newOptions;
+            }
+            if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                return ClientFactoryOptions.of(newOptions, MIN_PING_INTERVAL);
+            }
+        }
+        return newOptions;
     }
 
     /**

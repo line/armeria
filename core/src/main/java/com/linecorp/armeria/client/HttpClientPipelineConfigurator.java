@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.client.HttpSessionHandler.PENDING_EXCEPTION;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -47,11 +46,11 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.Http1ClientCodec;
+import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -65,6 +64,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpContent;
@@ -83,7 +83,6 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AsciiString;
@@ -111,7 +110,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     @Nullable
     private InetSocketAddress remoteAddress;
 
-    HttpClientPipelineConfigurator(HttpClientFactory clientFactory, SessionProtocol sessionProtocol) {
+    HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
+                                   SessionProtocol sessionProtocol,
+                                   @Nullable SslContext sslCtx) {
         this.clientFactory = clientFactory;
 
         if (sessionProtocol == HTTP || sessionProtocol == HTTPS) {
@@ -126,11 +127,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         if (sessionProtocol.isTls()) {
-            sslCtx = SslContextUtil.createSslContext(SslContextBuilder.forClient(),
-                                                     httpPreference == HttpPreference.HTTP1_REQUIRED,
-                                                     clientFactory.tlsCustomizers());
+            this.sslCtx = sslCtx;
         } else {
-            sslCtx = null;
+            this.sslCtx = null;
         }
     }
 
@@ -231,7 +230,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    ctx.channel().attr(PENDING_EXCEPTION).set(cause.getCause());
+                    HttpSessionHandler.setPendingException(ctx, cause.getCause());
                     return;
                 }
 
@@ -291,7 +290,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(new DowngradeHandler());
                 pipeline.addLast(http2Handler);
             } else {
-                final Http1ClientCodec http1Codec = newHttp1Codec(
+                final HttpClientCodec http1Codec = newHttp1Codec(
                         clientFactory.http1MaxInitialLineLength(),
                         clientFactory.http1MaxHeaderSize(),
                         clientFactory.http1MaxChunkSize());
@@ -337,11 +336,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (initialWindow > DEFAULT_WINDOW_SIZE) {
                 incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
             }
-        }
-
-        final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
-        if (idleTimeoutMillis > 0) {
-            pipeline.addFirst(new HttpClientIdleTimeoutHandler(idleTimeoutMillis));
         }
 
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
@@ -404,7 +398,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             //       because they are filled by Http2ClientUpgradeCodec.
 
             assert remoteAddress != null;
-            final String host = HttpHeaderUtil.hostHeader(
+            final String host = ArmeriaHttpUtil.authorityHeader(
                     remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
 
             upgradeReq.headers().set(HttpHeaderNames.HOST, host);
@@ -626,9 +620,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         return settings;
     }
 
-    private static Http1ClientCodec newHttp1Codec(
+    private static HttpClientCodec newHttp1Codec(
             int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
-        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
+        return new HttpClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
     }
 
     /**

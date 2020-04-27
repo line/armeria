@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -34,11 +35,10 @@ import javax.net.ssl.SSLSession;
 
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
@@ -74,9 +74,9 @@ import ch.qos.logback.core.status.StatusManager;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-public class RequestContextExportingAppenderTest {
+class RequestContextExportingAppenderTest {
 
-    private static final AttributeKey<CustomValue> MY_ATTR =
+    private static final AttributeKey<CustomObject> MY_ATTR =
             AttributeKey.valueOf(RequestContextExportingAppenderTest.class, "MY_ATTR");
 
     private static final RpcRequest RPC_REQ = RpcRequest.of(Object.class, "hello", "world");
@@ -94,20 +94,18 @@ public class RequestContextExportingAppenderTest {
     private static final Logger logger =
             (Logger) LoggerFactory.getLogger(RequestContextExportingAppenderTest.class);
 
-    @Rule
-    public final TestName testName = new TestName();
     private Logger testLogger;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
         rootLogger.getLoggerContext().getStatusManager().clear();
         MDC.clear();
-        testLogger = (Logger) LoggerFactory.getLogger("loggerTest." + testName.getMethodName());
+        testLogger = (Logger) LoggerFactory.getLogger("loggerTest." + testInfo.getDisplayName());
         testLogger.setLevel(Level.ALL);
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    void tearDown() {
         final Logger logger = (Logger) LoggerFactory.getLogger(getClass());
         final StatusManager sm = rootLogger.getLoggerContext().getStatusManager();
         int count = 0;
@@ -146,24 +144,16 @@ public class RequestContextExportingAppenderTest {
     }
 
     @Test
-    public void testMutabilityAndImmutability() {
+    void testMutabilityAndImmutability() {
         final AttributeKey<Object> someAttr =
                 AttributeKey.valueOf(RequestContextExportingAppenderTest.class, "SOME_ATTR");
         final RequestContextExportingAppender a = new RequestContextExportingAppender();
 
         // Ensure mutability before start.
         a.addBuiltIn(BuiltInProperty.ELAPSED_NANOS);
-        assertThat(a.getBuiltIns()).containsExactly(BuiltInProperty.ELAPSED_NANOS);
-
         a.addAttribute("some-attr", someAttr);
-        assertThat(a.getAttributes()).containsOnlyKeys("some-attr")
-                                     .containsValue(someAttr);
-
-        a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
-        assertThat(a.getHttpRequestHeaders()).containsExactly(HttpHeaderNames.USER_AGENT);
-
-        a.addHttpResponseHeader(HttpHeaderNames.SET_COOKIE);
-        assertThat(a.getHttpResponseHeaders()).containsExactly(HttpHeaderNames.SET_COOKIE);
+        a.addRequestHeader(HttpHeaderNames.USER_AGENT);
+        a.addResponseHeader(HttpHeaderNames.SET_COOKIE);
 
         final ListAppender<ILoggingEvent> la = new ListAppender<>();
         a.addAppender(la);
@@ -177,15 +167,15 @@ public class RequestContextExportingAppenderTest {
         assertThatThrownBy(() -> a.addAttribute("my-attr", MY_ATTR))
                 .isExactlyInstanceOf(IllegalStateException.class);
 
-        assertThatThrownBy(() -> a.addHttpRequestHeader(HttpHeaderNames.ACCEPT))
+        assertThatThrownBy(() -> a.addRequestHeader(HttpHeaderNames.ACCEPT))
                 .isExactlyInstanceOf(IllegalStateException.class);
 
-        assertThatThrownBy(() -> a.addHttpResponseHeader(HttpHeaderNames.DATE))
+        assertThatThrownBy(() -> a.addResponseHeader(HttpHeaderNames.DATE))
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void testXmlConfig() throws Exception {
+    void testXmlConfig() throws Exception {
         try {
             final JoranConfigurator configurator = new JoranConfigurator();
             configurator.setContext(context);
@@ -196,15 +186,18 @@ public class RequestContextExportingAppenderTest {
             final RequestContextExportingAppender rcea =
                     (RequestContextExportingAppender) logger.getAppender("RCEA");
 
+            rcea.start();
+            logger.trace("foo");
             assertThat(rcea).isNotNull();
-            assertThat(rcea.getBuiltIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
-            assertThat(rcea.getHttpRequestHeaders()).containsExactly(HttpHeaderNames.USER_AGENT);
-            assertThat(rcea.getHttpResponseHeaders()).containsExactly(HttpHeaderNames.SET_COOKIE);
+            assertThat(rcea.exporter().builtIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
+            assertThat(rcea.exporter().requestHeaders()).containsExactly(HttpHeaderNames.USER_AGENT);
+            assertThat(rcea.exporter().responseHeaders()).containsExactly(HttpHeaderNames.SET_COOKIE);
 
             final AttributeKey<Object> fooAttr = AttributeKey.valueOf("com.example.AttrKeys#FOO");
             final AttributeKey<Object> barAttr = AttributeKey.valueOf("com.example.AttrKeys#BAR");
-            assertThat(rcea.getAttributes()).containsOnly(new SimpleEntry<>("foo", fooAttr),
-                                                          new SimpleEntry<>("bar", barAttr));
+            assertThat(rcea.exporter().attributes()).containsOnly(new SimpleEntry<>("attrs.foo", fooAttr),
+                                                                  new SimpleEntry<>("attrs.bar", barAttr),
+                                                                  new SimpleEntry<>("attrs.qux", barAttr));
         } finally {
             // Revert to the original configuration.
             final JoranConfigurator configurator = new JoranConfigurator();
@@ -216,14 +209,14 @@ public class RequestContextExportingAppenderTest {
     }
 
     @Test
-    public void testWithoutContext() {
+    void testWithoutContext() {
         final List<ILoggingEvent> events = prepare();
         final ILoggingEvent e = log(events);
         assertThat(e.getMDCPropertyMap()).isEmpty();
     }
 
     @Test
-    public void testMdcPropertyPreservation() throws Exception {
+    void testMdcPropertyPreservation() throws Exception {
         final List<ILoggingEvent> events = prepare(a -> a.addBuiltIn(BuiltInProperty.REQ_DIRECTION));
 
         MDC.put("some-prop", "some-value");
@@ -240,7 +233,7 @@ public class RequestContextExportingAppenderTest {
     }
 
     @Test
-    public void testServiceContextWithoutLogs() throws Exception {
+    void testServiceContextWithoutLogs() throws Exception {
         final List<ILoggingEvent> events = prepare(a -> {
             // Export all properties.
             for (BuiltInProperty p : BuiltInProperty.values()) {
@@ -263,17 +256,17 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
-                           .containsEntry("req.query", null)
                            .containsEntry("scheme", "unknown+h2")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
+                           .containsKey("req.id")
                            .hasSize(16);
         }
     }
 
     @Test
-    public void testServiceContextWithMinimalLogs() throws Exception {
+    void testServiceContextWithMinimalLogs() throws Exception {
         final List<ILoggingEvent> events = prepare(a -> {
             // Export all properties.
             for (BuiltInProperty p : BuiltInProperty.values()) {
@@ -309,22 +302,24 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
-                           .hasSize(20);
+                           .containsKey("req.id")
+                           .hasSize(21);
         }
     }
 
     @Test
-    public void testServiceContextWithFullLogs() throws Exception {
+    void testServiceContextWithFullLogs() throws Exception {
         final List<ILoggingEvent> events = prepare(a -> {
             // Export all properties.
             for (BuiltInProperty p : BuiltInProperty.values()) {
                 a.addBuiltIn(p);
             }
             // .. and an attribute.
-            a.addAttribute("my_attr", MY_ATTR, new CustomValueStringifier());
+            a.addAttribute("attrs.my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
+            a.addAttribute("attrs.my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
-            a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
-            a.addHttpResponseHeader(HttpHeaderNames.DATE);
+            a.addRequestHeader(HttpHeaderNames.USER_AGENT);
+            a.addResponseHeader(HttpHeaderNames.DATE);
         });
 
         final ServiceRequestContext ctx = newServiceContext("/foo", "bar=baz");
@@ -359,19 +354,21 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.query", "bar=baz")
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
-                           .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "[world]")
+                           .containsEntry("req.name", "hello")
+                           .containsEntry("req.content", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "Hello, world!")
-                           .containsEntry("req.http_headers.user-agent", "some-client")
-                           .containsEntry("res.http_headers.date", "some-date")
+                           .containsEntry("res.content", "Hello, world!")
+                           .containsEntry("req.headers.user-agent", "some-client")
+                           .containsEntry("res.headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .containsEntry("attrs.my_attr", "some-attr")
+                           .containsEntry("attrs.my_attr_name", "some-name")
+                           .containsEntry("attrs.my_attr_value", "some-value")
+                           .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(27);
+                           .hasSize(28);
         }
     }
 
@@ -410,12 +407,12 @@ public class RequestContextExportingAppenderTest {
                                              ProxiedAddresses.of(new InetSocketAddress("9.10.11.12", 0)))
                                      .build();
 
-        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomObject("some-name", "some-value"));
         return ctx;
     }
 
     @Test
-    public void testClientContextWithMinimalLogs() throws Exception {
+    void testClientContextWithMinimalLogs() throws Exception {
         final List<ILoggingEvent> events = prepare(a -> {
             // Export all properties.
             for (BuiltInProperty p : BuiltInProperty.values()) {
@@ -442,22 +439,24 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .hasSize(15);
+                           .containsKey("req.id")
+                           .hasSize(16);
         }
     }
 
     @Test
-    public void testClientContextWithFullLogs() throws Exception {
+    void testClientContextWithFullLogs() throws Exception {
         final List<ILoggingEvent> events = prepare(a -> {
             // Export all properties.
             for (BuiltInProperty p : BuiltInProperty.values()) {
                 a.addBuiltIn(p);
             }
             // .. and an attribute.
-            a.addAttribute("my_attr", MY_ATTR, new CustomValueStringifier());
+            a.addAttribute("attrs.my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
+            a.addAttribute("attrs.my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
-            a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
-            a.addHttpResponseHeader(HttpHeaderNames.DATE);
+            a.addRequestHeader(HttpHeaderNames.USER_AGENT);
+            a.addResponseHeader(HttpHeaderNames.DATE);
         });
 
         final ClientRequestContext ctx = newClientContext("/bar", null);
@@ -487,21 +486,22 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/bar")
-                           .containsEntry("req.query", null)
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.name", "hello")
                            .containsEntry("req.content_length", "64")
-                           .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "[world]")
+                           .containsEntry("req.name", "hello")
+                           .containsEntry("req.content", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "Hello, world!")
-                           .containsEntry("req.http_headers.user-agent", "some-client")
-                           .containsEntry("res.http_headers.date", "some-date")
+                           .containsEntry("res.content", "Hello, world!")
+                           .containsEntry("req.headers.user-agent", "some-client")
+                           .containsEntry("res.headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .containsEntry("attrs.my_attr", "some-attr")
+                           .containsEntry("attrs.my_attr_name", "some-name")
+                           .containsEntry("attrs.my_attr_value", "some-value")
+                           .containsKey("req.id")
                            .containsKey("elapsed_nanos")
                            .hasSize(26);
         }
@@ -528,12 +528,12 @@ public class RequestContextExportingAppenderTest {
                                     .sslSession(newSslSession())
                                     .build();
 
-        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomObject("some-name", "some-value"));
         return ctx;
     }
 
     private static SSLSession newSslSession() {
-        final SSLSession sslSession = mock(SSLSession.class);
+        final SSLSession sslSession = mock(SSLSession.class, withSettings().lenient());
         when(sslSession.getId()).thenReturn(new byte[] { 1, 1, 2, 3, 5, 8, 13, 21 });
         when(sslSession.getProtocol()).thenReturn("TLSv1.2");
         when(sslSession.getCipherSuite()).thenReturn("some-cipher");

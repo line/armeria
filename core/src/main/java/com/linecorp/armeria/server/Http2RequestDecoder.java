@@ -19,20 +19,20 @@ package com.linecorp.armeria.server;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
 
 import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -74,13 +74,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
+    @Nullable
+    private final Http2KeepAliveHandler keepAliveHandler;
     private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme,
+                        @Nullable Http2KeepAliveHandler keepAliveHandler) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
         this.scheme = scheme;
+        this.keepAliveHandler = keepAliveHandler;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         goAwayHandler = new Http2GoAwayHandler();
@@ -98,6 +102,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             // Validate the method.
@@ -166,7 +171,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding,
             boolean endOfStream) throws Http2Exception {
-
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
@@ -200,7 +204,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         final DecodedHttpRequest req = requests.remove(stream.id());
         if (req != null) {
             // Ignored if the stream has already been closed.
-            req.close(ClosedSessionException.get());
+            req.close(ClosedStreamException.get());
         }
     }
 
@@ -208,6 +212,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public int onDataRead(
             ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
 
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
@@ -292,14 +297,15 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+        keepAliveChannelRead();
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             throw connectionError(PROTOCOL_ERROR,
                                   "received a RST_STREAM frame for an unknown stream: %d", streamId);
         }
 
-        req.abortResponse(streamError(
-                streamId, Http2Error.valueOf(errorCode), "received a RST_STREAM frame"));
+        req.abortResponse(new ClosedStreamException(
+                "received a RST_STREAM frame: " + Http2Error.valueOf(errorCode)));
     }
 
     @Override
@@ -316,5 +322,25 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
         goAwayHandler.onGoAwayReceived(channel, lastStreamId, errorCode, debugData);
+    }
+
+    @Override
+    public void onPingAckRead(final ChannelHandlerContext ctx, final long data) {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPingAck(data);
+        }
+    }
+
+    @Override
+    public void onPingRead(ChannelHandlerContext ctx, long data) {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPing();
+        }
+    }
+
+    private void keepAliveChannelRead() {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
+        }
     }
 }

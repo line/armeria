@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,7 +15,7 @@
  */
 
 /**
- * RxJava2 plugins to help keep {@link com.linecorp.armeria.common.RequestContext} during RxJava2 Operations.
+ * RxJava3 plugins to help keep {@link com.linecorp.armeria.common.RequestContext} during RxJava3 Operations.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.rxjava;

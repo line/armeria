@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.TimeoutMode;
 
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
@@ -140,7 +141,8 @@ final class HttpHealthChecker implements AsyncCloseable {
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
             if (maxLongPollingSeconds > 0) {
-                ctx.extendResponseTimeoutMillis(TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
+                ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND,
+                                             TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
             }
             return delegate().execute(ctx, req);
         }

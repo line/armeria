@@ -58,7 +58,7 @@ class ServiceBindingTest {
                   ctx.log().whenComplete().thenAccept(log -> {
                       assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
                       assertThat(ctx.maxRequestLength()).isEqualTo(8192);
-                      assertThat(ctx.verboseResponses()).isTrue();
+                      assertThat(ctx.config().verboseResponses()).isTrue();
 
                       propertyCheckLatch.countDown();
                   });

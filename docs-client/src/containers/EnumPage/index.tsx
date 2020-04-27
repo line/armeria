@@ -43,8 +43,8 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
     return <>Not found.</>;
   }
 
-  const hasIntValue = data.values.some((value) => !!value.intValue);
-  const hasDocString = data.values.some((value) => !!value.docString);
+  const hasIntValue = data.values.some(value => !!value.intValue);
+  const hasDocString = data.values.some(value => !!value.docString);
 
   return (
     <>
@@ -69,7 +69,7 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
           </TableHead>
           <TableBody>
             {data.values.length > 0 ? (
-              data.values.map((value) => (
+              data.values.map(value => (
                 <TableRow key={value.name}>
                   <TableCell>
                     <code>{value.name}</code>

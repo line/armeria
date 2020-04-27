@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -196,6 +197,12 @@ class AnnotatedServiceRequestConverterTest {
         public String defaultText(String obj1) {
             assertThat(obj1).isNotNull();
             return obj1;
+        }
+
+        @Get("/default/uuid/:uuid")
+        public UUID defaultUUID(@Param UUID uuid) {
+            assertThat(uuid).isNotNull();
+            return uuid;
         }
     }
 
@@ -905,6 +912,14 @@ class AnnotatedServiceRequestConverterTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         // Response is encoded as UTF-8.
         assertThat(response.content().array()).isEqualTo(utf8);
+    }
+
+    @Test
+    void testDefaultRequestConverter_uuid() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final UUID uuid = UUID.randomUUID();
+        final AggregatedHttpResponse response = client.get("/2/default/uuid/" + uuid).aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo(uuid.toString());
     }
 
     @Test

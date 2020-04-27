@@ -113,8 +113,7 @@ public class ThreadFactoryTest {
         final Thread t3 = new EventLoopThreadFactory("test", Thread.MAX_PRIORITY).newThread(() -> {});
         assertThat(t3.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
 
-        final Thread t4 = new EventLoopThreadFactory("test",
-                                               true, Thread.MIN_PRIORITY).newThread(() -> {});
+        final Thread t4 = new EventLoopThreadFactory("test", true, Thread.MIN_PRIORITY).newThread(() -> {});
         assertThat(t4.isDaemon()).isTrue();
         assertThat(t4.getPriority()).isEqualTo(Thread.MIN_PRIORITY);
 

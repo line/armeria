@@ -176,7 +176,8 @@ final class SamlService implements HttpServiceWithRoutes {
 
             // Use user-specified hostname if it exists.
             // If there's no hostname set by a user, the default virtual hostname will be used.
-            final String defaultHostname = firstNonNull(sp.hostname(), ctx.virtualHost().defaultHostname());
+            final String defaultHostname =
+                    firstNonNull(sp.hostname(), ctx.config().virtualHost().defaultHostname());
             return func.serve(ctx, aggregatedReq, defaultHostname, portConfig);
         }));
     }

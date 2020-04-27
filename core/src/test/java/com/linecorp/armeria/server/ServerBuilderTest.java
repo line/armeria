@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -30,6 +31,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,11 +42,16 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.SslContextBuilder;
+import reactor.core.scheduler.Schedulers;
 
 class ServerBuilderTest {
 
@@ -59,13 +67,15 @@ class ServerBuilderTest {
             sb.service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .service("/test", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .decorator((delegate, ctx, req) -> {
-                  ctx.addAdditionalResponseHeader("global_decorator", "true");
+                  ctx.mutateAdditionalResponseHeaders(
+                          mutator -> mutator.add("global_decorator", "true"));
                   return delegate.serve(ctx, req);
               })
               .virtualHost("*.example.com")
               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .decorator((delegate, ctx, req) -> {
-                  ctx.addAdditionalResponseHeader("virtualhost_decorator", "true");
+                  ctx.mutateAdditionalResponseHeaders(
+                          mutator -> mutator.add("virtualhost_decorator", "true"));
                   return delegate.serve(ctx, req);
               });
         }
@@ -81,6 +91,14 @@ class ServerBuilderTest {
     @AfterAll
     static void destroy() {
         clientFactory.close();
+    }
+
+    private static Server newServerWithKeepAlive(long idleTimeoutMillis, long pingIntervalMillis) {
+        return Server.builder()
+                     .service("/", (ctx, req) -> HttpResponse.of(200))
+                     .idleTimeoutMillis(idleTimeoutMillis)
+                     .pingIntervalMillis(pingIntervalMillis)
+                     .build();
     }
 
     @Test
@@ -456,5 +474,82 @@ class ServerBuilderTest {
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
+    void tlsPkcsPrivateKeys(String privateKeyPath) {
+        final String resourceRoot =
+                '/' + BouncyCastleKeyFactoryProvider.class.getPackage().getName().replace('.', '/') + '/';
+        Server.builder()
+              .tls(getClass().getResourceAsStream("/cert.pem"),
+                   getClass().getResourceAsStream(privateKeyPath))
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .build();
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
+    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyPath) {
+        Server.builder()
+              .tlsSelfSigned()
+              .tlsCustomizer(sslCtxBuilder -> {
+                  sslCtxBuilder.keyManager(
+                          getClass().getResourceAsStream("/cert.pem"),
+                          getClass().getResourceAsStream(privateKeyPath));
+              })
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .build();
+    }
+
+    @Test
+    void monitorBlockingTaskExecutorAndSchedulersTogetherWithPrometheus() {
+        final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        Metrics.addRegistry(registry);
+        Server.builder()
+              .meterRegistry(registry)
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .build();
+        Schedulers.enableMetrics();
+        Schedulers.decorateExecutorService(Schedulers.single(), Executors.newSingleThreadScheduledExecutor());
+    }
+
+    @Test
+    void positivePingIntervalShouldBeGreaterThan10seconds() {
+        final ServerConfig config1 = newServerWithKeepAlive(15000, 0).config();
+        assertThat(config1.idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(config1.pingIntervalMillis()).isEqualTo(0);
+
+        assertThatThrownBy(() -> newServerWithKeepAlive(10000, 5000))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("(expected: >= " + ServerBuilder.MIN_PING_INTERVAL_MILLIS + " or == 0)");
+
+        final ServerConfig config2 = newServerWithKeepAlive(15000, 20000).config();
+        assertThat(config2.idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(config2.pingIntervalMillis()).isEqualTo(0);
+
+        final ServerConfig config3 = newServerWithKeepAlive(15000, 10000).config();
+        assertThat(config3.idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(config3.pingIntervalMillis()).isEqualTo(10000);
+
+        final ServerConfig config4 = newServerWithKeepAlive(20000, 15000).config();
+        assertThat(config4.idleTimeoutMillis()).isEqualTo(20000);
+        assertThat(config4.pingIntervalMillis()).isEqualTo(15000);
+    }
+
+    @CsvSource({
+            "0,     10000",
+            "15000, 20000",
+            "20000, 15000",
+    })
+    @ParameterizedTest
+    void pingIntervalShouldBeLessThanIdleTimeout(long idleTimeoutMillis, long pingIntervalMillis) {
+        final ServerConfig config = newServerWithKeepAlive(idleTimeoutMillis, pingIntervalMillis).config();
+        assertThat(config.idleTimeoutMillis()).isEqualTo(idleTimeoutMillis);
+        if (idleTimeoutMillis == 0 || pingIntervalMillis >= idleTimeoutMillis) {
+            assertThat(config.pingIntervalMillis()).isEqualTo(0);
+        } else {
+            assertThat(config.pingIntervalMillis()).isEqualTo(pingIntervalMillis);
+        }
     }
 }

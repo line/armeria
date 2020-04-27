@@ -22,7 +22,6 @@ import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.time.temporal.TemporalAccessor;
-import java.util.Date;
 
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
@@ -48,20 +47,6 @@ public final class SelfSignedCertificateRule extends ExternalResource {
     /**
      * Creates a new instance.
      *
-     * @deprecated Use {@link #SelfSignedCertificateRule(TemporalAccessor, TemporalAccessor)}.
-     *
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateRule(Date notBefore, Date notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(notBefore, notAfter);
-    }
-
-    /**
-     * Creates a new instance.
-     *
      * @param notBefore {@link Certificate} is not valid before this time
      * @param notAfter {@link Certificate} is not valid after this time
      */
@@ -76,21 +61,6 @@ public final class SelfSignedCertificateRule extends ExternalResource {
      */
     public SelfSignedCertificateRule(String fqdn) {
         delegate = new SelfSignedCertificateRuleDelegate(fqdn);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link #SelfSignedCertificateRule(String, TemporalAccessor, TemporalAccessor)}.
-     *
-     * @param fqdn a fully qualified domain name
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateRule(String fqdn, Date notBefore, Date notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn, notBefore, notAfter);
     }
 
     /**
@@ -113,25 +83,6 @@ public final class SelfSignedCertificateRule extends ExternalResource {
      */
     public SelfSignedCertificateRule(String fqdn, SecureRandom random, int bits) {
         delegate = new SelfSignedCertificateRuleDelegate(fqdn, random, bits);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use
-     *     {@link #SelfSignedCertificateRule(String, SecureRandom, int, TemporalAccessor, TemporalAccessor)}
-     *
-     * @param fqdn a fully qualified domain name
-     * @param random the {@link SecureRandom} to use
-     * @param bits the number of bits of the generated private key
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateRule(String fqdn, SecureRandom random, int bits,
-                                     Date notBefore, Date notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn, random, bits, notBefore, notAfter);
     }
 
     /**

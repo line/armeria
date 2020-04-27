@@ -22,10 +22,10 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,16 +34,15 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
-import io.netty.util.concurrent.Future;
 
 class EventLoopCheckingFutureTest {
 
@@ -55,75 +54,109 @@ class EventLoopCheckingFutureTest {
         }
     };
 
+    private static final ch.qos.logback.classic.Logger rootLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+
     @Mock private Appender<ILoggingEvent> appender;
     @Captor private ArgumentCaptor<ILoggingEvent> eventCaptor;
 
     @BeforeEach
     void setupLogger() {
-        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME))
-                .addAppender(appender);
+        rootLogger.addAppender(appender);
     }
 
     @AfterEach
     void cleanupLogger() {
-        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME))
-                .detachAppender(appender);
+        rootLogger.detachAppender(appender);
     }
 
     @Test
     void joinOnEventLoop() {
-        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
-        final Future<?> eventLoopFuture = eventLoop.get().submit((Runnable) future::join);
-        future.complete("complete");
-        eventLoopFuture.syncUninterruptibly();
-        verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
-            assertThat(event.getLevel()).isEqualTo(Level.WARN);
-            assertThat(event.getMessage()).startsWith("Calling a blocking method");
-        });
+        testBlockingOperationOnEventLoop(CompletableFuture::join);
     }
 
     @Test
-    void joinOffEventLoop() {
-        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
-        final AtomicBoolean joined = new AtomicBoolean();
-        CommonPools.blockingTaskExecutor().execute(() -> {
-            future.join();
-            joined.set(true);
-        });
-        future.complete("complete");
-        await().untilTrue(joined);
-        verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues()).noneSatisfy(event -> {
-            assertThat(event.getLevel()).isEqualTo(Level.WARN);
-            assertThat(event.getMessage()).startsWith("Calling a blocking method");
-        });
+    void joinOnEventLoopAfterCompletion() {
+        testBlockingOperationOnEventLoopAfterCompletion(CompletableFuture::join);
+    }
+
+    @Test
+    void joinOffEventLoop() throws Exception {
+        testBlockingOperationOffEventLoop(CompletableFuture::join);
     }
 
     @Test
     void getOnEventLoop() {
-        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
-        final Future<?> eventLoopFuture = eventLoop.get().submit((Callable<String>) future::get);
-        future.complete("complete");
-        eventLoopFuture.syncUninterruptibly();
-        verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
-            assertThat(event.getLevel()).isEqualTo(Level.WARN);
-            assertThat(event.getMessage()).startsWith("Calling a blocking method");
-        });
+        testBlockingOperationOnEventLoop(CompletableFuture::get);
+    }
+
+    @Test
+    void getOnEventLoopAfterCompletion() {
+        testBlockingOperationOnEventLoopAfterCompletion(CompletableFuture::get);
+    }
+
+    @Test
+    void getOffEventLoop() throws Exception {
+        testBlockingOperationOffEventLoop(CompletableFuture::get);
     }
 
     @Test
     void getTimeoutOnEventLoop() {
+        testBlockingOperationOnEventLoop(future -> future.get(10, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void getTimeoutOnEventLoopAfterCompletion() {
+        testBlockingOperationOnEventLoopAfterCompletion(future -> future.get(10, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void getTimeoutOffEventLoop() throws Exception {
+        testBlockingOperationOffEventLoop(future -> future.get(10, TimeUnit.SECONDS));
+    }
+
+    private void testBlockingOperationOnEventLoop(EventLoopCheckingFutureTask task) {
         final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
-        final Future<?> eventLoopFuture = eventLoop.get().submit(() -> future.get(10, TimeUnit.SECONDS));
+        eventLoop.get().submit(() -> task.run(future));
+        try {
+            await().untilAsserted(() -> {
+                verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+                assertThat(eventCaptor.getAllValues()).hasSizeGreaterThan(1)
+                                                      .anySatisfy(this::assertWarned);
+            });
+        } finally {
+            future.complete("complete");
+        }
+    }
+
+    private void testBlockingOperationOnEventLoopAfterCompletion(EventLoopCheckingFutureTask task) {
+        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
         future.complete("complete");
-        eventLoopFuture.syncUninterruptibly();
+        eventLoop.get().submit(() -> task.run(future)).syncUninterruptibly();
         verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
-            assertThat(event.getLevel()).isEqualTo(Level.WARN);
-            assertThat(event.getMessage()).startsWith("Calling a blocking method");
-        });
+        assertThat(eventCaptor.getAllValues()).noneSatisfy(this::assertWarned);
+    }
+
+    private void testBlockingOperationOffEventLoop(EventLoopCheckingFutureTask task) throws Exception {
+        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
+        final Future<?> submitFuture = CommonPools.blockingTaskExecutor()
+                                                  .submit(() -> task.run(future));
+
+        // Give time to make sure the task is invoked before future.complete() below.
+        Thread.sleep(500);
+
+        // Complete the future and ensure the logger was invoked.
+        future.complete("complete");
+        submitFuture.get();
+
+        verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues()).noneSatisfy(this::assertWarned);
+    }
+
+    @SuppressWarnings("MethodMayBeStatic") // Method reference becomes too verbose if static.
+    private void assertWarned(ILoggingEvent event) {
+        assertThat(event.getLevel()).isEqualTo(Level.WARN);
+        assertThat(event.getMessage()).startsWith("Calling a blocking method");
     }
 
     @Test
@@ -148,5 +181,10 @@ class EventLoopCheckingFutureTest {
         assertThat(future).isCompletedExceptionally();
         assertThatThrownBy(future::join).isInstanceOf(CompletionException.class)
                                         .hasCauseReference(cause);
+    }
+
+    @FunctionalInterface
+    private interface EventLoopCheckingFutureTask {
+        String run(CompletableFuture<String> future) throws Exception;
     }
 }

@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
  */
-public class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
+public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
 
     private final boolean needsContentInStrategy;
 
@@ -65,12 +65,6 @@ public class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBui
     }
 
     // Methods that were overridden to change the return type.
-
-    @Override
-    @Deprecated
-    public CircuitBreakerClientBuilder circuitBreakerMapping(CircuitBreakerMapping mapping) {
-        return mapping(mapping);
-    }
 
     @Override
     public CircuitBreakerClientBuilder mapping(CircuitBreakerMapping mapping) {

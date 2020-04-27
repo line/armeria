@@ -34,8 +34,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -83,7 +83,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private final ServerConfig cfg;
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
-    private final Http1ObjectEncoder writer;
+    private final ServerHttp1ObjectEncoder writer;
 
     /** The request being decoded currently. */
     @Nullable
@@ -92,11 +92,29 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private boolean discarding;
 
     Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
-                        Http1ObjectEncoder writer) {
+                        ServerHttp1ObjectEncoder writer) {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.writer = writer;
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        destroyKeepAliveHandler();
+        super.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
+        super.channelActive(ctx);
     }
 
     @Override
@@ -106,6 +124,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // Ignored if the stream has already been closed.
             req.close(ClosedSessionException.get());
         }
+
+        destroyKeepAliveHandler();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        destroyKeepAliveHandler();
+        super.channelInactive(ctx);
     }
 
     @Override
@@ -115,6 +141,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             return;
         }
 
+        final KeepAliveHandler keepAliveHandler = writer.keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
+        }
         // this.req can be set to null by fail(), so we keep it in a local variable.
         DecodedHttpRequest req = this.req;
         final int id = req != null ? req.id() : ++receivedRequests;
@@ -311,5 +341,19 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         ctx.fireUserEventTriggered(evt);
+    }
+
+    private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
+        final KeepAliveHandler keepAliveHandler = writer.keepAliveHandler();
+        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+            keepAliveHandler.initialize(ctx);
+        }
+    }
+
+    private void destroyKeepAliveHandler() {
+        final KeepAliveHandler keepAliveHandler = writer.keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
     }
 }

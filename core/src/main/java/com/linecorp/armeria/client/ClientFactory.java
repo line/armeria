@@ -70,14 +70,6 @@ import reactor.core.scheduler.NonBlocking;
 public interface ClientFactory extends ListenableAsyncCloseable {
 
     /**
-     * The default {@link ClientFactory} implementation.
-     *
-     * @deprecated Use {@link #ofDefault()}.
-     */
-    @Deprecated
-    ClientFactory DEFAULT = DefaultClientFactory.DEFAULT;
-
-    /**
      * Returns the default {@link ClientFactory} implementation.
      */
     static ClientFactory ofDefault() {

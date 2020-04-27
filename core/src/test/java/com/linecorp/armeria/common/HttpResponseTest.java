@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -64,5 +65,33 @@ class HttpResponseTest {
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
+    }
+
+    @Test
+    void shouldReleaseEmptyContent() {
+        final EmptyReferenceCountedHttpData data = new EmptyReferenceCountedHttpData();
+
+        data.retain();
+        HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, data);
+        assertThat(data.refCnt()).isOne();
+
+        data.retain();
+        HttpResponse.of(ResponseHeaders.of(200), data);
+        assertThat(data.refCnt()).isOne();
+
+        data.retain();
+        HttpResponse.of(ResponseHeaders.of(200),
+                        data,
+                        HttpHeaders.of("some-trailer", "value"));
+        assertThat(data.refCnt()).isOne();
+
+        data.release();
+    }
+
+    @Test
+    void statusOfResponseHeadersShouldNotBeInformational() {
+        assertThatThrownBy(() -> HttpResponse.of(HttpStatus.CONTINUE, MediaType.PLAIN_TEXT_UTF_8,
+                                                 HttpData.ofUtf8("bob")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("non-1xx");
     }
 }

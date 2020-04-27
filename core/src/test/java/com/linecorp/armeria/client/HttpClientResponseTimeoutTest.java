@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -64,6 +66,25 @@ class HttpClientResponseTimeoutTest {
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
     }
 
+    @Test
+    void shouldSetResponseTimeoutWithNoTimeout() {
+        final WebClient client = WebClient
+                .builder(server.httpUri())
+                .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                .decorator((delegate, ctx, req) -> {
+                    ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
+                    assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
+                    return delegate.execute(ctx, req);
+                })
+                .build();
+        await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout")
+                                           .aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ResponseTimeoutException.class);
+        });
+    }
+
     @ParameterizedTest
     @ArgumentsSource(TimeoutDecoratorSource.class)
     void setRequestTimeoutAtPendingTimeoutTask(Consumer<? super ClientRequestContext> timeoutCustomizer) {
@@ -90,8 +111,8 @@ class HttpClientResponseTimeoutTest {
                 throws Exception {
             final Stream<Consumer<? super ClientRequestContext>> timeoutCustomizers = Stream.of(
                     ctx -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
-                    ctx -> ctx.setResponseTimeoutAfterMillis(1000),
-                    ctx -> ctx.setResponseTimeoutMillis(1000)
+                    ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000),
+                    ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000)
             );
             return timeoutCustomizers.map(Arguments::of);
         }

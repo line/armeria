@@ -16,10 +16,15 @@
 
 package com.linecorp.armeria.internal.common.util;
 
-import java.time.Clock;
+import static java.util.Objects.requireNonNull;
+
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -37,11 +42,12 @@ public final class HttpTimestampSupplier {
         return INSTANCE.currentTimestamp();
     }
 
-    private static final HttpTimestampSupplier INSTANCE = new HttpTimestampSupplier(Clock.systemUTC());
+    private static final HttpTimestampSupplier INSTANCE = new HttpTimestampSupplier();
 
     private static final long NANOS_IN_SECOND = TimeUnit.SECONDS.toNanos(1);
 
-    private final Clock clock;
+    private final Supplier<Instant> instantSupplier;
+    private final LongSupplier nanoTimeSupplier;
 
     // We do not use volatile fields because time only goes up - stale reads of nextUpdateNanos will
     // cause extra computation of timestamp but will not affect the accuracy. As this is intended to
@@ -51,20 +57,26 @@ public final class HttpTimestampSupplier {
     private String timestamp = "";
     private long nextUpdateNanos;
 
+    private HttpTimestampSupplier() {
+        this(Instant::now, System::nanoTime);
+    }
+
     @VisibleForTesting
-    HttpTimestampSupplier(Clock clock) {
-        this.clock = clock;
+    HttpTimestampSupplier(Supplier<Instant> instantSupplier, LongSupplier nanoTimeSupplier) {
+        this.instantSupplier = requireNonNull(instantSupplier, "instantSupplier");
+        this.nanoTimeSupplier = requireNonNull(nanoTimeSupplier, "nanoTimeSupplier");
+        nextUpdateNanos = nanoTimeSupplier.getAsLong();
     }
 
     @VisibleForTesting
     String currentTimestamp() {
-        final long currentTimeNanos = System.nanoTime();
+        final long currentTimeNanos = nanoTimeSupplier.getAsLong();
 
-        if (currentTimeNanos < nextUpdateNanos) {
+        if (nextUpdateNanos - currentTimeNanos > 0) {
             return timestamp;
         }
 
-        final ZonedDateTime now = ZonedDateTime.now(clock);
+        final Instant now = instantSupplier.get();
 
         // The next time we need to update our formatted timestamp is the next time System.nanoTime()
         // equals the following second. We can determine this by adding one second to our current
@@ -72,7 +84,7 @@ public final class HttpTimestampSupplier {
         // last second).
         nextUpdateNanos = currentTimeNanos - now.getNano() + NANOS_IN_SECOND;
 
-        final String timestamp = DateTimeFormatter.RFC_1123_DATE_TIME.format(now);
-        return this.timestamp = timestamp;
+        return timestamp = DateTimeFormatter.RFC_1123_DATE_TIME.format(
+                ZonedDateTime.ofInstant(now, ZoneOffset.UTC));
     }
 }

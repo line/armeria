@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.HttpResponseUtil.delegateWhenStageComplete;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
@@ -39,6 +38,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.HttpResponseAggregator;
 
 import io.netty.util.ReferenceCountUtil;
@@ -68,8 +68,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
+        requireNonNull(stage, "stage");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        delegateWhenStageComplete(stage, res);
+        res.delegateWhenComplete(stage);
         return res;
     }
 
@@ -85,9 +86,10 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage,
                              EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
         final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
-        delegateWhenStageComplete(stage, res);
+        res.delegateWhenComplete(stage);
         return res;
     }
 
@@ -139,8 +141,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     /**
      * Creates a new HTTP response of the specified {@code statusCode}.
      *
-     * @throws IllegalArgumentException if the {@link HttpStatusClass} is
-     *                                  {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * @throws IllegalArgumentException if the specified {@code statusCode} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
@@ -149,12 +151,12 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     /**
      * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
-     * @throws IllegalArgumentException if the {@link HttpStatusClass} is
-     *                                  {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * @throws IllegalArgumentException if the specified {@link HttpStatus} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
-        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status");
+        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
 
         if (status.isContentAlwaysEmpty()) {
             return new OneElementFixedHttpResponse(ResponseHeaders.of(status));
@@ -168,6 +170,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
+     *
+     * @throws IllegalArgumentException if the specified {@link HttpStatus} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, CharSequence content) {
         requireNonNull(mediaType, "mediaType");
@@ -181,6 +186,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
+     *
+     * @throws IllegalArgumentException if the specified {@link HttpStatus} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(mediaType, "mediaType");
@@ -241,6 +249,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param mediaType the {@link MediaType} of the response content
      * @param format {@linkplain Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
+     *
+     * @throws IllegalArgumentException if the specified {@link HttpStatus} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
@@ -255,6 +266,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
+     *
+     * @throws IllegalArgumentException if the specified {@link HttpStatus} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
         requireNonNull(content, "content");
@@ -266,6 +280,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
+     *
+     * @throws IllegalArgumentException if the specified {@link HttpStatus} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
         return of(status, mediaType, content, HttpHeaders.of());
@@ -277,6 +294,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      * @param trailers the HTTP trailers
+     *
+     * @throws IllegalArgumentException if the specified {@link HttpStatus} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
                            HttpHeaders trailers) {
@@ -291,6 +311,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response of the specified headers.
+     *
+     * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers) {
         return of(headers, HttpData.empty());
@@ -298,6 +321,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response of the specified headers and content.
+     *
+     * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers, HttpData content) {
         return of(headers, content, HttpHeaders.of());
@@ -305,27 +331,36 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response of the specified objects.
+     *
+     * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
+        final HttpStatus status = headers.status();
+        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
+
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
 
         final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
-        if (content.isEmpty() && trailers.isEmpty()) {
+        final boolean contentIsEmpty = content.isEmpty();
+        if (contentIsEmpty) {
             ReferenceCountUtil.safeRelease(content);
-            return new OneElementFixedHttpResponse(newHeaders);
-        }
-
-        if (!content.isEmpty()) {
             if (trailers.isEmpty()) {
-                return new TwoElementFixedHttpResponse(newHeaders, content);
+                return new OneElementFixedHttpResponse(newHeaders);
             } else {
-                return new RegularFixedHttpResponse(newHeaders, content, trailers);
+                return new TwoElementFixedHttpResponse(newHeaders, trailers);
             }
         }
 
-        return new TwoElementFixedHttpResponse(newHeaders, trailers);
+        // `content` is not empty from now on.
+
+        if (trailers.isEmpty()) {
+            return new TwoElementFixedHttpResponse(newHeaders, content);
+        } else {
+            return new RegularFixedHttpResponse(newHeaders, content, trailers);
+        }
     }
 
     /**
@@ -333,17 +368,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse of(HttpObject... objs) {
         return new RegularFixedHttpResponse(objs);
-    }
-
-    /**
-     * Converts the {@link AggregatedHttpResponse} into a new complete {@link HttpResponse}.
-     *
-     * @deprecated Use {@link AggregatedHttpResponse#toHttpResponse()}.
-     */
-    @Deprecated
-    static HttpResponse of(AggregatedHttpResponse res) {
-        requireNonNull(res, "res");
-        return res.toHttpResponse();
     }
 
     /**
@@ -365,28 +389,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final HttpResponseWriter res = streaming();
         res.close(cause);
         return res;
-    }
-
-    /**
-     * Creates a new failed HTTP response.
-     *
-     * @deprecated Use {@link #ofFailure(Throwable)}.
-     */
-    @Deprecated
-    static HttpResponse ofFailed(Throwable cause) {
-        return ofFailure(cause);
-    }
-
-    @Override
-    @Deprecated
-    default CompletableFuture<Void> closeFuture() {
-        return whenComplete();
-    }
-
-    @Override
-    @Deprecated
-    default CompletableFuture<Void> completionFuture() {
-        return whenComplete();
     }
 
     @Override

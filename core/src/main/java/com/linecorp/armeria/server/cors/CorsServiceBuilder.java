@@ -57,46 +57,6 @@ public final class CorsServiceBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsServiceBuilder.class);
 
-    /**
-     * Creates a new builder with its origin set with '*'.
-     *
-     * @deprecated Use {@link CorsService#builderForAnyOrigin()}.
-     */
-    @Deprecated
-    public static CorsServiceBuilder forAnyOrigin() {
-        return CorsService.builderForAnyOrigin();
-    }
-
-    /**
-     * Creates a new builder with the specified origin.
-     *
-     * @deprecated Use {@link CorsService#builder(String...)}.
-     */
-    @Deprecated
-    public static CorsServiceBuilder forOrigin(String origin) {
-        return forOrigins(requireNonNull(origin, "origin"));
-    }
-
-    /**
-     * Creates a new builder with the specified origins.
-     *
-     * @deprecated Use {@link CorsService#builder(String...)}.
-     */
-    @Deprecated
-    public static CorsServiceBuilder forOrigins(String... origins) {
-        return CorsService.builder(origins);
-    }
-
-    /**
-     * Creates a new builder with the specified origins.
-     *
-     * @deprecated Use {@link CorsService#builder(Iterable)}.
-     */
-    @Deprecated
-    public static CorsServiceBuilder forOrigins(Iterable<String> origins) {
-        return CorsService.builder(origins);
-    }
-
     final boolean anyOriginSupported;
     final ChainedCorsPolicyBuilder firstPolicyBuilder;
     final List<CorsPolicy> policies = new ArrayList<>();

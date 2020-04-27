@@ -57,13 +57,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ProgressivePromise;
 import io.netty.util.concurrent.Promise;
 
@@ -167,32 +161,6 @@ public class RequestContextTest {
             assertCurrentContext(context);
         }, 100, TimeUnit.MILLISECONDS);
         future.get();
-        assertCurrentContext(null);
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void makeContextAwareFutureListener() {
-        final RequestContext context = createContext();
-        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        promise.addListener(context.makeContextAware((FutureListener<String>) f -> {
-            assertCurrentContext(context);
-            assertThat(f.getNow()).isEqualTo("success");
-        }));
-        promise.setSuccess("success");
-        assertCurrentContext(null);
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void makeContextAwareChannelFutureListener() {
-        final RequestContext context = createContext();
-        final ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-        promise.addListener(context.makeContextAware((ChannelFutureListener) f -> {
-            assertCurrentContext(context);
-            assertThat(f.getNow()).isNull();
-        }));
-        promise.setSuccess(null);
         assertCurrentContext(null);
     }
 

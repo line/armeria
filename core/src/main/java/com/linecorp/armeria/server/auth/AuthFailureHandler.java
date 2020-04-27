@@ -19,32 +19,26 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A callback which is invoked to handle an authorization failure indicated by {@link Authorizer}.
  *
- * @param <I> the type of incoming {@link Request}. Must be {@link HttpRequest} or {@link RpcRequest}.
- * @param <O> the type of outgoing {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
- *
  * @see AuthServiceBuilder#onFailure(AuthFailureHandler)
  */
 @FunctionalInterface
-public interface AuthFailureHandler<I extends Request, O extends Response> {
+public interface AuthFailureHandler {
     /**
-     * Invoked when the authorization of the specified {@link Request} has failed.
+     * Invoked when the authorization of the specified {@link HttpRequest} has failed.
      *
      * @param delegate the next {@link Service} in the decoration chain
-     * @param ctx the {@link ServiceRequestContext} of {@code req}
-     * @param req the {@link Request} being handled
-     * @param cause {@code null} if {@code req} has been rejected by the {@link Authorizer}.
+     * @param ctx the {@link ServiceRequestContext}
+     * @param req the {@link HttpRequest} being handled
+     * @param cause {@code null} if the {@link HttpRequest} has been rejected by the {@link Authorizer}.
      *              non-{@code null} if the {@link Authorizer} raised an {@link Exception}.
      */
-    O authFailed(Service<I, O> delegate, ServiceRequestContext ctx,
-                 I req, @Nullable Throwable cause) throws Exception;
+    HttpResponse authFailed(HttpService delegate, ServiceRequestContext ctx,
+                            HttpRequest req, @Nullable Throwable cause) throws Exception;
 }

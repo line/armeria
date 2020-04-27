@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -30,53 +29,18 @@ import com.google.common.base.MoreObjects;
 
 /**
  * Default {@link RpcRequest} implementation.
- *
- * @deprecated Use the factory methods in {@link RpcRequest}.
  */
-@Deprecated
-public class DefaultRpcRequest implements RpcRequest {
+final class DefaultRpcRequest implements RpcRequest {
 
     private final Class<?> serviceType;
     private final String method;
     private final List<Object> params;
 
-    /**
-     * Creates a new instance with no parameter.
-     *
-     * @deprecated Use the factory methods in {@link RpcRequest}.
-     */
-    @Deprecated
-    public DefaultRpcRequest(Class<?> serviceType, String method) {
-        this(serviceType, method, Collections.emptyList());
-    }
-
-    /**
-     * Creates a new instance with a single parameter.
-     *
-     * @deprecated Use the factory methods in {@link RpcRequest}.
-     */
-    @Deprecated
-    public DefaultRpcRequest(Class<?> serviceType, String method, @Nullable Object parameter) {
-        this(serviceType, method, Collections.singletonList(parameter));
-    }
-
-    /**
-     * Creates a new instance with the specified parameters.
-     *
-     * @deprecated Use the factory methods in {@link RpcRequest}.
-     */
-    @Deprecated
-    public DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> params) {
+    DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> params) {
         this(serviceType, method, copyParams(params));
     }
 
-    /**
-     * Creates a new instance with the specified parameters.
-     *
-     * @deprecated Use the factory methods in {@link RpcRequest}.
-     */
-    @Deprecated
-    public DefaultRpcRequest(Class<?> serviceType, String method, Object... params) {
+    DefaultRpcRequest(Class<?> serviceType, String method, Object... params) {
         this(serviceType, method, copyParams(params));
     }
 
@@ -106,21 +70,23 @@ public class DefaultRpcRequest implements RpcRequest {
     }
 
     private static List<Object> copyParams(Object... params) {
-        return Collections.unmodifiableList(Arrays.asList(requireNonNull(params, "params")));
+        final List<Object> copy = new ArrayList<>(params.length);
+        Collections.addAll(copy, params);
+        return Collections.unmodifiableList(copy);
     }
 
     @Override
-    public final Class<?> serviceType() {
+    public Class<?> serviceType() {
         return serviceType;
     }
 
     @Override
-    public final String method() {
+    public String method() {
         return method;
     }
 
     @Override
-    public final List<Object> params() {
+    public List<Object> params() {
         return params;
     }
 
@@ -155,7 +121,7 @@ public class DefaultRpcRequest implements RpcRequest {
     /**
      * Returns the simplified name of the {@link #serviceType()}.
      */
-    protected final String simpleServiceName() {
+    private String simpleServiceName() {
         final Class<?> serviceType = serviceType();
         final String fqcn = serviceType.getName();
         final int lastDot = fqcn.lastIndexOf('.');

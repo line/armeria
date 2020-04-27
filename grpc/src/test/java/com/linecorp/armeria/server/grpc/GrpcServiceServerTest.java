@@ -78,7 +78,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -123,7 +125,6 @@ import io.grpc.reflection.v1alpha.ServerReflectionRequest;
 import io.grpc.reflection.v1alpha.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -203,13 +204,14 @@ class GrpcServiceServerTest {
 
             final ServiceRequestContext ctx = ServiceRequestContext.current();
             // gRPC wire format allow comma-separated binary headers.
-            ctx.addAdditionalResponseTrailer(
-                    INT_32_VALUE_KEY.name(),
-                    Base64.getEncoder().encodeToString(
-                            Int32Value.newBuilder().setValue(10).build().toByteArray()) +
-                    ',' +
-                    Base64.getEncoder().encodeToString(
-                            Int32Value.newBuilder().setValue(20).build().toByteArray()));
+            ctx.mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(
+                            INT_32_VALUE_KEY.name(),
+                            Base64.getEncoder().encodeToString(
+                                    Int32Value.newBuilder().setValue(10).build().toByteArray()) +
+                            ',' +
+                            Base64.getEncoder().encodeToString(
+                                    Int32Value.newBuilder().setValue(20).build().toByteArray())));
 
             responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
         }
@@ -324,12 +326,13 @@ class GrpcServiceServerTest {
         @Override
         public void errorAdditionalMetadata(SimpleRequest request,
                                             StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext.current().addAdditionalResponseTrailer(
-                    ERROR_METADATA_HEADER,
-                    Base64.getEncoder().encodeToString(StringValue.newBuilder()
-                                                                  .setValue("an error occurred")
-                                                                  .build()
-                                                                  .toByteArray()));
+            ServiceRequestContext.current().mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(
+                            ERROR_METADATA_HEADER,
+                            Base64.getEncoder().encodeToString(StringValue.newBuilder()
+                                                                          .setValue("an error occurred")
+                                                                          .build()
+                                                                          .toByteArray())));
             responseObserver.onError(new IllegalStateException("This error should have metadata"));
         }
 
@@ -343,7 +346,7 @@ class GrpcServiceServerTest {
 
         @Override
         public void timesOut(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext.current().setRequestTimeoutAfterMillis(100);
+            ServiceRequestContext.current().setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 100);
         }
     }
 
@@ -809,8 +812,7 @@ class GrpcServiceServerTest {
     @Test
     void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
         final RequestLog log = clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C);
-        assertThat(log.responseCause()).isInstanceOf(Http2Exception.StreamException.class)
-                                       .hasMessageContaining("received a RST_STREAM frame");
+        assertThat(log.responseCause()).isInstanceOf(ClosedStreamException.class);
     }
 
     @Test

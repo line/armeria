@@ -25,11 +25,12 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -55,12 +56,16 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
+    @Nullable
+    private final Http2KeepAliveHandler keepAliveHandler;
 
-    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory) {
+    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
+                         @Nullable Http2KeepAliveHandler keepAliveHandler) {
         super(channel,
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
+        this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }
 
@@ -131,7 +136,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         if (!goAwayHandler.receivedGoAway()) {
-            res.close(ClosedSessionException.get());
+            res.close(ClosedStreamException.get());
             return;
         }
 
@@ -139,7 +144,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         if (stream.id() > lastStreamId) {
             res.close(new UnprocessedRequestException(GoAwayReceivedException.get()));
         } else {
-            res.close(ClosedSessionException.get());
+            res.close(ClosedStreamException.get());
         }
 
         // Send a GOAWAY frame if the connection has been scheduled for disconnection and
@@ -175,6 +180,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
@@ -217,6 +223,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public int onDataRead(
             ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
 
         final int dataLength = data.readableBytes();
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
@@ -258,6 +265,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+        keepAliveChannelRead();
         final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
@@ -272,7 +280,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             return;
         }
 
-        res.close(ClosedSessionException.get());
+        res.close(new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode)));
     }
 
     @Override
@@ -284,10 +292,18 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                boolean exclusive) {}
 
     @Override
-    public void onPingRead(ChannelHandlerContext ctx, long data) {}
+    public void onPingRead(ChannelHandlerContext ctx, long data) {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPing();
+        }
+    }
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, long data) {}
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onPingAck(data);
+        }
+    }
 
     @Override
     public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {}
@@ -298,6 +314,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
+
+    private void keepAliveChannelRead() {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.onReadOrWrite();
+        }
+    }
 
     private static int streamIdToId(int streamId) {
         return streamId - 1 >>> 1;

@@ -282,12 +282,14 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 // gRPC methods always take a single request parameter of message type.
                 ImmutableList.of(FieldInfo.builder("request", namedMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
-                ImmutableList.of(),
+                /* exceptionTypeSignatures */ ImmutableList.of(),
                 methodEndpoints,
-                ImmutableList.of(),
+                /* exampleHttpHeaders */ ImmutableList.of(),
                 defaultExamples(method),
+                /* examplePaths */ ImmutableList.of(),
+                /* exampleQueries */ ImmutableList.of(),
                 HttpMethod.POST,
-                null);
+                /* docString */ null);
     }
 
     private static List<String> defaultExamples(MethodDescriptor method) {

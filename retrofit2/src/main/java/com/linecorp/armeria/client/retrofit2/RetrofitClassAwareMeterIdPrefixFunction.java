@@ -87,7 +87,7 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
                                             @Nullable String serviceTagName,
                                             @Nullable String serviceName,
                                             Class<?> serviceClass) {
-        super(name, null, null, null);
+        super(name, null, null);
 
         this.name = name;
         this.serviceTagName = firstNonNull(serviceTagName, "service");

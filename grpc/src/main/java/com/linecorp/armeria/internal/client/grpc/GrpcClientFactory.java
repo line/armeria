@@ -96,7 +96,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 GrpcSerializationFormats.isJson(serializationFormat) ?
                 GrpcJsonUtil.jsonMarshaller(
                         stubMethods(stubClass),
-                        options.getOrElse(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER, NO_OP)) : null;
+                        options.get(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER)) : null;
 
         final ArmeriaChannel channel = new ArmeriaChannel(
                 params,

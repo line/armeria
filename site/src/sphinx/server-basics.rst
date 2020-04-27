@@ -64,7 +64,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     sb.http(8080);
 
     // Add a simple 'Hello, world!' service.
-    sb.service("/", (ctx, res) -> HttpResponse.of("Hello, world!"));
+    sb.service("/", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
     // Using path variables:
     sb.service("/greet/{name}", new AbstractHttpService() {

@@ -98,6 +98,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * as is in {@code buf} to optimize parsing. For compressed messages, we will parse incrementally
      * and thus return a {@link InputStream} in {@code stream}.
      */
+    @UnstableApi
     public static final class DeframedMessage {
         private final int type;
 
@@ -180,6 +181,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     /**
      * A listener of deframing events.
      */
+    @UnstableApi
     public interface Listener {
 
         /**
@@ -247,7 +249,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     /**
-     * Indicates whether delivery is currently stalled, pending receipt of more data.  This means
+     * Indicates whether delivery is currently stalled, pending receipt of more data. This means
      * that no additional data can be delivered to the application.
      */
     public boolean isStalled() {
@@ -289,11 +291,15 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         deliver();
     }
 
-    /** Requests closing this deframer when any messages currently queued have been requested and delivered. */
+    /**
+     * Requests closing this deframer when any messages currently queued have been requested and delivered.
+     */
     public void closeWhenComplete() {
         if (isClosed()) {
             return;
-        } else if (isStalled()) {
+        }
+
+        if (isStalled()) {
             close();
         } else {
             closeWhenComplete = true;
@@ -524,10 +530,6 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private DeframedMessage getUncompressedBody(ByteBuf buf) {
         return new DeframedMessage(buf, currentType);
-    }
-
-    private boolean isClosedOrScheduledToClose() {
-        return isClosed() || closeWhenComplete;
     }
 
     private DeframedMessage getCompressedBody(ByteBuf buf) {

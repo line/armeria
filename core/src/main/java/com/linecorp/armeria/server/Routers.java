@@ -226,11 +226,6 @@ public final class Routers {
                     continue;
                 }
 
-                if (route.complexity() == 0) {
-                    rejectionHandler.accept(route, existingRoute);
-                    return;
-                }
-
                 if (route.methods().stream().noneMatch(
                         method -> existingRoute.methods().contains(method))) {
                     // No overlap in supported methods.

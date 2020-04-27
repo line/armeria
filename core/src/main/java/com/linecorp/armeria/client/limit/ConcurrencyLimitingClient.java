@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.HttpResponse;
  * }</pre>
  *
  */
-public class ConcurrencyLimitingClient
+public final class ConcurrencyLimitingClient
         extends AbstractConcurrencyLimitingClient<HttpRequest, HttpResponse> implements HttpClient {
 
     /**

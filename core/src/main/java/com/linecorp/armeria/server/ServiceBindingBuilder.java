@@ -68,12 +68,6 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    @Deprecated
-    public ServiceBindingBuilder pathUnder(String prefix) {
-        return (ServiceBindingBuilder) super.pathPrefix(prefix);
-    }
-
-    @Override
     public ServiceBindingBuilder pathPrefix(String prefix) {
         return (ServiceBindingBuilder) super.pathPrefix(prefix);
     }
@@ -182,6 +176,16 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     public ServiceBindingBuilder matchesHeaders(CharSequence headerName,
                                                 Predicate<? super String> valuePredicate) {
         return (ServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
+    }
+
+    @Override
+    public ServiceBindingBuilder addRoute(Route route) {
+        return (ServiceBindingBuilder) super.addRoute(route);
+    }
+
+    @Override
+    public ServiceBindingBuilder defaultLogName(String defaultLogName) {
+        return (ServiceBindingBuilder) super.defaultLogName(defaultLogName);
     }
 
     @Override
