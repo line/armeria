@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.annotation.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -28,12 +29,20 @@ import java.util.Properties;
 
 import org.joor.CompileOptions;
 import org.joor.Reflect;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.io.CharStreams;
 
+import com.linecorp.armeria.common.util.SystemInfo;
+
 public class DocumentationProcessorTest {
     private final DocumentationProcessor target = new DocumentationProcessor();
+
+    @BeforeAll
+    public static void classSetup() {
+        assumeThat(SystemInfo.javaVersion()).isGreaterThanOrEqualTo(11);
+    }
 
     @Test
     public void withJavaDoc() throws IOException {

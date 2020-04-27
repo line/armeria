@@ -108,7 +108,7 @@ public class DocumentationProcessor extends AbstractProcessor {
 
     private void processAnnotation(TypeElement annotationElement, RoundEnvironment roundEnv) {
         roundEnv.getElementsAnnotatedWith(annotationElement)
-                .parallelStream()
+                .stream()
                 .filter(element -> element.getKind() == ElementKind.METHOD)
                 // Element is always ExecutableElement because it is a method.
                 .forEachOrdered(element -> {
