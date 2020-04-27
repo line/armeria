@@ -98,7 +98,13 @@ final class DefaultNodeValueCodec implements NodeValueCodec {
 
     @Override
     public byte[] encode(Endpoint endpoint) {
-        return (endpoint.host() + fieldDelimiter + endpoint.port() + fieldDelimiter + endpoint.weight())
+        final String ipAddressOrHostname;
+        if (endpoint.hasIpAddr()) {
+            ipAddressOrHostname = endpoint.ipAddr();
+        } else {
+            ipAddressOrHostname = endpoint.host();
+        }
+        return (ipAddressOrHostname + fieldDelimiter + endpoint.port() + fieldDelimiter + endpoint.weight())
                 .getBytes(StandardCharsets.UTF_8);
     }
 }
