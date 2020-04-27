@@ -157,11 +157,12 @@ class RetryingClientWithLoggingTest {
     @Test
     void loggingThenRetrying() throws Exception {
         successLogIndex = 1;
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(RetryingClient.newDecorator(
-                                                  RetryStrategy.onServerErrorStatus()))
-                                          .decorator(loggingDecorator())
-                                          .build();
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(RetryingClient.newDecorator(
+                                 RetryRule.onServerErrorStatus().onException().thenBackoff()))
+                         .decorator(loggingDecorator())
+                         .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back

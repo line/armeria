@@ -70,10 +70,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
     @Nullable
-    private final RetryStrategy retryStrategy;
+    private final RetryRule retryRule;
 
     @Nullable
-    private final RetryStrategyWithContent<O> retryStrategyWithContent;
+    private final RetryRuleWithContent<O> retryRuleWithContent;
 
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
@@ -81,9 +81,21 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
+    protected AbstractRetryingClient(Client<I, O> delegate, RetryRule retryRule,
+                                     int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+        this(delegate, requireNonNull(retryRule, "retryRule"), null,
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     *
+     * @deprecated Use {@link #AbstractRetryingClient(Client, RetryRule, int, long)}
+     */
+    @Deprecated
     protected AbstractRetryingClient(Client<I, O> delegate, RetryStrategy retryStrategy,
                                      int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, requireNonNull(retryStrategy, "retryStrategyWithoutContent"), null,
+        this(delegate, requireNonNull(retryStrategy, "retryStrategy").toRetryRule(), null,
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
@@ -91,21 +103,22 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * Creates a new instance that decorates the specified {@link Client}.
      */
     protected AbstractRetryingClient(Client<I, O> delegate,
-                                     RetryStrategyWithContent<O> retryStrategyWithContent,
+                                     RetryRuleWithContent<O> retryRuleWithContent,
                                      int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, null, requireNonNull(retryStrategyWithContent, "retryStrategyWithContent"),
+        this(delegate, null,
+             requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    private AbstractRetryingClient(Client<I, O> delegate, @Nullable RetryStrategy retryStrategy,
-                                   @Nullable RetryStrategyWithContent<O> retryStrategyWithContent,
+    private AbstractRetryingClient(Client<I, O> delegate, @Nullable RetryRule retryRule,
+                                   @Nullable RetryRuleWithContent<O> retryRuleWithContent,
                                    int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         super(delegate);
-        this.retryStrategy = retryStrategy;
-        this.retryStrategyWithContent = retryStrategyWithContent;
+        this.retryRule = retryRule;
+        this.retryRuleWithContent = retryRuleWithContent;
 
         checkArgument(maxTotalAttempts > 0, "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
         this.maxTotalAttempts = maxTotalAttempts;
@@ -138,23 +151,45 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
+     * Returns the {@link RetryRule}.
+     *
+     * @throws IllegalStateException if the {@link RetryRule} is not set
+     */
+    protected RetryRule retryRule() {
+        checkState(retryRule != null, "retryRule is not set.");
+        return retryRule;
+    }
+
+    /**
      * Returns the {@link RetryStrategy}.
      *
      * @throws IllegalStateException if the {@link RetryStrategy} is not set
+     * @deprecated Use {@link #retryRule()}.
      */
+    @Deprecated
     protected RetryStrategy retryStrategy() {
-        checkState(retryStrategy != null, "retryStrategy is not set.");
-        return retryStrategy;
+        return RetryRuleUtil.toRetryStrategy(retryRule());
+    }
+
+    /**
+     * Returns the {@link RetryRuleWithContent}.
+     *
+     * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
+     */
+    protected RetryRuleWithContent<O> retryRuleWithContent() {
+        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+        return retryRuleWithContent;
     }
 
     /**
      * Returns the {@link RetryStrategyWithContent}.
      *
      * @throws IllegalStateException if the {@link RetryStrategyWithContent} is not set
+     * @deprecated Use {@link #retryRuleWithContent()}.
      */
+    @Deprecated
     protected RetryStrategyWithContent<O> retryStrategyWithContent() {
-        checkState(retryStrategyWithContent != null, "retryStrategyWithContent is not set.");
-        return retryStrategyWithContent;
+        return retryRuleWithContent()::shouldRetry;
     }
 
     /**

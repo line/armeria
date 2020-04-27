@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -33,6 +34,8 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A builder which creates a {@link RetryRule} used for building {@link RetryStrategy}.
@@ -41,7 +44,8 @@ import com.linecorp.armeria.common.HttpStatusClass;
  */
 public final class RetryRuleBuilder {
 
-    private static final Backoff NO_RETRY = numAttemptsSoFar -> -1;
+    private static final CompletableFuture<RetryRuleDecision> NEXT =
+            CompletableFuture.completedFuture(RetryRuleDecision.next());
 
     private static final Set<HttpMethod> IDEMPOTENT_METHODS =
             ImmutableSet.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.PUT, HttpMethod.DELETE);
@@ -205,7 +209,7 @@ public final class RetryRuleBuilder {
      */
     public RetryRule thenBackoff(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return build(backoff);
+        return build(RetryRuleDecision.retry(backoff));
     }
 
     /**
@@ -215,31 +219,53 @@ public final class RetryRuleBuilder {
     public RetryRule thenImmediately(int maxAttempts) {
         checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
         final Backoff backOff = Backoff.withoutDelay().withMaxAttempts(maxAttempts);
-        return build(backOff);
+        return build(RetryRuleDecision.retry(backOff));
     }
 
     /**
      * Returns a newly created {@link RetryRule} that never retries.
      */
     public RetryRule thenStop() {
-        return build(NO_RETRY);
+        return build(RetryRuleDecision.stop());
     }
 
-    private RetryRule build(Backoff backoff) {
+    private RetryRule build(RetryRuleDecision decision) {
         final Set<HttpMethod> methods = Sets.immutableEnumSet(this.methods);
         final Set<HttpStatusClass> statusClasses = Sets.immutableEnumSet(statusClassesBuilder.build());
         final Set<HttpStatus> statuses = statusesBuilder.build();
         final Predicate<HttpStatus> statusFilter = this.statusFilter;
         final Predicate<Throwable> exceptionFilter = this.exceptionFilter;
 
-        if (backoff != NO_RETRY && exceptionFilter == null && statusFilter == null &&
+        if (decision != RetryRuleDecision.stop() && exceptionFilter == null && statusFilter == null &&
             statuses.isEmpty() && statusClasses.isEmpty()) {
             throw new IllegalStateException(
                     "Should set at least one of status, status class and an expected exception type " +
                     "if a backoff was set.");
         }
 
-        return new RetryRule(methods, statusClasses, statuses, backoff, statusFilter, exceptionFilter);
+        return (ctx, cause) -> {
+            if (!methods.contains(ctx.request().method())) {
+                return NEXT;
+            }
+
+            if (cause != null && exceptionFilter != null && exceptionFilter.test(Exceptions.peel(cause))) {
+                return CompletableFuture.completedFuture(decision);
+            }
+
+            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                final HttpStatus responseStatus = ctx.log().partial().responseHeaders().status();
+                if (statusClasses != null && statusClasses.contains(responseStatus.codeClass())) {
+                    return CompletableFuture.completedFuture(decision);
+                }
+
+                if ((statuses != null && statuses.contains(responseStatus)) ||
+                    (statusFilter != null && statusFilter.test(responseStatus))) {
+                    return CompletableFuture.completedFuture(decision);
+                }
+            }
+
+            return NEXT;
+        };
     }
 
     @Override

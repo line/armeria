@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.retry.RetryStrategy;
+import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -32,7 +32,7 @@ class HttpClientUnwrapTest {
         final WebClient client =
                 WebClient.builder()
                          .decorator(LoggingClient.newDecorator())
-                         .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
+                         .decorator(RetryingClient.newDecorator(RetryRule.onException().thenStop()))
                          .build();
 
         assertThat(client.as(WebClient.class)).isSameAs(client);

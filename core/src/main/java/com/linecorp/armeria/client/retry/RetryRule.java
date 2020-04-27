@@ -16,186 +16,173 @@
 
 package com.linecorp.armeria.client.retry;
 
-import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
  * A rule for {@link RetryStrategy}.
  */
-public final class RetryRule {
+@FunctionalInterface
+public interface RetryRule {
 
     /**
      * Adds the idempotent HTTP methods for a {@link RetryStrategy} which will retry
      * if the request HTTP method is idempotent.
      */
-    public static RetryRuleBuilder onIdempotentMethods() {
-        return newRuleBuilder().onIdempotentMethods();
+    static RetryRuleBuilder onIdempotentMethods() {
+        return new RetryRuleBuilder().onIdempotentMethods();
     }
 
     /**
      * Adds the specified HTTP methods for a {@link RetryStrategy} which will retry
      * if the request HTTP method is one of the specified HTTP methods.
      */
-    public static RetryRuleBuilder onMethods(HttpMethod... methods) {
-        return newRuleBuilder().onMethods(methods);
+    static RetryRuleBuilder onMethods(HttpMethod... methods) {
+        return new RetryRuleBuilder().onMethods(methods);
     }
 
     /**
      * Adds the specified HTTP methods for a {@link RetryStrategy} which will retry
      * if the request HTTP method is one of the specified HTTP methods.
      */
-    public static RetryRuleBuilder onMethods(Iterable<HttpMethod> methods) {
-        return newRuleBuilder().onMethods(methods);
+    static RetryRuleBuilder onMethods(Iterable<HttpMethod> methods) {
+        return new RetryRuleBuilder().onMethods(methods);
     }
 
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
-    public static RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
-        return newRuleBuilder().onStatusClass(statusClasses);
+    static RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
+        return new RetryRuleBuilder().onStatusClass(statusClasses);
     }
 
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
-    public static RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
-        return newRuleBuilder().onStatusClass(statusClasses);
+    static RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
+        return new RetryRuleBuilder().onStatusClass(statusClasses);
     }
 
     /**
      * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryStrategy} which will retry
      * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
      */
-    public static RetryRuleBuilder onServerErrorStatus() {
-        return newRuleBuilder().onServerErrorStatus();
+    static RetryRuleBuilder onServerErrorStatus() {
+        return new RetryRuleBuilder().onServerErrorStatus();
     }
 
     /**
      * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
      * if the response status is one of the specified {@link HttpStatus}es.
      */
-    public static RetryRuleBuilder onStatus(HttpStatus... statuses) {
-        return newRuleBuilder().onStatus(statuses);
+    static RetryRuleBuilder onStatus(HttpStatus... statuses) {
+        return new RetryRuleBuilder().onStatus(statuses);
     }
 
     /**
      * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
      * if the response status is one of the specified {@link HttpStatus}es.
      */
-    public static RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
-        return newRuleBuilder().onStatus(statuses);
+    static RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
+        return new RetryRuleBuilder().onStatus(statuses);
     }
 
     /**
      * Adds the specified {@code statusFilter} for a {@link RetryStrategy} which will retry
      * if the response status matches the specified {@code statusFilter}.
      */
-    public static RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
-        return newRuleBuilder().onStatus(statusFilter);
+    static RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
+        return new RetryRuleBuilder().onStatus(statusFilter);
     }
 
     /**
      * Adds the specified exception type for a {@link RetryStrategy} which will retry
      * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
      */
-    public static RetryRuleBuilder onException(Class<? extends Throwable> exception) {
-        return newRuleBuilder().onException(exception);
+    static RetryRuleBuilder onException(Class<? extends Throwable> exception) {
+        return new RetryRuleBuilder().onException(exception);
     }
 
     /**
      * Adds the specified {@code exceptionFilter} for a {@link RetryStrategy} which will retry
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
-    public static RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
-        return newRuleBuilder().onException(exceptionFilter);
+    static RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
+        return new RetryRuleBuilder().onException(exceptionFilter);
     }
 
     /**
      * Makes a {@link RetryStrategy} retry on any {@link Exception}.
      */
-    public static RetryRuleBuilder onException() {
-        return newRuleBuilder().onException();
+    static RetryRuleBuilder onException() {
+        return new RetryRuleBuilder().onException();
     }
 
     /**
      * Makes a {@link RetryStrategy} retry on an {@link UnprocessedRequestException}.
      */
-    public static RetryRuleBuilder onUnprocessed() {
-        return newRuleBuilder().onUnprocessed();
+    static RetryRuleBuilder onUnprocessed() {
+        return new RetryRuleBuilder().onUnprocessed();
     }
 
-    private static RetryRuleBuilder newRuleBuilder() {
-        return new RetryRuleBuilder();
+    /**
+     * Returns composed {@link RetryRule} that represents a logical OR of this {@link RetryRule} and another.
+     * If this {@link RetryRule} completes with {@link RetryRuleDecision#retry(Backoff)} or
+     * {@link RetryRuleDecision#stop()}, then other {@link RetryRule} is not evaluated.
+     */
+    default RetryRule or(RetryRule other) {
+        return (ctx, cause) -> {
+            final CompletionStage<RetryRuleDecision> decisionFuture = shouldRetry(ctx, cause);
+            return decisionFuture.thenCompose(decision -> {
+                if (decision != RetryRuleDecision.next()) {
+                    return decisionFuture;
+                } else {
+                    return other.shouldRetry(ctx, cause);
+                }
+            });
+        };
     }
 
-    private final Set<HttpMethod> methods;
-    private final Set<HttpStatusClass> statusClasses;
-    private final Set<HttpStatus> statuses;
-    private final Backoff backoff;
-    @Nullable
-    private final Predicate<HttpStatus> statusFilter;
-    @Nullable
-    private final Predicate<Throwable> exceptionFilter;
-
-    RetryRule(Set<HttpMethod> methods, Set<HttpStatusClass> statusClasses,
-              Set<HttpStatus> statuses, Backoff backoff,
-              @Nullable Predicate<HttpStatus> statusFilter,
-              @Nullable Predicate<Throwable> exceptionFilter) {
-        this.methods = methods;
-        this.statusClasses = statusClasses;
-        this.statuses = statuses;
-        this.backoff = backoff;
-        this.statusFilter = statusFilter;
-        this.exceptionFilter = exceptionFilter;
-    }
-
-    Set<HttpMethod> methods() {
-        return methods;
-    }
-
-    Set<HttpStatusClass> statusClasses() {
-        return statusClasses;
-    }
-
-    Set<HttpStatus> statuses() {
-        return statuses;
-    }
-
-    Backoff backoff() {
-        return backoff;
-    }
-
-    @Nullable
-    Predicate<HttpStatus> statusFilter() {
-        return statusFilter;
-    }
-
-    @Nullable
-    Predicate<Throwable> exceptionFilter() {
-        return exceptionFilter;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("methods", methods)
-                          .add("statusClasses", statusClasses)
-                          .add("statuses", statuses)
-                          .add("backoff", backoff)
-                          .add("statusFilter", statusFilter)
-                          .add("exceptionFilter", exceptionFilter)
-                          .omitNullValues()
-                          .toString();
-    }
+    /**
+     * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
+     * Implement this method to return a {@link CompletionStage} and to complete it with a desired
+     * {@link RetryRuleDecision#retry(Backoff)}.
+     * To stop trying further, complete it with {@link RetryRuleDecision#stop()}.
+     * To find other {@link RetryRule}, complete it with {@link RetryRuleDecision#next()}.
+     *
+     * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
+     * <pre>{@code
+     * CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+     *     if (cause != null) {
+     *         return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
+     *     }
+     *
+     *     ResponseHeaders responseHeaders = ctx.log().responseHeaders();
+     *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
+     *         return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
+     *     }
+     *     if (responseHeaders.status() == HttpStatus.TOO_MANY_REQUESTS) {
+     *         return CompletableFuture.completedFuture(RetryRuleDecision.stop());
+     *     }
+     *
+     *     return CompletableFuture.completedFuture(RetryRuleDecision.next());
+     * }
+     * }</pre>
+     *
+     * @param ctx the {@link ClientRequestContext} of this request
+     * @param cause the {@link Throwable} which is raised while sending a request. {@code null} it there's no
+     *              exception.
+     */
+    CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);
 }

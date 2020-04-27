@@ -23,15 +23,12 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * Determines whether a failed request should be retried using the content of a {@link Response}.
- * If you just need the headers to make a decision, use {@link RetryStrategy} for efficiency.
+ * If you just need the headers to make a decision, use {@link RetryRule} for efficiency.
  *
  * @param <T> the response type
- *
- * @deprecated Use {@link RetryRuleWithContent}.
  */
-@Deprecated
 @FunctionalInterface
-public interface RetryStrategyWithContent<T extends Response> extends RetryRuleWithContent<T> {
+public interface RetryRuleWithContent<T extends Response> {
 
     /**
      * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
@@ -40,10 +37,6 @@ public interface RetryStrategyWithContent<T extends Response> extends RetryRuleW
      *
      * @param ctx the {@link ClientRequestContext} of this request
      * @param response the {@link Response} from the server
-     *
-     * @deprecated Use {@link RetryRuleWithContent#shouldRetry(ClientRequestContext, Response)}
      */
-    @Deprecated
-    @Override
     CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, T response);
 }
