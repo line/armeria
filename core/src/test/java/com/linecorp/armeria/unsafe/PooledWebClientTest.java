@@ -33,7 +33,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoop;
 
-class PooledHttpResponseTest {
+class PooledWebClientTest {
 
     @RegisterExtension
     public static final ServerExtension server = new ServerExtension() {

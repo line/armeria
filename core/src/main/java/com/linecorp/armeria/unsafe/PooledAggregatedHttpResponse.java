@@ -30,4 +30,10 @@ public interface PooledAggregatedHttpResponse extends AggregatedHttpResponse, Sa
      */
     @Override
     PooledHttpData content();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    PooledHttpResponse toHttpResponse();
 }

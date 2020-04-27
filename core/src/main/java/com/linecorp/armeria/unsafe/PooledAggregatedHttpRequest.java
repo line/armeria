@@ -30,4 +30,7 @@ public interface PooledAggregatedHttpRequest extends AggregatedHttpRequest, Safe
      */
     @Override
     PooledHttpData content();
+
+    @Override
+    PooledHttpRequest toHttpRequest();
 }
