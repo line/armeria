@@ -13,9 +13,8 @@ buildscript {
 plugins {
     application
     id("org.jetbrains.kotlin.jvm")
+    id("org.jlleitschuh.gradle.ktlint") version "9.2.1"
 }
-
-apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
 application {
     mainClassName = "example.armeria.grpc.kotlin.MainKt"
@@ -47,11 +46,17 @@ tasks.withType<KotlinCompile> {
     }
 }
 
-// TODO(ikhoon): gRPC-Kotlin compiler does not run well in Window. The generated stub files are added
-//               intentionally. Remove this once gRPC-Kotlin compiler supports Window as well.
+// TODO(ikhoon): gRPC-Kotlin compiler does not run well in Windows. The generated stub files are added
+//               intentionally. Remove this once gRPC-Kotlin compiler supports Windows as well.
 kotlin {
     sourceSets["main"].apply {
         kotlin.srcDir("gen-src/main/kotlinGrpc")
+    }
+}
+
+ktlint {
+    filter {
+        exclude { element -> element.file.path.contains("gen-src") }
     }
 }
 
