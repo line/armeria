@@ -432,7 +432,7 @@ public final class SystemInfo {
                          addrs.hasMoreElements();) {
                         final InetAddress address = addrs.nextElement();
                         if (!(address instanceof Inet4Address)) {
-                            logger.debug("{} of {} is not Inet4Address. Trying next.",
+                            logger.debug("{} of {} is not an Inet4Address. Trying next.",
                                          address, nic.getDisplayName());
                             continue;
                         }
@@ -468,11 +468,11 @@ public final class SystemInfo {
                                     temp);
                     } else {
                         logger.warn("Could not get a non-loopback IPv4 address. " +
-                                    "defaultNonLoopbackIpV4Address is set to null");
+                                    "defaultNonLoopbackIpV4Address is set to null.");
                     }
                 } catch (UnknownHostException e) {
                     logger.warn("Unable to retrieve the localhost address. " +
-                                "defaultNonLoopbackIpV4Address is set to null", e);
+                                "defaultNonLoopbackIpV4Address is set to null.", e);
                 }
                 defaultNonLoopbackIpV4Address = temp;
             }
