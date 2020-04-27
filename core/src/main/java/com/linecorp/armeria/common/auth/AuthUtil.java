@@ -14,16 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.common.auth;
 
 import javax.annotation.Nullable;
 
-public final class AuthUtil {
+final class AuthUtil {
 
     /**
      * Compares two specified strings in the secure way.
      */
-    public static boolean secureEquals(@Nullable String a, @Nullable String b) {
+    static boolean secureEquals(@Nullable String a, @Nullable String b) {
         final int aLength = a != null ? a.length() : 0;
         final int bLength = b != null ? b.length() : 0;
         final int length = Math.min(aLength, bLength);

@@ -17,8 +17,8 @@
 package com.linecorp.armeria.common.auth;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.linecorp.armeria.common.auth.AuthUtil.secureEquals;
 import static com.linecorp.armeria.internal.common.PercentEncoder.encodeComponent;
-import static com.linecorp.armeria.internal.common.util.AuthUtil.secureEquals;
 
 import java.util.Map;
 import java.util.Map.Entry;

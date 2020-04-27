@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.auth;
 
-import static com.linecorp.armeria.internal.common.util.AuthUtil.secureEquals;
+import static com.linecorp.armeria.common.auth.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
