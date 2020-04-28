@@ -26,24 +26,27 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
- * A rule for {@link RetryStrategy}.
+ * Determines whether a failed request should be retried.
+ * If you need to determine by looking into the {@link Response}, use {@link RetryRuleWithContent}.
  */
 @FunctionalInterface
 public interface RetryRule {
 
     /**
-     * Adds the idempotent HTTP methods for a {@link RetryStrategy} which will retry
-     * if the request HTTP method is idempotent.
+     * Adds the <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
+     * HTTP methods, which should not have any side-effects (except for keeping statistics),
+     * for a {@link RetryRule} which will retry if the request HTTP method is idempotent.
      */
     static RetryRuleBuilder onIdempotentMethods() {
         return new RetryRuleBuilder().onIdempotentMethods();
     }
 
     /**
-     * Adds the specified HTTP methods for a {@link RetryStrategy} which will retry
+     * Adds the specified HTTP methods for a {@link RetryRule} which will retry
      * if the request HTTP method is one of the specified HTTP methods.
      */
     static RetryRuleBuilder onMethods(HttpMethod... methods) {
@@ -51,7 +54,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified HTTP methods for a {@link RetryStrategy} which will retry
+     * Adds the specified HTTP methods for a {@link RetryRule} which will retry
      * if the request HTTP method is one of the specified HTTP methods.
      */
     static RetryRuleBuilder onMethods(Iterable<HttpMethod> methods) {
@@ -59,7 +62,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
+     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     static RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
@@ -67,7 +70,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryStrategy} which will retry
+     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     static RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
@@ -75,7 +78,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryStrategy} which will retry
+     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRule} which will retry
      * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
      */
     static RetryRuleBuilder onServerErrorStatus() {
@@ -83,7 +86,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
+     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
      * if the response status is one of the specified {@link HttpStatus}es.
      */
     static RetryRuleBuilder onStatus(HttpStatus... statuses) {
@@ -91,7 +94,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryStrategy} which will retry
+     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
      * if the response status is one of the specified {@link HttpStatus}es.
      */
     static RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
@@ -99,7 +102,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified {@code statusFilter} for a {@link RetryStrategy} which will retry
+     * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
      * if the response status matches the specified {@code statusFilter}.
      */
     static RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
@@ -107,7 +110,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified exception type for a {@link RetryStrategy} which will retry
+     * Adds the specified exception type for a {@link RetryRule} which will retry
      * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
      */
     static RetryRuleBuilder onException(Class<? extends Throwable> exception) {
@@ -115,7 +118,7 @@ public interface RetryRule {
     }
 
     /**
-     * Adds the specified {@code exceptionFilter} for a {@link RetryStrategy} which will retry
+     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
     static RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
@@ -123,14 +126,16 @@ public interface RetryRule {
     }
 
     /**
-     * Makes a {@link RetryStrategy} retry on any {@link Exception}.
+     * Makes a {@link RetryRule} retry on any {@link Exception}.
      */
     static RetryRuleBuilder onException() {
         return new RetryRuleBuilder().onException();
     }
 
     /**
-     * Makes a {@link RetryStrategy} retry on an {@link UnprocessedRequestException}.
+     * Makes a {@link RetryRule} retry on an {@link UnprocessedRequestException} which means that the request
+     * has not been processed by the server. Therefore, you can safely retry the request without worrying about
+     * the idempotency of the request.
      */
     static RetryRuleBuilder onUnprocessed() {
         return new RetryRuleBuilder().onUnprocessed();
@@ -159,7 +164,8 @@ public interface RetryRule {
      * Implement this method to return a {@link CompletionStage} and to complete it with a desired
      * {@link RetryRuleDecision#retry(Backoff)}.
      * To stop trying further, complete it with {@link RetryRuleDecision#stop()}.
-     * To find other {@link RetryRule}, complete it with {@link RetryRuleDecision#next()}.
+     * To skip this {@link RetryRule} and find other {@link RetryRule}, complete it with
+     * {@link RetryRuleDecision#next()}.
      *
      * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      * <pre>{@code
@@ -181,7 +187,7 @@ public interface RetryRule {
      * }</pre>
      *
      * @param ctx the {@link ClientRequestContext} of this request
-     * @param cause the {@link Throwable} which is raised while sending a request. {@code null} it there's no
+     * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no
      *              exception.
      */
     CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);

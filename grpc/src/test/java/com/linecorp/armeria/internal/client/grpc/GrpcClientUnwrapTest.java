@@ -39,8 +39,8 @@ class GrpcClientUnwrapTest {
                 Clients.builder("gproto+http://127.0.0.1:1/")
                        .decorator(LoggingClient.newDecorator())
                        .decorator(RetryingClient.newDecorator(
-                               (RetryRule) (ctx, cause) -> CompletableFuture
-                                       .completedFuture(RetryRuleDecision.stop())))
+                               (RetryRule) (ctx, cause) ->
+                                       CompletableFuture.completedFuture(RetryRuleDecision.stop())))
                        .build(TestServiceBlockingStub.class);
 
         assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).isSameAs(client);

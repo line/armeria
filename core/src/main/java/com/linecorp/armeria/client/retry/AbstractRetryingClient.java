@@ -105,8 +105,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected AbstractRetryingClient(Client<I, O> delegate,
                                      RetryRuleWithContent<O> retryRuleWithContent,
                                      int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, null,
-             requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
+        this(delegate, null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 

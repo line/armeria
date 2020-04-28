@@ -36,8 +36,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * Determines whether a failed request should be retried.
  * If you need to determine by looking into the {@link Response}, use {@link RetryStrategyWithContent}.
  *
- * @deprecated Use {@link RetryRule} directly or convert the existing {@link RetryStrategy} to {@link RetryRule}
- *             using {@link RetryStrategy#toRetryRule()}.
+ * @deprecated Use {@link RetryRule} or {@link RetryStrategy#toRetryRule()}.
  */
 @Deprecated
 @FunctionalInterface
@@ -84,7 +83,7 @@ public interface RetryStrategy {
      *             {@link RetryRuleBuilder#thenBackoff(Backoff)}.
      *             For example:
      *             <pre>{@code
-     *             RetryRule.onException(ex -> ex instanceof ClosedSessionException)
+     *             RetryRule.onException(ex -> ex instanceof UnprocessedRequestException)
      *                      .thenBackoff(myBackoff);
      *             }</pre>
      */
@@ -153,7 +152,7 @@ public interface RetryStrategy {
      *             For example:
      *             <pre>{@code
      *             RetryRule.onStatus(HttpStatus.TOO_MANY_REQUESTS)
-     *                      .onException(ex -> ex instanceof ClosedStreamException)
+     *                      .onException(ex -> ex instanceof UnprocessedRequestException)
      *                      .thenBackoff(myBackoff);
      *             }</pre>
      */

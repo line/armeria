@@ -51,8 +51,7 @@ class RetryStrategyBuilderTest {
 
     @Test
     void onStatusClass() {
-        final RetryRule rule =
-                RetryRule.onStatusClass(HttpStatusClass.CLIENT_ERROR).thenBackoff();
+        final RetryRule rule = RetryRule.onStatusClass(HttpStatusClass.CLIENT_ERROR).thenBackoff();
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.BAD_REQUEST));
@@ -104,8 +103,7 @@ class RetryStrategyBuilderTest {
         final Backoff backoff1 = Backoff.fixed(1000);
         final Backoff backoff2 = Backoff.fixed(2000);
         final RetryRule rule =
-                RetryRule.onException(ClosedSessionException.class)
-                         .thenBackoff(backoff1)
+                RetryRule.onException(ClosedSessionException.class).thenBackoff(backoff1)
                          .or(RetryRule.onException(WriteTimeoutException.class::isInstance)
                                       .thenBackoff(backoff2));
 
@@ -122,9 +120,9 @@ class RetryStrategyBuilderTest {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Backoff backoff1 = Backoff.fixed(1000);
         final Backoff backoff2 = Backoff.fixed(2000);
-        final RetryRule rule =
-                RetryRule.onException().thenBackoff(backoff1)
-                         .or(RetryRule.onException(ClosedSessionException.class).thenBackoff(backoff2));
+        final RetryRule rule = RetryRule.onException().thenBackoff(backoff1)
+                                        .or(RetryRule.onException(ClosedSessionException.class)
+                                                     .thenBackoff(backoff2));
 
         assertBackoff(rule.shouldRetry(ctx, ClosedSessionException.get())).isSameAs(backoff1);
         assertBackoff(rule.shouldRetry(ctx, new RuntimeException())).isNotNull();
@@ -161,8 +159,7 @@ class RetryStrategyBuilderTest {
         final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final CompletionException ex =
                 new CompletionException(new UnprocessedRequestException(ClosedStreamException.get()));
-        assertBackoff(retryRule.shouldRetry(ctx3, ex))
-                .isSameAs(unprocessBackOff);
+        assertBackoff(retryRule.shouldRetry(ctx3, ex)).isSameAs(unprocessBackOff);
 
         final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertBackoff(retryRule.shouldRetry(ctx4, new RuntimeException())).isSameAs(Backoff.ofDefault());
@@ -189,23 +186,20 @@ class RetryStrategyBuilderTest {
         }).or(RetryRule.onStatus(HttpStatus.SERVICE_UNAVAILABLE).thenBackoff(backoff));
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final UnprocessedRequestException cause = new UnprocessedRequestException(
-                ResponseTimeoutException.get());
+        final UnprocessedRequestException cause =
+                new UnprocessedRequestException(ResponseTimeoutException.get());
         assertBackoff(retryRule.shouldRetry(ctx1, cause)).isSameAs(backoff);
 
         final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
-        assertBackoff(retryRule.shouldRetry(ctx2, null))
-                .isNull();
+        assertBackoff(retryRule.shouldRetry(ctx2, null)).isNull();
 
         final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx3.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE));
-        assertBackoff(retryRule.shouldRetry(ctx3, null))
-                .isSameAs(backoff);
+        assertBackoff(retryRule.shouldRetry(ctx3, null)).isSameAs(backoff);
 
         final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx4.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
-        assertBackoff(retryRule.shouldRetry(ctx4, null))
-                .isNull();
+        assertBackoff(retryRule.shouldRetry(ctx4, null)).isNull();
     }
 }

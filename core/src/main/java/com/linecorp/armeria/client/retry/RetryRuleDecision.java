@@ -19,7 +19,8 @@ package com.linecorp.armeria.client.retry;
 import javax.annotation.Nullable;
 
 /**
- * A {@link RetryRuleDecision} that determines whether a {@link RetryRule} is applied or not.
+ * A {@link RetryRuleDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff}, stop,
+ * or skip the current {@link RetryRule}.
  */
 public final class RetryRuleDecision {
 

@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.util.ReflectionUtils;
 
 class RetryRuleTest {
-
     @Test
     void checkStaticMethods() {
         final List<Method> builderMethods =
@@ -44,6 +43,7 @@ class RetryRuleTest {
                                                       Modifier.isPublic(method.getModifiers()) &&
                                                       method.getName().startsWith("on"));
 
+        assertThat(builderMethods).hasSameSizeAs(ruleMethods);
         for (Method builderMethod : builderMethods) {
             final Predicate<Method> predicate = ruleMethod ->
                     ruleMethod.getName().equals(builderMethod.getName()) &&

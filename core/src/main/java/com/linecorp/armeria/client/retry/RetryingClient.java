@@ -69,7 +69,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
-     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRule}.
+     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryStrategy}.
      *
      * @deprecated Use {@link #builder(RetryRule)}
      */
@@ -113,7 +113,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * requests.
      *
      * @param retryRule the retry rule
-     * @param maxTotalAttempts the maximum number of total attempts
+     * @param maxTotalAttempts the maximum allowed number of total attempts
      */
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryRule retryRule, int maxTotalAttempts) {

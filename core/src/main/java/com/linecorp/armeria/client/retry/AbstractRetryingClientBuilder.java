@@ -55,6 +55,16 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
     }
 
     /**
+     * Creates a new builder with the specified {@link RetryStrategy}.
+     *
+     * @deprecated Use {@link #AbstractRetryingClientBuilder(RetryRule)}.
+     */
+    @Deprecated
+    protected AbstractRetryingClientBuilder(RetryStrategy retryStrategy) {
+        this(requireNonNull(retryStrategy, "retryStrategy").toRetryRule(), null);
+    }
+
+    /**
      * Creates a new builder with the specified {@link RetryRuleWithContent}.
      */
     protected AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent) {
