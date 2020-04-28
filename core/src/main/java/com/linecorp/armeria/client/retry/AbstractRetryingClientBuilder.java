@@ -61,7 +61,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      */
     @Deprecated
     protected AbstractRetryingClientBuilder(RetryStrategy retryStrategy) {
-        this(requireNonNull(retryStrategy, "retryStrategy").toRetryRule(), null);
+        this(RetryRuleUtil.fromRetryStrategy(requireNonNull(retryStrategy, "retryStrategy")), null);
     }
 
     /**

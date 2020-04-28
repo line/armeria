@@ -75,7 +75,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      */
     @Deprecated
     public static RetryingClientBuilder builder(RetryStrategy retryStrategy) {
-        return builder(requireNonNull(retryStrategy, "retryStrategy").toRetryRule());
+        return builder(RetryRuleUtil.fromRetryStrategy(requireNonNull(retryStrategy, "retryStrategy")));
     }
 
     /**
@@ -105,7 +105,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      */
     @Deprecated
     public static Function<? super HttpClient, RetryingClient> newDecorator(RetryStrategy retryStrategy) {
-        return newDecorator(requireNonNull(retryStrategy, "retryStrategy").toRetryRule());
+        return newDecorator(RetryRuleUtil.fromRetryStrategy(requireNonNull(retryStrategy, "retryStrategy")));
     }
 
     /**
@@ -133,7 +133,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
         requireNonNull(retryStrategy, "retryStrategy");
-        return newDecorator(retryStrategy.toRetryRule(), maxTotalAttempts);
+        return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy), maxTotalAttempts);
     }
 
     /**
@@ -167,7 +167,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         requireNonNull(retryStrategy, "retryStrategy");
-        return newDecorator(retryStrategy.toRetryRule(), maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+        return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy), maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     private final boolean useRetryAfter;

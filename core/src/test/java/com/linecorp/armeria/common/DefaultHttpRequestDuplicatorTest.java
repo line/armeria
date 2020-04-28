@@ -92,7 +92,10 @@ class DefaultHttpRequestDuplicatorTest {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(RetryingClient.newDecorator(
-                                 RetryRule.onServerErrorStatus().onException().thenImmediately(10)))
+                                 RetryRule.builder()
+                                          .onServerErrorStatus()
+                                          .onException()
+                                          .thenImmediately(10)))
                          .build();
 
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/long_streaming");

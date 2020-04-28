@@ -32,7 +32,7 @@ class HttpClientUnwrapTest {
         final WebClient client =
                 WebClient.builder()
                          .decorator(LoggingClient.newDecorator())
-                         .decorator(RetryingClient.newDecorator(RetryRule.onException().thenStop()))
+                         .decorator(RetryingClient.newDecorator(RetryRule.builder().thenNoRetry()))
                          .build();
 
         assertThat(client.as(WebClient.class)).isSameAs(client);

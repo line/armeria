@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * Determines whether a failed request should be retried.
  * If you need to determine by looking into the {@link Response}, use {@link RetryStrategyWithContent}.
  *
- * @deprecated Use {@link RetryRule} or {@link RetryStrategy#toRetryRule()}.
+ * @deprecated Use {@link RetryRule}.
  */
 @Deprecated
 @FunctionalInterface
@@ -52,7 +52,10 @@ public interface RetryStrategy {
     /**
      * Returns a {@link RetryStrategy} that retries with {@link Backoff#ofDefault()}
      * only on an {@link UnprocessedRequestException}.
+     *
+     * @deprecated Use {@link RetryRule#onUnprocessed()}
      */
+    @Deprecated
     static RetryStrategy onUnprocessed() {
         return onUnprocessed(Backoff.ofDefault());
     }
@@ -60,17 +63,22 @@ public interface RetryStrategy {
     /**
      * Returns a {@link RetryStrategy} that retries with the specified {@link Backoff}
      * only on an {@link UnprocessedRequestException}.
+     *
+     * @deprecated Use {@link RetryRule#onUnprocessed(Backoff)}
      */
     static RetryStrategy onUnprocessed(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return RetryRuleUtil.toRetryStrategy(RetryRule.onUnprocessed().thenBackoff(backoff));
+        return RetryRuleUtil.toRetryStrategy(RetryRule.onUnprocessed(backoff));
     }
 
     /**
      * Returns a {@link RetryStrategy} that retries with {@link Backoff#ofDefault()} on any {@link Exception}.
+     *
+     * @deprecated Use {@link RetryRule#onException()}
      */
+    @Deprecated
     static RetryStrategy onException() {
-        return RetryRuleUtil.toRetryStrategy(RetryRule.onException().thenBackoff());
+        return RetryRuleUtil.toRetryStrategy(RetryRule.onException());
     }
 
     /**
@@ -102,14 +110,7 @@ public interface RetryStrategy {
      * Returns a {@link RetryStrategy} that retries with the {@link Backoff#ofDefault()}
      * when the response status is 5xx (server error) or an {@link Exception} is raised.
      *
-     * @deprecated Use {@link RetryRuleBuilder#onServerErrorStatus()}}, {@link RetryRuleBuilder#onException()}
-     *             and {@link RetryRuleBuilder#thenBackoff()}.
-     *             For example:
-     *             <pre>{@code
-     *             RetryRule.onServerErrorStatus()
-     *                      .onException()
-     *                      .thenBackoff();
-     *             }</pre>
+     * @deprecated Use {@link RetryRule#onServerError()}}.
      */
     @Deprecated
     static RetryStrategy onServerErrorStatus() {
@@ -120,14 +121,7 @@ public interface RetryStrategy {
      * Returns the {@link RetryStrategy} that retries the request with the specified {@code backoff}
      * when the response status is 5xx (server error) or an {@link Exception} is raised.
      *
-     * @deprecated Use {@link RetryRuleBuilder#onServerErrorStatus()}}, {@link RetryRuleBuilder#onException()}
-     *             and {@link RetryRuleBuilder#thenBackoff(Backoff)}.
-     *             For example:
-     *             <pre>{@code
-     *             RetryRule.onServerErrorStatus()
-     *                      .onException()
-     *                      .thenBackoff(myBackoff);
-     *             }</pre>
+     * @deprecated Use {@link RetryRule#onServerError(Backoff)}}.
      */
     @Deprecated
     static RetryStrategy onServerErrorStatus(Backoff backoff) {
@@ -160,13 +154,6 @@ public interface RetryStrategy {
     static RetryStrategy onStatus(
             BiFunction<? super HttpStatus, ? super Throwable, ? extends Backoff> backoffFunction) {
         return new HttpStatusBasedRetryStrategy(backoffFunction);
-    }
-
-    /**
-     * Converts a {@link RetryStrategy} to a {@link RetryRule}.
-     */
-    default RetryRule toRetryRule() {
-        return (ctx, req) -> shouldRetry(ctx, req).thenApply(RetryRuleDecision::retry);
     }
 
     /**

@@ -159,8 +159,7 @@ class RetryingClientWithLoggingTest {
         successLogIndex = 1;
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(RetryingClient.newDecorator(
-                                 RetryRule.onServerErrorStatus().onException().thenBackoff()))
+                         .decorator(RetryingClient.newDecorator(RetryRule.onServerError()))
                          .decorator(loggingDecorator())
                          .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");

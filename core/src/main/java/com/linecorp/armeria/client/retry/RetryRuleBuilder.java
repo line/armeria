@@ -228,8 +228,8 @@ public final class RetryRuleBuilder {
     /**
      * Returns a newly created {@link RetryRule} that never retries.
      */
-    public RetryRule thenStop() {
-        return build(RetryRuleDecision.stop());
+    public RetryRule thenNoRetry() {
+        return build(RetryRuleDecision.noRetry());
     }
 
     private RetryRule build(RetryRuleDecision decision) {
@@ -239,7 +239,7 @@ public final class RetryRuleBuilder {
         final Predicate<HttpStatus> statusFilter = this.statusFilter;
         final Predicate<Throwable> exceptionFilter = this.exceptionFilter;
 
-        if (decision != RetryRuleDecision.stop() && exceptionFilter == null && statusFilter == null &&
+        if (decision != RetryRuleDecision.noRetry() && exceptionFilter == null && statusFilter == null &&
             statuses.isEmpty() && statusClasses.isEmpty()) {
             throw new IllegalStateException(
                     "Should set at least one of status, status class and an expected exception type " +

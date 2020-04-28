@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.Response;
@@ -37,114 +36,216 @@ import com.linecorp.armeria.common.ResponseHeaders;
 public interface RetryRule {
 
     /**
-     * Adds the <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
-     * HTTP methods, which should not have any side-effects (except for keeping statistics),
-     * for a {@link RetryRule} which will retry if the request HTTP method is idempotent.
+     * Returns a newly created {@link RetryRuleBuilder}.
      */
-    static RetryRuleBuilder onIdempotentMethods() {
-        return new RetryRuleBuilder().onIdempotentMethods();
+    static RetryRuleBuilder builder() {
+        return new RetryRuleBuilder();
     }
 
     /**
-     * Adds the specified HTTP methods for a {@link RetryRule} which will retry
-     * if the request HTTP method is one of the specified HTTP methods.
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
+     * if the class of the response status is the specified {@link HttpStatusClass}.
      */
-    static RetryRuleBuilder onMethods(HttpMethod... methods) {
-        return new RetryRuleBuilder().onMethods(methods);
+    static RetryRule onStatusClass(HttpStatusClass statusClass) {
+        return onStatusClass(statusClass, Backoff.ofDefault());
     }
 
     /**
-     * Adds the specified HTTP methods for a {@link RetryRule} which will retry
-     * if the request HTTP method is one of the specified HTTP methods.
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
+     * if the class of the response status is the specified {@link HttpStatusClass}.
      */
-    static RetryRuleBuilder onMethods(Iterable<HttpMethod> methods) {
-        return new RetryRuleBuilder().onMethods(methods);
+    static RetryRule onStatusClass(HttpStatusClass statusClass, Backoff backoff) {
+        return builder().onStatusClass(statusClass).thenBackoff(backoff);
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
-    static RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
-        return new RetryRuleBuilder().onStatusClass(statusClasses);
+    static RetryRule onStatusClass(Iterable<HttpStatusClass> statusClasses) {
+        return onStatusClass(statusClasses, Backoff.ofDefault());
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
-    static RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
-        return new RetryRuleBuilder().onStatusClass(statusClasses);
+    static RetryRule onStatusClass(Iterable<HttpStatusClass> statusClasses, Backoff backoff) {
+        return builder().onStatusClass(statusClasses).thenBackoff(backoff);
     }
 
     /**
-     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRule} which will retry
+     * Returns a newly created {@link RetryRule} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff}
      * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
      */
-    static RetryRuleBuilder onServerErrorStatus() {
-        return new RetryRuleBuilder().onServerErrorStatus();
+    static RetryRule onServerErrorStatus() {
+        return onServerErrorStatus(Backoff.ofDefault());
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
+     * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     */
+    static RetryRule onServerErrorStatus(Backoff backoff) {
+        return builder().onServerErrorStatus().thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the
+     * {@link Backoff#ofDefault() default backoff} if an {@link Exception} is raised and
+     * the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     *
+     * <p>This method is shortcut for:
+     * <pre>{@code
+     * RetryRule.builder()
+     *          .onServerErrorStatus()
+     *          .onException()
+     *          .thenBackoff();
+     * }</pre>
+     */
+    static RetryRule onServerError() {
+        return onServerError(Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
+     * if an {@link Exception} is raised and the class of the response status is
+     * {@link HttpStatusClass#SERVER_ERROR}.
+     *
+     * <p>This method is shortcut for:
+     * <pre>{@code
+     * Backoff myBackoff = ...;
+     * RetryRule.builder()
+     *          .onServerErrorStatus()
+     *          .onException()
+     *          .thenBackoff(myBackoff);
+     * }</pre>
+     */
+    static RetryRule onServerError(Backoff backoff) {
+        return builder().onServerErrorStatus().onException().thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the response status is
+     * the specified {@link HttpStatus}.
+     */
+    static RetryRule onStatus(HttpStatus status) {
+        return onStatus(status, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
+     * if the response status is the specified {@link HttpStatus}.
+     */
+    static RetryRule onStatus(HttpStatus status, Backoff backoff) {
+        return builder().onStatus(status).thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the response status is one of
+     * the specified {@link HttpStatus}es.
+     */
+    static RetryRule onStatus(Iterable<HttpStatus> statuses) {
+        return onStatus(statuses, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
      * if the response status is one of the specified {@link HttpStatus}es.
      */
-    static RetryRuleBuilder onStatus(HttpStatus... statuses) {
-        return new RetryRuleBuilder().onStatus(statuses);
+    static RetryRule onStatus(Iterable<HttpStatus> statuses, Backoff backoff) {
+        return builder().onStatus(statuses).thenBackoff(backoff);
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * Returns a newly created a {@link RetryRule} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the response status matches
+     * the specified {@code statusFilter}.
      */
-    static RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
-        return new RetryRuleBuilder().onStatus(statuses);
+    static RetryRule onStatus(Predicate<? super HttpStatus> statusFilter) {
+        return onStatus(statusFilter, Backoff.ofDefault());
     }
 
     /**
-     * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
+     * Returns a newly created a {@link RetryRule} that will retry with the specified {@link Backoff}
      * if the response status matches the specified {@code statusFilter}.
      */
-    static RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
-        return new RetryRuleBuilder().onStatus(statusFilter);
+    static RetryRule onStatus(Predicate<? super HttpStatus> statusFilter, Backoff backoff) {
+        return builder().onStatus(statusFilter).thenBackoff(backoff);
     }
 
     /**
-     * Adds the specified exception type for a {@link RetryRule} which will retry
+     * Returns a newly created a {@link RetryRule} that will retry with
+     * the {@linkplain Backoff#ofDefault() default backoff} if an {@link Exception} is raised and
+     * that is instance of the specified {@code exception}.
+     */
+    static RetryRule onException(Class<? extends Throwable> exception) {
+        return onException(exception, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
      * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
      */
-    static RetryRuleBuilder onException(Class<? extends Throwable> exception) {
-        return new RetryRuleBuilder().onException(exception);
+    static RetryRule onException(Class<? extends Throwable> exception, Backoff backoff) {
+        return builder().onException(exception).thenBackoff(backoff);
     }
 
     /**
-     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
-     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     * Returns a newly created {@link RetryRule} that will retry if an {@link Exception} is raised and
+     * the specified {@code exceptionFilter} returns {@code true}.
      */
-    static RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
-        return new RetryRuleBuilder().onException(exceptionFilter);
+    static RetryRule onException(Predicate<? super Throwable> exceptionFilter) {
+        return onException(exceptionFilter, Backoff.ofDefault());
     }
 
     /**
-     * Makes a {@link RetryRule} retry on any {@link Exception}.
+     * Returns a newly created {@link RetryRule} that will retry if an {@link Exception} is raised and
+     * the specified {@code exceptionFilter} returns {@code true}.
      */
-    static RetryRuleBuilder onException() {
-        return new RetryRuleBuilder().onException();
+    static RetryRule onException(Predicate<? super Throwable> exceptionFilter, Backoff backoff) {
+        return builder().onException(exceptionFilter).thenBackoff(backoff);
     }
 
     /**
-     * Makes a {@link RetryRule} retry on an {@link UnprocessedRequestException} which means that the request
-     * has not been processed by the server. Therefore, you can safely retry the request without worrying about
-     * the idempotency of the request.
+     * Returns a newly created {@link RetryRule} that retries on any {@link Exception}.
      */
-    static RetryRuleBuilder onUnprocessed() {
-        return new RetryRuleBuilder().onUnprocessed();
+    static RetryRule onException() {
+        return onException(Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly-created {@link RetryRule} that retries with the specified {@link Backoff} on any {@link Exception}.
+     */
+    static RetryRule onException(Backoff backoff) {
+        return builder().onException().thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a {@link RetryRule} that retries on an {@link UnprocessedRequestException} which means that
+     * the request has not been processed by the server. Therefore, you can safely retry the request without
+     * worrying about the idempotency of the request.
+     */
+    static RetryRule onUnprocessed() {
+        return builder().onUnprocessed().thenBackoff();
+    }
+
+    /**
+     * Returns a {@link RetryRule} that retries with the specified {@link Backoff} on
+     * an {@link UnprocessedRequestException} which means that the request has not been processed by the server.
+     * Therefore, you can safely retry the request without worrying about the idempotency of the request.
+     */
+    static RetryRule onUnprocessed(Backoff backoff) {
+        return builder().onUnprocessed().thenBackoff(backoff);
     }
 
     /**
      * Returns composed {@link RetryRule} that represents a logical OR of this {@link RetryRule} and another.
      * If this {@link RetryRule} completes with {@link RetryRuleDecision#retry(Backoff)} or
-     * {@link RetryRuleDecision#stop()}, then other {@link RetryRule} is not evaluated.
+     * {@link RetryRuleDecision#noRetry()}, then other {@link RetryRule} is not evaluated.
      */
     default RetryRule or(RetryRule other) {
         return (ctx, cause) -> {
@@ -163,7 +264,7 @@ public interface RetryRule {
      * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
      * Implement this method to return a {@link CompletionStage} and to complete it with a desired
      * {@link RetryRuleDecision#retry(Backoff)}.
-     * To stop trying further, complete it with {@link RetryRuleDecision#stop()}.
+     * To stop trying further, complete it with {@link RetryRuleDecision#noRetry()}.
      * To skip this {@link RetryRule} and find other {@link RetryRule}, complete it with
      * {@link RetryRuleDecision#next()}.
      *

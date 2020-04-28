@@ -40,7 +40,7 @@ class GrpcClientUnwrapTest {
                        .decorator(LoggingClient.newDecorator())
                        .decorator(RetryingClient.newDecorator(
                                (RetryRule) (ctx, cause) ->
-                                       CompletableFuture.completedFuture(RetryRuleDecision.stop())))
+                                       CompletableFuture.completedFuture(RetryRuleDecision.noRetry())))
                        .build(TestServiceBlockingStub.class);
 
         assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).isSameAs(client);

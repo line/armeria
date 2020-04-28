@@ -35,11 +35,12 @@ import com.linecorp.armeria.common.ResponseHeaders;
 class RetryStrategyBindingBuilderTest {
     @Test
     void methodFilter() {
-        assertThatThrownBy(() -> RetryRule.onMethods(HttpMethod.HEAD).thenBackoff())
+        assertThatThrownBy(() -> RetryRule.builder().onMethods(HttpMethod.HEAD).thenBackoff())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set at least one");
 
-        final RetryRule rule = RetryRule.onMethods(HttpMethod.HEAD)
+        final RetryRule rule = RetryRule.builder()
+                                        .onMethods(HttpMethod.HEAD)
                                         .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                                         .thenBackoff();
 
@@ -56,12 +57,13 @@ class RetryStrategyBindingBuilderTest {
     void buildFluently() {
         final Backoff idempotentBackoff = Backoff.fixed(100);
         final Backoff unprocessedBackoff = Backoff.fixed(200);
-        final RetryRule retryRule = RetryRule.onIdempotentMethods()
+        final RetryRule retryRule = RetryRule.builder()
+                                             .onIdempotentMethods()
                                              .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                                              .onException(ClosedChannelException.class)
                                              .onStatusClass(HttpStatusClass.CLIENT_ERROR)
                                              .thenBackoff(idempotentBackoff)
-                                             .or(RetryRule.onUnprocessed().thenBackoff(unprocessedBackoff));
+                                             .or(RetryRule.onUnprocessed(unprocessedBackoff));
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -83,8 +85,9 @@ class RetryStrategyBindingBuilderTest {
 
     @Test
     void noRetry() {
-        final RetryRule rule = RetryRule.onMethods(HttpMethod.POST).thenStop()
-                                        .or(RetryRule.onException().thenBackoff());
+        final RetryRule rule = RetryRule.builder()
+                                        .onMethods(HttpMethod.POST).thenNoRetry()
+                                        .or(RetryRule.onException());
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertBackoff(rule.shouldRetry(ctx1, new RuntimeException())).isSameAs(Backoff.ofDefault());
@@ -96,7 +99,8 @@ class RetryStrategyBindingBuilderTest {
     @Test
     void noDelay() {
         final int maxAttempts = 10;
-        final RetryRule rule = RetryRule.onStatus(status -> status == HttpStatus.BAD_REQUEST ||
+        final RetryRule rule = RetryRule.builder()
+                                        .onStatus(status -> status == HttpStatus.BAD_REQUEST ||
                                                             status == HttpStatus.TOO_MANY_REQUESTS)
                                         .thenImmediately(maxAttempts);
 

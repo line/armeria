@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
 
 /**
@@ -24,21 +26,21 @@ import javax.annotation.Nullable;
  */
 public final class RetryRuleDecision {
 
-    private static final RetryRuleDecision STOP = new RetryRuleDecision(null);
+    private static final RetryRuleDecision NO_RETRY = new RetryRuleDecision(null);
     private static final RetryRuleDecision NEXT = new RetryRuleDecision(null);
 
     /**
      * Returns a {@link RetryRuleDecision} that retries with the specified {@link Backoff}.
      */
     public static RetryRuleDecision retry(Backoff backoff) {
-        return new RetryRuleDecision(backoff);
+        return new RetryRuleDecision(requireNonNull(backoff, "backoff"));
     }
 
     /**
      * Returns a {@link RetryRuleDecision} that never retries.
      */
-    public static RetryRuleDecision stop() {
-        return STOP;
+    public static RetryRuleDecision noRetry() {
+        return NO_RETRY;
     }
 
     /**
@@ -63,7 +65,7 @@ public final class RetryRuleDecision {
 
     @Override
     public String toString() {
-        if (this == STOP) {
+        if (this == NO_RETRY) {
             return "RetryRuleDecision(STOP)";
         } else if (this == NEXT) {
             return "RetryRuleDecision(NEXT)";

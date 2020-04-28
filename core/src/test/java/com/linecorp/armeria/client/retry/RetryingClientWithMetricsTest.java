@@ -135,7 +135,7 @@ class RetryingClientWithMetricsTest {
                 WebClient.builder(SessionProtocol.HTTP, group)
                          .factory(clientFactory)
                          .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
-                         .decorator(RetryingClient.newDecorator(RetryRule.onUnprocessed().thenBackoff()))
+                         .decorator(RetryingClient.newDecorator(RetryRule.onUnprocessed()))
                          .build();
         assertThat(client.get("/ok").aggregate().join().status()).isEqualTo(HttpStatus.OK);
 
@@ -156,8 +156,7 @@ class RetryingClientWithMetricsTest {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .factory(clientFactory)
-                         .decorator(RetryingClient.newDecorator(
-                                 RetryRule.onServerErrorStatus().onException().thenBackoff()))
+                         .decorator(RetryingClient.newDecorator(RetryRule.onServerError()))
                          .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
                          .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
@@ -179,7 +178,7 @@ class RetryingClientWithMetricsTest {
         final WebClient client =
                 WebClient.builder(SessionProtocol.HTTP, group)
                          .factory(clientFactory)
-                         .decorator(RetryingClient.newDecorator(RetryRule.onUnprocessed().thenBackoff()))
+                         .decorator(RetryingClient.newDecorator(RetryRule.onUnprocessed()))
                          .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("foo")))
                          .build();
 

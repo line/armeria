@@ -95,7 +95,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     @Deprecated
     protected AbstractRetryingClient(Client<I, O> delegate, RetryStrategy retryStrategy,
                                      int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, requireNonNull(retryStrategy, "retryStrategy").toRetryRule(), null,
+        this(delegate, RetryRuleUtil.fromRetryStrategy(requireNonNull(retryStrategy, "retryStrategy")), null,
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 

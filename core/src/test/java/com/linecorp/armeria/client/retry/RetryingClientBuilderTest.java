@@ -28,7 +28,7 @@ class RetryingClientBuilderTest {
 
     @Test
     void cannotSetContentPreviewLengthWhenRetryStrategyIsUsed() {
-        final RetryRule strategy = (ctx, cause) -> CompletableFuture.completedFuture(RetryRuleDecision.stop());
+        final RetryRule strategy = (ctx, cause) -> CompletableFuture.completedFuture(RetryRuleDecision.noRetry());
         assertThatThrownBy(() -> RetryingClient.builder(strategy).contentPreviewLength(1024))
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
