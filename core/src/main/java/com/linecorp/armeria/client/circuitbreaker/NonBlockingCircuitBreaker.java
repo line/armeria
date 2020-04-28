@@ -60,7 +60,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         this.name = name != null ? name : "circuit-breaker-" + seqNo.getAndIncrement();
         state = new AtomicReference<>(newClosedState());
         logStateTransition(CircuitState.CLOSED, null);
-        notifyStateChanged(CircuitState.CLOSED);
+        notifyInitialized();
     }
 
     @Override
@@ -174,6 +174,17 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             }
             logger.info(builder.toString());
         }
+    }
+
+    private void notifyInitialized() {
+        config.listeners().forEach(listener -> {
+            try {
+                listener.onInitialized(name(), CircuitState.CLOSED);
+            } catch (Throwable t) {
+                logger.warn("An error occurred when notifying an Initialized event", t);
+            }
+            notifyCountUpdated(listener, EventCount.ZERO);
+        });
     }
 
     private void notifyStateChanged(CircuitState circuitState) {

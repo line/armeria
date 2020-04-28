@@ -193,7 +193,7 @@ class NonBlockingCircuitBreakerTest {
 
         // Notify initial state
         verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
-        verify(listener, times(1)).onStateChanged(name, CircuitState.CLOSED);
+        verify(listener, times(1)).onInitialized(name, CircuitState.CLOSED);
         reset(listener);
 
         cb.onFailure();
