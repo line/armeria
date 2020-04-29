@@ -3,35 +3,39 @@ package example.armeria.grpc.kotlin
 import com.linecorp.armeria.server.ServiceRequestContext
 import example.armeria.grpc.kotlin.Hello.HelloReply
 import example.armeria.grpc.kotlin.Hello.HelloRequest
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 
 /**
  * Note that if you want to access a current [ServiceRequestContext] in [HelloServiceImpl],
- * you should initialize [HelloServiceImpl] with [ArmeriaContext].
+ * you should initialize [HelloServiceImpl] with [Dispatchers.Unconfined] and wrap your rpc methods with
+ * [withArmeriaContext] or [withArmeriaBlockingContext].
  */
-class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispatchers.Armeria) {
+class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispatchers.Unconfined) {
 
     /**
      * Sends a [HelloReply] immediately when receiving a request.
      */
-    override suspend fun hello(request: HelloRequest): HelloReply {
+    override suspend fun hello(request: HelloRequest): HelloReply = withArmeriaContext {
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()
-        return buildReply(toMessage(request.name))
+        buildReply(toMessage(request.name))
     }
 
-    override suspend fun lazyHello(request: HelloRequest): HelloReply {
+    override suspend fun lazyHello(request: HelloRequest): HelloReply = withArmeriaContext {
         delay(3000L)
         ServiceRequestContext.current()
-        return buildReply(toMessage(request.name))
+        buildReply(toMessage(request.name))
     }
 
     /**
@@ -39,16 +43,14 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
      *
      * @see [Blocking service implementation](https://line.github.io/armeria/server-grpc.html#blocking-service-implementation)
      */
-    override suspend fun blockingHello(request: HelloRequest): HelloReply {
-        return withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher()) {
-            try { // Simulate a blocking API call.
-                Thread.sleep(3000)
-            } catch (ignored: Exception) { // Do nothing.
-            }
-            // Make sure that current thread is request context aware
-            ServiceRequestContext.current()
-            buildReply(toMessage(request.name))
+    override suspend fun blockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
+        try { // Simulate a blocking API call.
+            Thread.sleep(3000)
+        } catch (ignored: Exception) { // Do nothing.
         }
+        // Make sure that current thread is request context aware
+        ServiceRequestContext.current()
+        buildReply(toMessage(request.name))
     }
 
     /**
@@ -67,18 +69,18 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
                 emit(buildReply("Hello, ${request.name}! (sequence: $i)")) // emit next value
                 ServiceRequestContext.current()
             }
-        }
+        }.flowOn(armeriaDispatcher())
     }
 
     /**
      * Sends a [HelloReply] when a request has been completed with multiple [HelloRequest]s.
      */
-    override suspend fun lotsOfGreetings(requests: Flow<HelloRequest>): HelloReply {
+    override suspend fun lotsOfGreetings(requests: Flow<HelloRequest>): HelloReply = withArmeriaContext {
         val names = mutableListOf<String>()
         requests.map { it.name }.toList(names)
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()
-        return buildReply(toMessage(names.joinToString()))
+        buildReply(toMessage(names.joinToString()))
     }
 
     /**
@@ -93,8 +95,17 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
     }
 
     companion object {
+        fun armeriaDispatcher(): CoroutineDispatcher =
+            ServiceRequestContext.current().contextAwareExecutor().asCoroutineDispatcher()
 
-        private fun buildReply(message: String): HelloReply = HelloReply.newBuilder().setMessage(message).build()
+        suspend fun <T> withArmeriaContext(block: suspend CoroutineScope.() -> T): T =
+            withContext(armeriaDispatcher(), block)
+
+        suspend fun <T> withArmeriaBlockingContext(block: suspend CoroutineScope.() -> T): T =
+            withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher(), block)
+
+        private fun buildReply(message: String): HelloReply =
+            HelloReply.newBuilder().setMessage(message).build()
 
         private fun toMessage(message: String): String = "Hello, $message!"
     }
