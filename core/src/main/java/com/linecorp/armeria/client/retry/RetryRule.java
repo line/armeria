@@ -36,10 +36,51 @@ import com.linecorp.armeria.common.ResponseHeaders;
 public interface RetryRule {
 
     /**
-     * Returns a newly created {@link RetryRuleBuilder}.
+     * Returns a newly created {@link RetryRule} that will retry with the
+     * {@link Backoff#ofDefault() default backoff} if the request HTTP method is
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
+     * and an {@link UnprocessedRequestException} is raised or the class of the response status is
+     * {@link HttpStatusClass#SERVER_ERROR}.
+     *
+     * <p>Note that a client can safely retry a failed request with this rule if an endpoint service produces
+     * the same result (no side effects) on idempotent HTTP methods.
+     *
+     * <p>This method is shortcut for:
+     * <pre>{@code
+     * Backoff myBackoff = ...;
+     * RetryRule.builder()
+     *          .onIdempotentMethods()
+     *          .onServerErrorStatus()
+     *          .onUnprocessed()
+     *          .thenBackoff(myBackoff);
+     * }</pre>
      */
-    static RetryRuleBuilder builder() {
-        return new RetryRuleBuilder();
+    static RetryRule failsafe() {
+        return builder().onIdempotentMethods().onServerErrorStatus().onUnprocessed().thenBackoff();
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
+     * if the request HTTP method is
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
+     * and an {@link UnprocessedRequestException} is raised or the class of the response status is
+     * {@link HttpStatusClass#SERVER_ERROR}.
+     *
+     * <p>Note that a client can safely retry a failed request with this rule if an endpoint service produces
+     * the same result (no side effects) on idempotent HTTP methods.
+     *
+     * <p>This method is shortcut for:
+     * <pre>{@code
+     * Backoff myBackoff = ...;
+     * RetryRule.builder()
+     *          .onIdempotentMethods()
+     *          .onServerErrorStatus()
+     *          .onUnprocessed()
+     *          .thenBackoff(myBackoff);
+     * }</pre>
+     */
+    static RetryRule failsafe(Backoff backoff) {
+        return builder().onIdempotentMethods().onServerErrorStatus().onUnprocessed().thenBackoff(backoff);
     }
 
     /**
@@ -91,40 +132,6 @@ public interface RetryRule {
         return builder().onServerErrorStatus().thenBackoff(backoff);
     }
 
-    /**
-     * Returns a newly created {@link RetryRule} that will retry with the
-     * {@link Backoff#ofDefault() default backoff} if an {@link Exception} is raised and
-     * the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
-     *
-     * <p>This method is shortcut for:
-     * <pre>{@code
-     * RetryRule.builder()
-     *          .onServerErrorStatus()
-     *          .onException()
-     *          .thenBackoff();
-     * }</pre>
-     */
-    static RetryRule onServerError() {
-        return onServerError(Backoff.ofDefault());
-    }
-
-    /**
-     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff}
-     * if an {@link Exception} is raised and the class of the response status is
-     * {@link HttpStatusClass#SERVER_ERROR}.
-     *
-     * <p>This method is shortcut for:
-     * <pre>{@code
-     * Backoff myBackoff = ...;
-     * RetryRule.builder()
-     *          .onServerErrorStatus()
-     *          .onException()
-     *          .thenBackoff(myBackoff);
-     * }</pre>
-     */
-    static RetryRule onServerError(Backoff backoff) {
-        return builder().onServerErrorStatus().onException().thenBackoff(backoff);
-    }
 
     /**
      * Returns a newly created {@link RetryRule} that will retry with the
@@ -243,9 +250,16 @@ public interface RetryRule {
     }
 
     /**
+     * Returns a newly created {@link RetryRuleBuilder}.
+     */
+    static RetryRuleBuilder builder() {
+        return new RetryRuleBuilder();
+    }
+
+    /**
      * Returns composed {@link RetryRule} that represents a logical OR of this {@link RetryRule} and another.
-     * If this {@link RetryRule} completes with {@link RetryRuleDecision#retry(Backoff)} or
-     * {@link RetryRuleDecision#noRetry()}, then other {@link RetryRule} is not evaluated.
+     * If this {@link RetryRule} completes with {@link RetryRuleDecision#next()},
+     * then other {@link RetryRule} is evaluated.
      */
     default RetryRule or(RetryRule other) {
         return (ctx, cause) -> {

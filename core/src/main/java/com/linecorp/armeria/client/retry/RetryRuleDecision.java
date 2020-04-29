@@ -15,14 +15,13 @@
  */
 
 package com.linecorp.armeria.client.retry;
-
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
 /**
- * A {@link RetryRuleDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff}, stop,
- * or skip the current {@link RetryRule}.
+ * A {@link RetryRuleDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff},
+ * skips the current {@link RetryRule} or no retries.
  */
 public final class RetryRuleDecision {
 

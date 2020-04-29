@@ -44,7 +44,10 @@ public interface RetryStrategy {
 
     /**
      * Returns a {@link RetryStrategy} that never retries.
+     *
+     * @deprecated Use {@link RetryRuleBuilder#thenNoRetry()}.
      */
+    @Deprecated
     static RetryStrategy never() {
         return (ctx, cause) -> CompletableFuture.completedFuture(null);
     }
@@ -66,6 +69,7 @@ public interface RetryStrategy {
      *
      * @deprecated Use {@link RetryRule#onUnprocessed(Backoff)}
      */
+    @Deprecated
     static RetryStrategy onUnprocessed(Backoff backoff) {
         requireNonNull(backoff, "backoff");
         return RetryRuleUtil.toRetryStrategy(RetryRule.onUnprocessed(backoff));
@@ -87,13 +91,7 @@ public interface RetryStrategy {
      * @param backoffFunction A {@link Function} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link Throwable}
      *
-     * @deprecated Use {@link RetryRuleBuilder#onException(Predicate)}} and
-     *             {@link RetryRuleBuilder#thenBackoff(Backoff)}.
-     *             For example:
-     *             <pre>{@code
-     *             RetryRule.onException(ex -> ex instanceof UnprocessedRequestException)
-     *                      .thenBackoff(myBackoff);
-     *             }</pre>
+     * @deprecated Use {@link RetryRule#onException(Predicate, Backoff)}.
      */
     @Deprecated
     static RetryStrategy onException(Function<? super Throwable, ? extends Backoff> backoffFunction) {
@@ -110,7 +108,15 @@ public interface RetryStrategy {
      * Returns a {@link RetryStrategy} that retries with the {@link Backoff#ofDefault()}
      * when the response status is 5xx (server error) or an {@link Exception} is raised.
      *
-     * @deprecated Use {@link RetryRule#onServerError()}}.
+     * @deprecated Use {@link RetryRuleBuilder#onServerErrorStatus()}} and
+     *             {@link RetryRuleBuilder#onException()}.
+     *             For example:
+     *             <pre>{@code
+     *             RetryRule.builder()
+     *                      .onServerErrorStatus()
+     *                      .onException()
+     *                      .thenBackoff();
+     *             }</pre>
      */
     @Deprecated
     static RetryStrategy onServerErrorStatus() {
@@ -121,7 +127,15 @@ public interface RetryStrategy {
      * Returns the {@link RetryStrategy} that retries the request with the specified {@code backoff}
      * when the response status is 5xx (server error) or an {@link Exception} is raised.
      *
-     * @deprecated Use {@link RetryRule#onServerError(Backoff)}}.
+     * @deprecated Use {@link RetryRuleBuilder#onServerErrorStatus()}} and
+     *             {@link RetryRuleBuilder#onException()}.
+     *             For example:
+     *             <pre>{@code
+     *             RetryRule.builder()
+     *                      .onServerErrorStatus()
+     *                      .onException()
+     *                      .thenBackoff(myBackoff);
+     *             }</pre>
      */
     @Deprecated
     static RetryStrategy onServerErrorStatus(Backoff backoff) {
@@ -145,7 +159,8 @@ public interface RetryStrategy {
      *             {@link RetryRuleBuilder#thenBackoff(Backoff)}.
      *             For example:
      *             <pre>{@code
-     *             RetryRule.onStatus(HttpStatus.TOO_MANY_REQUESTS)
+     *             RetryRule.builder()
+     *                      .onStatus(HttpStatus.TOO_MANY_REQUESTS)
      *                      .onException(ex -> ex instanceof UnprocessedRequestException)
      *                      .thenBackoff(myBackoff);
      *             }</pre>
