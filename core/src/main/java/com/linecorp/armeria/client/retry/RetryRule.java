@@ -219,13 +219,18 @@ public interface RetryRule {
 
     /**
      * Returns a newly created {@link RetryRule} that retries on any {@link Exception}.
+     * Note that this rule should be used carefully because it reties regardless of
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
     static RetryRule onException() {
         return onException(Backoff.ofDefault());
     }
 
     /**
-     * Returns a newly-created {@link RetryRule} that retries with the specified {@link Backoff} on any {@link Exception}.
+     * Returns a newly-created {@link RetryRule} that retries with the specified {@link Backoff} on
+     * any {@link Exception}.
+     * Note that this rule should be used carefully because it reties regardless of
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
     static RetryRule onException(Backoff backoff) {
         return builder().onException().thenBackoff(backoff);
