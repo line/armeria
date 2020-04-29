@@ -21,12 +21,19 @@ module.exports = ({ markdownAST, pathPrefix }, pluginOptions = {}) => {
       return;
     }
 
-    const svg = draw
-      .render(lang, node.value, pluginOptions)
-      .value.replace(
-        /(<style[^>]*>)/,
-        "$1\n@import url('https://cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack-subset.css');\n* { font-family: Hack; font-size: 13px; }\n",
-      );
+    let svg;
+    try {
+      svg = draw
+        .render(lang, node.value, pluginOptions)
+        .value.replace(
+          /(<style[^>]*>)/,
+          "$1\n@import url('https://cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack-subset.css');\n* { font-family: Hack; font-size: 13px; }\n",
+        );
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to render a diagram:', node.value, e);
+      return;
+    }
 
     if (!svg.includes('hack-subset.css')) {
       throw new Error(`Failed to inject the font CSS: ${svg}`);
