@@ -27,11 +27,15 @@ public final class RetryRuleDecision {
 
     private static final RetryRuleDecision NO_RETRY = new RetryRuleDecision(null);
     private static final RetryRuleDecision NEXT = new RetryRuleDecision(null);
+    static final RetryRuleDecision DEFAULT = new RetryRuleDecision(Backoff.ofDefault());
 
     /**
      * Returns a {@link RetryRuleDecision} that retries with the specified {@link Backoff}.
      */
     public static RetryRuleDecision retry(Backoff backoff) {
+        if (backoff == Backoff.ofDefault()) {
+            return DEFAULT;
+        }
         return new RetryRuleDecision(requireNonNull(backoff, "backoff"));
     }
 

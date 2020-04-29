@@ -44,6 +44,9 @@ public final class RetryRuleBuilder {
 
     private static final CompletableFuture<RetryRuleDecision> NEXT =
             CompletableFuture.completedFuture(RetryRuleDecision.next());
+    private static final CompletableFuture<RetryRuleDecision> DEFAULT_DECISION_FUTURE =
+           CompletableFuture.completedFuture(RetryRuleDecision.DEFAULT);
+
 
     private static final Set<HttpMethod> IDEMPOTENT_METHODS =
             ImmutableSet.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.PUT, HttpMethod.DELETE);
@@ -216,16 +219,6 @@ public final class RetryRuleBuilder {
     }
 
     /**
-     * Sets a {@link Backoff} which limits the number of attempts up to the specified value and
-     * never waits between attempts. Returns a newly created {@link RetryRule}.
-     */
-    public RetryRule thenImmediately(int maxAttempts) {
-        checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
-        final Backoff backOff = Backoff.withoutDelay().withMaxAttempts(maxAttempts);
-        return build(RetryRuleDecision.retry(backOff));
-    }
-
-    /**
      * Returns a newly created {@link RetryRule} that never retries.
      */
     public RetryRule thenNoRetry() {
@@ -245,25 +238,30 @@ public final class RetryRuleBuilder {
                     "Should set at least one of status, status class and an expected exception type " +
                     "if a backoff was set.");
         }
-
+        final CompletableFuture<RetryRuleDecision> decisionFuture;
+        if (decision == RetryRuleDecision.DEFAULT) {
+           decisionFuture = DEFAULT_DECISION_FUTURE;
+        } else {
+            decisionFuture = CompletableFuture.completedFuture(decision);
+        }
         return (ctx, cause) -> {
             if (!methods.contains(ctx.request().method())) {
                 return NEXT;
             }
 
             if (cause != null && exceptionFilter != null && exceptionFilter.test(Exceptions.peel(cause))) {
-                return CompletableFuture.completedFuture(decision);
+                return decisionFuture;
             }
 
             if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
                 final HttpStatus responseStatus = ctx.log().partial().responseHeaders().status();
                 if (statusClasses != null && statusClasses.contains(responseStatus.codeClass())) {
-                    return CompletableFuture.completedFuture(decision);
+                    return decisionFuture;
                 }
 
                 if ((statuses != null && statuses.contains(responseStatus)) ||
                     (statusFilter != null && statusFilter.test(responseStatus))) {
-                    return CompletableFuture.completedFuture(decision);
+                    return decisionFuture;
                 }
             }
 

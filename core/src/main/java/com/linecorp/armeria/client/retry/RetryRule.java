@@ -182,6 +182,8 @@ public interface RetryRule {
      * To not retry, complete it with {@link RetryRuleDecision#noRetry()}.
      * To skip this {@link RetryRule} and find other {@link RetryRule}, complete it with
      * {@link RetryRuleDecision#next()}.
+     * If the return value of the last {@link RetryRule} completes with {@link RetryRuleDecision#next()},
+     * the request never retries.
      *
      * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      * <pre>{@code

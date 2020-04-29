@@ -103,7 +103,7 @@ class RetryStrategyBindingBuilderTest {
         final RetryRule rule = RetryRule.builder()
                                         .onStatus(status -> status == HttpStatus.BAD_REQUEST ||
                                                             status == HttpStatus.TOO_MANY_REQUESTS)
-                                        .thenImmediately(maxAttempts);
+                                        .thenBackoff(Backoff.withoutDelay().withMaxAttempts(maxAttempts));
 
         for (int i = 1; i < maxAttempts; i++) {
             final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
