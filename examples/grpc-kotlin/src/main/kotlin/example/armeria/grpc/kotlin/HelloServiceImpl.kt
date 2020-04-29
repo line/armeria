@@ -3,6 +3,8 @@ package example.armeria.grpc.kotlin
 import com.linecorp.armeria.server.ServiceRequestContext
 import example.armeria.grpc.kotlin.Hello.HelloReply
 import example.armeria.grpc.kotlin.Hello.HelloRequest
+import example.armeria.grpc.kotlin.HelloServiceImpl.Companion.withArmeriaBlockingContext
+import example.armeria.grpc.kotlin.HelloServiceImpl.Companion.withArmeriaContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,12 +89,13 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
      * Sends a [HelloReply] when each [HelloRequest] is received. The response will be completed
      * when the request is completed.
      */
-    override fun bidiHello(requests: Flow<HelloRequest>): Flow<HelloReply> = flow {
-        requests.collect { request ->
-            ServiceRequestContext.current()
-            emit(buildReply(toMessage(request.name)))
-        }
-    }
+    override fun bidiHello(requests: Flow<HelloRequest>): Flow<HelloReply> =
+        flow {
+            requests.collect { request ->
+                ServiceRequestContext.current()
+                emit(buildReply(toMessage(request.name)))
+            }
+        }.flowOn(armeriaDispatcher())
 
     companion object {
         fun armeriaDispatcher(): CoroutineDispatcher =
