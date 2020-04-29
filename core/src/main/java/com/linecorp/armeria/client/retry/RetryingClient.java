@@ -167,7 +167,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         requireNonNull(retryStrategy, "retryStrategy");
-        return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy), maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+        return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy),
+                            maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     private final boolean useRetryAfter;

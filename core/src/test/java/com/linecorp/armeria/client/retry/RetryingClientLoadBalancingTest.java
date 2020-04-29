@@ -95,7 +95,7 @@ class RetryingClientLoadBalancingTest {
                                                                   .map(port -> Endpoint.of("127.0.0.1", port))
                                                                   .collect(toImmutableList()));
 
-        final RetryStrategy retryStrategy = (ctx, cause) -> {
+        final RetryRule retryRule = (ctx, cause) -> {
             // Get the response status.
             final HttpStatus status;
             if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
@@ -106,13 +106,13 @@ class RetryingClientLoadBalancingTest {
 
             // Retry only once on failure.
             if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
-                return CompletableFuture.completedFuture(Backoff.withoutDelay());
+                return CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.withoutDelay()));
             } else {
-                return CompletableFuture.completedFuture(null);
+                return CompletableFuture.completedFuture(RetryRuleDecision.noRetry());
             }
         };
         final WebClient c = WebClient.builder(SessionProtocol.H2C, group)
-                                     .decorator(RetryingClient.builder(retryStrategy)
+                                     .decorator(RetryingClient.builder(retryRule)
                                                               .newDecorator())
                                      .build();
 

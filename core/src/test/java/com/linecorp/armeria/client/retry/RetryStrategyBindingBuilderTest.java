@@ -57,13 +57,14 @@ class RetryStrategyBindingBuilderTest {
     void buildFluently() {
         final Backoff idempotentBackoff = Backoff.fixed(100);
         final Backoff unprocessedBackoff = Backoff.fixed(200);
-        final RetryRule retryRule = RetryRule.builder()
-                                             .onIdempotentMethods()
-                                             .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-                                             .onException(ClosedChannelException.class)
-                                             .onStatusClass(HttpStatusClass.CLIENT_ERROR)
-                                             .thenBackoff(idempotentBackoff)
-                                             .or(RetryRule.onUnprocessed(unprocessedBackoff));
+        final RetryRule retryRule =
+                RetryRule.builder()
+                         .onIdempotentMethods()
+                         .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                         .onException(ClosedChannelException.class)
+                         .onStatusClass(HttpStatusClass.CLIENT_ERROR)
+                         .thenBackoff(idempotentBackoff)
+                         .or(RetryRule.builder().onUnprocessed().thenBackoff(unprocessedBackoff));
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));

@@ -22,9 +22,6 @@ final class RetryRuleUtil {
         return (ctx, cause) -> rule.shouldRetry(ctx, cause).thenApply(RetryRuleDecision::backoff);
     }
 
-    /**
-     * Converts a {@link RetryStrategy} to a {@link RetryRule}.
-     */
     static RetryRule fromRetryStrategy(RetryStrategy strategy) {
         return (ctx, req) -> strategy.shouldRetry(ctx, req).thenApply(RetryRuleDecision::retry);
     }

@@ -67,12 +67,19 @@ public interface RetryStrategy {
      * Returns a {@link RetryStrategy} that retries with the specified {@link Backoff}
      * only on an {@link UnprocessedRequestException}.
      *
-     * @deprecated Use {@link RetryRule#onUnprocessed(Backoff)}
+     * @deprecated Use {@link RetryRuleBuilder#onUnprocessed()}} and
+     *             {@link RetryRuleBuilder#thenBackoff(Backoff)}.
+     *             For example:
+     *             <pre>{@code
+     *             RetryRule.builder()
+     *                      .onUnprocessed()
+     *                      .thenBackoff(myBackoff);
+     *             }</pre>
      */
     @Deprecated
     static RetryStrategy onUnprocessed(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return RetryRuleUtil.toRetryStrategy(RetryRule.onUnprocessed(backoff));
+        return RetryRuleUtil.toRetryStrategy(RetryRule.builder().onUnprocessed().thenBackoff(backoff));
     }
 
     /**
@@ -91,7 +98,8 @@ public interface RetryStrategy {
      * @param backoffFunction A {@link Function} that returns the {@link Backoff} or {@code null} (no retry)
      *                        according to the given {@link Throwable}
      *
-     * @deprecated Use {@link RetryRule#onException(Predicate, Backoff)}.
+     * @deprecated Use {@link RetryRuleBuilder#onException(Predicate)} and
+     *             {@link RetryRuleBuilder#thenBackoff(Backoff)}.
      */
     @Deprecated
     static RetryStrategy onException(Function<? super Throwable, ? extends Backoff> backoffFunction) {
