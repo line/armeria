@@ -31,6 +31,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -84,7 +85,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
-    private static final ThreadLocal<Boolean> isRefreshingContexts = new ThreadLocal<>();
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -117,6 +117,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
 
+    private final AtomicBoolean isRefreshingContexts = new AtomicBoolean();
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
     @VisibleForTesting
     final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
@@ -163,11 +164,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void refreshContexts() {
-        if (isRefreshingContexts.get() != null || isClosing()) {
+        if (isClosing() || !isRefreshingContexts.compareAndSet(false, true)) {
             return;
         }
 
-        isRefreshingContexts.set(Boolean.TRUE);
         try {
             synchronized (contexts) {
                 final List<Endpoint> newSelectedEndpoints = healthCheckStrategy.getSelectedEndpoints();
@@ -197,7 +197,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
         } finally {
-            isRefreshingContexts.remove();
+            isRefreshingContexts.set(false);
         }
     }
 
