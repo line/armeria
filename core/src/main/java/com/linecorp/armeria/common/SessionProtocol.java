@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,7 +60,11 @@ public enum SessionProtocol {
     /**
      * <a href="https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">PROXY protocol</a> - v1 or v2.
      */
-    PROXY("proxy", false, false, 0);
+    PROXY("proxy", false, false, 0),
+    /**
+     * None.
+     */
+    NONE("none", false, false, -1);
 
     private static final Set<SessionProtocol> HTTP_VALUES = Sets.immutableEnumSet(HTTP, H1C, H2C);
 
@@ -70,10 +75,20 @@ public enum SessionProtocol {
     static {
         final ImmutableMap.Builder<String, SessionProtocol> builder = ImmutableMap.builder();
         for (SessionProtocol e : values()) {
+            if (NONE == e) {
+                continue;
+            }
             builder.put(e.uriText(), e);
         }
 
         uriTextToProtocols = builder.build();
+    }
+
+    /**
+     * TBD.
+     */
+    public static Collection<SessionProtocol> availableValues() {
+        return uriTextToProtocols.values();
     }
 
     /**

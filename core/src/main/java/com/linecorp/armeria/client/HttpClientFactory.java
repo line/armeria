@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -69,9 +68,9 @@ final class HttpClientFactory implements ClientFactory {
     private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
-            Arrays.stream(SessionProtocol.values())
-                  .map(p -> Scheme.of(SerializationFormat.NONE, p))
-                  .collect(toImmutableSet());
+            SessionProtocol.availableValues().stream()
+                           .map(p -> Scheme.of(SerializationFormat.NONE, p))
+                           .collect(toImmutableSet());
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;

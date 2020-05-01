@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -53,11 +52,12 @@ import io.grpc.stub.AbstractStub;
 final class GrpcClientFactory extends DecoratingClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
-            Arrays.stream(SessionProtocol.values())
-                  .flatMap(p -> GrpcSerializationFormats.values()
-                                                        .stream()
-                                                        .map(f -> Scheme.of(f, p)))
-                  .collect(toImmutableSet());
+            SessionProtocol.availableValues()
+                           .stream()
+                           .flatMap(p -> GrpcSerializationFormats.values()
+                                                                 .stream()
+                                                                 .map(f -> Scheme.of(f, p)))
+                           .collect(toImmutableSet());
 
     private static final Consumer<MessageMarshaller.Builder> NO_OP = unused -> {};
 

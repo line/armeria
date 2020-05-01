@@ -50,7 +50,7 @@ public final class Scheme implements Comparable<Scheme> {
         // Pre-populate all possible scheme combos.
         final ImmutableMap.Builder<String, Scheme> schemes = ImmutableMap.builder();
         for (SerializationFormat f : SerializationFormat.values()) {
-            for (SessionProtocol p : SessionProtocol.values()) {
+            for (SessionProtocol p : SessionProtocol.availableValues()) {
                 final String ftxt = f.uriText();
                 final String ptxt = p.uriText();
 
