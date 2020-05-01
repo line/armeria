@@ -19,16 +19,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.beans.PropertyDescriptor;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
@@ -43,7 +40,6 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
 import org.springframework.core.BridgeMethodResolver;
 import org.springframework.core.Ordered;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -61,8 +57,6 @@ import com.linecorp.armeria.server.Server;
 public final class ArmeriaBeanPostProcessor
         implements InstantiationAwareBeanPostProcessor, Ordered {
 
-    private final Set<Class<? extends Annotation>> autowiredAnnotationTypes = new LinkedHashSet<>(2);
-
     private final Map<String, InjectionMetadata> injectionMetadataCache = new ConcurrentHashMap<>(256);
 
     private final BeanFactory beanFactory;
@@ -72,8 +66,6 @@ public final class ArmeriaBeanPostProcessor
      */
     public ArmeriaBeanPostProcessor(BeanFactory beanFactory) {
         this.beanFactory = requireNonNull(beanFactory, "beanFactory");
-        autowiredAnnotationTypes.add(LocalArmeriaPort.class);
-        autowiredAnnotationTypes.add(LocalArmeriaPorts.class);
     }
 
     @Override
@@ -115,10 +107,6 @@ public final class ArmeriaBeanPostProcessor
     }
 
     private InjectionMetadata buildLocalArmeriaPortMetadata(Class<?> clazz) {
-        if (!AnnotationUtils.isCandidateClass(clazz, autowiredAnnotationTypes)) {
-            return InjectionMetadata.EMPTY;
-        }
-
         final List<InjectedElement> elements = new ArrayList<>();
         Class<?> targetClass = clazz;
 
@@ -168,7 +156,7 @@ public final class ArmeriaBeanPostProcessor
         }
         while (targetClass != null && targetClass != Object.class);
 
-        return InjectionMetadata.forElements(elements, clazz);
+        return new InjectionMetadata(clazz, elements);
     }
 
     /**
