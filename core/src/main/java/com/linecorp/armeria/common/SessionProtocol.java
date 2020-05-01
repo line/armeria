@@ -85,7 +85,7 @@ public enum SessionProtocol {
     }
 
     /**
-     * TBD.
+     * Returns {@link SessionProtocol} values excluding {@link SessionProtocol#NONE}.
      */
     public static Collection<SessionProtocol> availableValues() {
         return uriTextToProtocols.values();

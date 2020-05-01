@@ -310,7 +310,6 @@ public class ArmeriaAutoConfigurationTest {
                                              .get("/internal/metrics")
                                              .aggregate().join()
                                              .contentUtf8();
-        System.out.println(metricReport);
         assertThat(metricReport).contains("# TYPE jvm_gc_live_data_size_bytes gauge");
     }
 }
