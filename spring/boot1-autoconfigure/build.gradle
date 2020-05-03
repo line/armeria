@@ -59,6 +59,7 @@ task copyFiles(type: Copy) {
     into "${project.ext.genSrcDir}/main/java"
     exclude '**/ArmeriaBeanPostProcessor.java'
     exclude '**/ArmeriaBeanPostProcessorConfiguration.java'
+    exclude '**/package-info.java'
 }
 
 tasks.compileJava.dependsOn(copyFiles)
