@@ -54,8 +54,7 @@ import com.linecorp.armeria.server.Server;
  * <p>This class was created by referring to classes implementing
  * Spring's {@link InstantiationAwareBeanPostProcessor}.
  */
-public final class ArmeriaBeanPostProcessor
-        implements InstantiationAwareBeanPostProcessor, Ordered {
+public final class ArmeriaBeanPostProcessor implements InstantiationAwareBeanPostProcessor, Ordered {
 
     private final Map<String, InjectionMetadata> injectionMetadataCache = new ConcurrentHashMap<>(256);
 

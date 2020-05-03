@@ -1,11 +1,23 @@
 allprojects {
     ext {
         hasSourceDirectory = this.&hasSourceDirectory.curry(project)
+        hasGenerateSourceDirectory = this.&hasGenerateSourceDirectory.curry(project)
     }
 }
 
 static boolean hasSourceDirectory(Project project, String name) {
     return new File(project.projectDir, 'src').listFiles(new FileFilter() {
+        @Override
+        boolean accept(File pathname) {
+            return pathname.isDirectory()
+        }
+    }).find {
+        dir -> new File(dir, name).isDirectory()
+    } != null
+}
+
+static boolean hasGenerateSourceDirectory(Project project, String name) {
+    return new File(project.projectDir, 'gen-src').listFiles(new FileFilter() {
         @Override
         boolean accept(File pathname) {
             return pathname.isDirectory()

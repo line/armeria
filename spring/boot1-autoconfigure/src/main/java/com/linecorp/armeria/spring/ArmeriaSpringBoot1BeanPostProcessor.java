@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanFactory;
@@ -56,8 +55,7 @@ import com.linecorp.armeria.server.Server;
  * <p>This class was created by referring to classes implementing
  * Spring's {@link InstantiationAwareBeanPostProcessor}.
  */
-public class ArmeriaSpringBoot1BeanPostProcessor
-        implements InstantiationAwareBeanPostProcessor, Ordered {
+public class ArmeriaSpringBoot1BeanPostProcessor implements InstantiationAwareBeanPostProcessor, Ordered {
 
     private final BeanFactory beanFactory;
 
@@ -74,7 +72,7 @@ public class ArmeriaSpringBoot1BeanPostProcessor
 
     @Override
     public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
-        return beanClass;
+        return null;
     }
 
     @Override
@@ -172,13 +170,13 @@ public class ArmeriaSpringBoot1BeanPostProcessor
     }
 
     @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        return null;
+    public Object postProcessBeforeInitialization(Object bean, String beanName) {
+        return bean;
     }
 
     @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return null;
+    public Object postProcessAfterInitialization(Object bean, String beanName) {
+        return bean;
     }
 
     /**

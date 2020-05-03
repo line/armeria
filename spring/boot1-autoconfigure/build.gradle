@@ -52,7 +52,6 @@ dependencies {
 task copyFiles(type: Copy) {
     from "${rootProject.projectDir}/spring/boot-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
-    include '**'
     exclude '**/ArmeriaBeanPostProcessor.java'
     exclude '**/ArmeriaBeanPostProcessorConfiguration.java'
 }
@@ -60,6 +59,14 @@ task copyFiles(type: Copy) {
 tasks.compileJava.dependsOn(copyFiles)
 tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.compileTestThrift)
 tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.generateTestProto)
+
+task copyTestFiles(type: Copy) {
+    from "${rootProject.projectDir}/spring/boot-autoconfigure/src/test",
+            "${rootProject.projectDir}/spring/boot-autoconfigure/gen-src/test"
+    into "${project.ext.genSrcDir}/test"
+}
+
+tasks.compileTestJava.dependsOn(copyTestFiles)
 
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.withType(Checkstyle) {
