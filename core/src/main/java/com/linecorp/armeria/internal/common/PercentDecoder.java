@@ -87,16 +87,14 @@ public final class PercentDecoder {
 
             // At this point, `c` is one of the following characters: # % ' ) + - /
             if (c == '%' || c == '+') {
-                return decodeUtf8Component(tempThreadLocals, s, from, toExcluded);
+                return decodeUtf8Component(tempThreadLocals.charArray(toExcluded - from), s, from, toExcluded);
             }
         }
 
         return s.substring(from, toExcluded);
     }
 
-    private static String decodeUtf8Component(TemporaryThreadLocals tempThreadLocals,
-                                              String s, int from, int toExcluded) {
-        final char[] buf = tempThreadLocals.charArray(toExcluded - from);
+    private static String decodeUtf8Component(char[] buf, String s, int from, int toExcluded) {
         int bufIdx = 0;
         for (int i = from; i < toExcluded;) {
             final int undecodedChars = toExcluded - i;
