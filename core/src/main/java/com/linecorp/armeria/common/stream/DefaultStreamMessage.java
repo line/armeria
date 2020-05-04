@@ -195,7 +195,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         final Object o = queue.peek();
         // If there's no data pushed (i.e empty stream), notify subscriber with the event pushed by
         // close() or close(cause).
-        if (!wroteAny && o instanceof AbstractStreamMessage.CloseEvent) {
+        if (!wroteAny && o instanceof CloseEvent) {
             notifySubscriberOfCloseEvent(subscription, (CloseEvent) queue.remove());
             return;
         }
