@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 import java.util.function.Predicate;
 
@@ -163,6 +165,7 @@ public interface RetryRule {
      * is evaluated.
      */
     default RetryRule or(RetryRule other) {
+        requireNonNull(other, "other");
         return (ctx, cause) -> {
             final CompletionStage<RetryRuleDecision> decisionFuture = shouldRetry(ctx, cause);
             return decisionFuture.thenCompose(decision -> {

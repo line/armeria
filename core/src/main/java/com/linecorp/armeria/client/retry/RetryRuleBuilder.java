@@ -271,12 +271,12 @@ public final class RetryRuleBuilder {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("statusClasses", statusClassesBuilder.build())
-                .add("statuses", statusesBuilder.build())
-                .add("methods", methods)
-                .add("statusFilter", statusFilter)
-                .add("exceptionFilter", exceptionFilter)
-                .omitNullValues()
-                .toString();
+                          .omitNullValues()
+                          .add("statusClasses", statusClassesBuilder.build())
+                          .add("statuses", statusesBuilder.build())
+                          .add("methods", methods)
+                          .add("statusFilter", statusFilter)
+                          .add("exceptionFilter", exceptionFilter)
+                          .toString();
     }
 }
