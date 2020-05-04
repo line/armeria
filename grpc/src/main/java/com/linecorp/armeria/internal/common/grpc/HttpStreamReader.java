@@ -166,12 +166,12 @@ public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunctio
 
     @Override
     public void onError(Throwable cause) {
-        // Handled by accept() below.
+        // Handled by apply() below.
     }
 
     @Override
     public void onComplete() {
-        // Handled by accept() below.
+        // Handled by apply() below.
     }
 
     @Override

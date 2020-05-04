@@ -161,7 +161,7 @@ public class HttpStreamReaderTest {
     @Test
     public void onComplete_when_deframer_isClosing() {
         when(deframer.isClosing()).thenReturn(true);
-        reader.onComplete();
+        reader.apply(null, null);
         verify(deframer, never()).deframe(HttpData.empty(), true);
         verify(deframer, never()).closeWhenComplete();
     }
