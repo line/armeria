@@ -44,9 +44,8 @@ public final class RetryRuleBuilder {
 
     private static final CompletableFuture<RetryRuleDecision> NEXT =
             CompletableFuture.completedFuture(RetryRuleDecision.next());
-    private static final CompletableFuture<RetryRuleDecision> DEFAULT_DECISION_FUTURE =
+    private static final CompletableFuture<RetryRuleDecision> DEFAULT_DECISION =
            CompletableFuture.completedFuture(RetryRuleDecision.DEFAULT);
-
 
     private static final Set<HttpMethod> IDEMPOTENT_METHODS =
             ImmutableSet.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.PUT, HttpMethod.DELETE);
@@ -240,7 +239,7 @@ public final class RetryRuleBuilder {
         }
         final CompletableFuture<RetryRuleDecision> decisionFuture;
         if (decision == RetryRuleDecision.DEFAULT) {
-           decisionFuture = DEFAULT_DECISION_FUTURE;
+           decisionFuture = DEFAULT_DECISION;
         } else {
             decisionFuture = CompletableFuture.completedFuture(decision);
         }
