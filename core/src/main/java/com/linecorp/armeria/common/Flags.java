@@ -90,7 +90,7 @@ public final class Flags {
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
 
     @Nullable
-    private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRS;
+    private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES;
 
     static {
         final String spec = getNormalized("verboseExceptions", DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
@@ -123,8 +123,8 @@ public final class Flags {
                 VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
         }
 
-        final List<Predicate<InetAddress>> preferredIpV4Addrs =
-        CSV_SPLITTER.splitToList(getNormalized("preferredIpV4Addrs", "", unused -> true))
+        final List<Predicate<InetAddress>> preferredIpV4Addresses =
+        CSV_SPLITTER.splitToList(getNormalized("preferredIpV4Addresses", "", unused -> true))
                     .stream()
                     .map(cidr -> {
                         try {
@@ -136,16 +136,16 @@ public final class Flags {
                     })
                     .filter(Objects::nonNull)
                     .collect(toImmutableList());
-        switch (preferredIpV4Addrs.size()) {
+        switch (preferredIpV4Addresses.size()) {
             case 0:
-                PREFERRED_IP_V4_ADDRS = null;
+                PREFERRED_IP_V4_ADDRESSES = null;
                 break;
             case 1:
-                PREFERRED_IP_V4_ADDRS = preferredIpV4Addrs.get(0);
+                PREFERRED_IP_V4_ADDRESSES = preferredIpV4Addresses.get(0);
                 break;
             default:
-                PREFERRED_IP_V4_ADDRS = inetAddress -> {
-                    for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addrs) {
+                PREFERRED_IP_V4_ADDRESSES = inetAddress -> {
+                    for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses) {
                         if (preferredIpV4Addr.test(inetAddress)) {
                             return true;
                         }
@@ -974,15 +974,15 @@ public final class Flags {
      * {@link SystemInfo#defaultNonLoopbackIpV4Address()}.
      *
      * <p>The default value of this flag is {@code null}, which means all valid IPv4 addresses are
-     * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addrs=<csv>} JVM option
+     * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
      * to override the default value. The {@code csv} should be
      * <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing(CIDR)</a>s or
-     * exact IP addresses separated by commas.
-     * For example, {@code -Dcom.linecorp.armeria.=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
+     * exact IP addresses separated by commas. For example,
+     * {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
      */
     @Nullable
-    public static Predicate<InetAddress> preferredIpV4Addrs() {
-        return PREFERRED_IP_V4_ADDRS;
+    public static Predicate<InetAddress> preferredIpV4Addresses() {
+        return PREFERRED_IP_V4_ADDRESSES;
     }
 
     /**

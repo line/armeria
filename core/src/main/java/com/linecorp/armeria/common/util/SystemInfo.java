@@ -169,7 +169,7 @@ public final class SystemInfo {
     /**
      * Returns the non-loopback {@link Inet4Address} whose {@link NetworkInterface#getIndex()} is the lowest.
      *
-     * @see Flags#preferredIpV4Addrs()
+     * @see Flags#preferredIpV4Addresses()
      */
     @Nullable
     public static Inet4Address defaultNonLoopbackIpV4Address() {
@@ -456,7 +456,7 @@ public final class SystemInfo {
 
             if (result != null) {
                 defaultNonLoopbackIpV4Address = result;
-                logger.info("defaultNonLoopbackIpV4Address: {} from: {}",
+                logger.info("defaultNonLoopbackIpV4Address: {} (from: {})",
                             defaultNonLoopbackIpV4Address, nicDisplayName);
             } else {
                 Inet4Address temp = null;
@@ -464,7 +464,7 @@ public final class SystemInfo {
                     final InetAddress localHost = InetAddress.getLocalHost();
                     if (localHost instanceof Inet4Address) {
                         temp = (Inet4Address) localHost;
-                        logger.info("defaultNonLoopbackIpV4Address: {} from: InetAddress.getLocalHost()",
+                        logger.info("defaultNonLoopbackIpV4Address: {} (from: InetAddress.getLocalHost())",
                                     temp);
                     } else {
                         logger.warn("Could not get a non-loopback IPv4 address. " +
@@ -479,7 +479,7 @@ public final class SystemInfo {
         }
 
         private static boolean isPreferredAddress(InetAddress address) {
-            final Predicate<InetAddress> predicates = Flags.preferredIpV4Addrs();
+            final Predicate<InetAddress> predicates = Flags.preferredIpV4Addresses();
             if (predicates == null) {
                 return true;
             }
