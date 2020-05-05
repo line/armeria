@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
 import com.google.common.collect.MapMaker;
@@ -30,6 +31,9 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.internal.TimedExecutor;
+import io.micrometer.core.instrument.internal.TimedExecutorService;
+import io.micrometer.core.instrument.internal.TimedScheduledExecutorService;
 
 /**
  * A utility that prevents double instantiation of an object for a certain {@link MeterIdPrefix}. This can be
