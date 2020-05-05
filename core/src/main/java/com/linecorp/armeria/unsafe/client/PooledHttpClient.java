@@ -53,13 +53,4 @@ public interface PooledHttpClient extends HttpClient, Unwrappable {
      * @return the {@link PooledHttpResponse} to the specified {@link PooledHttpRequest}
      */
     PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception;
-
-    /**
-     * Returns the unpooled delegate of this {@link PooledHttpClient}.
-     */
-    default HttpClient toUnpooled() {
-        final HttpClient unpooled = as(HttpClient.class);
-        assert unpooled != null;
-        return unpooled;
-    }
 }

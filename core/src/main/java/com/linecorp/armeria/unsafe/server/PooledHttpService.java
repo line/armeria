@@ -57,13 +57,4 @@ public interface PooledHttpService extends HttpService, Unwrappable {
      * @return the {@link PooledHttpResponse}
      */
     PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception;
-
-    /**
-     * Returns the unpooled delegate of this {@link PooledHttpService}.
-     */
-    default HttpService toUnpooled() {
-        final HttpService unpooled = as(HttpService.class);
-        assert unpooled != null;
-        return unpooled;
-    }
 }
