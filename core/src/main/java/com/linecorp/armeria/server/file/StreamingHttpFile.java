@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
-import com.linecorp.armeria.unsafe.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

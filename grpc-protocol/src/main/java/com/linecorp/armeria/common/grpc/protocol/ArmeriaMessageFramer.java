@@ -57,7 +57,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
-import com.linecorp.armeria.unsafe.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

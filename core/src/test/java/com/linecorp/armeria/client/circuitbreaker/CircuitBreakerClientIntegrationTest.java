@@ -33,7 +33,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
 
 import io.netty.buffer.Unpooled;
 

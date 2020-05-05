@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.unsafe.common;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.unsafe.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,6 +31,18 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 public interface PooledHttpRequest extends HttpRequest {
+
+    /**
+     * Returns a {@link PooledHttpRequest} that wraps the {@link HttpRequest}, ensuring all published data
+     * is a {@link PooledHttpData}.
+     */
+    static PooledHttpRequest of(HttpRequest delegate) {
+        requireNonNull(delegate, "delegate");
+        if (delegate instanceof PooledHttpRequest) {
+            return (PooledHttpRequest) delegate;
+        }
+        return new DefaultPooledHttpRequest(delegate);
+    }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
@@ -66,12 +78,16 @@ public interface PooledHttpRequest extends HttpRequest {
      */
     @Override
     @Deprecated
-    CompletableFuture<AggregatedHttpRequest> aggregate();
+    default CompletableFuture<AggregatedHttpRequest> aggregate() {
+        return HttpRequest.super.aggregate();
+    }
 
     /**
      * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
      */
     @Override
     @Deprecated
-    CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor);
+    default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
+        return HttpRequest.super.aggregate(executor);
+    }
 }

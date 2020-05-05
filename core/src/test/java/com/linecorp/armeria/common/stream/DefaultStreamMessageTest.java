@@ -33,7 +33,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;

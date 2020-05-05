@@ -25,7 +25,6 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -44,12 +43,13 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
-import com.linecorp.armeria.unsafe.PooledHttpClient;
-import com.linecorp.armeria.unsafe.PooledHttpData;
+import com.linecorp.armeria.unsafe.client.PooledHttpClient;
+import com.linecorp.armeria.unsafe.client.PooledSimpleDecoratingHttpClient;
+import com.linecorp.armeria.unsafe.common.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
+import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
@@ -128,31 +128,25 @@ public final class UnaryGrpcClient {
         }
     }
 
-    private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
+    private static final class GrpcFramingDecorator extends PooledSimpleDecoratingHttpClient {
 
         private GrpcFramingDecorator(HttpClient delegate) {
-            super(PooledHttpClient.of(delegate));
+            super(delegate);
         }
 
         @Override
-        public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(
+        public PooledHttpResponse doExecute(ClientRequestContext ctx, PooledHttpRequest req) {
+            final HttpResponse response = HttpResponse.from(
                     req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                        .thenCompose(
                                msg -> {
-                                   final ByteBuf buf;
-                                   if (msg.content() instanceof ByteBufHolder) {
-                                       buf = ((ByteBufHolder) msg.content()).content();
-                                   } else {
-                                       buf = Unpooled.wrappedBuffer(msg.content().array());
-                                   }
-                                   final HttpData framed;
+                                   final ByteBuf buf = msg.content().content();
+                                   final PooledHttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                                            ctx.alloc(), Integer.MAX_VALUE)) {
                                        framed = framer.writePayload(buf);
                                    }
 
-                                   assert delegate() instanceof PooledHttpClient;
                                    final PooledHttpClient client = delegate();
                                    try {
                                        return client.execute(ctx, HttpRequest.of(req.headers(), framed))
@@ -197,6 +191,7 @@ public final class UnaryGrpcClient {
                            }
                            return responseFuture;
                        }), ctx.eventLoop());
+            return PooledHttpResponse.of(response);
         }
     }
 }

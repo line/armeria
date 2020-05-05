@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.unsafe.client;
 
 import java.net.URI;
 
@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
+import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 
 final class DefaultPooledWebClient extends AbstractUnwrappable<WebClient> implements PooledWebClient {
 
@@ -34,12 +35,12 @@ final class DefaultPooledWebClient extends AbstractUnwrappable<WebClient> implem
 
     @Override
     public PooledHttpResponse execute(HttpRequest req) {
-        return new DefaultPooledHttpResponse(delegate().execute(req));
+        return PooledHttpResponse.of(delegate().execute(req));
     }
 
     @Override
     public PooledHttpResponse execute(AggregatedHttpRequest aggregatedReq) {
-        return new DefaultPooledHttpResponse(delegate().execute(aggregatedReq));
+        return PooledHttpResponse.of(delegate().execute(aggregatedReq));
     }
 
     @Override

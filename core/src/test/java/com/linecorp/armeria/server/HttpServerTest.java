@@ -86,7 +86,7 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;

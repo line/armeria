@@ -66,9 +66,9 @@ import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
-import com.linecorp.armeria.unsafe.PooledAggregatedHttpResponse;
-import com.linecorp.armeria.unsafe.PooledHttpClient;
-import com.linecorp.armeria.unsafe.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.PooledAggregatedHttpResponse;
+import com.linecorp.armeria.unsafe.client.PooledHttpClient;
+import com.linecorp.armeria.unsafe.common.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

@@ -14,24 +14,25 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.unsafe.common;
 
 import java.nio.charset.Charset;
+import java.util.List;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 
-final class DefaultPooledAggregatedHttpRequest implements PooledAggregatedHttpRequest {
+final class DefaultPooledAggregatedHttpResponse implements PooledAggregatedHttpResponse {
 
-    private final AggregatedHttpRequest delegate;
+    private final AggregatedHttpResponse delegate;
     private final PooledHttpData content;
 
-    DefaultPooledAggregatedHttpRequest(AggregatedHttpRequest delegate) {
+    DefaultPooledAggregatedHttpResponse(AggregatedHttpResponse delegate) {
         this.delegate = delegate;
 
         // This is only called with the result of a pooled aggregation, it would be a programming bug for this
@@ -41,30 +42,18 @@ final class DefaultPooledAggregatedHttpRequest implements PooledAggregatedHttpRe
     }
 
     @Override
-    public RequestHeaders headers() {
+    public ResponseHeaders headers() {
         return delegate.headers();
     }
 
     @Override
-    public HttpMethod method() {
-        return delegate.method();
+    public List<ResponseHeaders> informationals() {
+        return delegate.informationals();
     }
 
     @Override
-    public String path() {
-        return delegate.path();
-    }
-
-    @Override
-    @Nullable
-    public String scheme() {
-        return delegate.scheme();
-    }
-
-    @Override
-    @Nullable
-    public String authority() {
-        return delegate.authority();
+    public HttpStatus status() {
+        return delegate.status();
     }
 
     @Override
@@ -73,19 +62,13 @@ final class DefaultPooledAggregatedHttpRequest implements PooledAggregatedHttpRe
     }
 
     @Override
-    @Nullable
-    public MediaType contentType() {
-        return delegate.contentType();
-    }
-
-    @Override
     public PooledHttpData content() {
         return content;
     }
 
     @Override
-    public PooledHttpRequest toHttpRequest() {
-        return new DefaultPooledHttpRequest(delegate.toHttpRequest());
+    public PooledHttpResponse toHttpResponse() {
+        return PooledHttpResponse.of(delegate.toHttpResponse());
     }
 
     @Override
@@ -101,6 +84,12 @@ final class DefaultPooledAggregatedHttpRequest implements PooledAggregatedHttpRe
     @Override
     public String contentAscii() {
         return content.toStringAscii();
+    }
+
+    @Override
+    @Nullable
+    public MediaType contentType() {
+        return delegate.contentType();
     }
 
     @Override

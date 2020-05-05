@@ -36,7 +36,7 @@ import com.linecorp.armeria.grpc.shared.GithubApiService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.unsafe.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpData;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;

@@ -28,8 +28,8 @@ import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.core.io.buffer.PooledDataBuffer;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
-import com.linecorp.armeria.unsafe.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpData;
 
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;

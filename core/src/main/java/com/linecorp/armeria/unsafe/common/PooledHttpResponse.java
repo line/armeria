@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.unsafe.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +35,18 @@ import io.netty.util.concurrent.EventExecutor;
  * A streamed HTTP/2 {@link Response} which returns pooled buffers.
  */
 public interface PooledHttpResponse extends HttpResponse {
+
+    /**
+     * Returns a {@link PooledHttpResponse} that wraps the {@link HttpResponse}, ensuring all published data
+     * is a {@link PooledHttpData}.
+     */
+    static PooledHttpResponse of(HttpResponse delegate) {
+        requireNonNull(delegate, "delegate");
+        if (delegate instanceof PooledHttpResponse) {
+            return (PooledHttpResponse) delegate;
+        }
+        return new DefaultPooledHttpResponse(delegate);
+    }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
@@ -70,12 +82,16 @@ public interface PooledHttpResponse extends HttpResponse {
      */
     @Override
     @Deprecated
-    CompletableFuture<AggregatedHttpResponse> aggregate();
+    default CompletableFuture<AggregatedHttpResponse> aggregate() {
+        return HttpResponse.super.aggregate();
+    }
 
     /**
      * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
      */
     @Override
     @Deprecated
-    CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor);
+    default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
+        return HttpResponse.super.aggregate(executor);
+    }
 }

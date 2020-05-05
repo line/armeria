@@ -14,32 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.unsafe.client;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
+import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 
-/**
- * Sends an {@link HttpRequest} to a remote {@link Endpoint}.
- */
-public interface PooledHttpClient extends HttpClient {
+final class DefaultPooledHttpClient extends AbstractUnwrappable<HttpClient> implements PooledHttpClient {
 
-    /**
-     * Creates a {@link PooledHttpClient} that delegates to the provided {@link HttpClient} for issuing
-     * requests.
-     */
-    static PooledHttpClient of(HttpClient delegate) {
-        if (delegate instanceof PooledHttpClient) {
-            return (PooledHttpClient) delegate;
-        }
-        return new DefaultPooledHttpClient(delegate);
+    DefaultPooledHttpClient(HttpClient delegate) {
+        super(delegate);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    PooledHttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception;
+    public PooledHttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        return PooledHttpResponse.of(delegate().execute(ctx, req));
+    }
 }

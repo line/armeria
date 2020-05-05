@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 
-import com.linecorp.armeria.unsafe.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
