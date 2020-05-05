@@ -20,12 +20,15 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
 import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 
 /**
  * Sends an {@link HttpRequest} to a remote {@link Endpoint}.
  */
-public interface PooledHttpClient extends HttpClient {
+public interface PooledHttpClient extends HttpClient, Unwrappable {
 
     /**
      * Creates a {@link PooledHttpClient} that delegates to the provided {@link HttpClient} for issuing
@@ -38,9 +41,25 @@ public interface PooledHttpClient extends HttpClient {
         return new DefaultPooledHttpClient(delegate);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    PooledHttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception;
+    default HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        return execute(ctx, PooledHttpRequest.of(req));
+    }
+
+    /**
+     * Sends a {@link PooledHttpRequest} to a remote {@link Endpoint}, as specified in
+     * {@link ClientRequestContext#endpoint()}.
+     *
+     * @return the {@link PooledHttpResponse} to the specified {@link PooledHttpRequest}
+     */
+    PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception;
+
+    /**
+     * Returns the unpooled delegate of this {@link PooledHttpClient}.
+     */
+    default HttpClient toUnpooled() {
+        final HttpClient unpooled = as(HttpClient.class);
+        assert unpooled != null;
+        return unpooled;
+    }
 }

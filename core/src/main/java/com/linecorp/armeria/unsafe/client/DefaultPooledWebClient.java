@@ -25,6 +25,8 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
+import com.linecorp.armeria.unsafe.common.PooledAggregatedHttpRequest;
+import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
 import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 
 final class DefaultPooledWebClient extends AbstractUnwrappable<WebClient> implements PooledWebClient {
@@ -35,12 +37,12 @@ final class DefaultPooledWebClient extends AbstractUnwrappable<WebClient> implem
 
     @Override
     public PooledHttpResponse execute(HttpRequest req) {
-        return PooledHttpResponse.of(delegate().execute(req));
+        return PooledHttpResponse.of(delegate().execute(PooledHttpRequest.of(req)));
     }
 
     @Override
     public PooledHttpResponse execute(AggregatedHttpRequest aggregatedReq) {
-        return PooledHttpResponse.of(delegate().execute(aggregatedReq));
+        return PooledHttpResponse.of(delegate().execute(PooledAggregatedHttpRequest.of(aggregatedReq)));
     }
 
     @Override

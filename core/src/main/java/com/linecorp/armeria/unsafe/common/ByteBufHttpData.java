@@ -49,17 +49,6 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
     static final ByteBufHttpData EMPTY = new ByteBufHttpData(
             new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT), false);
 
-    /**
-     * Converts non-pooled {@link HttpData} into {@link PooledHttpData}.
-     */
-    static PooledHttpData convert(HttpData data) {
-        requireNonNull(data, "data");
-        if (data instanceof PooledHttpData) {
-            return (PooledHttpData) data;
-        }
-        return new ByteBufHttpData(Unpooled.wrappedBuffer(data.array()), data.isEndOfStream());
-    }
-
     private final ByteBuf buf;
     private final boolean endOfStream;
     private final int length;

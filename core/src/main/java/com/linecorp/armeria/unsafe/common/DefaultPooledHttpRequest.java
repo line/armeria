@@ -42,7 +42,7 @@ final class DefaultPooledHttpRequest extends FilteredHttpRequest implements Pool
         if (!(obj instanceof HttpData)) {
             return obj;
         }
-        return ByteBufHttpData.convert((HttpData) obj);
+        return PooledHttpData.of((HttpData) obj);
     }
 
     @Override

@@ -45,6 +45,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -66,9 +67,10 @@ import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
-import com.linecorp.armeria.unsafe.common.PooledAggregatedHttpResponse;
 import com.linecorp.armeria.unsafe.client.PooledHttpClient;
+import com.linecorp.armeria.unsafe.common.PooledAggregatedHttpResponse;
 import com.linecorp.armeria.unsafe.common.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -147,7 +149,8 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             assert delegate() instanceof PooledHttpClient;
             final PooledHttpClient client = delegate();
             final CompletableFuture<PooledAggregatedHttpResponse> future =
-                    client.execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
+                    client.execute(ctx, PooledHttpRequest.of(httpReq))
+                          .aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
 
             future.handle((res, cause) -> {
                 if (cause != null) {

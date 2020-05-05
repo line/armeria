@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.unsafe.common;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -24,6 +26,18 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * {@link AutoCloseable#close()} on this response or the {@code content} to release pooled resources.
  */
 public interface PooledAggregatedHttpRequest extends AggregatedHttpRequest, SafeCloseable {
+
+    /**
+     * Returns a {@link PooledAggregatedHttpRequest} that wraps the {@link AggregatedHttpRequest}, ensuring all
+     * published data is a {@link PooledHttpData}.
+     */
+    static PooledAggregatedHttpRequest of(AggregatedHttpRequest delegate) {
+        requireNonNull(delegate, "delegate");
+        if (delegate instanceof PooledAggregatedHttpRequest) {
+            return (PooledAggregatedHttpRequest) delegate;
+        }
+        return new DefaultPooledAggregatedHttpRequest(delegate);
+    }
 
     /**
      * {@inheritDoc}

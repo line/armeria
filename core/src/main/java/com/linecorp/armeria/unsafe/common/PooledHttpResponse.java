@@ -78,6 +78,9 @@ public interface PooledHttpResponse extends HttpResponse {
     }
 
     /**
+     * Aggregate this response without pooled objects. When operating on {@link PooledHttpResponse}, this should
+     * be avoided.
+     *
      * @deprecated Use {@link #aggregateWithPooledObjects()}.
      */
     @Override
@@ -87,6 +90,9 @@ public interface PooledHttpResponse extends HttpResponse {
     }
 
     /**
+     * Aggregate this response without pooled objects. When operating on {@link PooledHttpResponse}, this should
+     * be avoided.
+     *
      * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
      */
     @Override

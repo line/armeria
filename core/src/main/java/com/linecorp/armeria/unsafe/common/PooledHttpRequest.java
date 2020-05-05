@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.HttpRequestAggregator;
@@ -30,6 +31,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
+/**
+ * A streamed HTTP/2 {@link Request} which returns pooled buffers.
+ */
 public interface PooledHttpRequest extends HttpRequest {
 
     /**
@@ -45,7 +49,7 @@ public interface PooledHttpRequest extends HttpRequest {
     }
 
     /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects() {
@@ -53,8 +57,8 @@ public interface PooledHttpRequest extends HttpRequest {
     }
 
     /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the request are received fully.
      */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects(EventExecutor executor) {
         requireNonNull(executor);
@@ -62,8 +66,8 @@ public interface PooledHttpRequest extends HttpRequest {
     }
 
     /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the request are received fully.
      */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
@@ -74,6 +78,9 @@ public interface PooledHttpRequest extends HttpRequest {
     }
 
     /**
+     * Aggregate this request without pooled objects. When operating on {@link PooledHttpRequest}, this should
+     * be avoided.
+     *
      * @deprecated Use {@link #aggregateWithPooledObjects()}.
      */
     @Override
@@ -83,6 +90,9 @@ public interface PooledHttpRequest extends HttpRequest {
     }
 
     /**
+     * Aggregate this request without pooled objects. When operating on {@link PooledHttpRequest}, this should
+     * be avoided.
+     *
      * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
      */
     @Override

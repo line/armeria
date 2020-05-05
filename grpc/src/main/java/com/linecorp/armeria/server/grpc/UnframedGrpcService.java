@@ -51,6 +51,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.unsafe.common.PooledHttpData;
+import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
+import com.linecorp.armeria.unsafe.server.PooledHttpService;
+import com.linecorp.armeria.unsafe.server.SimplePooledDecoratingHttpService;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
@@ -75,7 +78,7 @@ import io.netty.buffer.ByteBufHolder;
  *     </li>
  * </ul>
  */
-final class UnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
+final class UnframedGrpcService extends SimplePooledDecoratingHttpService implements GrpcService {
 
     private static final char LINE_SEPARATOR = '\n';
 
@@ -113,19 +116,20 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    public HttpResponse serve(
+            ServiceRequestContext ctx, PooledHttpRequest req, PooledHttpService service) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
-            return delegate().serve(ctx, req);
+            return service.serve(ctx, req);
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
                 // Framed request, so just delegate.
-                return delegate().serve(ctx, req);
+                return service.serve(ctx, req);
             }
         }
 
@@ -133,7 +137,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
-            return delegate().serve(ctx, req);
+            return service.serve(ctx, req);
         }
 
         if (method.getType() != MethodType.UNARY) {

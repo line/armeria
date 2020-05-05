@@ -44,10 +44,9 @@ import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.unsafe.client.PooledHttpClient;
-import com.linecorp.armeria.unsafe.client.PooledSimpleDecoratingHttpClient;
+import com.linecorp.armeria.unsafe.client.SimplePooledDecoratingHttpClient;
 import com.linecorp.armeria.unsafe.common.PooledHttpData;
 import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
-import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -128,15 +127,16 @@ public final class UnaryGrpcClient {
         }
     }
 
-    private static final class GrpcFramingDecorator extends PooledSimpleDecoratingHttpClient {
+    private static final class GrpcFramingDecorator extends SimplePooledDecoratingHttpClient {
 
         private GrpcFramingDecorator(HttpClient delegate) {
             super(delegate);
         }
 
         @Override
-        public PooledHttpResponse doExecute(ClientRequestContext ctx, PooledHttpRequest req) {
-            final HttpResponse response = HttpResponse.from(
+        public HttpResponse execute(
+                ClientRequestContext ctx, PooledHttpRequest req, PooledHttpClient client) {
+            return HttpResponse.from(
                     req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                        .thenCompose(
                                msg -> {
@@ -147,9 +147,9 @@ public final class UnaryGrpcClient {
                                        framed = framer.writePayload(buf);
                                    }
 
-                                   final PooledHttpClient client = delegate();
                                    try {
-                                       return client.execute(ctx, HttpRequest.of(req.headers(), framed))
+                                       return client.execute(
+                                               ctx, PooledHttpRequest.of(HttpRequest.of(req.headers(), framed)))
                                                     .aggregateWithPooledObjects(ctx.eventLoop(),
                                                                                 ctx.alloc());
                                    } catch (Exception e) {
@@ -191,7 +191,6 @@ public final class UnaryGrpcClient {
                            }
                            return responseFuture;
                        }), ctx.eventLoop());
-            return PooledHttpResponse.of(response);
         }
     }
 }

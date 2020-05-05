@@ -34,10 +34,7 @@ final class DefaultPooledAggregatedHttpRequest implements PooledAggregatedHttpRe
     DefaultPooledAggregatedHttpRequest(AggregatedHttpRequest delegate) {
         this.delegate = delegate;
 
-        // This is only called with the result of a pooled aggregation, it would be a programming bug for this
-        // to not be true.
-        assert delegate.content() instanceof PooledHttpData;
-        content = (PooledHttpData) delegate.content();
+        content = PooledHttpData.of(delegate.content());
     }
 
     @Override
@@ -84,11 +81,6 @@ final class DefaultPooledAggregatedHttpRequest implements PooledAggregatedHttpRe
     }
 
     @Override
-    public PooledHttpRequest toHttpRequest() {
-        return PooledHttpRequest.of(delegate.toHttpRequest());
-    }
-
-    @Override
     public String content(Charset charset) {
         return content.toString(charset);
     }
@@ -101,6 +93,11 @@ final class DefaultPooledAggregatedHttpRequest implements PooledAggregatedHttpRe
     @Override
     public String contentAscii() {
         return content.toStringAscii();
+    }
+
+    @Override
+    public PooledHttpRequest toHttpRequest() {
+        return PooledHttpRequest.of(delegate.toHttpRequest());
     }
 
     @Override

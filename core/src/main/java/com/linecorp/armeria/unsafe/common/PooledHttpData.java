@@ -24,6 +24,7 @@ import com.linecorp.armeria.unsafe.client.PooledWebClient;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 
 /**
  * A {@link HttpData} that is backed by a pooled {@link ByteBuf} for optimizing certain internal use cases. Not
@@ -95,6 +96,18 @@ import io.netty.buffer.ByteBufHolder;
  * Reference counted objects</a> for more information on pooled objects.
  */
 public interface PooledHttpData extends HttpData, ByteBufHolder, SafeCloseable {
+
+    /**
+     * Converts non-pooled {@link HttpData} into {@link PooledHttpData}.
+     */
+    static PooledHttpData of(HttpData data) {
+        requireNonNull(data, "obj");
+        if (data instanceof PooledHttpData) {
+            return (PooledHttpData) data;
+        }
+
+        return new ByteBufHttpData(Unpooled.wrappedBuffer(data.array()), data.isEndOfStream());
+    }
 
     /**
      * Converts the specified Netty {@link ByteBuf} into an {@link PooledHttpData}. The buffer is not copied;

@@ -29,7 +29,6 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -161,17 +160,6 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     @Override
     public CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         return delegate.aggregate(executor).thenApply(this::replaceHeaders);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
-        return delegate.aggregateWithPooledObjects(alloc).thenApply(this::replaceHeaders);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
-            EventExecutor executor, ByteBufAllocator alloc) {
-        return delegate.aggregateWithPooledObjects(executor, alloc).thenApply(this::replaceHeaders);
     }
 
     private AggregatedHttpRequest replaceHeaders(AggregatedHttpRequest req) {

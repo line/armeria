@@ -29,25 +29,32 @@ import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 /**
  * Decorates an {@link HttpClient}, ensuring {@link HttpData} are all {@link PooledHttpData}.
  */
-public abstract class PooledSimpleDecoratingHttpClient extends SimpleDecoratingHttpClient {
+public abstract class SimplePooledDecoratingHttpClient extends SimpleDecoratingHttpClient
+        implements PooledHttpClient {
+
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
-     * @param delegate
      */
-    protected PooledSimpleDecoratingHttpClient(HttpClient delegate) {
+    protected SimplePooledDecoratingHttpClient(HttpClient delegate) {
         super(PooledHttpClient.of(delegate));
     }
 
     @Override
     public final HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        PooledHttpClient client = delegate();
-        return client.execute(ctx, PooledHttpRequest.of(req));
+        return execute(ctx, PooledHttpRequest.of(req), delegate());
+    }
+
+    @Override
+    public PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception {
+        return PooledHttpResponse.of(execute(ctx, req, delegate()));
     }
 
     /**
      * Execute the {@code req} with the given {@code ctx}.
      *
-     * @see SimpleDecoratingHttpClient#execute(ClientRequestContext, HttpRequest).
+     * @see SimpleDecoratingHttpClient#execute(ClientRequestContext, HttpRequest)
      */
-    protected abstract PooledHttpResponse doExecute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception;
+    protected abstract HttpResponse execute(
+            ClientRequestContext ctx, PooledHttpRequest req, PooledHttpClient client)
+            throws Exception;
 }
