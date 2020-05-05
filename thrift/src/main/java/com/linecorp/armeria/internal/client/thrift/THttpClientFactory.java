@@ -41,7 +41,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
 
     static {
         final ImmutableSet.Builder<Scheme> builder = ImmutableSet.builder();
-        for (SessionProtocol p : SessionProtocol.availableValues()) {
+        for (SessionProtocol p : SessionProtocol.values()) {
             for (SerializationFormat f : ThriftSerializationFormats.values()) {
                 builder.add(Scheme.of(f, p));
             }

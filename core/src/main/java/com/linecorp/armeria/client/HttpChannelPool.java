@@ -177,7 +177,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                       Function<SessionProtocol, T> factory,
                                       SessionProtocol... allowedProtocols) {
         @SuppressWarnings("unchecked")
-        final T[] maps = (T[]) Array.newInstance(elementType, SessionProtocol.availableValues().size());
+        final T[] maps = (T[]) Array.newInstance(elementType, SessionProtocol.values().length);
         // Attempting to access the array with an unallowed protocol will trigger NPE,
         // which will help us find a bug.
         for (SessionProtocol p : allowedProtocols) {

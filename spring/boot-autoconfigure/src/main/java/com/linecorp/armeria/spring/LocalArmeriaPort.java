@@ -34,7 +34,6 @@ public @interface LocalArmeriaPort {
 
     /**
      * Specifies the {@link SessionProtocol} to get the port from the {@link Server}.
-     * If a user does not specify a value, {@link Server#activeLocalPort()} is used.
      */
-    SessionProtocol value() default SessionProtocol.NONE;
+    SessionProtocol value() default SessionProtocol.HTTP;
 }
