@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -37,6 +38,9 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
+
+import com.google.common.base.Splitter;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.server.annotation.Description;
 
@@ -54,6 +58,9 @@ import com.linecorp.armeria.server.annotation.Description;
         "com.linecorp.armeria.server.annotation.Patch",
 })
 public class DocumentationProcessor extends AbstractProcessor {
+    private static final Splitter LINEBREAK_SPLITTER = Splitter.on(Pattern.compile("\\R"))
+                                                               .trimResults()
+                                                               .omitEmptyStrings();
     private final Map<String, Properties> propertiesMap = new HashMap<>();
 
     @Override
@@ -94,7 +101,7 @@ public class DocumentationProcessor extends AbstractProcessor {
     }
 
     private void writeProperties(String className, Properties properties) throws IOException {
-        if (properties.size() == 0) {
+        if (properties.isEmpty()) {
             return;
         }
         final FileObject resource = processingEnv.getFiler().createResource(
@@ -127,25 +134,24 @@ public class DocumentationProcessor extends AbstractProcessor {
         if (docComment == null || !docComment.contains("@param")) {
             return;
         }
-        final List<List<String>> lines = Arrays.stream(docComment.split("\\R"))
-                                               .filter(line -> !line.trim().isEmpty())
-                                               .map(line -> Arrays.stream(line.split("\\s"))
-                                                                  .filter(word -> !word.trim().isEmpty())
-                                                                  .collect(toImmutableList()))
-                                               .collect(toImmutableList());
+        final List<List<String>> lines = Streams.stream(LINEBREAK_SPLITTER.split(docComment))
+                                                .map(line -> Arrays.stream(line.split("\\s"))
+                                                                   .filter(word -> !word.trim().isEmpty())
+                                                                   .collect(toImmutableList()))
+                                                .collect(toImmutableList());
         method.getParameters().forEach(param -> {
             final StringBuilder stringBuilder = new StringBuilder();
             JavaDocParserState state = JavaDocParserState.SEARCHING;
             for (List<String> line : lines) {
                 final List<String> subLine;
                 if ((line.size() < 3 ||
-                     !"@param".equals(line.get(0)) ||
+                     !line.get(0).startsWith("@") ||
                      !param.getSimpleName().toString().equals(line.get(1))) &&
                     state == JavaDocParserState.SEARCHING) {
                     continue;
                 } else if (state == JavaDocParserState.IN_DESCRIPTION &&
-                           line.size() > 0 &&
-                           "@param".equals(line.get(0))) {
+                           !line.isEmpty() &&
+                           line.get(0).startsWith("@")) {
                     break;
                 } else if (state == JavaDocParserState.SEARCHING) {
                     subLine = line.subList(2, line.size());
@@ -162,13 +168,13 @@ public class DocumentationProcessor extends AbstractProcessor {
         });
     }
 
-    private void setProperty(Properties properties,
-                             ExecutableElement method,
-                             VariableElement parameter,
-                             String description) {
+    private static void setProperty(Properties properties,
+                                    ExecutableElement method,
+                                    VariableElement parameter,
+                                    String description) {
         final String methodName = method.getSimpleName().toString();
         final String parameterName = parameter.getSimpleName().toString();
-        properties.setProperty(methodName + "." + parameterName, description);
+        properties.setProperty(methodName + '.' + parameterName, description);
     }
 
     /**

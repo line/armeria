@@ -66,4 +66,53 @@ public class WithJavaDoc {
                   @Param("y") String y) {
         System.out.println(x + y);
     }
+
+    /**
+     * hasReturn method.
+     * @param x The x variable in hasReturn
+     * @return The number 1
+     */
+    @Get
+    public int hasReturn(@Param("x") String x) {
+        System.out.println(x);
+        return 1;
+    }
+
+    /**
+     * hasThrows method.
+     * @param x The x variable in hasThrows
+     * @throws IllegalArgumentException when x is empty
+     */
+    @Get
+    public void hasThrows(@Param("x") String x) {
+        if (x.isEmpty()) {
+            throw new IllegalArgumentException("x is empty");
+        }
+        System.out.println(x);
+    }
+
+    /**
+     * hasReturnAndThrows method.
+     * @param x The x variable in hasReturnAndThrows
+     * @return The number 1
+     * @throws IllegalArgumentException when x is empty
+     */
+    @Get
+    public int hasReturnAndThrows(@Param("x") String x) {
+        if (x.isEmpty()) {
+            throw new IllegalArgumentException("x is empty");
+        }
+        System.out.println(x);
+        return 1;
+    }
+
+    /**
+     * hasMultilineComment method.
+     * @param x The x variable in hasMultilineComment
+     *          and this continues on the next line
+     */
+    @Get
+    public void hasMultilineComment(@Param("x") String x) {
+        System.out.println(x);
+    }
 }

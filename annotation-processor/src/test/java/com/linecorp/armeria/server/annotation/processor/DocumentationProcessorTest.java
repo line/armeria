@@ -29,6 +29,7 @@ import java.util.Properties;
 
 import org.joor.CompileOptions;
 import org.joor.Reflect;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,14 @@ public class DocumentationProcessorTest {
         assumeThat(SystemInfo.javaVersion()).isGreaterThanOrEqualTo(11);
     }
 
+    @AfterAll
+    public static void classCleanUp() throws IOException {
+        Files.deleteIfExists(Paths.get(
+                "com.linecorp.armeria.docstrings.annotated.com.linecorp.armeria.WithJavaDoc.properties"));
+        Files.deleteIfExists(Paths.get(
+                "com.linecorp.armeria.docstrings.annotated.com.linecorp.armeria.NoJavaDoc.properties"));
+    }
+
     @Test
     public void withJavaDoc() throws IOException {
         Reflect.compile(
@@ -51,7 +60,7 @@ public class DocumentationProcessorTest {
                 loadFile("WithJavaDoc.java"),
                 new CompileOptions().processors(target)
         );
-        testAndDeleteFile("com.linecorp.armeria.WithJavaDoc");
+        testFile("com.linecorp.armeria.WithJavaDoc");
     }
 
     @Test
@@ -65,20 +74,25 @@ public class DocumentationProcessorTest {
         assertThat(Files.notExists(Paths.get(fileName))).isTrue();
     }
 
-    private void testAndDeleteFile(String fileName) throws IOException {
+    private static void testFile(String fileName) throws IOException {
         final Path path = Paths.get(DocumentationProcessor.getFileName(fileName));
         assertThat(Files.exists(path)).isTrue();
         final Properties properties = new Properties();
         properties.load(Files.newInputStream(path));
-        assertThat(properties.get("a.x")).isEqualTo("The x variable in a");
-        assertThat(properties.get("a.y")).isEqualTo("The y variable in a");
-        assertThat(properties.get("b.x")).isEqualTo("The x variable in b");
-        assertThat(properties.get("b.y")).isEqualTo("The y variable in b");
-        assertThat(properties.get("c.x")).isEqualTo("The x variable in c");
-        assertThat(properties.get("c.y")).isEqualTo("The y variable in c");
-        assertThat(properties.get("d.x")).isEqualTo("The x variable in d");
-        assertThat(properties.get("d.y")).isEqualTo("The y variable in d");
-        assertThat(Files.deleteIfExists(path)).isTrue();
+        assertThat(properties.getProperty("a.x")).isEqualTo("The x variable in a");
+        assertThat(properties.getProperty("a.y")).isEqualTo("The y variable in a");
+        assertThat(properties.getProperty("b.x")).isEqualTo("The x variable in b");
+        assertThat(properties.getProperty("b.y")).isEqualTo("The y variable in b");
+        assertThat(properties.getProperty("c.x")).isEqualTo("The x variable in c");
+        assertThat(properties.getProperty("c.y")).isEqualTo("The y variable in c");
+        assertThat(properties.getProperty("d.x")).isEqualTo("The x variable in d");
+        assertThat(properties.getProperty("d.y")).isEqualTo("The y variable in d");
+        assertThat(properties.getProperty("hasReturn.x")).isEqualTo("The x variable in hasReturn");
+        assertThat(properties.getProperty("hasThrows.x")).isEqualTo("The x variable in hasThrows");
+        assertThat(properties.getProperty("hasReturnAndThrows.x"))
+                .isEqualTo("The x variable in hasReturnAndThrows");
+        assertThat(properties.getProperty("hasMultilineComment.x"))
+                .isEqualTo("The x variable in hasMultilineComment and this continues on the next line");
     }
 
     private String loadFile(String fileName) throws IOException {

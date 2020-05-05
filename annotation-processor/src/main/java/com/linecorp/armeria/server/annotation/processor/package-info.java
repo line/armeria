@@ -15,7 +15,7 @@
  */
 
 /**
- * Annotation processors for RESTful services.
+ * Annotation processors for annotated services.
  */
 @NonNullByDefault
 package com.linecorp.armeria.server.annotation.processor;
