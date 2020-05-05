@@ -24,8 +24,10 @@ import javax.inject.Inject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -37,7 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.spring.LocalArmeriaPortTest.TestConfiguration;
+import com.linecorp.armeria.spring.LocalArmeriaPortsTest.TestConfiguration;
 
 /**
  * Tests for {@link LocalArmeriaPorts}.
@@ -51,41 +53,83 @@ public class LocalArmeriaPortsTest {
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
     static class TestConfiguration {
+
+        @Bean
+        LocalArmeriaPortsForFieldInjection localArmeriaPortsForFieldInjection() {
+            return new LocalArmeriaPortsForFieldInjection();
+        }
+
+        @Bean
+        LocalArmeriaPortsForMethodInjection localArmeriaPortsForMethodInjection() {
+            return new LocalArmeriaPortsForMethodInjection();
+        }
     }
 
-    @LocalArmeriaPorts
-    private List<Integer> ports;
+    static class LocalArmeriaPortsForFieldInjection {
+
+        @LocalArmeriaPorts
+        private List<Integer> ports;
+
+        List<Integer> getPorts() {
+            return ports;
+        }
+    }
+
+    static class LocalArmeriaPortsForMethodInjection {
+
+        private List<Integer> ports;
+
+        @LocalArmeriaPorts
+        void setPorts(List<Integer> ports) {
+            this.ports = ports;
+        }
+
+        List<Integer> getPorts() {
+            return ports;
+        }
+    }
 
     @Inject
     private Server server;
+    @Inject
+    private BeanFactory beanFactory;
+    @LocalArmeriaPorts
+    private List<Integer> ports;
 
     private String newUrl(String scheme, Integer port) {
         return scheme + "://127.0.0.1:" + port;
     }
 
     @Test
-    public void testPortConfiguration() throws Exception {
+    public void testPortConfigurationFromFieldInjection() throws Exception {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
-        assertThat(serverPorts).size().isEqualTo(ports.size());
+        final LocalArmeriaPortsForFieldInjection bean = beanFactory.getBean(
+                LocalArmeriaPortsForFieldInjection.class);
+        final List<Integer> ports = bean.getPorts();
         serverPorts.stream()
                    .map(sp -> sp.localAddress().getPort())
                    .forEach(port -> assertThat(ports).contains(port));
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() {
-        ports.forEach(port -> {
-            try {
-                final WebClient client = WebClient.of(newUrl("h1c", port));
+    public void testPortConfigurationFromMethodInjection() throws Exception {
+        final Collection<ServerPort> serverPorts = server.activePorts().values();
+        final LocalArmeriaPortsForMethodInjection bean = beanFactory.getBean(
+                LocalArmeriaPortsForMethodInjection.class);
+        final List<Integer> ports = bean.getPorts();
+        serverPorts.stream()
+                   .map(sp -> sp.localAddress().getPort())
+                   .forEach(port -> assertThat(ports).contains(port));
+    }
 
-                final HttpResponse response = client.get("/ok");
-
-                final AggregatedHttpResponse res = response.aggregate().get();
-                assertThat(res.status()).isEqualTo(HttpStatus.OK);
-                assertThat(res.contentUtf8()).isEqualTo("ok");
-            } catch (Exception e) {
-                // Ignored
-            }
-        });
+    @Test
+    public void testHttpServiceRegistrationBean() throws Exception {
+        for (Integer port : ports) {
+            final WebClient client = WebClient.of(newUrl("h1c", port));
+            final HttpResponse response = client.get("/ok");
+            final AggregatedHttpResponse res = response.aggregate().get();
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+            assertThat(res.contentUtf8()).isEqualTo("ok");
+        }
     }
 }

@@ -41,7 +41,8 @@ import org.springframework.beans.factory.config.InstantiationAwareBeanPostProces
 import org.springframework.core.BridgeMethodResolver;
 import org.springframework.core.Ordered;
 import org.springframework.util.ReflectionUtils;
-import org.springframework.util.StringUtils;
+
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
@@ -50,9 +51,6 @@ import com.linecorp.armeria.server.Server;
  * {@link BeanPostProcessor} implementation that autowires annotated fields, setter methods, and arbitrary
  * config methods. Such members to be injected are detected through annotations:
  * by default, {@link LocalArmeriaPort} and {@link LocalArmeriaPorts} annotations.
- *
- * <p>This class was created by referring to classes implementing
- * Spring's {@link InstantiationAwareBeanPostProcessor}.
  */
 public final class ArmeriaBeanPostProcessor implements InstantiationAwareBeanPostProcessor, Ordered {
 
@@ -88,7 +86,7 @@ public final class ArmeriaBeanPostProcessor implements InstantiationAwareBeanPos
 
     private InjectionMetadata findLocalArmeriaPortMetadata(
             String beanName, Class<?> clazz, @Nullable PropertyValues pvs) {
-        final String cacheKey = StringUtils.hasLength(beanName) ? beanName : clazz.getName();
+        final String cacheKey = Strings.isNullOrEmpty(beanName) ? beanName : clazz.getName();
         InjectionMetadata metadata = injectionMetadataCache.get(cacheKey);
         if (InjectionMetadata.needsRefresh(metadata, clazz)) {
             synchronized (injectionMetadataCache) {
@@ -116,13 +114,15 @@ public final class ArmeriaBeanPostProcessor implements InstantiationAwareBeanPos
                 if (field.isAnnotationPresent(LocalArmeriaPort.class)) {
                     if (Modifier.isStatic(field.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPort annotations are not supported on static fields");
+                                "LocalArmeriaPort annotation is not supported on the static field: " +
+                                field.getName());
                     }
                     currElements.add(new LocalArmeriaPortElement(field, field, null));
                 } else if (field.isAnnotationPresent(LocalArmeriaPorts.class)) {
                     if (Modifier.isStatic(field.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPorts annotations are not supported on static fields");
+                                "LocalArmeriaPorts annotation is not supported on the static field: " +
+                                field.getName());
                     }
                     currElements.add(new LocalArmeriaPortsElement(field, null));
                 }
@@ -136,14 +136,16 @@ public final class ArmeriaBeanPostProcessor implements InstantiationAwareBeanPos
                 if (bridgedMethod.isAnnotationPresent(LocalArmeriaPort.class)) {
                     if (Modifier.isStatic(method.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPort annotations are not supported on static methods");
+                                "LocalArmeriaPort annotation is not supported on the static field: " +
+                                method.getName());
                     }
                     final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
                     currElements.add(new LocalArmeriaPortElement(method, bridgedMethod, pd));
                 } else if (bridgedMethod.isAnnotationPresent(LocalArmeriaPorts.class)) {
                     if (Modifier.isStatic(method.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPorts annotations are not supported on static methods");
+                                "LocalArmeriaPorts annotation is not supported on the static field: " +
+                                method.getName());
                     }
                     final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
                     currElements.add(new LocalArmeriaPortsElement(method, pd));

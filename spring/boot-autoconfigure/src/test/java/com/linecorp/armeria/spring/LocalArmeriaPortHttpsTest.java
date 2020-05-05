@@ -21,75 +21,45 @@ import javax.inject.Inject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.LocalArmeriaPortTest.TestConfiguration;
 
 /**
- * Tests for {@link LocalArmeriaPort}.
+ * Tests for {@link LocalArmeriaPort} when https.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
-@ActiveProfiles({ "local", "autoConfTest" })
+@ActiveProfiles({ "local", "sslTest" })
 @DirtiesContext
-public class LocalArmeriaPortTest {
+public class LocalArmeriaPortHttpsTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
-    static class TestConfiguration {
+    static class TestConfiguration {}
 
-        @Bean
-        LocalArmeriaPortForFieldInjection localArmeriaPortForFieldInjection() {
-            return new LocalArmeriaPortForFieldInjection();
-        }
-
-        @Bean
-        LocalArmeriaPortForMethodInjection localArmeriaPortForMethodInjection() {
-            return new LocalArmeriaPortForMethodInjection();
-        }
-    }
-
-    static class LocalArmeriaPortForFieldInjection {
-
-        @LocalArmeriaPort
-        private Integer port;
-
-        Integer getPort() {
-            return port;
-        }
-    }
-
-    static class LocalArmeriaPortForMethodInjection {
-
-        private Integer port;
-
-        @LocalArmeriaPort
-        void setPort(Integer port) {
-            this.port = port;
-        }
-
-        Integer getPort() {
-            return port;
-        }
-    }
+    private static final ClientFactory clientFactory =
+            ClientFactory.builder()
+                         .tlsNoVerify()
+                         .addressResolverGroupFactory(it -> MockAddressResolverGroup.localhost())
+                         .build();
 
     @Inject
     private Server server;
-    @Inject
-    private BeanFactory beanFactory;
-    @LocalArmeriaPort
+    @LocalArmeriaPort(SessionProtocol.HTTPS)
     private Integer port;
 
     private String newUrl(String scheme) {
@@ -97,25 +67,17 @@ public class LocalArmeriaPortTest {
     }
 
     @Test
-    public void testPortConfigurationFromFieldInjection() throws Exception {
-        final Integer actualPort = server.activeLocalPort();
-        final LocalArmeriaPortForFieldInjection bean = beanFactory.getBean(
-                LocalArmeriaPortForFieldInjection.class);
-        assertThat(actualPort).isEqualTo(bean.getPort());
-    }
-
-    @Test
-    public void testPortConfigurationFromMethodInjection() throws Exception {
-        final Integer actualPort = server.activeLocalPort();
-        final LocalArmeriaPortForMethodInjection bean = beanFactory.getBean(
-                LocalArmeriaPortForMethodInjection.class);
-        assertThat(actualPort).isEqualTo(bean.getPort());
+    public void testPortConfiguration() throws Exception {
+        final Integer actualPort = server.activeLocalPort(SessionProtocol.HTTPS);
+        assertThat(actualPort).isEqualTo(port);
     }
 
     @Test
     public void testHttpServiceRegistrationBean() throws Exception {
-        final WebClient client = WebClient.of(newUrl("h1c"));
-        final HttpResponse response = client.get("/ok");
+        final HttpResponse response = WebClient.builder(newUrl("https"))
+                                               .factory(clientFactory)
+                                               .build()
+                                               .get("/ok");
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("ok");

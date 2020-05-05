@@ -51,9 +51,6 @@ import com.linecorp.armeria.server.Server;
  * {@link BeanPostProcessor} implementation that autowires annotated fields, setter methods, and arbitrary
  * config methods. Such members to be injected are detected through annotations:
  * by default, {@link LocalArmeriaPort} and {@link LocalArmeriaPorts} annotations.
- *
- * <p>This class was created by referring to classes implementing
- * Spring's {@link InstantiationAwareBeanPostProcessor}.
  */
 public class ArmeriaSpringBoot1BeanPostProcessor implements InstantiationAwareBeanPostProcessor, Ordered {
 
@@ -127,13 +124,15 @@ public class ArmeriaSpringBoot1BeanPostProcessor implements InstantiationAwareBe
                 if (field.isAnnotationPresent(LocalArmeriaPort.class)) {
                     if (Modifier.isStatic(field.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPort annotations are not supported on static fields");
+                                "LocalArmeriaPort annotation is not supported on the static field: " +
+                                field.getName());
                     }
                     currElements.add(new LocalArmeriaPortElement(field, field, null));
                 } else if (field.isAnnotationPresent(LocalArmeriaPorts.class)) {
                     if (Modifier.isStatic(field.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPorts annotations are not supported on static fields");
+                                "LocalArmeriaPorts annotation is not supported on the static field: " +
+                                field.getName());
                     }
                     currElements.add(new LocalArmeriaPortsElement(field, null));
                 }
@@ -147,14 +146,16 @@ public class ArmeriaSpringBoot1BeanPostProcessor implements InstantiationAwareBe
                 if (bridgedMethod.isAnnotationPresent(LocalArmeriaPort.class)) {
                     if (Modifier.isStatic(method.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPort annotations are not supported on static methods");
+                                "LocalArmeriaPort annotation is not supported on the static field: " +
+                                method.getName());
                     }
                     final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
                     currElements.add(new LocalArmeriaPortElement(method, bridgedMethod, pd));
                 } else if (bridgedMethod.isAnnotationPresent(LocalArmeriaPorts.class)) {
                     if (Modifier.isStatic(method.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPorts annotations are not supported on static methods");
+                                "LocalArmeriaPorts annotation is not supported on the static field: " +
+                                method.getName());
                     }
                     final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
                     currElements.add(new LocalArmeriaPortsElement(method, pd));

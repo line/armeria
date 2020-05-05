@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 /**
  * Specifies active ports of an Armeria server.
  */
-@Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
+@Target({ ElementType.FIELD, ElementType.METHOD, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface LocalArmeriaPorts {

@@ -9,7 +9,7 @@ buildscript {
 
 configure(projectsWithFlags('java')) {
     // Add protobuf/gRPC support if there is src/*/proto, gen-src/*/proto
-    if (project.ext.hasSourceDirectory('proto') || project.ext.hasGenerateSourceDirectory('proto')) {
+    if (project.ext.hasSourceDirectory('proto') || project.ext.hasGenerated('proto')) {
         apply plugin: com.google.protobuf.gradle.ProtobufPlugin
 
         protobuf {

@@ -27,14 +27,14 @@ import com.linecorp.armeria.server.Server;
 /**
  * Specifies an active local port of an Armeria server.
  */
-@Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
+@Target({ ElementType.FIELD, ElementType.METHOD, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface LocalArmeriaPort {
 
     /**
      * Specifies the {@link SessionProtocol} to get the port from the {@link Server}.
-     * If a user specify a default value, {@link Server#activeLocalPort()} is used.
+     * If a user does not specify a value, {@link Server#activeLocalPort()} is used.
      */
     SessionProtocol value() default SessionProtocol.NONE;
 }
