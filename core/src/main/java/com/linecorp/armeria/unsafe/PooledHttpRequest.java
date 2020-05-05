@@ -62,24 +62,16 @@ public interface PooledHttpRequest extends HttpRequest {
     }
 
     /**
-     * Throws {@link UnsupportedOperationException}.
-     *
      * @deprecated Use {@link #aggregateWithPooledObjects()}.
      */
     @Override
     @Deprecated
-    default CompletableFuture<AggregatedHttpRequest> aggregate() {
-        throw new UnsupportedOperationException();
-    }
+    CompletableFuture<AggregatedHttpRequest> aggregate();
 
     /**
-     * Throws {@link UnsupportedOperationException}.
-     *
      * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
      */
     @Override
     @Deprecated
-    default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
-        throw new UnsupportedOperationException();
-    }
+    CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor);
 }

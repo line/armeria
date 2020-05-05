@@ -66,24 +66,16 @@ public interface PooledHttpResponse extends HttpResponse {
     }
 
     /**
-     * Throws {@link UnsupportedOperationException}.
-     *
      * @deprecated Use {@link #aggregateWithPooledObjects()}.
      */
     @Override
     @Deprecated
-    default CompletableFuture<AggregatedHttpResponse> aggregate() {
-        throw new UnsupportedOperationException();
-    }
+    CompletableFuture<AggregatedHttpResponse> aggregate();
 
     /**
-     * Throws {@link UnsupportedOperationException}.
-     *
      * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
      */
     @Override
     @Deprecated
-    default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
-        throw new UnsupportedOperationException();
-    }
+    CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor);
 }

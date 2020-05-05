@@ -17,7 +17,6 @@
 package com.linecorp.armeria.unsafe;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -102,13 +101,5 @@ class PooledWebClientTest {
                         assertThat(response.content().content().alloc()).isSameAs(alloc);
                     }
                 }).join();
-    }
-
-    @Test
-    void unpooledAggregate() {
-        assertThatThrownBy(() -> client.get("/hello").aggregate())
-                .isInstanceOf(UnsupportedOperationException.class);
-        assertThatThrownBy(() -> client.get("/hello").aggregate(eventLoop.get()))
-                .isInstanceOf(UnsupportedOperationException.class);
     }
 }
