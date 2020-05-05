@@ -42,7 +42,7 @@ public class DocumentationProcessorTest {
 
     @BeforeAll
     public static void classSetup() {
-        assumeThat(SystemInfo.javaVersion()).isGreaterThanOrEqualTo(11);
+        assumeThat(SystemInfo.javaVersion()).isGreaterThanOrEqualTo(13);
     }
 
     @AfterAll
