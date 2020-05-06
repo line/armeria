@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -45,10 +44,6 @@ public class AbstractClientOptionsBuilder {
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
     private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
-
-    private boolean basicAuthSet;
-    private boolean oAuth1aSet;
-    private boolean oAuth2Set;
 
     /**
      * Creates a new instance.
@@ -309,10 +304,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(BasicToken token) {
         requireNonNull(token, "token");
-        checkState(!oAuth1aSet || !oAuth2Set,
-                   "cannot set basic auth with %s.", oAuth1aSet ? "OAuth 1.0" : "OAuth 2.0");
         httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
-        basicAuthSet = true;
         return this;
     }
 
@@ -322,10 +314,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
         requireNonNull(token, "token");
-        checkState(!basicAuthSet || !oAuth2Set,
-                   "cannot set OAuth 1.0 with %s.", basicAuthSet ? "basic auth" : "OAuth 2.0");
         httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
-        oAuth1aSet = true;
         return this;
     }
 
@@ -335,10 +324,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth2Token token) {
         requireNonNull(token, "token");
-        checkState(!basicAuthSet || !oAuth1aSet,
-                   "cannot set OAuth 2.0 with %s.", basicAuthSet ? "basic auth" : "OAuth 1.0");
         httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
-        oAuth2Set = true;
         return this;
     }
 
