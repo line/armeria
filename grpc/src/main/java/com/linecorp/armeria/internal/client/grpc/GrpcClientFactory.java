@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -24,6 +25,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
@@ -84,18 +87,19 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final ClientOptions options = params.options();
 
         final SerializationFormat serializationFormat = scheme.serializationFormat();
-        final Class<?> stubClass = clientType.getEnclosingClass();
-        if (stubClass == null) {
+        final Class<?> enclosingClass = clientType.getEnclosingClass();
+        if (enclosingClass == null) {
             throw newUnknownClientTypeException(clientType);
         }
 
         final HttpClient httpClient = newHttpClient(params);
-        final Method stubFactoryMethod = findStubFactoryMethod(clientType, stubClass);
 
+        // TODO(ikhoon): Support gjson with Kotlin coroutine stub once
+        //               https://github.com/grpc/grpc-kotlin/pull/63 is released
         final MessageMarshaller jsonMarshaller =
                 GrpcSerializationFormats.isJson(serializationFormat) ?
                 GrpcJsonUtil.jsonMarshaller(
-                        stubMethods(stubClass),
+                        stubMethods(enclosingClass),
                         options.get(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER)) : null;
 
         final ArmeriaChannel channel = new ArmeriaChannel(
@@ -106,17 +110,27 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 serializationFormat,
                 jsonMarshaller);
 
+        final Method stubFactoryMethod = findStubFactoryMethod(clientType, enclosingClass);
         try {
             // Verified stubFactoryMethod.getReturnType() == clientType in findStubFactoryMethod().
-            return stubFactoryMethod.invoke(null, channel);
-        } catch (IllegalAccessException | InvocationTargetException e) {
+            if (stubFactoryMethod != null) {
+                return stubFactoryMethod.invoke(null, channel);
+            } else {
+                final Constructor<?> stubConstructor = findStubConstructor(clientType);
+                if (stubConstructor == null) {
+                    throw newUnknownClientTypeException(clientType);
+                }
+                return stubConstructor.newInstance(channel);
+            }
+        } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
             throw new IllegalStateException("Could not create a gRPC stub through reflection.", e);
         }
     }
 
-    private static <T> Method findStubFactoryMethod(Class<T> clientType, Class<?> stubClass) {
+    @Nullable
+    private static <T> Method findStubFactoryMethod(Class<T> clientType, Class<?> enclosingClass) {
         Method newStubMethod = null;
-        for (Method method : stubClass.getDeclaredMethods()) {
+        for (Method method : enclosingClass.getDeclaredMethods()) {
             final int methodModifiers = method.getModifiers();
             if (!(Modifier.isPublic(methodModifiers) && Modifier.isStatic(methodModifiers))) {
                 // Must be public and static.
@@ -143,11 +157,23 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             newStubMethod = method;
             break;
         }
-
-        if (newStubMethod == null) {
-            throw newUnknownClientTypeException(clientType);
-        }
         return newStubMethod;
+    }
+
+    @Nullable
+    private static <T> Constructor<?> findStubConstructor(Class<T> clientType) {
+        if (!clientType.getName().endsWith("CoroutineStub")) {
+            return null;
+        }
+
+        for (Constructor<?> constructor: clientType.getConstructors()) {
+            final Class<?>[] methodParameterTypes = constructor.getParameterTypes();
+            if (methodParameterTypes.length == 1 && methodParameterTypes[0] == Channel.class) {
+                // Must have a single `Channel` parameter.
+                return constructor;
+            }
+        }
+        return null;
     }
 
     private static IllegalArgumentException newUnknownClientTypeException(Class<?> clientType) {
