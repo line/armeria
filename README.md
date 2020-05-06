@@ -12,7 +12,7 @@ Visit [the official web site](https://line.github.io/armeria/) for more informat
 
 > Build a reactive microservice **at your pace**, not theirs.
 
-_Armeria_ is an all-round microservice framework that lets you build any type of microservices
+_Armeria_ is an all-round microservice framework that lets you build any type of microservice
 leveraging your favorite technologies, including [gRPC](https://grpc.io/),
 [Thrift](https://thrift.apache.org/), [Kotlin](https://kotlinlang.org/),
 [Retrofit](https://square.github.io/retrofit/), [Reactive Streams](https://www.reactive-streams.org/),

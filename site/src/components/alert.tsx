@@ -3,7 +3,7 @@ import React from 'react';
 import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 
 interface AlertProps {
-  type?: 'success' | 'info' | 'warning' | 'error';
+  type: 'success' | 'info' | 'warning' | 'error';
   showIcon?: boolean;
   style?: React.CSSProperties;
   className?: string;

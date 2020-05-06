@@ -25,18 +25,15 @@ const TypeLink: React.FC<TypeLinkProps> = props => {
     }
   }
 
-  if (props.href) {
-    return (
-      <code>
-        <OutboundLink href={props.href}>{simpleTypeName}</OutboundLink>
-        <span className={styles.typeLinkSuffix}>{suffix}</span>
-      </code>
-    );
-  }
+  const simpleTypeNameWithHref = props.href ? (
+    <OutboundLink href={props.href}>{simpleTypeName}</OutboundLink>
+  ) : (
+    simpleTypeName
+  );
 
   return (
     <code>
-      {simpleTypeName}
+      {simpleTypeNameWithHref}
       <span className={styles.typeLinkSuffix}>{suffix}</span>
     </code>
   );

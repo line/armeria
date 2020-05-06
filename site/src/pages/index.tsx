@@ -102,7 +102,7 @@ const IndexPage: React.FC<{
           </Title>
           <Paragraph>
             <em>Armeria</em> is an all-round microservice framework that lets
-            you build any type of microservices leveraging your favorite
+            you build any type of microservice leveraging your favorite
             technologies, including gRPC, Thrift, Kotlin, Retrofit, Reactive
             Streams, Spring Boot and Dropwizard.
           </Paragraph>
@@ -114,7 +114,7 @@ const IndexPage: React.FC<{
             and his colleagues at{' '}
             <Tooltip title="The company behind the most popular mobile messaging app in Japan, Taiwan and Thai">
               <OutboundLink href="https://engineering.linecorp.com/en/">
-                LINE corporation
+                LINE
               </OutboundLink>
             </Tooltip>{' '}
             &rdquo;
@@ -125,7 +125,7 @@ const IndexPage: React.FC<{
       <Marketing>
         <MarketingBlock>
           <Title level={1}>
-            gRPC, Thrift, REST, files? <NoWrap>You name it.</NoWrap>{' '}
+            gRPC, Thrift, REST, static files? <NoWrap>You name it.</NoWrap>{' '}
             <Highlight nowrap>We serve them all.</Highlight>
           </Title>
           <Paragraph>
@@ -136,11 +136,10 @@ const IndexPage: React.FC<{
             some static files.
           </Paragraph>
           <Paragraph>
-            Armeria is capable of running services of different protocols, all
-            in a single port. Waste no more setting up forward proxy or sidecar.
-            Worry no more about operational complexity and points of failure.
-            Imagine you don&apos;t need to set anything up while you migrate
-            from one protocol to another.
+            Armeria is capable of running services using different protocols,
+            all on a single port. No need for any proxies or sidecars. Enjoy the
+            reduced complexity and points of failure, even when migrating
+            between protocols!
           </Paragraph>
         </MarketingBlock>
         <MarketingBlock>
@@ -178,9 +177,10 @@ const IndexPage: React.FC<{
           </Title>
           <Paragraph>
             RPC protocols were often more difficult to work with than RESTful
-            API. How would you make an ad-hoc call to your gRPC service when you
-            can&apos;t find the right <code>.proto</code> file? How would you
-            help your colleague reproduce your problem by making the same call?
+            APIs. How would you make an ad-hoc call to your gRPC service when
+            you can&apos;t find the right <code>.proto</code> file? How would
+            you help your colleague reproduce your problem by making the same
+            call?
           </Paragraph>
           <Paragraph>
             Armeria&apos;s <em>documentation service</em> allows you to browse
@@ -226,7 +226,7 @@ const IndexPage: React.FC<{
             single process. Automated serving of API documentation, complete
             with sample payloads, allows simple ad-hoc gRPC requests straight
             from the browser. Distributed tracing is trivial to configure using
-            the built-in Zipkin decorators. Logging request bodies, performing
+            the built-in Brave decorators. Logging request bodies, performing
             retries or circuit breaking are all built-in. The friendly devs
             rapidly respond to issues and feature requests. Armeria is becoming
             the default stack for gRPC at Afterpay.
@@ -280,11 +280,10 @@ const IndexPage: React.FC<{
           </Title>
           <Paragraph>
             Wanna try some cool technology while using Spring Boot or
-            Dropwizard? That&apos;s absolutely fine. Armeria integrates with
-            them so smoothly that it&apos;s not like any other that claims so.
-            It serves gRPC or Thrift requests at high efficiency while leaving
-            other requests to Spring MVC, WebFlux or Dropwizard with minimal
-            changes only.
+            Dropwizard? That&apos;s absolutely fine. Armeria integrates them
+            without getting in the way. It serves gRPC or Thrift requests at
+            high efficiency while leaving other requests to Spring MVC, WebFlux
+            or Dropwizard with minimal changes only.
           </Paragraph>
           <Paragraph>
             Got a legacy webapp you must keep until you migrate off? No problem!
