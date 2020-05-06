@@ -46,7 +46,8 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
+import com.linecorp.armeria.client.retry.RetryRuleDecision;
+import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -60,16 +61,11 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class RetryingRpcClientTest {
 
-    private static final RetryStrategyWithContent<RpcResponse> retryAlways =
-            (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(500));
+    private static final RetryRuleWithContent<RpcResponse> retryAlways =
+            (ctx, response) -> CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.fixed(500)));
 
-    private static final RetryStrategyWithContent<RpcResponse> retryOnException =
-            (ctx, response) -> response.whenComplete().handle((unused, cause) -> {
-                if (cause != null) {
-                    return Backoff.withoutDelay();
-                }
-                return null;
-            });
+    private static final RetryRuleWithContent<RpcResponse> retryOnException =
+            RetryRuleWithContent.<RpcResponse>builder().onException().thenBackoff(Backoff.withoutDelay());
 
     private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
     private final DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
@@ -84,6 +80,8 @@ class RetryingRpcClientTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final AtomicInteger retryCount = new AtomicInteger();
+            sb.requestTimeoutMillis(0);
+            sb.idleTimeoutMillis(0);
             sb.service("/thrift", THttpService.of(serviceHandler).decorate(
                     (delegate, ctx, req) -> {
                         final int count = retryCount.getAndIncrement();
@@ -131,8 +129,9 @@ class RetryingRpcClientTest {
     @Test
     void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
         final BlockingQueue<RequestLog> logQueue = new LinkedTransferQueue<>();
-        final RetryStrategyWithContent<RpcResponse> strategy =
-                (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(10000000));
+        final RetryRuleWithContent<RpcResponse> strategy =
+                (ctx, response) -> CompletableFuture.completedFuture(
+                        RetryRuleDecision.retry(Backoff.fixed(10000000)));
         final HelloService.Iface client = helloClient(strategy, 100, logQueue);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
         final Throwable thrown = catchThrowable(() -> client.hello("hello"));
@@ -158,16 +157,20 @@ class RetryingRpcClientTest {
         assertThatThrownBy(() -> client.hello("bar")).isSameAs(exception);
     }
 
-    private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
+    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
+                      .responseTimeoutMillis(0)
+                      .factory(ClientFactory.builder()
+                                            .idleTimeoutMillis(0)
+                                            .build())
                       .rpcDecorator(RetryingRpcClient.builder(strategy)
                                                      .maxTotalAttempts(maxAttempts)
                                                      .newDecorator())
                       .build(HelloService.Iface.class);
     }
 
-    private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
+    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> strategy,
                                            int maxAttempts, BlockingQueue<RequestLog> logQueue) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
                       .rpcDecorator(RetryingRpcClient.builder(strategy)
@@ -200,10 +203,10 @@ class RetryingRpcClientTest {
         final ClientFactory factory =
                 ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
-        final RetryStrategyWithContent<RpcResponse> strategy =
+        final RetryRuleWithContent<RpcResponse> strategy =
                 (ctx, response) -> {
                     // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
-                    return CompletableFuture.completedFuture(Backoff.fixed(8000));
+                    return CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.fixed(8000)));
                 };
 
         final HelloService.Iface client =

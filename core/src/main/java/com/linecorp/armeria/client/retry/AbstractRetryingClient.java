@@ -188,7 +188,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     @Deprecated
     protected RetryStrategyWithContent<O> retryStrategyWithContent() {
-        return retryRuleWithContent()::shouldRetry;
+        return RetryRuleUtil.toRetryStrategyWithContent(retryRuleWithContent());
     }
 
     /**

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
@@ -23,10 +24,18 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 
@@ -41,23 +50,28 @@ public interface RetryRule {
      * Returns a newly created {@link RetryRule} that will retry with the
      * {@link Backoff#ofDefault() default backoff} if the request HTTP method is
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
-     * and an {@link UnprocessedRequestException} is raised or the class of the response status is
+     * and an {@link Exception} is raised or the class of the response status is
      * {@link HttpStatusClass#SERVER_ERROR}.
+     * Or an {@link UnprocessedRequestException} is raised regardless of the request HTTP method.
      *
      * <p>Note that a client can safely retry a failed request with this rule if an endpoint service produces
-     * the same result (no side effects) on idempotent HTTP methods.
+     * the same result (no side effects) on idempotent HTTP methods or {@link UnprocessedRequestException}.
      *
      * <p>This method is shortcut for:
      * <pre>{@code
-     * RetryRule.builder()
-     *          .onIdempotentMethods()
-     *          .onServerErrorStatus()
-     *          .onUnprocessed()
-     *          .thenBackoff();
+     * RetryRule.of(RetryRule.builder(HttpMethods.idempotentMethods())
+     *                       .onIdempotentMethods()
+     *                       .onServerErrorStatus()
+     *                       .onUnprocessed()
+     *                       .thenBackoff(),
+     *             RetryRule.builder()
+     *                      .onUnprocessed()
+     *                      .thenBackoff());
      * }</pre>
      */
     static RetryRule failsafe() {
-        return builder().onIdempotentMethods().onServerErrorStatus().onUnprocessed().thenBackoff();
+        return of(builder(HttpMethod.idempotentMethods()).onServerErrorStatus().onException().thenBackoff(),
+                  builder().onUnprocessed().thenBackoff());
     }
 
     /**
@@ -156,7 +170,65 @@ public interface RetryRule {
      * Returns a newly created {@link RetryRuleBuilder}.
      */
     static RetryRuleBuilder builder() {
-        return new RetryRuleBuilder();
+        return builder(HttpMethod.knownMethods());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleBuilder} with the specified {@link HttpMethod}s.
+     */
+    static RetryRuleBuilder builder(HttpMethod... methods) {
+        requireNonNull(methods, "methods");
+        return builder(ImmutableSet.copyOf(methods));
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleBuilder} with the specified {@link HttpMethod}s.
+     */
+    static RetryRuleBuilder builder(Iterable<HttpMethod> methods) {
+        requireNonNull(methods, "methods");
+        final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
+        return builder(headers -> httpMethods.contains(headers.method()));
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleBuilder} with the specified {@code requestHeadersFilter}.
+     */
+    static RetryRuleBuilder builder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+        return new RetryRuleBuilder(requireNonNull(requestHeadersFilter, "requestHeadersFilter"));
+    }
+
+    /**
+     * Returns a {@link RetryRule} that combines the specified {@code retryRule} and {@code otherRules}.
+     */
+    static RetryRule of(RetryRule retryRule, RetryRule... otherRules) {
+        requireNonNull(retryRule, "retryRule");
+        requireNonNull(otherRules, "otherRules");
+        if (otherRules.length == 0) {
+            return retryRule;
+        }
+        final ImmutableList<RetryRule> retryRules =
+                ImmutableList.<RetryRule>builderWithExpectedSize(otherRules.length + 1)
+                        .add(retryRule)
+                        .addAll(ImmutableList.copyOf(otherRules))
+                        .build();
+        return of(retryRules);
+    }
+
+    /**
+     * Returns a {@link RetryRule} that combines all the {@link RetryRule} of
+     * the {@code retryRules}.
+     */
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    static RetryRule of(Iterable<? extends RetryRule> retryRules) {
+        requireNonNull(retryRules, "retryRules");
+        checkArgument(!Iterables.isEmpty(retryRules), "retryRules should not be empty");
+        if (Iterables.size(retryRules) == 1) {
+            return Iterables.get(retryRules, 0);
+        }
+
+        @SuppressWarnings("unchecked")
+        final Iterable<RetryRule> cast = (Iterable<RetryRule>) retryRules;
+        return Streams.stream(cast).reduce(RetryRule::orElse).get();
     }
 
     /**
@@ -164,18 +236,8 @@ public interface RetryRule {
      * If this {@link RetryRule} completes with {@link RetryRuleDecision#next()}, then other {@link RetryRule}
      * is evaluated.
      */
-    default RetryRule or(RetryRule other) {
-        requireNonNull(other, "other");
-        return (ctx, cause) -> {
-            final CompletionStage<RetryRuleDecision> decisionFuture = shouldRetry(ctx, cause);
-            return decisionFuture.thenCompose(decision -> {
-                if (decision != RetryRuleDecision.next()) {
-                    return decisionFuture;
-                } else {
-                    return other.shouldRetry(ctx, cause);
-                }
-            });
-        };
+    default RetryRule orElse(RetryRule other) {
+        return RetryRuleUtil.orElse(this, requireNonNull(other, "other"));
     }
 
     /**
@@ -195,7 +257,7 @@ public interface RetryRule {
      *         return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
      *     }
      *
-     *     ResponseHeaders responseHeaders = ctx.log().responseHeaders();
+     *     ResponseHeaders responseHeaders = ctx.log().partial().responseHeaders();
      *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
      *         return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
      *     }

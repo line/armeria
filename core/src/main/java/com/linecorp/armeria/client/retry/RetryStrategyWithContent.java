@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.Response;
  */
 @Deprecated
 @FunctionalInterface
-public interface RetryStrategyWithContent<T extends Response> extends RetryRuleWithContent<T> {
+public interface RetryStrategyWithContent<T extends Response> {
 
     /**
      * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
@@ -44,6 +44,5 @@ public interface RetryStrategyWithContent<T extends Response> extends RetryRuleW
      * @deprecated Use {@link RetryRuleWithContent#shouldRetry(ClientRequestContext, Response)}
      */
     @Deprecated
-    @Override
     CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, T response);
 }

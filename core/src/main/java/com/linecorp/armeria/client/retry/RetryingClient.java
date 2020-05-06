@@ -86,6 +86,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
+     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRuleWithContent}.
+     *
+     * @deprecated Use {@link #builder(RetryRuleWithContent)}.
+     */
+    @Deprecated
+    public static RetryingClientBuilder builder(
+            RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
+        requireNonNull(retryStrategyWithContent, "retryStrategyWithContent");
+        return builder(RetryRuleUtil.fromRetryStrategyWithContent(retryStrategyWithContent));
+    }
+
+    /**
      * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
      * requests.
      *
@@ -275,12 +287,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     final Runnable originalResClosingTask =
                             responseCause == null ? response::abort : () -> response.abort(responseCause);
                     retryRule().shouldRetry(derivedCtx, responseCause)
-                               .handle((decision, cause) -> {
-                                   final Backoff backoff = decision != null ? decision.backoff() : null;
-                                   return handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                        originalReq, returnedRes, future, response,
-                                                        originalResClosingTask).apply(backoff, cause);
-                               });
+                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                     originalReq, returnedRes, future, response,
+                                                     originalResClosingTask));
                 }
             } catch (Throwable t) {
                 handleException(ctx, rootReqDuplicator, future, t, false);
@@ -299,15 +308,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         rootReqDuplicator.abort(cause);
     }
 
-    private BiFunction<Backoff, Throwable, Void> handleBackoff(ClientRequestContext ctx,
-                                                               ClientRequestContext derivedCtx,
-                                                               HttpRequestDuplicator rootReqDuplicator,
-                                                               HttpRequest originalReq,
-                                                               HttpResponse returnedRes,
-                                                               CompletableFuture<HttpResponse> future,
-                                                               HttpResponse originalRes,
-                                                               Runnable originalResClosingTask) {
-        return (backoff, unused) -> {
+    private BiFunction<RetryRuleDecision, Throwable, Void> handleBackoff(
+            ClientRequestContext ctx, ClientRequestContext derivedCtx, HttpRequestDuplicator rootReqDuplicator,
+            HttpRequest originalReq, HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
+            HttpResponse originalRes, Runnable originalResClosingTask) {
+        return (decision, unused) -> {
+            final Backoff backoff = decision != null ? decision.backoff() : null;
             if (backoff != null) {
                 // Set response content with null to make sure that the log is complete.
                 final RequestLogBuilder logBuilder = derivedCtx.logBuilder();

@@ -107,17 +107,14 @@ class RetryingClientWithLoggingTest {
     @Test
     void retryingThenLogging() throws InterruptedException {
         successLogIndex = 3;
-        final RetryStrategyWithContent<HttpResponse> retryStrategy =
-                (ctx, response) -> response.aggregate().handle((msg, cause) -> {
-                    if ("hello".equals(msg.contentUtf8())) {
-                        return null;
-                    }
-                    return Backoff.ofDefault();
+        final RetryRuleWithContent<HttpResponse> retryRule =
+                RetryRuleWithContent.onResponse(response -> {
+                    return response.aggregate().thenApply(content -> !"hello".equals(content.contentUtf8()));
                 });
+
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(loggingDecorator())
-                                          .decorator(RetryingClient.builder(retryStrategy)
-                                                                   .newDecorator())
+                                          .decorator(RetryingClient.builder(retryRule).newDecorator())
                                           .decorator((delegate, ctx, req) -> {
                                               final RequestLogBuilder logBuilder = ctx.logBuilder();
                                               logBuilder.name("foo");

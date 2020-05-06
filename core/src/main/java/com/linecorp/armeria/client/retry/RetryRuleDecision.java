@@ -69,7 +69,7 @@ public final class RetryRuleDecision {
     @Override
     public String toString() {
         if (this == NO_RETRY) {
-            return "RetryRuleDecision(STOP)";
+            return "RetryRuleDecision(NO_RETRY)";
         } else if (this == NEXT) {
             return "RetryRuleDecision(NEXT)";
         } else {

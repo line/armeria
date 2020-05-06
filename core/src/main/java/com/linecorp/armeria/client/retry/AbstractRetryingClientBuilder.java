@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.Response;
 /**
  * Builds a new {@link AbstractRetryingClient} or its decorator function.
  *
- * @param <O> the type of incoming {@link Response} of the {@link Client}
+ * @param <O> the content type of incoming {@link Response} of the {@link Client}
  */
 public abstract class AbstractRetryingClientBuilder<O extends Response> {
 

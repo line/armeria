@@ -640,21 +640,21 @@ class RetryingClientTest {
                         .build();
     }
 
-    private static class RetryIfContentMatch implements RetryStrategyWithContent<HttpResponse> {
+    private static class RetryIfContentMatch implements RetryRuleWithContent<HttpResponse> {
         private final String retryContent;
-        private final Backoff backoffOnContent = Backoff.fixed(100);
+        private final RetryRuleDecision decision = RetryRuleDecision.retry(Backoff.fixed(100));
 
         RetryIfContentMatch(String retryContent) {
             this.retryContent = retryContent;
         }
 
         @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
+        public CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
             final CompletableFuture<AggregatedHttpResponse> future = response.aggregate();
             return future.handle((aggregatedResponse, unused) -> {
                 if (aggregatedResponse != null &&
                     aggregatedResponse.contentUtf8().equalsIgnoreCase(retryContent)) {
-                    return backoffOnContent;
+                    return decision;
                 }
                 return null;
             });
@@ -679,10 +679,10 @@ class RetryingClientTest {
             });
 
             final RetryRule retryRule =
-                    RetryRule.builder()
-                             .onStatus(HttpStatus.SERVICE_UNAVAILABLE)
-                             .thenBackoff(backoffOn503)
-                             .or(RetryRule.builder()
+                    RetryRule.of(RetryRule.builder()
+                                          .onStatus(HttpStatus.SERVICE_UNAVAILABLE)
+                                          .thenBackoff(backoffOn503),
+                                 RetryRule.builder()
                                           .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                                           .thenBackoff(backoffOn500));
 

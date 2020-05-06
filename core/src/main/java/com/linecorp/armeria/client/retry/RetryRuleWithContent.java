@@ -16,9 +16,22 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 
 /**
@@ -31,6 +44,109 @@ import com.linecorp.armeria.common.Response;
 public interface RetryRuleWithContent<T extends Response> {
 
     /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with
+     * the {@linkplain Backoff#ofDefault() default backoff} if the specified {@code retryFunction} completes
+     * with {@code true}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onResponse(
+            Function<? super T, ? extends CompletionStage<Boolean>> retryFunction) {
+        return RetryRuleWithContent.<T>builder().onResponse(retryFunction).thenBackoff();
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContentBuilder}.
+     */
+    static <T extends Response> RetryRuleWithContentBuilder<T> builder() {
+        return builder(HttpMethod.knownMethods());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContentBuilder} with the specified {@link HttpMethod}s.
+     */
+    static <T extends Response> RetryRuleWithContentBuilder<T> builder(HttpMethod... methods) {
+        return builder(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContentBuilder} with the specified {@link HttpMethod}s.
+     */
+    static <T extends Response> RetryRuleWithContentBuilder<T> builder(Iterable<HttpMethod> methods) {
+        requireNonNull(methods, "methods");
+        final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
+        return builder(headers -> httpMethods.contains(headers.method()));
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContentBuilder} with the specified
+     * {@code requestHeadersFilter}.
+     */
+    static <T extends Response> RetryRuleWithContentBuilder<T> builder(
+            Predicate<? super RequestHeaders> requestHeadersFilter) {
+        requireNonNull(requestHeadersFilter, "requestHeadersFilter");
+        return new RetryRuleWithContentBuilder<>(requestHeadersFilter);
+    }
+
+    /**
+     * Returns a {@link RetryRuleWithContent} that combines the specified {@code retryRule} and
+     * {@code otherRules}.
+     */
+    @SafeVarargs
+    static <T extends Response> RetryRuleWithContent<T> of(RetryRuleWithContent<T> retryRule,
+                                                           RetryRuleWithContent<T>... otherRules) {
+        requireNonNull(retryRule, "retryRule");
+        requireNonNull(otherRules, "otherRules");
+        if (otherRules.length == 0) {
+            return retryRule;
+        }
+        final ImmutableList<RetryRuleWithContent<T>> retryRules =
+                ImmutableList.<RetryRuleWithContent<T>>builderWithExpectedSize(otherRules.length + 1)
+                        .add(retryRule)
+                        .add(otherRules)
+                        .build();
+        return of(retryRules);
+    }
+
+    /**
+     * Returns a {@link RetryRuleWithContent} that combines all the {@link RetryRuleWithContent} of
+     * the {@code retryRules}.
+     */
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    static <T extends Response> RetryRuleWithContent<T> of(
+            Iterable<? extends RetryRuleWithContent<T>> retryRules) {
+        requireNonNull(retryRules, "retryRules");
+        checkArgument(!Iterables.isEmpty(retryRules), "retryRules should not be empty");
+        if (Iterables.size(retryRules) == 1) {
+            return Iterables.get(retryRules, 0);
+        }
+
+        @SuppressWarnings("unchecked")
+        final Iterable<RetryRuleWithContent<T>> cast = (Iterable<RetryRuleWithContent<T>>) retryRules;
+        return Streams.stream(cast).reduce(RetryRuleWithContent::orElse).get();
+    }
+
+    /**
+     * Returns a composed {@link RetryRuleWithContent} that represents a logical OR of this
+     * {@link RetryRuleWithContent} and the specified {@link RetryRule}.
+     * If this {@link RetryRuleWithContent} completes with {@link RetryRuleDecision#next()},
+     * then other {@link RetryRule} is evaluated.
+     */
+    default RetryRuleWithContent<T> orElse(RetryRule other) {
+        requireNonNull(other, "other");
+        return RetryRuleUtil.orElse(this, other);
+    }
+
+    /**
+     * Returns a composed {@link RetryRuleWithContent} that represents a logical OR of this
+     * {@link RetryRuleWithContent} and another.
+     * If this {@link RetryRuleWithContent} completes with {@link RetryRuleDecision#next()},
+     * then other {@link RetryRuleWithContent} is evaluated.
+     */
+    default RetryRuleWithContent<T> orElse(RetryRuleWithContent<T> other) {
+        requireNonNull(other, "other");
+        return RetryRuleUtil.orElse(this, other);
+    }
+
+    /**
      * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
      * Implement this method to return a {@link CompletionStage} and to complete it with a desired
      * {@link Backoff}. To stop trying further, complete it with {@code null}.
@@ -38,5 +154,5 @@ public interface RetryRuleWithContent<T extends Response> {
      * @param ctx the {@link ClientRequestContext} of this request
      * @param response the {@link Response} from the server
      */
-    CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, T response);
+    CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, T response);
 }

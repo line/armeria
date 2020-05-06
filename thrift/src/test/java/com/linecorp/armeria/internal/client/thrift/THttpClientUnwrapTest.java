@@ -25,7 +25,9 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
@@ -36,7 +38,7 @@ class THttpClientUnwrapTest {
         final HelloService.Iface client =
                 Clients.builder("tbinary+http://127.0.0.1:1/")
                        .decorator(LoggingClient.newDecorator())
-                       .rpcDecorator(RetryingRpcClient.newDecorator(
+                       .rpcDecorator(RetryingRpcClient.newDecorator((RetryStrategyWithContent<RpcResponse>)
                                (ctx, response) -> CompletableFuture.completedFuture(null)))
                        .build(HelloService.Iface.class);
 
