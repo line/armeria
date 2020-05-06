@@ -8,6 +8,7 @@ const urljoin = require('url-join');
 const visit = require('unist-util-visit');
 /* eslint-enable import/no-extraneous-dependencies */
 
+// TODO(trustin): Use svgbob-wasm or something similar so that we don't have to install svgbob_cli manually.
 const Draw = require('gatsby-remark-draw/lib/draw');
 
 const DEPLOY_DIR = 'public';
