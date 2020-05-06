@@ -494,11 +494,14 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
             role="directory"
             onClick={useCallback(
               (e: any) => {
-                if (e.target.className === styles.pageTocWrapper) {
+                if (
+                  tocState === ToCState.OPEN &&
+                  e.target.className === styles.pageTocWrapper
+                ) {
                   toggleToC();
                 }
               },
-              [toggleToC],
+              [tocState, toggleToC],
             )}
           >
             {/* eslint-enable jsx-a11y/click-events-have-key-events */}
