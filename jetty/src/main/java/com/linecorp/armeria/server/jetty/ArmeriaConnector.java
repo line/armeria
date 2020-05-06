@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server.jetty;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Collections;
 import java.util.List;
@@ -61,6 +63,17 @@ final class ArmeriaConnector extends ServerConnector {
 
     @Override
     public String getHost() {
+        //noinspection ConstantConditions
+        if (armeriaServer == null) {
+            // This method could be called during ServerConnector construction (for diagnostic purposes)
+            // BEFORE {@code armeriaServer} gets assigned. In such case case,
+            // return some reasonable mockup value in order to prevent NPE.
+            try {
+                return InetAddress.getLocalHost().getHostName();
+            } catch (UnknownHostException e) {
+                return "";
+            }
+        }
         return armeriaServer.defaultHostname();
     }
 
@@ -71,6 +84,13 @@ final class ArmeriaConnector extends ServerConnector {
 
     @Override
     public int getLocalPort() {
+        //noinspection ConstantConditions
+        if (armeriaServer == null) {
+            // This method could be called during ServerConnector construction (for diagnostic purposes),
+            // BEFORE {@code armeriaServer} gets assigned. In such case case,
+            // return some reasonable mockup value in order to prevent NPE.
+            return -1;
+        }
         try {
             return armeriaServer.activeLocalPort();
         } catch (IllegalStateException e) {
