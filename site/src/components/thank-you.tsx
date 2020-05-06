@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import ReactMixitup from 'react-mixitup';
 import shuffleSeed from 'shuffle-seed';
@@ -15,12 +15,12 @@ interface ThankYouProps {
 }
 
 const ThankYou: React.FC<ThankYouProps> = props => {
-  const wrapperRef = React.useRef(null);
-  const lastConfettiFireTime = React.useRef(0);
-  const [seed, setSeed] = React.useState(currentSeed());
-  const [periodicConfettiFire, setPeriodicConfettiFire] = React.useState(false);
-  const numActiveConfetti = React.useRef(0);
-  const [message, setMessage] = React.useState(getMessage(seed));
+  const wrapperRef = useRef(null);
+  const lastConfettiFireTime = useRef(0);
+  const [seed, setSeed] = useState(currentSeed());
+  const [periodicConfettiFire, setPeriodicConfettiFire] = useState(false);
+  const numActiveConfetti = useRef(0);
+  const [message, setMessage] = useState(getMessage(seed));
 
   function currentSeed() {
     return new Date().getTime();
@@ -42,7 +42,7 @@ const ThankYou: React.FC<ThankYouProps> = props => {
   }
 
   // Update the seed every minute to give everyone a chance to appear first.
-  React.useEffect(() => {
+  useEffect(() => {
     const timerId = setInterval(() => {
       const newSeed = currentSeed();
       setSeed(newSeed);
@@ -55,7 +55,7 @@ const ThankYou: React.FC<ThankYouProps> = props => {
 
   // Fire confetti periodically when a cursor hovers over an avatar.
   const confettiFireInterval = 5000;
-  React.useEffect(() => {
+  useEffect(() => {
     if (!periodicConfettiFire || !window) {
       return () => {};
     }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, Form, Radio, Checkbox, Tag, TreeSelect } from 'antd';
 
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
@@ -29,17 +29,16 @@ interface ArticleListProps {
 }
 
 const ArticleList: React.FC<ArticleListProps> = props => {
-  const [language, setLanguage] = React.useState('en');
-  const [tags, setTags] = React.useState([
+  const [language, setLanguage] = useState('en');
+  const [tags, setTags] = useState([
     'articles',
     'slides',
     'knowledge',
     'experience',
   ]);
-  const [
-    includeMachineTranslated,
-    setIncludeMachineTranslated,
-  ] = React.useState(true);
+  const [includeMachineTranslated, setIncludeMachineTranslated] = useState(
+    true,
+  );
 
   const columns = [
     {

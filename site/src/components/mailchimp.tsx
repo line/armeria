@@ -2,7 +2,7 @@ import { MailOutlined } from '@ant-design/icons';
 import { Input, message } from 'antd';
 import EmailValidator from 'email-validator';
 import jsonp from 'jsonp';
-import React from 'react';
+import React, { useState } from 'react';
 import DOMPurify from 'dompurify';
 
 import Emoji from './emoji';
@@ -24,8 +24,8 @@ const Mailchimp: React.FC<MailchimpProps> = givenProps => {
     props = givenProps;
   }
 
-  const [email, setEmail] = React.useState('');
-  const [sending, setSending] = React.useState(false);
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
   const messageDuration = 5;
 
   function doSubmit(

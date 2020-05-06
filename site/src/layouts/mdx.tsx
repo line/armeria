@@ -11,7 +11,7 @@ import { globalHistory, WindowLocation } from '@reach/router';
 import { Button, Layout, Select, Tabs as AntdTabs } from 'antd';
 import { Link, navigate, withPrefix } from 'gatsby';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import StickyBox from 'react-sticky-box';
 import tocbot from 'tocbot';
 
@@ -165,7 +165,7 @@ function filterTableCellProps(props: any) {
 }
 
 const MdxLayout: React.FC<MdxLayoutProps> = props => {
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     tocbot.init({
       tocSelector: `.${styles.pageToc}`,
       contentSelector: `.${styles.content}`,
@@ -290,8 +290,8 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
   }
 
   // States required for opening and closing ToC
-  const [tocState, setTocState] = React.useState(ToCState.CLOSED);
-  const tocStateRef = React.useRef(tocState);
+  const [tocState, setTocState] = useState(ToCState.CLOSED);
+  const tocStateRef = useRef(tocState);
   tocStateRef.current = tocState;
 
   function findCurrentMdxNode(): any {

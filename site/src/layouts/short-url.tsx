@@ -1,6 +1,6 @@
 import { Typography } from 'antd';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 
 interface ShortUrlRedirectProps {
@@ -8,7 +8,7 @@ interface ShortUrlRedirectProps {
 }
 
 const ShortUrlRedirect: React.FC<ShortUrlRedirectProps> = props => {
-  const [manualRedirect, setManualRedirect] = React.useState(false);
+  const [manualRedirect, setManualRedirect] = useState(false);
   setTimeout(() => setManualRedirect(true), 3000);
   return (
     <>

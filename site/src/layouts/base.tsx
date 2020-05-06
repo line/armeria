@@ -1,7 +1,7 @@
 import { globalHistory, WindowLocation } from '@reach/router';
 import { BackTop, Layout } from 'antd';
 import { graphql, useStaticQuery } from 'gatsby';
-import React from 'react';
+import React, { useEffect } from 'react';
 import CookieConsent from 'react-cookie-consent';
 import { Helmet } from 'react-helmet';
 // @ts-ignore
@@ -28,7 +28,7 @@ interface BaseLayoutProps {
 let firstRender = true;
 
 const BaseLayout: React.FC<BaseLayoutProps> = props => {
-  React.useEffect(() => {
+  useEffect(() => {
     // Jump to hash or flash at hash only when rendering in a browser.
     if (typeof window !== 'undefined') {
       if (firstRender) {

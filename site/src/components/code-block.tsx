@@ -1,6 +1,6 @@
 import { CopyOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
-import React from 'react';
+import React, { useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import {
   PrismLight as Prism,
@@ -94,7 +94,7 @@ interface CodeBlockProps extends SyntaxHighlighterProps {
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = props => {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
   let timeout: any;
 
   const code = process(props.children);

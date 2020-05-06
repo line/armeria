@@ -8,7 +8,7 @@ import { WindowLocation } from '@reach/router';
 import { Layout, Menu, Drawer, Button } from 'antd';
 import Link from 'gatsby-link';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React from 'react';
+import React, { useState } from 'react';
 
 import Logo from '../components/logo';
 
@@ -29,7 +29,7 @@ const selectableKeysAndRegexes = {
 };
 
 const HeaderComponent: React.FC<HeaderComponentProps> = props => {
-  const [verticalMenuOpen, setVerticalMenuOpen] = React.useState(false);
+  const [verticalMenuOpen, setVerticalMenuOpen] = useState(false);
 
   const selectedKeyAndRegex = Object.entries(
     selectableKeysAndRegexes,
