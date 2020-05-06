@@ -24,7 +24,6 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
-import org.springframework.core.Ordered;
 
 /**
  * {@link BeanPostProcessor} implementation that autowires annotated fields, setter methods, and arbitrary
@@ -32,15 +31,10 @@ import org.springframework.core.Ordered;
  * by default, {@link LocalArmeriaPort} and {@link LocalArmeriaPorts} annotations.
  */
 public final class ArmeriaSpringBoot1BeanPostProcessor extends AbstractArmeriaBeanPostProcessor
-        implements InstantiationAwareBeanPostProcessor, Ordered {
+        implements InstantiationAwareBeanPostProcessor {
 
     public ArmeriaSpringBoot1BeanPostProcessor(BeanFactory beanFactory) {
         super(beanFactory);
-    }
-
-    @Override
-    public int getOrder() {
-        return Ordered.LOWEST_PRECEDENCE - 2;
     }
 
     @Override
