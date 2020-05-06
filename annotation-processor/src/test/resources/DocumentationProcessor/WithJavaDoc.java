@@ -93,6 +93,7 @@ public class WithJavaDoc {
 
     /**
      * hasReturnAndThrows method.
+     * @since 1.4
      * @param x The x variable in hasReturnAndThrows
      * @return The number 1
      * @throws IllegalArgumentException when x is empty
