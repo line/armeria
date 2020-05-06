@@ -99,14 +99,14 @@ abstract class AbstractArmeriaBeanPostProcessor {
                 if (field.isAnnotationPresent(LocalArmeriaPort.class)) {
                     if (Modifier.isStatic(field.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPort annotation is not supported on the static field: " +
+                                "LocalArmeriaPort annotation is not supported on a static field: " +
                                 field.getName());
                     }
                     currElements.add(new LocalArmeriaPortElement(field, field, null));
                 } else if (field.isAnnotationPresent(LocalArmeriaPorts.class)) {
                     if (Modifier.isStatic(field.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPorts annotation is not supported on the static field: " +
+                                "LocalArmeriaPorts annotation is not supported on a static field: " +
                                 field.getName());
                     }
                     currElements.add(new LocalArmeriaPortsElement(field, null));
@@ -121,7 +121,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
                 if (bridgedMethod.isAnnotationPresent(LocalArmeriaPort.class)) {
                     if (Modifier.isStatic(method.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPort annotation is not supported on the static field: " +
+                                "LocalArmeriaPort annotation is not supported on a static method: " +
                                 method.getName());
                     }
                     final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
@@ -129,7 +129,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
                 } else if (bridgedMethod.isAnnotationPresent(LocalArmeriaPorts.class)) {
                     if (Modifier.isStatic(method.getModifiers())) {
                         throw new IllegalStateException(
-                                "LocalArmeriaPorts annotation is not supported on the static field: " +
+                                "LocalArmeriaPorts annotation is not supported on a static method: " +
                                 method.getName());
                     }
                     final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
