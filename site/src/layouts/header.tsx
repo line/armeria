@@ -8,7 +8,7 @@ import { WindowLocation } from '@reach/router';
 import { Layout, Menu, Drawer, Button } from 'antd';
 import Link from 'gatsby-link';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import Logo from '../components/logo';
 
@@ -79,14 +79,14 @@ const HeaderComponent: React.FC<HeaderComponentProps> = props => {
         <div className={styles.verticalMenuWrapper}>
           <Button
             className={styles.verticalMenuOpenButton}
-            onClick={() => setVerticalMenuOpen(true)}
+            onClick={useCallback(() => setVerticalMenuOpen(true), [])}
           >
             <MenuOutlined />
           </Button>
           <Drawer
             className={styles.verticalMenuDrawer}
             visible={verticalMenuOpen}
-            onClose={() => setVerticalMenuOpen(false)}
+            onClose={useCallback(() => setVerticalMenuOpen(false), [])}
           >
             <Menu
               theme="dark"

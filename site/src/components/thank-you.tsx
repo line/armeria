@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import ReactMixitup from 'react-mixitup';
 import shuffleSeed from 'shuffle-seed';
@@ -70,6 +70,16 @@ const ThankYou: React.FC<ThankYouProps> = props => {
       clearInterval(timerId);
     };
   });
+
+  // Fire confetti on mouse enter/exit.
+  const onMouseEnterCallback = useCallback(() => {
+    fireConfetti();
+    setPeriodicConfettiFire(true);
+  }, []);
+  const onMouseExitCallback = useCallback(
+    () => setPeriodicConfettiFire(false),
+    [],
+  );
 
   function fireConfetti() {
     // @ts-ignore
@@ -147,11 +157,8 @@ const ThankYou: React.FC<ThankYouProps> = props => {
                       alt={`@${key}`}
                       title={`@${key}`}
                       loading="lazy"
-                      onMouseEnter={() => {
-                        fireConfetti();
-                        setPeriodicConfettiFire(true);
-                      }}
-                      onMouseLeave={() => setPeriodicConfettiFire(false)}
+                      onMouseEnter={onMouseEnterCallback}
+                      onMouseLeave={onMouseExitCallback}
                     />
                   </OutboundLink>
                 </span>

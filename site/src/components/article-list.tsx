@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Table, Form, Radio, Checkbox, Tag, TreeSelect } from 'antd';
 
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
@@ -155,7 +155,7 @@ const ArticleList: React.FC<ArticleListProps> = props => {
       <Form className={styles.form} layout="inline">
         <Form.Item>
           <Radio.Group
-            onChange={e => setLanguage(e.target.value)}
+            onChange={useCallback(e => setLanguage(e.target.value), [])}
             value={language}
           >
             <Radio value="en">English</Radio>
@@ -166,9 +166,9 @@ const ArticleList: React.FC<ArticleListProps> = props => {
         <Form.Item>
           <Checkbox
             checked={includeMachineTranslated}
-            onChange={() =>
-              setIncludeMachineTranslated(!includeMachineTranslated)
-            }
+            onChange={useCallback(() => {
+              setIncludeMachineTranslated(!includeMachineTranslated);
+            }, [includeMachineTranslated])}
           >
             Include machine-translated / <TranslationOutlined />
           </Checkbox>
@@ -177,12 +177,12 @@ const ArticleList: React.FC<ArticleListProps> = props => {
           <TreeSelect
             className={styles.tagsSelect}
             value={tags}
-            onChange={values => {
+            onChange={useCallback(values => {
               const filteredValues = values.filter(
                 value => !value.startsWith('_'),
               );
               setTags(filteredValues);
-            }}
+            }, [])}
             allowClear
             multiple
             treeDefaultExpandAll

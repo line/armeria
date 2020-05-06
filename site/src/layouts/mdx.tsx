@@ -11,7 +11,7 @@ import { globalHistory, WindowLocation } from '@reach/router';
 import { Button, Layout, Select, Tabs as AntdTabs } from 'antd';
 import { Link, navigate, withPrefix } from 'gatsby';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState, useCallback } from 'react';
 import StickyBox from 'react-sticky-box';
 import tocbot from 'tocbot';
 
@@ -325,7 +325,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
     return undefined;
   }
 
-  function toggleToC() {
+  const toggleToC = useCallback(() => {
     switch (tocState) {
       case ToCState.CLOSED:
         setTocState(ToCState.OPENING);
@@ -346,7 +346,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
       default:
       // Animation in progress. Let the user wait a little bit.
     }
-  }
+  }, [tocState]);
 
   // Style functions for fading in/out table of contents.
   function pageTocWrapperStyle(): React.CSSProperties {
@@ -492,11 +492,14 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
             className={styles.pageTocWrapper}
             style={pageTocWrapperStyle()}
             role="directory"
-            onClick={(e: any) => {
-              if (e.target.className === styles.pageTocWrapper) {
-                toggleToC();
-              }
-            }}
+            onClick={useCallback(
+              (e: any) => {
+                if (e.target.className === styles.pageTocWrapper) {
+                  toggleToC();
+                }
+              },
+              [toggleToC],
+            )}
           >
             {/* eslint-enable jsx-a11y/click-events-have-key-events */}
             {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions */}
@@ -510,19 +513,21 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
                 <Select
                   showSearch={showSearch}
                   placeholder="Jump to other page"
-                  onChange={href => {
+                  onChange={useCallback(href => {
                     const hrefStr = `${href}`;
                     if (hrefStr.includes('://')) {
                       globalHistory.navigate(hrefStr);
                     } else {
                       navigate(hrefStr);
                     }
-                  }}
-                  filterOption={(input, option) =>
-                    option.children
-                      ?.toLowerCase()
-                      .indexOf(input.toLowerCase()) >= 0
-                  }
+                  }, [])}
+                  filterOption={useCallback((input, option) => {
+                    return (
+                      option.children
+                        ?.toLowerCase()
+                        .indexOf(input.toLowerCase()) >= 0
+                    );
+                  }, [])}
                 >
                   {Object.entries(groupToMdxNodes).map(
                     ([group, groupedMdxNodes]) => {

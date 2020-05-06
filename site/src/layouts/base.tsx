@@ -1,7 +1,7 @@
 import { globalHistory, WindowLocation } from '@reach/router';
 import { BackTop, Layout } from 'antd';
 import { graphql, useStaticQuery } from 'gatsby';
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import CookieConsent from 'react-cookie-consent';
 import { Helmet } from 'react-helmet';
 // @ts-ignore
@@ -76,9 +76,9 @@ const BaseLayout: React.FC<BaseLayoutProps> = props => {
         enableDeclineButton
         disableButtonStyles
         acceptOnScroll
-        onDecline={() =>
-          globalHistory.navigate('https://tools.google.com/dlpage/gaoptout/')
-        }
+        onDecline={useCallback(() => {
+          globalHistory.navigate('https://tools.google.com/dlpage/gaoptout/');
+        }, [])}
       >
         This website uses anonymous cookies to ensure we provide you the best
         experience.

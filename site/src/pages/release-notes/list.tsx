@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import ListAllLayout from '../../layouts/list-all';
@@ -22,13 +22,13 @@ export default (props: any) => {
       pageTitle="Release notes for all past versions"
       allItems={allReleases}
       layout={ReleaseNotesLayout}
-      grouper={pagePath => {
+      grouper={useCallback(pagePath => {
         const version = pagePathToVersion(pagePath);
         const firstDotIndex = version.indexOf('.');
         const majorVersion =
           firstDotIndex >= 0 ? version.substring(0, firstDotIndex) : version;
         return `Version ${majorVersion}`;
-      }}
+      }, [])}
     >
       <h2 id="even-older-versions">Even older versions</h2>
       <p>

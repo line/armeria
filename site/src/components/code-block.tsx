@@ -1,6 +1,6 @@
 import { CopyOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import {
   PrismLight as Prism,
@@ -95,7 +95,15 @@ interface CodeBlockProps extends SyntaxHighlighterProps {
 
 const CodeBlock: React.FC<CodeBlockProps> = props => {
   const [copied, setCopied] = useState(false);
-  let timeout: any;
+  const timeoutRef = useRef(null);
+
+  const onCopyCallback = useCallback(() => {
+    setCopied(true);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => setCopied(false), 1000);
+  }, []);
 
   const code = process(props.children);
   if (code.length === 0) {
@@ -111,16 +119,7 @@ const CodeBlock: React.FC<CodeBlockProps> = props => {
       {props.filename && (
         <div className={styles.filename}>{props.filename}</div>
       )}
-      <CopyToClipboard
-        text={code}
-        onCopy={() => {
-          setCopied(true);
-          if (timeout) {
-            clearTimeout(timeout);
-          }
-          timeout = setTimeout(() => setCopied(false), 1000);
-        }}
-      >
+      <CopyToClipboard text={code} onCopy={onCopyCallback}>
         <Button
           className={styles.clipboardButton}
           aria-label="Copy to clipboard"
