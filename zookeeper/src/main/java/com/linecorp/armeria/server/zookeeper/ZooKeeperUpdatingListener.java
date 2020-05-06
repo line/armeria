@@ -17,6 +17,8 @@ package com.linecorp.armeria.server.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
+
 import javax.annotation.Nullable;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -24,6 +26,7 @@ import org.apache.zookeeper.CreateMode;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
@@ -98,8 +101,10 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         if (endpoint == null) {
             final ServerPort activePort = server.activePort();
             assert activePort != null;
-            endpoint = Endpoint.of(server.defaultHostname(),
-                                   activePort.localAddress().getPort());
+            final InetAddress inetAddress = SystemInfo.defaultNonLoopbackIpV4Address();
+            final String ipAddressOrHostname = inetAddress != null ? inetAddress.getHostAddress()
+                                                                   : server.defaultHostname();
+            endpoint = Endpoint.of(ipAddressOrHostname, activePort.localAddress().getPort());
         }
         client.start();
         final String key = endpoint.host() + '_' + endpoint.port();

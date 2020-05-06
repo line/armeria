@@ -125,33 +125,32 @@ public final class InetAddressPredicates {
      * range of a <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing (CIDR)</a> block.
      *
      * @param cidr the CIDR notation of an address block, e.g. {@code 10.0.0.0/8}, {@code 192.168.1.0/24},
-     *             {@code 1080:0:0:0:8:800:200C:4100/120}
+     *             {@code 1080:0:0:0:8:800:200C:4100/120}. If it's an exact IP address such as
+     *             {@code 10.1.1.7} or {@code 1080:0:0:0:8:800:200C:4100}, the mask bits is considered as
+     *             {@code 32} for IPv4 or {@code 128} for IPv6.
      */
     public static Predicate<InetAddress> ofCidr(String cidr) {
         requireNonNull(cidr, "cidr");
 
         final int delim = cidr.indexOf('/');
-        checkArgument(delim >= 0, "Invalid CIDR notation: %s", cidr);
 
         final InetAddress baseAddress;
-        try {
-            baseAddress = InetAddress.getByName(cidr.substring(0, delim));
-        } catch (UnknownHostException e) {
-            throw new IllegalArgumentException("Invalid CIDR notation: " + cidr, e);
-        }
-
-        final String subnetMask = cidr.substring(delim + 1);
-        checkArgument(!subnetMask.isEmpty(), "Invalid CIDR notation: %s", cidr);
-
         final int maskBits;
-
-        if (NetUtil.isValidIpV4Address(subnetMask)) {
-            maskBits = toMaskBits(subnetMask);
-            return ofCidr(baseAddress, maskBits, maskBits + 96);
-        }
-
         try {
-            maskBits = Integer.parseInt(subnetMask);
+            // Exact IP address.
+            if (delim < 0) {
+                baseAddress = InetAddress.getByName(cidr);
+                maskBits = baseAddress instanceof Inet4Address ? 32 : 128;
+            } else {
+                baseAddress = InetAddress.getByName(cidr.substring(0, delim));
+                final String subnetMask = cidr.substring(delim + 1);
+                checkArgument(!subnetMask.isEmpty(), "Invalid CIDR notation: %s", cidr);
+                if (NetUtil.isValidIpV4Address(subnetMask)) {
+                    maskBits = toMaskBits(subnetMask);
+                    return ofCidr(baseAddress, maskBits, maskBits + 96);
+                }
+                maskBits = Integer.parseInt(subnetMask);
+            }
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid CIDR notation: " + cidr, e);
         }
