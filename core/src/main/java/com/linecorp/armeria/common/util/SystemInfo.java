@@ -18,17 +18,23 @@ package com.linecorp.armeria.common.util;
 import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.IDN;
+import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -38,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
 
 /**
@@ -49,7 +56,7 @@ public final class SystemInfo {
 
     private static final int JAVA_VERSION;
 
-    private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
+    private static final boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
 
     private static final OsType osType;
 
@@ -102,14 +109,16 @@ public final class SystemInfo {
         if (JAVA_VERSION >= 9) {
             JETTY_ALPN_OPTIONAL_OR_AVAILABLE = true;
         } else {
+            boolean temp;
             try {
                 // Always use bootstrap class loader.
                 Class.forName("sun.security.ssl.ALPNExtension", true, null);
-                JETTY_ALPN_OPTIONAL_OR_AVAILABLE = true;
+                temp = true;
             } catch (Throwable ignore) {
                 // alpn-boot was not loaded.
-                JETTY_ALPN_OPTIONAL_OR_AVAILABLE = false;
+                temp = false;
             }
+            JETTY_ALPN_OPTIONAL_OR_AVAILABLE = temp;
         }
 
         final String osName = Ascii.toUpperCase(System.getProperty("os.name", ""));
@@ -158,6 +167,16 @@ public final class SystemInfo {
     }
 
     /**
+     * Returns the non-loopback {@link Inet4Address} whose {@link NetworkInterface#getIndex()} is the lowest.
+     *
+     * @see Flags#preferredIpV4Addresses()
+     */
+    @Nullable
+    public static Inet4Address defaultNonLoopbackIpV4Address() {
+        return DefaultNonLoopbackIPv4Address.defaultNonLoopbackIpV4Address;
+    }
+
+    /**
      * Returns the number of microseconds since the epoch (00:00:00, 01-Jan-1970, GMT). The precision of the
      * returned value may vary depending on {@linkplain #javaVersion() Java version}. Currently, Java 9 or
      * above is required for microsecond precision. {@code System.currentTimeMillis() * 1000} is returned on
@@ -200,7 +219,7 @@ public final class SystemInfo {
                         hostname = normalizeHostname(lines.get(0));
                     }
                     if (hostname != null) {
-                        logger.info("Hostname: {} (from /proc/sys/kernel/hostname)", hostname);
+                        logger.info("hostname: {} (from /proc/sys/kernel/hostname)", hostname);
                     } else {
                         logger.debug("/proc/sys/kernel/hostname does not contain a valid hostname: {}", lines);
                     }
@@ -223,7 +242,7 @@ public final class SystemInfo {
                     }
 
                     if (hostname != null) {
-                        logger.info("Hostname: {} (from 'hostname' command)", hostname);
+                        logger.info("hostname: {} (from 'hostname' command)", hostname);
                     } else {
                         logger.debug("The 'hostname' command returned a non-hostname ({}); " +
                                      "using InetAddress.getLocalHost() instead", line);
@@ -246,7 +265,7 @@ public final class SystemInfo {
                         logger.warn("InetAddress.getLocalHost() returned an invalid hostname ({}); " +
                                     "using 'localhost' instead", jdkHostname);
                     } else {
-                        logger.info("Hostname: {} (from InetAddress.getLocalHost())", hostname);
+                        logger.info("hostname: {} (from InetAddress.getLocalHost())", hostname);
                     }
                 } catch (Throwable t) {
                     logger.warn("Failed to get the hostname using InetAddress.getLocalHost(); " +
@@ -375,6 +394,96 @@ public final class SystemInfo {
             } else {
                 logger.debug(msg, method, cause);
             }
+        }
+    }
+
+    private static final class DefaultNonLoopbackIPv4Address {
+
+        // Forked from InetUtils in spring-cloud-common 3.0.0.M1 at e7bb7ed3ae19a91c6fa7b3b698dd9788f70df7d4
+        // - Use CIDR in isPreferredAddress instead of regular expression.
+
+        @Nullable
+        static final Inet4Address defaultNonLoopbackIpV4Address;
+
+        static {
+            Inet4Address result = null;
+            String nicDisplayName = null;
+            try {
+                int lowest = Integer.MAX_VALUE;
+                for (final Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
+                     nics.hasMoreElements();) {
+                    final NetworkInterface nic = nics.nextElement();
+                    if (!nic.isUp()) {
+                        logger.debug("{} is down. Trying next.", nic.getDisplayName());
+                        continue;
+                    }
+
+                    // The NIC whose index is the lowest will be likely the valid IPv4 address.
+                    // See https://github.com/spring-cloud/spring-cloud-commons/issues/82.
+                    if (nic.getIndex() < lowest || result == null) {
+                        lowest = nic.getIndex();
+                    } else {
+                        logger.debug("{} has higher index({}) than {}. Skip.",
+                                     nic.getDisplayName(), nic.getIndex(), result);
+                        continue;
+                    }
+
+                    for (final Enumeration<InetAddress> addrs = nic.getInetAddresses();
+                         addrs.hasMoreElements();) {
+                        final InetAddress address = addrs.nextElement();
+                        if (!(address instanceof Inet4Address)) {
+                            logger.debug("{} of {} is not an Inet4Address. Trying next.",
+                                         address, nic.getDisplayName());
+                            continue;
+                        }
+                        if (address.isLoopbackAddress()) {
+                            logger.debug("{} of {} is a loopback address. Trying next.",
+                                         address, nic.getDisplayName());
+                            continue;
+                        }
+                        if (!isPreferredAddress(address)) {
+                            logger.debug("{} of {} is not a preferred IP address. Trying next.",
+                                         address, nic.getDisplayName());
+                            continue;
+                        }
+                        result = (Inet4Address) address;
+                        nicDisplayName = nic.getDisplayName();
+                    }
+                }
+            } catch (IOException ex) {
+                logger.warn("Could not get a non-loopback IPv4 address:", ex);
+            }
+
+            if (result != null) {
+                defaultNonLoopbackIpV4Address = result;
+                logger.info("defaultNonLoopbackIpV4Address: {} (from: {})",
+                            defaultNonLoopbackIpV4Address, nicDisplayName);
+            } else {
+                Inet4Address temp = null;
+                try {
+                    final InetAddress localHost = InetAddress.getLocalHost();
+                    if (localHost instanceof Inet4Address) {
+                        temp = (Inet4Address) localHost;
+                        logger.info("defaultNonLoopbackIpV4Address: {} (from: InetAddress.getLocalHost())",
+                                    temp);
+                    } else {
+                        logger.warn("Could not get a non-loopback IPv4 address. " +
+                                    "defaultNonLoopbackIpV4Address is set to null.");
+                    }
+                } catch (UnknownHostException e) {
+                    logger.warn("Unable to retrieve the localhost address. " +
+                                "defaultNonLoopbackIpV4Address is set to null.", e);
+                }
+                defaultNonLoopbackIpV4Address = temp;
+            }
+        }
+
+        private static boolean isPreferredAddress(InetAddress address) {
+            final Predicate<InetAddress> predicates = Flags.preferredIpV4Addresses();
+            if (predicates == null) {
+                return true;
+            }
+            return predicates.test(address);
         }
     }
 }

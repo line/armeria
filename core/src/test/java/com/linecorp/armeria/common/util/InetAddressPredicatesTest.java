@@ -28,16 +28,16 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.function.Predicate;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
 import io.netty.util.NetUtil;
 
-public class InetAddressPredicatesTest {
+class InetAddressPredicatesTest {
 
     @Test
-    public void exact() throws UnknownHostException {
+    void exact() throws UnknownHostException {
         final List<Predicate<InetAddress>> filters = ImmutableList.of(
                 ofExact(InetAddress.getByName("10.0.0.1")),
                 ofExact("10.0.0.1"));
@@ -56,8 +56,14 @@ public class InetAddressPredicatesTest {
     }
 
     @Test
-    public void inet4Cidr() throws UnknownHostException {
+    void inet4Cidr() throws UnknownHostException {
         Predicate<InetAddress> filter;
+
+        filter = ofCidr("10.1.1.7");
+        assertThat(filter.test(InetAddress.getByName("10.1.1.6"))).isFalse();
+        assertThat(filter.test(InetAddress.getByName("10.1.1.7"))).isTrue();
+        assertThat(filter.test(ipv6(10, 1, 1, 6))).isFalse();
+        assertThat(filter.test(ipv6(10, 1, 1, 7))).isTrue();
 
         filter = ofCidr("10.1.1.0/8");
         assertThat(filter.test(InetAddress.getByName("10.0.0.0"))).isTrue();
@@ -111,7 +117,7 @@ public class InetAddressPredicatesTest {
     }
 
     @Test
-    public void inet4Cidr_withSubnetAddress() throws UnknownHostException {
+    void inet4Cidr_withSubnetAddress() throws UnknownHostException {
         Predicate<InetAddress> filter;
 
         filter = ofCidr("10.1.1.0/255.0.0.0");
@@ -140,8 +146,12 @@ public class InetAddressPredicatesTest {
     }
 
     @Test
-    public void inet6Cidr() throws UnknownHostException {
+    void inet6Cidr() throws UnknownHostException {
         Predicate<InetAddress> filter;
+
+        filter = ofCidr("1080:0:0:0:8:800:200C:4111");
+        assertThat(filter.test(InetAddress.getByName("1080:0:0:0:8:800:200C:4111"))).isTrue();
+        assertThat(filter.test(InetAddress.getByName("1080:0:0:0:8:800:200C:4112"))).isFalse();
 
         filter = ofCidr("1080:0:0:0:8:800:200C:4100/120");
         assertThat(filter.test(InetAddress.getByName("1080:0:0:0:8:800:200C:4100"))).isTrue();
@@ -186,7 +196,7 @@ public class InetAddressPredicatesTest {
     }
 
     @Test
-    public void inet6Cidr_withSubnetAddress() throws UnknownHostException {
+    void inet6Cidr_withSubnetAddress() throws UnknownHostException {
         Predicate<InetAddress> filter;
 
         filter = ofCidr("1000:0:0:0:0:0:0:0/255.0.0.0");
@@ -215,7 +225,7 @@ public class InetAddressPredicatesTest {
     }
 
     @Test
-    public void subnetMaskToBits() {
+    void subnetMaskToBits() {
         assertThat(toMaskBits("255.0.0.0")).isEqualTo(8);
         assertThat(toMaskBits("255.255.0.0")).isEqualTo(16);
         assertThat(toMaskBits("255.255.255.0")).isEqualTo(24);
