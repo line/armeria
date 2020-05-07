@@ -35,7 +35,6 @@ import static com.linecorp.armeria.common.thrift.text.AbstractThriftMessageClass
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -56,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.util.SystemInfo;
 
@@ -67,7 +67,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 final class StructContext extends PairContext {
     private static final Logger log = LoggerFactory.getLogger(StructContext.class);
     private static final Supplier<Class<?>> thriftMessageClassFinder;
-    private static final Map<String, Class<?>> fieldMetaDataClassCache = new ConcurrentHashMap<>();
+    private static final Map<String, Class<?>> fieldMetaDataClassCache = new MapMaker().weakValues().makeMap();
 
     static {
         Supplier<Class<?>> supplier = null;
@@ -199,19 +199,22 @@ final class StructContext extends PairContext {
                 } else {
                     // Workaround a bug where the generated 'FieldMetaData' does not provide
                     // a fully qualified class name.
-                    final String fqcn = clazz.getPackage().getName() + '.' + elementMetaData.getTypedefName();
-                    Class<?> fieldClass = fieldMetaDataClassCache.get(fqcn);
-                    if (fieldClass == null) {
-                        fieldClass = fieldMetaDataClassCache.computeIfAbsent(fqcn, key -> {
-                            try {
-                                return Class.forName(fqcn);
-                            } catch (ClassNotFoundException ignored) {
-                                return StructContext.class;
-                            }
-                        });
-                    }
-                    if (fieldClass != StructContext.class) {
-                        classMap.put(fieldName, fieldClass);
+                    final String typedefName = elementMetaData.getTypedefName();
+                    if (typedefName != null) {
+                        final String fqcn = clazz.getPackage().getName() + '.' + typedefName;
+                        Class<?> fieldClass = fieldMetaDataClassCache.get(fqcn);
+                        if (fieldClass == null) {
+                            fieldClass = fieldMetaDataClassCache.computeIfAbsent(fqcn, key -> {
+                                try {
+                                    return Class.forName(fqcn);
+                                } catch (ClassNotFoundException ignored) {
+                                    return StructContext.class;
+                                }
+                            });
+                        }
+                        if (fieldClass != StructContext.class) {
+                            classMap.put(fieldName, fieldClass);
+                        }
                     }
                 }
 

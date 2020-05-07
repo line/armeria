@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
@@ -66,7 +66,7 @@ class ThriftTreeStructureTest {
         treeRequest = new TreeRequest().setBase(base);
     }
 
-    @Test
+    @RepeatedTest(10)
     void testRecursiveUnionCodec() throws TException {
         for (SerializationFormat format : ThriftSerializationFormats.values()) {
             final TreeService.Iface client = Clients.newClient(server.uri(HTTP, format).resolve("/tree"),
