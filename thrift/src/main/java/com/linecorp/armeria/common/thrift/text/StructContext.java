@@ -35,6 +35,7 @@ import static com.linecorp.armeria.common.thrift.text.AbstractThriftMessageClass
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -66,6 +67,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 final class StructContext extends PairContext {
     private static final Logger log = LoggerFactory.getLogger(StructContext.class);
     private static final Supplier<Class<?>> thriftMessageClassFinder;
+    private static final Map<String, Class<?>> fieldMetaDataClassCache = new ConcurrentHashMap<>();
 
     static {
         Supplier<Class<?>> supplier = null;
@@ -198,9 +200,18 @@ final class StructContext extends PairContext {
                     // Workaround a bug where the generated 'FieldMetaData' does not provide
                     // a fully qualified class name.
                     final String fqcn = clazz.getPackage().getName() + '.' + elementMetaData.getTypedefName();
-                    try {
-                        classMap.put(fieldName, Class.forName(fqcn));
-                    } catch (ClassNotFoundException ignored) {
+                    Class<?> fieldClass = fieldMetaDataClassCache.get(fqcn);
+                    if (fieldClass == null) {
+                        fieldClass = fieldMetaDataClassCache.computeIfAbsent(fqcn, key -> {
+                            try {
+                                return Class.forName(fqcn);
+                            } catch (ClassNotFoundException ignored) {
+                                return StructContext.class;
+                            }
+                        });
+                    }
+                    if (fieldClass != StructContext.class) {
+                        classMap.put(fieldName, fieldClass);
                     }
                 }
 
