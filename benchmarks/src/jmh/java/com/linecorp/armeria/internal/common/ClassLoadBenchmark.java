@@ -23,6 +23,7 @@ import org.openjdk.jmh.infra.Blackhole;
  * Microbenchmarks of {@link Class} loading.
  */
 public class ClassLoadBenchmark {
+
     @Benchmark
     public void loadClass(Blackhole bh) throws ClassNotFoundException {
         bh.consume(Class.forName("com.linecorp.armeria.thrift.services.HelloService"));
