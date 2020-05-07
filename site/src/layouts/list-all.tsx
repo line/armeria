@@ -1,11 +1,10 @@
-import { WindowLocation } from '@reach/router';
+import { RouteComponentProps } from '@reach/router';
 import { Link } from 'gatsby';
 import React from 'react';
 
 import styles from './list-all.module.less';
 
-interface ListAllLayoutProps {
-  location: WindowLocation;
+interface ListAllLayoutProps extends RouteComponentProps {
   pageContext: any;
   pageTitle: string;
   allItems: { [pagePath: string]: string };

@@ -1,12 +1,12 @@
-import { WindowLocation } from '@reach/router';
+import { RouteComponentProps } from '@reach/router';
 import { graphql, useStaticQuery } from 'gatsby';
 import React from 'react';
 
 import communityIndex from '../pages/community/toc.json';
 import MdxLayout from './mdx';
 
-interface CommunityLayoutProps {
-  location: WindowLocation;
+interface CommunityLayoutProps extends RouteComponentProps {
+  pageContext: any;
   pageTitle: string;
 }
 

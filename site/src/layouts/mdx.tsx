@@ -7,7 +7,7 @@ import {
 } from '@ant-design/icons';
 import loadable from '@loadable/component';
 import { MDXProvider } from '@mdx-js/react';
-import { globalHistory, WindowLocation } from '@reach/router';
+import { globalHistory, RouteComponentProps } from '@reach/router';
 import { Button, Layout, Select, Tabs as AntdTabs } from 'antd';
 import { Link, navigate, withPrefix } from 'gatsby';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
@@ -30,8 +30,7 @@ import styles from './mdx.module.less';
 
 const { Content } = Layout;
 
-interface MdxLayoutProps {
-  location: WindowLocation;
+interface MdxLayoutProps extends RouteComponentProps {
   pageContext: any;
   candidateMdxNodes: any[];
   index: { [section: string]: string[] | { [title: string]: string } };

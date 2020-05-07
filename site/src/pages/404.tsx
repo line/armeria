@@ -1,4 +1,4 @@
-import { WindowLocation } from '@reach/router';
+import { RouteComponentProps } from '@reach/router';
 import React from 'react';
 
 import BaseLayout from '../layouts/base';
@@ -6,9 +6,7 @@ import BaseLayout from '../layouts/base';
 import styles from './404.module.less';
 import Logo from '../components/logo';
 
-const NotFound: React.FC<{
-  location: WindowLocation;
-}> = props => (
+const NotFound: React.FC<RouteComponentProps> = props => (
   <BaseLayout
     location={props.location}
     pageTitle="Not found"

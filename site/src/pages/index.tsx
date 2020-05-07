@@ -1,9 +1,9 @@
-import { WindowLocation } from '@reach/router';
-import { Carousel, Button, Tooltip, Typography } from 'antd';
-import React from 'react';
+import { RouteComponentProps } from '@reach/router';
+import { Button, Carousel, Tooltip, Typography } from 'antd';
 import { graphql, Link, useStaticQuery } from 'gatsby';
 import Img from 'gatsby-image';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
+import React from 'react';
 
 import Blockquote from '../components/blockquote';
 import BrowserMockup from '../components/browser-mockup';
@@ -19,9 +19,7 @@ import styles from './index.module.less';
 
 const { Title, Paragraph } = Typography;
 
-const IndexPage: React.FC<{
-  location: WindowLocation;
-}> = props => {
+const IndexPage: React.FC<RouteComponentProps> = props => {
   const data = useStaticQuery(graphql`
     query {
       docServiceImages: allFile(
@@ -285,10 +283,10 @@ const IndexPage: React.FC<{
             or Dropwizard with minimal changes only.
           </Paragraph>
           <Paragraph>
-            Got a legacy webapp you must keep until you migrate off? No problem!
-            Armeria can serve any legacy webapps that run on top of Tomcat or
-            Jetty until you finish your migration. Adios, maintenance hell!{' '}
-            <Emoji text="🥂" />
+            Got a legacy webapp you need to keep running until you migrate off?
+            No problem! Armeria can serve any legacy webapps that run on top of
+            Tomcat or Jetty until you finish your migration. Adios, maintenance
+            hell! <Emoji text="🥂" />
           </Paragraph>
         </MarketingBlock>
         <MarketingBlock>

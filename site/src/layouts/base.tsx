@@ -1,4 +1,4 @@
-import { globalHistory, WindowLocation } from '@reach/router';
+import { globalHistory, RouteComponentProps } from '@reach/router';
 import { BackTop, Layout } from 'antd';
 import { graphql, useStaticQuery } from 'gatsby';
 import React, { useEffect, useCallback } from 'react';
@@ -18,8 +18,7 @@ const { Content } = Layout;
 
 configReveal({ ssrFadeout: true });
 
-interface BaseLayoutProps {
-  location: WindowLocation;
+interface BaseLayoutProps extends RouteComponentProps {
   pageTitle?: string;
   contentClassName?: string;
   main?: boolean;

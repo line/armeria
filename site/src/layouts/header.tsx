@@ -4,7 +4,7 @@ import {
   MenuOutlined,
   SlackOutlined,
 } from '@ant-design/icons';
-import { WindowLocation } from '@reach/router';
+import { RouteComponentProps } from '@reach/router';
 import { Layout, Menu, Drawer, Button } from 'antd';
 import Link from 'gatsby-link';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
@@ -16,10 +16,6 @@ import styles from './header.module.less';
 
 const { Header } = Layout;
 
-interface HeaderComponentProps {
-  location: WindowLocation;
-}
-
 const selectableKeysAndRegexes = {
   news: /\/news(\/|$)/,
   guides: /\/guides(\/|$)/,
@@ -28,7 +24,7 @@ const selectableKeysAndRegexes = {
   home: /.?/,
 };
 
-const HeaderComponent: React.FC<HeaderComponentProps> = props => {
+const HeaderComponent: React.FC<RouteComponentProps> = props => {
   const [verticalMenuOpen, setVerticalMenuOpen] = useState(false);
 
   const selectedKeyAndRegex = Object.entries(

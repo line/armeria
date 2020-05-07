@@ -1,12 +1,11 @@
-import { WindowLocation } from '@reach/router';
+import { RouteComponentProps } from '@reach/router';
 import React from 'react';
 
 import recentNews from '../../gen-src/news-recent.json';
 import recentReleases from '../../gen-src/release-notes-recent.json';
 import MdxLayout from './mdx';
 
-interface NewsLayoutProps {
-  location: WindowLocation;
+interface NewsLayoutProps extends RouteComponentProps {
   pageContext: any;
   pageTitle: string;
   version?: string;

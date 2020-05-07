@@ -1,12 +1,11 @@
-import { WindowLocation } from '@reach/router';
+import { RouteComponentProps } from '@reach/router';
 import { graphql, useStaticQuery } from 'gatsby';
 import React from 'react';
 
 import docsIndex from '../pages/docs/toc.json';
 import MdxLayout from './mdx';
 
-interface DocsLayoutProps {
-  location: WindowLocation;
+interface DocsLayoutProps extends RouteComponentProps {
   pageContext: any;
   pageTitle: string;
 }
