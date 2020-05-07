@@ -58,6 +58,7 @@ public class WithJavaDoc {
 
     /**
      * D method.
+     * @deprecated x is deprecated
      * @param x The x variable in d
      * @param y The y variable in d
      */

@@ -145,7 +145,7 @@ public class DocumentationProcessor extends AbstractProcessor {
             for (List<String> line : lines) {
                 final List<String> subLine;
                 if ((line.size() < 3 ||
-                     !line.get(0).startsWith("@") ||
+                     !"@param".equals(line.get(0)) ||
                      !param.getSimpleName().toString().equals(line.get(1))) &&
                     state == JavaDocParserState.SEARCHING) {
                     continue;
