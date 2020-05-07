@@ -74,7 +74,7 @@ const IndexPage: React.FC<{
   return (
     <BaseLayout
       location={props.location}
-      pageTitle="Armeria &ndash; An all-round microservice framework"
+      pageTitle="Armeria &ndash; Your go-to microservice framework"
       contentClassName={styles.wrapper}
     >
       <Marketing className={styles.slogan}>
@@ -101,10 +101,10 @@ const IndexPage: React.FC<{
             <NoWrap>not theirs.</NoWrap>
           </Title>
           <Paragraph>
-            <em>Armeria</em> is an all-round microservice framework that lets
-            you build any type of microservice leveraging your favorite
-            technologies, including gRPC, Thrift, Kotlin, Retrofit, Reactive
-            Streams, Spring Boot and Dropwizard.
+            <em>Armeria</em> is your go-to microservice framework for any
+            situation. You can build any type of microservice leveraging your
+            favorite technologies, including gRPC, Thrift, Kotlin, Retrofit,
+            Reactive Streams, Spring Boot and Dropwizard.
           </Paragraph>
           <Paragraph className={styles.indented}>
             &ldquo; Brought to you by the creater of{' '}
