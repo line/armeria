@@ -25,7 +25,7 @@ import org.openjdk.jmh.infra.Blackhole;
 public class ClassLoadBenchmark {
     @Benchmark
     public void loadClass(Blackhole bh) throws ClassNotFoundException {
-        bh.consume(Class.forName("com.linecorp.armeria.service.test.thrift.tree.LeafType"));
+        bh.consume(Class.forName("com.linecorp.armeria.thrift.services.HelloService"));
     }
 
     @Benchmark

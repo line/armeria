@@ -206,7 +206,7 @@ final class StructContext extends PairContext {
                         if (fieldClass == null) {
                             fieldClass = fieldMetaDataClassCache.computeIfAbsent(fqcn, key -> {
                                 try {
-                                    return Class.forName(fqcn);
+                                    return Class.forName(key);
                                 } catch (ClassNotFoundException ignored) {
                                     return StructContext.class;
                                 }
