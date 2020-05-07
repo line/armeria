@@ -205,28 +205,30 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
         <MarketingBlock>
           <Blockquote
             author={
-              <OutboundLink href="https://github.com/andrewoma">
-                Andrew O&apos;Malley
+              <OutboundLink href="https://github.com/renaudb">
+                Renaud Bourassa
               </OutboundLink>
             }
             from={
-              <OutboundLink href="https://en.wikipedia.org/wiki/Afterpay">
-                Afterpay
+              <OutboundLink href="https://slack.engineering/">
+                Slack
               </OutboundLink>
             }
             bgColor1="rgba(255, 255, 255, 0.5)"
             bgColor2="white"
           >
-            Armeria has eased our adoption of gRPC at Afterpay. Serving gRPC,
-            documentation, health checks and metrics on a single port (with or
-            without TLS) gives us the functionality of a sidecar like Envoy in a
-            single process. Automated serving of API documentation, complete
-            with sample payloads, allows simple ad-hoc gRPC requests straight
-            from the browser. Distributed tracing is trivial to configure using
-            the built-in Brave decorators. Logging request bodies, performing
-            retries or circuit breaking are all built-in. The friendly devs
-            rapidly respond to issues and feature requests. Armeria is becoming
-            the default stack for gRPC at Afterpay.
+            Armeria was pivotal in our effort to refactor core components of our
+            search system into separate services. Decorators make reusing
+            existing components and building new ones a breeze. This helped
+            streamline the integration of our new services with our existing
+            infrastructure, including logging, monitoring, tracing, service
+            discovery, and RPC. The modern Java API is a joy to use and the
+            asynchronous architecture delivers great performance with high
+            concurrency. The Armeria community has been very welcoming and the
+            maintainers were very responsive to our needs during our migration
+            process and beyond. We are now running several search and discovery
+            services built on Armeria and it has become our framework of choice
+            for building new Java services.
           </Blockquote>
         </MarketingBlock>
       </Marketing>
@@ -301,6 +303,36 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
           />
         </MarketingBlock>
       </Marketing>
+      <Marketing className={styles.testimonial}>
+        <MarketingBlock>
+          <Blockquote
+            author={
+              <OutboundLink href="https://github.com/andrewoma">
+                Andrew O&apos;Malley
+              </OutboundLink>
+            }
+            from={
+              <OutboundLink href="https://en.wikipedia.org/wiki/Afterpay">
+                Afterpay
+              </OutboundLink>
+            }
+            bgColor1="rgba(255, 255, 255, 0.5)"
+            bgColor2="white"
+            reverse
+          >
+            Armeria has eased our adoption of gRPC at Afterpay. Serving gRPC,
+            documentation, health checks and metrics on a single port (with or
+            without TLS) gives us the functionality of a sidecar like Envoy in a
+            single process. Automated serving of API documentation, complete
+            with sample payloads, allows simple ad-hoc gRPC requests straight
+            from the browser. Distributed tracing is trivial to configure using
+            the built-in Brave decorators. Logging request bodies, performing
+            retries or circuit breaking are all built-in. The friendly devs
+            rapidly respond to issues and feature requests. Armeria is becoming
+            the default stack for gRPC at Afterpay.
+          </Blockquote>
+        </MarketingBlock>
+      </Marketing>
       <Marketing>
         <MarketingBlock>
           <Title level={1}>
@@ -312,8 +344,8 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
             Kubernetes-style DNS records to ZooKeeper data nodes. Send periodic
             or long-polling pings to exclude unhealthy endpoints autonomously.
             Choose the best load-balancing strategy for you &mdash; weighted
-            round-robin, sticky-session. You can even write a custom service
-            discovery or load-balancing strategy.
+            round-robin, sticky-session, etc. You can even write a custom
+            service discovery or load-balancing strategy.
           </Paragraph>
         </MarketingBlock>
         <MarketingBlock>

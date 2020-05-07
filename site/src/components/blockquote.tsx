@@ -11,6 +11,7 @@ interface BlockquoteProps {
   from: React.ReactNode;
   bgColor1: string;
   bgColor2: string;
+  reverse?: boolean;
 }
 
 const Blockquote: React.FC<BlockquoteProps> = props => {
@@ -29,14 +30,24 @@ const Blockquote: React.FC<BlockquoteProps> = props => {
   return (
     <blockquote className={styles.blockquote}>
       <img
-        className={styles.backgroundPattern1}
-        src={data.pattern1.publicURL}
+        className={
+          props.reverse
+            ? styles.backgroundPattern1Reverse
+            : styles.backgroundPattern1
+        }
+        src={props.reverse ? data.pattern2.publicURL : data.pattern1.publicURL}
+        height={200}
         alt=" "
         aria-hidden
       />
       <img
-        className={styles.backgroundPattern2}
-        src={data.pattern2.publicURL}
+        className={
+          props.reverse
+            ? styles.backgroundPattern2Reverse
+            : styles.backgroundPattern2
+        }
+        src={props.reverse ? data.pattern1.publicURL : data.pattern2.publicURL}
+        height={200}
         alt=" "
         aria-hidden
       />
