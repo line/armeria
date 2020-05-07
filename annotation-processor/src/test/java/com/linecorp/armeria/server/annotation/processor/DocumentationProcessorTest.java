@@ -57,7 +57,7 @@ public class DocumentationProcessorTest {
     public void withJavaDoc() throws IOException {
         Reflect.compile(
                 "com.linecorp.armeria.WithJavaDoc",
-                loadFile("WithJavaDoc.java"),
+                loadFile("WithJavaDoc.java.txt"),
                 new CompileOptions().processors(target)
         );
         testFile("com.linecorp.armeria.WithJavaDoc");
@@ -67,7 +67,7 @@ public class DocumentationProcessorTest {
     public void noJavaDoc() throws IOException {
         Reflect.compile(
                 "com.linecorp.armeria.NoJavaDoc",
-                loadFile("NoJavaDoc.java"),
+                loadFile("NoJavaDoc.java.txt"),
                 new CompileOptions().processors(target)
         );
         final String fileName = DocumentationProcessor.getFileName("com.linecorp.armeria.NoJavaDoc");
