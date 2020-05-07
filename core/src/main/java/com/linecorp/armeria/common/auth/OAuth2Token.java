@@ -14,11 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.auth;
+package com.linecorp.armeria.common.auth;
 
+import static com.linecorp.armeria.common.auth.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.HttpHeaderNames;
 
 /**
  * The bearer token of <a href="https://tools.ietf.org/html/rfc6750">OAuth 2.0 authentication</a>.
@@ -45,6 +48,13 @@ public final class OAuth2Token {
         return accessToken;
     }
 
+    /**
+     * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
+     */
+    public String toHeaderValue() {
+        return "Bearer " + accessToken;
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {
@@ -54,7 +64,7 @@ public final class OAuth2Token {
             return false;
         }
         final OAuth2Token that = (OAuth2Token) o;
-        return BasicToken.secureEquals(accessToken, that.accessToken);
+        return secureEquals(accessToken, that.accessToken);
     }
 
     @Override

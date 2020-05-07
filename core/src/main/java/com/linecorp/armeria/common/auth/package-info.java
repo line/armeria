@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,20 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.auth;
 
-import static org.assertj.core.api.Assertions.assertThat;
+/**
+ * HTTP authorization common.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.common.auth;
 
-import org.junit.jupiter.api.Test;
-
-import com.linecorp.armeria.common.auth.OAuth2Token;
-
-class OAuth2TokenTest {
-    @Test
-    void testEquals() {
-        assertThat(OAuth2Token.of("a")).isEqualTo(OAuth2Token.of("a"));
-        assertThat(OAuth2Token.of("a")).isNotEqualTo(OAuth2Token.of("x"));
-        assertThat(OAuth2Token.of("b")).isNotEqualTo(OAuth2Token.of("bb"));
-        assertThat(OAuth2Token.of("bb")).isNotEqualTo(OAuth2Token.of("b"));
-    }
-}
+import com.linecorp.armeria.common.util.NonNullByDefault;

@@ -36,6 +36,9 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * Creates a new web client that connects to the specified {@link URI} using the builder pattern.
@@ -264,5 +267,20 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     public WebClientBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (WebClientBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public WebClientBuilder auth(BasicToken token) {
+        return (WebClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public WebClientBuilder auth(OAuth1aToken token) {
+        return (WebClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public WebClientBuilder auth(OAuth2Token token) {
+        return (WebClientBuilder) super.auth(token);
     }
 }
