@@ -278,9 +278,13 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
           <Paragraph>
             Wanna try some cool technology while using Spring Boot or
             Dropwizard? That&apos;s absolutely fine. Armeria integrates them
-            without getting in the way. It serves gRPC or Thrift requests at
-            high efficiency while leaving other requests to Spring MVC, WebFlux
-            or Dropwizard with minimal changes only.
+            without getting in the way.{' '}
+            <span className={styles.hideIfShrunk}>
+              <br />
+            </span>
+            It serves gRPC or Thrift requests at high efficiency while leaving
+            other requests to Spring MVC, WebFlux or Dropwizard with minimal
+            changes.
           </Paragraph>
           <Paragraph>
             Got a legacy webapp you need to keep running until you migrate off?
