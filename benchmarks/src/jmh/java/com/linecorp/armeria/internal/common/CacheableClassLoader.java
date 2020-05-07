@@ -24,7 +24,7 @@ import com.google.common.collect.MapMaker;
 final class CacheableClassLoader {
 
     private static final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
-    private static final Map<String, Class<?>> weakKeyCache = new MapMaker().weakValues().makeMap();
+    private static final Map<String, Class<?>> weakValueCache = new MapMaker().weakValues().makeMap();
 
     static Class<?> loadWithConcurrentHashMap(String fqcn) throws ClassNotFoundException {
         return loadFromCache(fqcn, cache);
@@ -45,7 +45,7 @@ final class CacheableClassLoader {
     }
 
     static Class<?> loadWithGuavaHashMap(String fqcn) throws ClassNotFoundException {
-        return loadFromCache(fqcn, weakKeyCache);
+        return loadFromCache(fqcn, weakValueCache);
     }
 
     private static Class<?> loadFromCache(String fqcn, Map<String, Class<?>> cache) {
