@@ -33,9 +33,9 @@ final class CacheableClassLoader {
     static Class<?> loadWithConcurrentHashMap(String fqcn, boolean initialize) throws ClassNotFoundException {
         final Class<?> clazz = cache.get(fqcn);
         if (clazz == null) {
-            return cache.computeIfAbsent(fqcn, unused -> {
+            return cache.computeIfAbsent(fqcn, key -> {
                 try {
-                    return Class.forName(fqcn, initialize, CacheableClassLoader.class.getClassLoader());
+                    return Class.forName(key, initialize, CacheableClassLoader.class.getClassLoader());
                 } catch (ClassNotFoundException e) {
                     return CacheableClassLoader.class;
                 }
@@ -51,9 +51,9 @@ final class CacheableClassLoader {
     private static Class<?> loadFromCache(String fqcn, Map<String, Class<?>> cache) {
         final Class<?> clazz = cache.get(fqcn);
         if (clazz == null) {
-            return cache.computeIfAbsent(fqcn, unused -> {
+            return cache.computeIfAbsent(fqcn, key -> {
                 try {
-                    return Class.forName(fqcn);
+                    return Class.forName(key);
                 } catch (ClassNotFoundException e) {
                     return CacheableClassLoader.class;
                 }
