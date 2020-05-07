@@ -3202,9 +3202,9 @@ caniuse-api@^3.0.0:
     lodash.uniq "^4.5.0"
 
 caniuse-lite@^1.0.0, caniuse-lite@^1.0.30000989, caniuse-lite@^1.0.30001039, caniuse-lite@^1.0.30001043:
-  version "1.0.30001052"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001052.tgz#33a5ddd13783cfe2c8a6a846ab983387d4edff75"
-  integrity sha512-b2/oWZwkpWzEB1+Azr2Z4FcpdDkH+9R4dn+bkwk/6eH9mRSrnZjhA6v32+zsV+TSqC0pp2Rxush2yUVTJ0dJTQ==
+  version "1.0.30001053"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001053.tgz#b7ae027567ce2665b965b0437e4512b296ccd20d"
+  integrity sha512-HtV4wwIZl6GA4Oznse8aR274XUOYGZnQLcf/P8vHgmlfqSNelwD+id8CyHOceqLqt9yfKmo7DUZTh1EuS9pukg==
 
 caseless@~0.12.0:
   version "0.12.0"
@@ -4570,9 +4570,9 @@ date-and-time@^0.11.1:
   integrity sha512-+1JkWME+UWRpCfvE1T0Vfbw629Ego0IcfHH0qtP4KhAXs7IJT2qsg1hNePqZhyD8Wby46HlW393lSL5PZSzDsA==
 
 date-fns@^2.12.0:
-  version "2.12.0"
-  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.12.0.tgz#01754c8a2f3368fc1119cf4625c3dad8c1845ee6"
-  integrity sha512-qJgn99xxKnFgB1qL4jpxU7Q2t0LOn1p8KMIveef3UZD7kqjT3tpFNNdXJelEHhE+rUgffriXriw/sOSU+cS1Hw==
+  version "2.13.0"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.13.0.tgz#d7b8a0a2d392e8d88a8024d0a46b980bbfdbd708"
+  integrity sha512-xm0c61mevGF7f0XpCGtDTGpzEFC/1fpLXHbmFpxZZQJuvByIK2ozm6cSYuU+nxFYOPh2EuCfzUwlTEFwKG+h5w==
 
 dayjs@^1.8.25:
   version "1.8.26"
@@ -5030,9 +5030,9 @@ domhandler@^2.3.0:
     domelementtype "1"
 
 dompurify@^2.0.8:
-  version "2.0.10"
-  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-2.0.10.tgz#d193f36d8148b4297a3a420b992d20eeff47a4d3"
-  integrity sha512-ok1dcSztsIuVxWG6Cx0ujyDIzNclz9W9OIU0cOb0IT+VAtSLrOelZF4miUvSm1U4PoCw8D7sIOLCnCQOaVpr3w==
+  version "2.0.11"
+  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-2.0.11.tgz#cd47935774230c5e478b183a572e726300b3891d"
+  integrity sha512-qVoGPjIW9IqxRij7klDQQ2j6nSe4UNWANBhZNLnsS7ScTtLb+3YdxkRY8brNTpkUiTtcXsCJO+jS0UCDfenLuA==
 
 domutils@1.5.1:
   version "1.5.1"
@@ -5152,9 +5152,9 @@ ejs@^3.0.2:
     jake "^10.6.1"
 
 electron-to-chromium@^1.3.247, electron-to-chromium@^1.3.413:
-  version "1.3.429"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.429.tgz#0d1ef6710ba84de3710615280c1f6f79c8205b47"
-  integrity sha512-YW8rXMJx33FalISp0uP0+AkvBx9gfzzQ4NotblGga6Z8ZX00bg2e5FNWV8fyDD/VN3WLhEtjFXNwzdJrdaAHEQ==
+  version "1.3.430"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.430.tgz#33914f7c2db771bdcf30977bd4fd6258ee8a2f37"
+  integrity sha512-HMDYkANGhx6vfbqpOf/hc6hWEmiOipOHGDeRDeUb3HLD3XIWpvKQxFgWf0tgHcr3aNv6I/8VPecplqmQsXoZSw==
 
 elliptic@^6.0.0, elliptic@^6.5.2:
   version "6.5.2"
@@ -6851,9 +6851,9 @@ gatsby-transformer-sharp@^2.4.2:
     sharp "^0.25.1"
 
 gatsby@^2.19.45:
-  version "2.21.15"
-  resolved "https://registry.yarnpkg.com/gatsby/-/gatsby-2.21.15.tgz#eb7edaa8b9c451a1ff0e92eb2128d170c88b8981"
-  integrity sha512-cFvL1FRkhnXIUN9+6Txza6Y0ThwYnYcWeW67Ovtc18faOK/qUx0gFTgCC5DXYFjVyYi+lN/eNHiKvqERAGpgwA==
+  version "2.21.16"
+  resolved "https://registry.yarnpkg.com/gatsby/-/gatsby-2.21.16.tgz#fd0a27e414c71d132622b116fc1ae1db1e6d0f84"
+  integrity sha512-ySWC4SIECqNs4cxQj400/Mr7d0B6DZc5gCuhGtwfUqi5fLvwAo7QYoDaSHqcBC+QMXFYqVhz3XQTV2Z0TP85bA==
   dependencies:
     "@babel/code-frame" "^7.8.3"
     "@babel/core" "^7.9.6"
@@ -6961,6 +6961,7 @@ gatsby@^2.19.45:
     postcss-loader "^3.0.0"
     prompts "^2.3.2"
     prop-types "^15.7.2"
+    query-string "^6.12.1"
     raw-loader "^0.5.1"
     react-dev-utils "^4.2.3"
     react-error-overlay "^3.0.0"
@@ -12188,9 +12189,9 @@ rc-switch@~1.9.0:
     react-lifecycles-compat "^3.0.4"
 
 rc-table@~7.5.2:
-  version "7.5.4"
-  resolved "https://registry.yarnpkg.com/rc-table/-/rc-table-7.5.4.tgz#737cc28adfa45ee3ab831068d377f92d278fd2d2"
-  integrity sha512-AZ8ekPo5joDB/EXcSIk0K3b3BUfrZp/dkZAgrLe50NbfkY4w97gjMFe3HG6f0gdxEs+1rlvMz9MfJWYFE3PyWg==
+  version "7.5.7"
+  resolved "https://registry.yarnpkg.com/rc-table/-/rc-table-7.5.7.tgz#da8ce5d1db178031aac867bcb61fc14d106518e0"
+  integrity sha512-zEcLTbnmXB4VHLmIPtSZ6xBtdK0HzACtAnddq2srYgbSulatDysNpY7dFuG2wv3SYGl8FyB3c9xw2wgvSmcKAw==
   dependencies:
     classnames "^2.2.5"
     component-classes "^1.2.6"

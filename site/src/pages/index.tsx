@@ -172,8 +172,7 @@ const IndexPage: React.FC<{
       <Marketing reverse>
         <MarketingBlock>
           <Title level={1}>
-            <Highlight>Supercharge your RPC</Highlight> with documentation
-            service
+            <Highlight>Headache-free RPC</Highlight> with documentation service
           </Title>
           <Paragraph>
             RPC protocols were often more difficult to work with than RESTful
