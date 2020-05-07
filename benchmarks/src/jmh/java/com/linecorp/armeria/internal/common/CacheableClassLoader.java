@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.collect.MapMaker;
 
-public final class CacheableClassLoader {
+final class CacheableClassLoader {
 
     private static final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
     private static final Map<String, Class<?>> weakKeyCache = new MapMaker().weakValues().makeMap();
@@ -61,7 +61,6 @@ public final class CacheableClassLoader {
         }
         return clazz;
     }
-
 
     private CacheableClassLoader() {}
 }
