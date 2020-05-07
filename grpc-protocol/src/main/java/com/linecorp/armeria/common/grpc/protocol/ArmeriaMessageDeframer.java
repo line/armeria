@@ -317,7 +317,6 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 unprocessed.forEach(ByteBuf::release);
             } finally {
                 unprocessed = null;
-                closeWhenComplete = false;
             }
 
             if (endOfStream) {
