@@ -29,6 +29,7 @@ import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
  * An {@link HttpService} that decorates another {@link HttpService} publishing {@link PooledHttpData}.
  *
  * @see SimpleDecoratingHttpService
+ * @see PooledHttpData
  */
 public abstract class SimplePooledDecoratingHttpService extends SimpleDecoratingHttpService
         implements PooledHttpService {

@@ -30,6 +30,7 @@ import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
  * A skeletal {@link HttpService} for easier HTTP service implementation that publishes {@link PooledHttpData}.
  *
  * @see AbstractHttpService
+ * @see PooledHttpData
  */
 public abstract class AbstractPooledHttpService extends AbstractHttpService {
 

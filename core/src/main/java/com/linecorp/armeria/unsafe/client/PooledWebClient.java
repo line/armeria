@@ -30,8 +30,10 @@ import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
 /**
  * An asynchronous web client which will return pooled buffers in its responses where possible. Before using
  * this class, please review the notes in {@link PooledHttpData}. Usage of this class is very advanced and while
- * it may unlock significant performance, has even more of a chance of introducing difficult to debug issues in
+ * it may unlock significant performance, has even more of a chance of introducing difficultn to debug issues in
  * an application. If you are not comfortable with this, use {@link WebClient}.
+ *
+ * @see PooledHttpData
  */
 public interface PooledWebClient extends WebClient {
 
