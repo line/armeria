@@ -37,7 +37,6 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.annotation.InjectionMetadata.InjectedElement;
 import org.springframework.core.BridgeMethodResolver;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 
 import com.google.common.base.Strings;
@@ -206,9 +205,9 @@ abstract class AbstractArmeriaBeanPostProcessor {
             }
 
             final Builder<Integer> ports = ImmutableList.builder();
-            if (CollectionUtils.isEmpty(portsCache)) {
+            if (portsCache.isEmpty()) {
                 synchronized (portsCache) {
-                    if (CollectionUtils.isEmpty(portsCache)) {
+                    if (portsCache.isEmpty()) {
                         ports.addAll(server.activePorts().values().stream()
                                            .map(p -> p.localAddress().getPort())
                                            .collect(toImmutableList()));
