@@ -123,7 +123,7 @@ You can return a different :api:`Backoff` according to the response status.
                                 ex instanceof UnprocessedRequestException)
              .thenBackoff(backoffOnServerErrorOrTimeout)
              .orElse(RetryRule.onStatusClass(HttpStatusClass.SERVER_ERROR)
-                          .thenBackoff(backoffOnServerErrorOrTimeout))
+                              .thenBackoff(backoffOnServerErrorOrTimeout))
              .orElse(RetryRule.onStatus(HttpStatus.CONFLICT).thenBackoff(backoffOnConflict));
 
 If you need to determine whether you need to retry by looking into the response content, you can build
@@ -134,6 +134,7 @@ using :api:`RetryingClientBuilder`:
 
     import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 
+    // Create an WebClient with a retry rule.
     RetryRuleWithContent<HttpResponse> retryRule =
             RetryRuleWithContent
                     .<HttpResponse>builder()
@@ -145,7 +146,6 @@ using :api:`RetryingClientBuilder`:
                     })
                     .thenBackoff(backoff);
 
-    // Create an WebClient with a retry rule.
     WebClient client = WebClient
             .builder(...)
             .decorator(RetryingClient.builder(retryRule)

@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.Response;
 /**
  * Builds a new {@link AbstractRetryingClient} or its decorator function.
  *
- * @param <O> the content type of incoming {@link Response} of the {@link Client}
+ * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
 public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
@@ -69,6 +69,16 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      */
     protected AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent) {
         this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"));
+    }
+
+    /**
+     * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     * @deprecated Use {@link #AbstractRetryingClientBuilder(RetryRuleWithContent)}
+     */
+    @Deprecated
+    protected AbstractRetryingClientBuilder(RetryStrategyWithContent<O> retryStrategyWithContent) {
+        this(null, RetryRuleUtil.fromRetryStrategyWithContent(
+                requireNonNull(retryStrategyWithContent, "retryStrategyWithContent")));
     }
 
     private AbstractRetryingClientBuilder(@Nullable RetryRule retryRule,

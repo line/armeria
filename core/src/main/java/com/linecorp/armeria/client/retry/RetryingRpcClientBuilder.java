@@ -27,8 +27,8 @@ import com.linecorp.armeria.common.RpcResponse;
  */
 public final class RetryingRpcClientBuilder extends AbstractRetryingClientBuilder<RpcResponse> {
 
-    RetryingRpcClientBuilder(RetryRuleWithContent<RpcResponse> retryRuleWithRpcResponse) {
-        super(retryRuleWithRpcResponse);
+    RetryingRpcClientBuilder(RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
+        super(retryRuleWithContent);
     }
 
     /**

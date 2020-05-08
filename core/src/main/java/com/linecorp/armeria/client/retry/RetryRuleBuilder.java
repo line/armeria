@@ -55,7 +55,7 @@ public final class RetryRuleBuilder extends AbstractRetryRuleBuilder {
     }
 
     /**
-     * Returns a newly created retry rule that never retries.
+     * Returns a newly created {@link RetryRule} that never retries.
      */
     public RetryRule thenNoRetry() {
         return build(RetryRuleDecision.noRetry());

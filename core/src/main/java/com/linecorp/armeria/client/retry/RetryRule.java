@@ -64,9 +64,9 @@ public interface RetryRule {
      *                       .onServerErrorStatus()
      *                       .onUnprocessed()
      *                       .thenBackoff(),
-     *             RetryRule.builder()
-     *                      .onUnprocessed()
-     *                      .thenBackoff());
+     *              RetryRule.builder()
+     *                       .onUnprocessed()
+     *                       .thenBackoff());
      * }</pre>
      */
     static RetryRule failsafe() {

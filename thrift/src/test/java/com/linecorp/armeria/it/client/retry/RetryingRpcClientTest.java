@@ -80,8 +80,6 @@ class RetryingRpcClientTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final AtomicInteger retryCount = new AtomicInteger();
-            sb.requestTimeoutMillis(0);
-            sb.idleTimeoutMillis(0);
             sb.service("/thrift", THttpService.of(serviceHandler).decorate(
                     (delegate, ctx, req) -> {
                         final int count = retryCount.getAndIncrement();
@@ -157,23 +155,18 @@ class RetryingRpcClientTest {
         assertThatThrownBy(() -> client.hello("bar")).isSameAs(exception);
     }
 
-    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> strategy,
-                                           int maxAttempts) {
+    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
-                      .responseTimeoutMillis(0)
-                      .factory(ClientFactory.builder()
-                                            .idleTimeoutMillis(0)
-                                            .build())
-                      .rpcDecorator(RetryingRpcClient.builder(strategy)
+                      .rpcDecorator(RetryingRpcClient.builder(rule)
                                                      .maxTotalAttempts(maxAttempts)
                                                      .newDecorator())
                       .build(HelloService.Iface.class);
     }
 
-    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> strategy,
-                                           int maxAttempts, BlockingQueue<RequestLog> logQueue) {
+    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts,
+                                           BlockingQueue<RequestLog> logQueue) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
-                      .rpcDecorator(RetryingRpcClient.builder(strategy)
+                      .rpcDecorator(RetryingRpcClient.builder(rule)
                                                      .maxTotalAttempts(maxAttempts)
                                                      .newDecorator())
                       .rpcDecorator((delegate, ctx, req) -> {

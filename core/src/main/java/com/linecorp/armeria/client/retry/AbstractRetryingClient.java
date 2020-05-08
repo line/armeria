@@ -111,6 +111,20 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
+     * @deprecated Use {@link #AbstractRetryingClient(Client, RetryRule, RetryRuleWithContent, int, long)}
+     */
+    @Deprecated
+    protected AbstractRetryingClient(Client<I, O> delegate,
+                                     RetryStrategyWithContent<O> retryStrategyWithContent,
+                                     int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+        this(delegate, null,
+             RetryRuleUtil.fromRetryStrategyWithContent(
+                     requireNonNull(retryStrategyWithContent, "retryStrategyWithContent")),
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
      */
     private AbstractRetryingClient(Client<I, O> delegate, @Nullable RetryRule retryRule,
                                    @Nullable RetryRuleWithContent<O> retryRuleWithContent,

@@ -106,12 +106,12 @@ class RetryStrategyBuilderTest {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Backoff backoff1 = Backoff.fixed(1000);
         final Backoff backoff2 = Backoff.fixed(2000);
-        final RetryRule rule = RetryRule.builder()
-                                        .onException(ClosedSessionException.class)
-                                        .thenBackoff(backoff1)
-                                        .orElse(RetryRule.builder()
-                                                         .onException(WriteTimeoutException.class::isInstance)
-                                                         .thenBackoff(backoff2));
+        final RetryRule rule = RetryRule.of(RetryRule.builder()
+                                                     .onException(ClosedSessionException.class)
+                                                     .thenBackoff(backoff1),
+                                            RetryRule.builder()
+                                                     .onException(WriteTimeoutException.class::isInstance)
+                                                     .thenBackoff(backoff2));
 
         assertBackoff(rule.shouldRetry(ctx, ClosedSessionException.get())).isSameAs(backoff1);
         assertBackoff(rule.shouldRetry(ctx, new CompletionException(ClosedSessionException.get())))
