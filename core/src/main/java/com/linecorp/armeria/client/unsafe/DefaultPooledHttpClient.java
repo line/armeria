@@ -18,9 +18,9 @@ package com.linecorp.armeria.client.unsafe;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 final class DefaultPooledHttpClient extends AbstractUnwrappable<HttpClient> implements PooledHttpClient {
 

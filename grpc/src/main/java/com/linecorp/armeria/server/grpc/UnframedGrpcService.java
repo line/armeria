@@ -52,8 +52,6 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
-import com.linecorp.armeria.server.unsafe.PooledHttpService;
-import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
@@ -117,7 +115,7 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
 
     @Override
     public HttpResponse serve(
-            ServiceRequestContext ctx, PooledHttpRequest req, PooledHttpService service) throws Exception {
+            PooledHttpService service, ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {

@@ -24,10 +24,10 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.unsafe.PooledAggregatedHttpRequest;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 final class DefaultPooledWebClient extends AbstractUnwrappable<WebClient> implements PooledWebClient {
 
