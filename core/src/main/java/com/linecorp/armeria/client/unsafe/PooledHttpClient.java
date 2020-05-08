@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.client;
+package com.linecorp.armeria.client.unsafe;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -22,8 +22,8 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
-import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 
 /**
  * Sends an {@link HttpRequest} to a remote {@link Endpoint}.

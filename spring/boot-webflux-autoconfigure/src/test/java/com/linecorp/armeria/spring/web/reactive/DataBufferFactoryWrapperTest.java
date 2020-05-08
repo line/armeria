@@ -27,7 +27,7 @@ import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;

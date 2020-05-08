@@ -23,7 +23,7 @@ import javax.annotation.CheckReturnValue;
 
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;

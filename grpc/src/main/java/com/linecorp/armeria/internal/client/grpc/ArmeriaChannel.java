@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.unsafe.client.PooledHttpClient;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 
 import io.grpc.CallCredentials;
 import io.grpc.CallOptions;

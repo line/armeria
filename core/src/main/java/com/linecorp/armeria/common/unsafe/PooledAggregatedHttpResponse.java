@@ -14,14 +14,26 @@
  * under the License.
  */
 
-/**
- * Wrappers for creating services that publish unsafe, pooled buffers.
- *
- * @see com.linecorp.armeria.unsafe.common.PooledHttpData
- */
-@UnstableApi
-@NonNullByDefault
-package com.linecorp.armeria.unsafe.server;
+package com.linecorp.armeria.common.unsafe;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.util.SafeCloseable;
+
+/**
+ * An {@link AggregatedHttpResponse} using pooled buffers for the content. Make sure to call
+ * {@link AutoCloseable#close()} on this response or the {@code content} to release pooled resources.
+ */
+public interface PooledAggregatedHttpResponse extends AggregatedHttpResponse, SafeCloseable {
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    PooledHttpData content();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    PooledHttpResponse toHttpResponse();
+}

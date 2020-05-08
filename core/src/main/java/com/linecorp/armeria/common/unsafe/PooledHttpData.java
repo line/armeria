@@ -14,13 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.common;
+package com.linecorp.armeria.common.unsafe;
 
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.unsafe.client.PooledWebClient;
+import com.linecorp.armeria.client.unsafe.PooledWebClient;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

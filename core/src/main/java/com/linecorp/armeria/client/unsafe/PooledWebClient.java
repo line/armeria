@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.client;
+package com.linecorp.armeria.client.unsafe;
 
 import java.nio.charset.Charset;
 
@@ -24,8 +24,8 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.unsafe.common.PooledHttpData;
-import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 
 /**
  * An asynchronous web client which will return pooled buffers in its responses where possible. Before using

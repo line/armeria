@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.common;
+package com.linecorp.armeria.common.unsafe;
 
 import java.nio.charset.Charset;
 import java.util.List;

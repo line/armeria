@@ -14,22 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.server;
+package com.linecorp.armeria.client.unsafe;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
-import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 
-final class DefaultPooledHttpService extends AbstractUnwrappable<HttpService> implements PooledHttpService {
+final class DefaultPooledHttpClient extends AbstractUnwrappable<HttpClient> implements PooledHttpClient {
 
-    DefaultPooledHttpService(HttpService delegate) {
+    DefaultPooledHttpClient(HttpClient delegate) {
         super(delegate);
     }
 
     @Override
-    public PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
-        return PooledHttpResponse.of(delegate().serve(ctx, PooledHttpRequest.of(req)));
+    public PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception {
+        return PooledHttpResponse.of(delegate().execute(ctx, req));
     }
 }

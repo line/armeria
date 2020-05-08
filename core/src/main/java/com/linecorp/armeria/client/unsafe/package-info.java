@@ -14,26 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.common;
-
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.util.SafeCloseable;
-
 /**
- * An {@link AggregatedHttpResponse} using pooled buffers for the content. Make sure to call
- * {@link AutoCloseable#close()} on this response or the {@code content} to release pooled resources.
+ * Wrappers for creating clients that publish unsafe, pooled buffers.
+ *
+ * @see com.linecorp.armeria.common.unsafe.PooledHttpData
  */
-public interface PooledAggregatedHttpResponse extends AggregatedHttpResponse, SafeCloseable {
+@UnstableApi
+@NonNullByDefault
+package com.linecorp.armeria.client.unsafe;
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    PooledHttpData content();
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    PooledHttpResponse toHttpResponse();
-}
+import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.util.UnstableApi;

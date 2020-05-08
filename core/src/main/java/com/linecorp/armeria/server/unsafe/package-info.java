@@ -15,13 +15,13 @@
  */
 
 /**
- * Wrappers for creating clients that publish unsafe, pooled buffers.
+ * Wrappers for creating services that publish unsafe, pooled buffers.
  *
- * @see com.linecorp.armeria.unsafe.common.PooledHttpData
+ * @see com.linecorp.armeria.common.unsafe.PooledHttpData
  */
 @UnstableApi
 @NonNullByDefault
-package com.linecorp.armeria.unsafe.client;
+package com.linecorp.armeria.server.unsafe;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
 import com.linecorp.armeria.common.util.UnstableApi;

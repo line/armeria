@@ -14,16 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.server;
+package com.linecorp.armeria.server.unsafe;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.unsafe.common.PooledHttpData;
-import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
-import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 
 /**
  * An {@link HttpService} that decorates another {@link HttpService} publishing {@link PooledHttpData}.

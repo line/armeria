@@ -43,10 +43,10 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
-import com.linecorp.armeria.unsafe.client.PooledHttpClient;
-import com.linecorp.armeria.unsafe.client.SimplePooledDecoratingHttpClient;
-import com.linecorp.armeria.unsafe.common.PooledHttpData;
-import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
+import com.linecorp.armeria.client.unsafe.SimplePooledDecoratingHttpClient;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderValues;

@@ -27,7 +27,7 @@ import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.unsafe.client.PooledHttpClient;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 
 class GrpcClientUnwrapTest {
 

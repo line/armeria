@@ -22,9 +22,9 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
-import com.linecorp.armeria.unsafe.client.PooledHttpClient;
-import com.linecorp.armeria.unsafe.client.SimplePooledDecoratingHttpClient;
-import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
+import com.linecorp.armeria.client.unsafe.SimplePooledDecoratingHttpClient;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 
 import io.grpc.Attributes;
 import io.grpc.CallCredentials;

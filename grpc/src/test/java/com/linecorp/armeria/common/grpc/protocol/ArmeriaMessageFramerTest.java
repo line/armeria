@@ -32,7 +32,7 @@ import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
-import com.linecorp.armeria.unsafe.common.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.ByteBuf;

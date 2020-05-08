@@ -19,11 +19,11 @@
  * when dealing with large buffers but require careful memory management or there will be memory leaks. Only use
  * these methods if you really know what you're doing.
  *
- * @see com.linecorp.armeria.unsafe.common.PooledHttpData
+ * @see com.linecorp.armeria.common.unsafe.PooledHttpData
  */
 @UnstableApi
 @NonNullByDefault
-package com.linecorp.armeria.unsafe.common;
+package com.linecorp.armeria.common.unsafe;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
 import com.linecorp.armeria.common.util.UnstableApi;

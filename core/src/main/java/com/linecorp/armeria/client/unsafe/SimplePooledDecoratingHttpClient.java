@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.client;
+package com.linecorp.armeria.client.unsafe;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -22,9 +22,9 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.unsafe.common.PooledHttpData;
-import com.linecorp.armeria.unsafe.common.PooledHttpRequest;
-import com.linecorp.armeria.unsafe.common.PooledHttpResponse;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 
 /**
  * Decorates an {@link HttpClient}, ensuring {@link HttpData} are all {@link PooledHttpData}.
@@ -36,7 +36,7 @@ public abstract class SimplePooledDecoratingHttpClient extends SimpleDecoratingH
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     protected SimplePooledDecoratingHttpClient(HttpClient delegate) {
-        super(PooledHttpClient.of(delegate));
+        super(of(delegate));
     }
 
     @Override

@@ -27,8 +27,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
-import com.linecorp.armeria.unsafe.client.PooledWebClient;
-import com.linecorp.armeria.unsafe.common.PooledAggregatedHttpResponse;
+import com.linecorp.armeria.client.unsafe.PooledWebClient;
+import com.linecorp.armeria.common.unsafe.PooledAggregatedHttpResponse;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe.common;
+package com.linecorp.armeria.common.unsafe;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -23,17 +23,17 @@ import org.reactivestreams.Subscriber;
 
 import com.google.common.collect.ObjectArrays;
 
-import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultPooledHttpResponse extends FilteredHttpResponse implements PooledHttpResponse {
+final class DefaultPooledHttpRequest extends FilteredHttpRequest implements PooledHttpRequest {
 
-    DefaultPooledHttpResponse(HttpResponse delegate) {
+    DefaultPooledHttpRequest(HttpRequest delegate) {
         super(delegate, true);
     }
 

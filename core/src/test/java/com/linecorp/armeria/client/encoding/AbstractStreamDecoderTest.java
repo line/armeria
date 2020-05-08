@@ -25,7 +25,7 @@ import java.util.zip.DeflaterOutputStream;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.unsafe.common.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

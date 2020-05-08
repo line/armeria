@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.encoding;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.unsafe.common.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
