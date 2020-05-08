@@ -19,12 +19,12 @@ package com.linecorp.armeria.internal.client.grpc;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.client.unsafe.SimplePooledDecoratingHttpClient;
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
+import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 
 import io.grpc.Attributes;
 import io.grpc.CallCredentials;

@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -57,7 +58,6 @@ import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
-import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallOptions;
