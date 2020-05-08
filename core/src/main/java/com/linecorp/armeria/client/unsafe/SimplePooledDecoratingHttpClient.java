@@ -36,17 +36,17 @@ public abstract class SimplePooledDecoratingHttpClient extends SimpleDecoratingH
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     protected SimplePooledDecoratingHttpClient(HttpClient delegate) {
-        super(of(delegate));
+        super(PooledHttpClient.of(delegate));
     }
 
     @Override
     public final HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        return execute(ctx, PooledHttpRequest.of(req), delegate());
+        return execute(delegate(), ctx, PooledHttpRequest.of(req));
     }
 
     @Override
     public PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception {
-        return PooledHttpResponse.of(execute(ctx, req, delegate()));
+        return PooledHttpResponse.of(execute(delegate(), ctx, req));
     }
 
     /**
@@ -55,6 +55,6 @@ public abstract class SimplePooledDecoratingHttpClient extends SimpleDecoratingH
      * @see SimpleDecoratingHttpClient#execute(ClientRequestContext, HttpRequest)
      */
     protected abstract HttpResponse execute(
-            ClientRequestContext ctx, PooledHttpRequest req, PooledHttpClient client)
+            PooledHttpClient client, ClientRequestContext ctx, PooledHttpRequest req)
             throws Exception;
 }

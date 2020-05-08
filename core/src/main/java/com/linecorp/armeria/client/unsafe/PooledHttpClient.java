@@ -21,14 +21,13 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 
 /**
  * Sends an {@link HttpRequest} to a remote {@link Endpoint}.
  */
-public interface PooledHttpClient extends HttpClient, Unwrappable {
+public interface PooledHttpClient extends HttpClient {
 
     /**
      * Creates a {@link PooledHttpClient} that delegates to the provided {@link HttpClient} for issuing

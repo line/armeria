@@ -53,7 +53,7 @@ final class DefaultPooledHttpRequest extends FilteredHttpRequest implements Pool
     @Override
     public void subscribe(Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
         if (hasPooledObjects(options)) {
-            super.subscribe(subscriber,  options);
+            super.subscribe(subscriber, options);
         } else {
             super.subscribe(subscriber, withPooled(options));
         }
@@ -100,7 +100,7 @@ final class DefaultPooledHttpRequest extends FilteredHttpRequest implements Pool
         return super.drainAll(executor, withPooled(options));
     }
 
-    private boolean hasPooledObjects(SubscriptionOption... options) {
+    private static boolean hasPooledObjects(SubscriptionOption... options) {
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
                 return true;
@@ -109,7 +109,7 @@ final class DefaultPooledHttpRequest extends FilteredHttpRequest implements Pool
         return false;
     }
 
-    private SubscriptionOption[] withPooled(SubscriptionOption[] options) {
+    private static SubscriptionOption[] withPooled(SubscriptionOption[] options) {
         return ObjectArrays.concat(options, SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 }

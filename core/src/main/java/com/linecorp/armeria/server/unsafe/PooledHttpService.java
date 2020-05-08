@@ -19,18 +19,17 @@ package com.linecorp.armeria.server.unsafe;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * An HTTP/2 {@link Service} which publishes {@link PooledHttpData}.
  */
-public interface PooledHttpService extends HttpService, Unwrappable {
+public interface PooledHttpService extends HttpService {
 
     /**
      * Creates a {@link PooledHttpService} that delegates to the provided {@link HttpClient} for issuing

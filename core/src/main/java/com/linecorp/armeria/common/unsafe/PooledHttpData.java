@@ -27,7 +27,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 
 /**
- * A {@link HttpData} that is backed by a pooled {@link ByteBuf} for optimizing certain internal use cases. Not
+ * An {@link HttpData} that is backed by a pooled {@link ByteBuf} for optimizing certain internal use cases. Not
  * for general use.
  *
  * <h3>What are pooled buffers?</h3>
@@ -110,7 +110,7 @@ public interface PooledHttpData extends HttpData, ByteBufHolder, SafeCloseable {
     }
 
     /**
-     * Converts the specified Netty {@link ByteBuf} into an {@link PooledHttpData}. The buffer is not copied;
+     * Converts the specified Netty {@link ByteBuf} into a {@link PooledHttpData}. The buffer is not copied;
      * any changes made to it will be visible to {@link PooledHttpData}. The ownership of the buffer is
      * transferred to the {@link HttpData}. If you still need to use it after calling this method, make sure to
      * call {@link ByteBuf#retain()} first.

@@ -47,16 +47,19 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends the specified HTTP request.
      */
+    @Override
     PooledHttpResponse execute(HttpRequest req);
 
     /**
      * Sends the specified HTTP request.
      */
+    @Override
     PooledHttpResponse execute(AggregatedHttpRequest aggregatedReq);
 
     /**
      * Sends an empty HTTP request with the specified headers.
      */
+    @Override
     default PooledHttpResponse execute(RequestHeaders headers) {
         return execute(HttpRequest.of(headers));
     }
@@ -64,6 +67,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @Override
     default PooledHttpResponse execute(RequestHeaders headers, HttpData content) {
         return execute(HttpRequest.of(headers, content));
     }
@@ -71,6 +75,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @Override
     default PooledHttpResponse execute(RequestHeaders headers, byte[] content) {
         return execute(HttpRequest.of(headers, HttpData.wrap(content)));
     }
@@ -78,6 +83,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @Override
     default PooledHttpResponse execute(RequestHeaders headers, String content) {
         return execute(HttpRequest.of(headers, HttpData.ofUtf8(content)));
     }
@@ -85,6 +91,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @Override
     default PooledHttpResponse execute(RequestHeaders headers, String content, Charset charset) {
         return execute(HttpRequest.of(headers, HttpData.of(charset, content)));
     }
@@ -92,6 +99,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP OPTIONS request.
      */
+    @Override
     default PooledHttpResponse options(String path) {
         return execute(RequestHeaders.of(HttpMethod.OPTIONS, path));
     }
@@ -99,6 +107,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP GET request.
      */
+    @Override
     default PooledHttpResponse get(String path) {
         return execute(RequestHeaders.of(HttpMethod.GET, path));
     }
@@ -106,6 +115,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP HEAD request.
      */
+    @Override
     default PooledHttpResponse head(String path) {
         return execute(RequestHeaders.of(HttpMethod.HEAD, path));
     }
@@ -113,6 +123,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @Override
     default PooledHttpResponse post(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), content);
     }
@@ -120,6 +131,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @Override
     default PooledHttpResponse post(String path, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), content);
     }
@@ -127,6 +139,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @Override
     default PooledHttpResponse post(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), HttpData.ofUtf8(content));
     }
@@ -134,6 +147,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @Override
     default PooledHttpResponse post(String path, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), content, charset);
     }
@@ -141,6 +155,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @Override
     default PooledHttpResponse put(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), content);
     }
@@ -148,6 +163,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @Override
     default PooledHttpResponse put(String path, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), content);
     }
@@ -155,6 +171,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @Override
     default PooledHttpResponse put(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), HttpData.ofUtf8(content));
     }
@@ -162,6 +179,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @Override
     default PooledHttpResponse put(String path, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), content, charset);
     }
@@ -169,6 +187,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @Override
     default PooledHttpResponse patch(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), content);
     }
@@ -176,6 +195,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @Override
     default PooledHttpResponse patch(String path, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), content);
     }
@@ -183,6 +203,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @Override
     default PooledHttpResponse patch(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), HttpData.ofUtf8(content));
     }
@@ -190,6 +211,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @Override
     default PooledHttpResponse patch(String path, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), content, charset);
     }
@@ -197,6 +219,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP DELETE request.
      */
+    @Override
     default PooledHttpResponse delete(String path) {
         return execute(RequestHeaders.of(HttpMethod.DELETE, path));
     }
@@ -204,6 +227,7 @@ public interface PooledWebClient extends WebClient {
     /**
      * Sends an HTTP TRACE request.
      */
+    @Override
     default PooledHttpResponse trace(String path) {
         return execute(RequestHeaders.of(HttpMethod.TRACE, path));
     }

@@ -34,24 +34,21 @@ import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 public abstract class SimplePooledDecoratingHttpService extends SimpleDecoratingHttpService
         implements PooledHttpService {
 
-    private final PooledHttpService pooledDelegate;
-
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
     protected SimplePooledDecoratingHttpService(HttpService delegate) {
-        super(delegate);
-        pooledDelegate = PooledHttpService.of(delegate);
+        super(PooledHttpService.of(delegate));
     }
 
     @Override
     public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return serve(ctx, PooledHttpRequest.of(req), pooledDelegate);
+        return serve(delegate(), ctx, PooledHttpRequest.of(req));
     }
 
     @Override
     public PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
-        return PooledHttpResponse.of(serve(ctx, req, delegate()));
+        return PooledHttpResponse.of(serve(delegate(), ctx, req));
     }
 
     /**
@@ -60,6 +57,6 @@ public abstract class SimplePooledDecoratingHttpService extends SimpleDecorating
      * @see SimpleDecoratingHttpService#serve(ServiceRequestContext, HttpRequest)
      */
     protected abstract HttpResponse serve(
-            ServiceRequestContext ctx, PooledHttpRequest req, PooledHttpService service)
+            PooledHttpService service, ServiceRequestContext ctx, PooledHttpRequest req)
             throws Exception;
 }

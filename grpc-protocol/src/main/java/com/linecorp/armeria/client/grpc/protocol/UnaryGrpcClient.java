@@ -135,7 +135,7 @@ public final class UnaryGrpcClient {
 
         @Override
         public HttpResponse execute(
-                ClientRequestContext ctx, PooledHttpRequest req, PooledHttpClient client) {
+                PooledHttpClient client, ClientRequestContext ctx, PooledHttpRequest req) {
             return HttpResponse.from(
                     req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                        .thenCompose(

@@ -50,8 +50,7 @@ final class CallCredentialsDecoratingClient extends SimplePooledDecoratingHttpCl
     }
 
     @Override
-    protected HttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req,
-                                   PooledHttpClient client) {
+    protected HttpResponse execute(PooledHttpClient client, ClientRequestContext ctx, PooledHttpRequest req) {
         final CompletableFuture<HttpResponse> response = new CompletableFuture<>();
 
         final RequestInfo requestInfo = new RequestInfo() {
