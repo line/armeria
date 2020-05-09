@@ -14,18 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.auth;
+package com.linecorp.armeria.common.auth;
 
+import static com.linecorp.armeria.common.auth.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+
 /**
- * The bearer token of <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>.
+ * The bearer token of
+ * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>.
  */
 public final class BasicToken {
 
@@ -38,6 +44,8 @@ public final class BasicToken {
 
     private final String username;
     private final String password;
+    @Nullable
+    private String headerValue;
 
     private BasicToken(String username, String password) {
         this.username = requireNonNull(username, "username");
@@ -58,6 +66,17 @@ public final class BasicToken {
         return password;
     }
 
+    /**
+     * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
+     */
+    public String toHeaderValue() {
+        if (headerValue != null) {
+            return headerValue;
+        }
+        return headerValue = "Basic " + Base64.getEncoder().encodeToString(
+                (username + ':' + password).getBytes(StandardCharsets.UTF_8));
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {
@@ -70,17 +89,6 @@ public final class BasicToken {
         // Note that we used '&' intentionally to make it hard to guess anything from timing.
         return secureEquals(username, that.username) &
                secureEquals(password, that.password);
-    }
-
-    static boolean secureEquals(@Nullable String a, @Nullable String b) {
-        final int aLength = a != null ? a.length() : 0;
-        final int bLength = b != null ? b.length() : 0;
-        final int length = Math.min(aLength, bLength);
-        int result = 0;
-        for (int i = 0; i < length; i++) {
-            result |= a.charAt(i) ^ b.charAt(i);
-        }
-        return result == 0 && aLength == bLength;
     }
 
     @Override

@@ -326,6 +326,13 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     /**
+     * Indicates whether or not this deframer is closing.
+     */
+    public boolean isClosing() {
+        return closeWhenComplete;
+    }
+
+    /**
      * Indicates whether or not this deframer has been closed.
      */
     public boolean isClosed() {
