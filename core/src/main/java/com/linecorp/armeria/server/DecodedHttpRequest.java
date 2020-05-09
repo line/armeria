@@ -18,12 +18,12 @@ package com.linecorp.armeria.server;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;

@@ -165,13 +165,9 @@ public abstract class AbstractCompositeService<T extends Service<I, O>, I extend
         }
 
         if (result.route().pathType() == RoutePathType.PREFIX) {
-            assert ctx.route().pathType() == RoutePathType.PREFIX;
-            final Route newRoute = Route.builder()
-                                        .pathPrefix(ctx.route().paths().get(0) +
-                                                    result.route().paths().get(0).substring(1)).build();
-
+            assert ctx.config().route().pathType() == RoutePathType.PREFIX;
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
-                    ctx, newRoute, result.routingResult().path());
+                    ctx, result.routingResult().path());
             try (SafeCloseable ignored = newCtx.replace()) {
                 return result.value().serve(newCtx, req);
             }
@@ -182,14 +178,12 @@ public abstract class AbstractCompositeService<T extends Service<I, O>, I extend
 
     private static final class CompositeServiceRequestContext extends ServiceRequestContextWrapper {
 
-        private final Route route;
         private final String mappedPath;
         @Nullable
         private String decodedMappedPath;
 
-        CompositeServiceRequestContext(ServiceRequestContext delegate, Route route, String mappedPath) {
+        CompositeServiceRequestContext(ServiceRequestContext delegate, String mappedPath) {
             super(delegate);
-            this.route = route;
             this.mappedPath = mappedPath;
         }
 
@@ -198,12 +192,7 @@ public abstract class AbstractCompositeService<T extends Service<I, O>, I extend
                                                        @Nullable HttpRequest req,
                                                        @Nullable RpcRequest rpcReq) {
             return new CompositeServiceRequestContext(super.newDerivedContext(id, req, rpcReq),
-                                                      route, mappedPath);
-        }
-
-        @Override
-        public Route route() {
-            return route;
+                                                      mappedPath);
         }
 
         @Override

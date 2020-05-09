@@ -74,8 +74,8 @@ class DefaultTimeoutControllerTest {
     @Test
     void adjustTimeout() {
         final long initTimeoutMillis = 1000;
-        final long adjustmentMillis = 100;
-        final long tolerance = 50;
+        final long adjustmentMillis = 200;
+        final long tolerance = 100;
 
         timeoutController.scheduleTimeout(initTimeoutMillis);
         final long startTimeNanos = timeoutController.startTimeNanos();

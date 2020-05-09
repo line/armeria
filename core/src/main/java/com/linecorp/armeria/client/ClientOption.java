@@ -55,40 +55,16 @@ public final class ClientOption<T> extends AbstractOption<ClientOption<T>, Clien
             define("WRITE_TIMEOUT_MILLIS", Flags.defaultWriteTimeoutMillis());
 
     /**
-     * The timeout of a socket write.
-     *
-     * @deprecated Use {@link #WRITE_TIMEOUT_MILLIS}.
-     */
-    @Deprecated
-    public static final ClientOption<Long> DEFAULT_WRITE_TIMEOUT_MILLIS = WRITE_TIMEOUT_MILLIS;
-
-    /**
      * The timeout of a server reply to a client call.
      */
     public static final ClientOption<Long> RESPONSE_TIMEOUT_MILLIS =
             define("RESPONSE_TIMEOUT_MILLIS", Flags.defaultResponseTimeoutMillis());
 
     /**
-     * The timeout of a server reply to a client call.
-     *
-     * @deprecated Use {@link #RESPONSE_TIMEOUT_MILLIS}.
-     */
-    @Deprecated
-    public static final ClientOption<Long> DEFAULT_RESPONSE_TIMEOUT_MILLIS = RESPONSE_TIMEOUT_MILLIS;
-
-    /**
      * The maximum allowed length of a server response.
      */
     public static final ClientOption<Long> MAX_RESPONSE_LENGTH =
             define("MAX_RESPONSE_LENGTH", Flags.defaultMaxResponseLength());
-
-    /**
-     * The maximum allowed length of a server response.
-     *
-     * @deprecated Use {@link #MAX_RESPONSE_LENGTH};
-     */
-    @Deprecated
-    public static final ClientOption<Long> DEFAULT_MAX_RESPONSE_LENGTH = MAX_RESPONSE_LENGTH;
 
     private static final List<AsciiString> BLACKLISTED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.CONNECTION,

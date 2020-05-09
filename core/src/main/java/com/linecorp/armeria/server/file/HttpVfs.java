@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Clock;
 import java.util.List;
 
@@ -55,46 +54,6 @@ public interface HttpVfs {
      */
     static HttpVfs of(ClassLoader classLoader, String rootDir) {
         return new ClassPathHttpVfs(classLoader, rootDir);
-    }
-
-    /**
-     * Creates a new {@link HttpVfs} with the specified {@code rootDir} in an O/S file system.
-     *
-     * @deprecated Use {@link #of(Path)}.
-     */
-    @Deprecated
-    static HttpVfs ofFileSystem(String rootDir) {
-        return of(Paths.get(requireNonNull(rootDir, "rootDir")));
-    }
-
-    /**
-     * Creates a new {@link HttpVfs} with the specified {@code rootDir} in an O/S file system.
-     *
-     * @deprecated Use {@link #of(Path)}.
-     */
-    @Deprecated
-    static HttpVfs ofFileSystem(Path rootDir) {
-        return of(rootDir);
-    }
-
-    /**
-     * Creates a new {@link HttpVfs} with the specified {@code rootDir} in the current class path.
-     *
-     * @deprecated Use {@link #of(ClassLoader, String)}.
-     */
-    @Deprecated
-    static HttpVfs ofClassPath(String rootDir) {
-        return of(HttpVfs.class.getClassLoader(), rootDir);
-    }
-
-    /**
-     * Creates a new {@link HttpVfs} with the specified {@code rootDir} in the current class path.
-     *
-     * @deprecated Use {@link #of(ClassLoader, String)}.
-     */
-    @Deprecated
-    static HttpVfs ofClassPath(ClassLoader classLoader, String rootDir) {
-        return of(classLoader, rootDir);
     }
 
     /**

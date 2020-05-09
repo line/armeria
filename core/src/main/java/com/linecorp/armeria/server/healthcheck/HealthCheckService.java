@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -171,10 +174,14 @@ public final class HealthCheckService implements TransientHttpService {
             pendingHealthyResponses = null;
             pendingUnhealthyResponses = null;
 
-            if (maxLongPollingTimeoutMillis > 0) {
-                logger.warn("Long-polling support has been disabled for {} " +
-                            "because some of the specified {}s are not listenable.",
-                            getClass().getSimpleName(), HealthChecker.class.getSimpleName());
+            if (maxLongPollingTimeoutMillis > 0 && logger.isWarnEnabled()) {
+                logger.warn("Long-polling support has been disabled " +
+                            "because some of the specified {}s do not implement {}: {}",
+                            HealthChecker.class.getSimpleName(),
+                            ListenableHealthChecker.class.getSimpleName(),
+                            this.healthCheckers.stream()
+                                               .filter(e -> !(e instanceof ListenableHealthChecker))
+                                               .collect(toImmutableList()));
             }
         }
 
@@ -183,6 +190,7 @@ public final class HealthCheckService implements TransientHttpService {
         stoppingResponse = clearCommonHeaders(unhealthyResponse);
         notModifiedHeaders = ResponseHeaders.builder()
                                             .add(this.unhealthyResponse.headers())
+                                            .endOfStream(true)
                                             .status(HttpStatus.NOT_MODIFIED)
                                             .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
                                             .build();
@@ -348,9 +356,9 @@ public final class HealthCheckService implements TransientHttpService {
 
                     updateRequestTimeout(ctx, longPollingTimeoutMillis);
 
-                    // Cancel the scheduled timeout task if the response is closed,
-                    // so that it's removed from the event loop's task queue quickly.
-                    res.whenComplete().exceptionally(cause -> {
+                    // Cancel the scheduled timeout and ping task if the response is closed,
+                    // so that they are removed from the event loop's task queue.
+                    res.whenComplete().handle((unused1, unused2) -> {
                         pendingResponse.cancelAllScheduledFutures();
                         return null;
                     });
@@ -453,7 +461,7 @@ public final class HealthCheckService implements TransientHttpService {
     private static void updateRequestTimeout(ServiceRequestContext ctx, long longPollingTimeoutMillis) {
         final long requestTimeoutMillis = ctx.requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
-            ctx.extendRequestTimeoutMillis(longPollingTimeoutMillis);
+            ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, longPollingTimeoutMillis);
         }
     }
 

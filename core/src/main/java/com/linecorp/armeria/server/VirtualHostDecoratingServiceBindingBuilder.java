@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -57,12 +58,6 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     @Override
     public VirtualHostDecoratingServiceBindingBuilder path(String pathPattern) {
         return (VirtualHostDecoratingServiceBindingBuilder) super.path(pathPattern);
-    }
-
-    @Override
-    @Deprecated
-    public VirtualHostDecoratingServiceBindingBuilder pathUnder(String prefix) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.pathPrefix(prefix);
     }
 
     @Override
@@ -143,6 +138,43 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     @Override
     public VirtualHostDecoratingServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
         return (VirtualHostDecoratingServiceBindingBuilder) super.produces(produceTypes);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder matchesParams(String... paramPredicates) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder matchesParams(Iterable<String> paramPredicates) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder matchesParams(String paramName,
+                                                                    Predicate<? super String> valuePredicate) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder matchesHeaders(String... headerPredicates) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder matchesHeaders(CharSequence headerName,
+                                                                     Predicate<? super String> valuePredicate) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder addRoute(Route route) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.addRoute(route);
     }
 
     /**

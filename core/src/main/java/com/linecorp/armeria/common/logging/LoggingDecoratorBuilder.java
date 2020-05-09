@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
@@ -91,11 +92,9 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Returns the {@link LogLevel} to use when logging requests.
-     *
-     * @deprecated It will be removed in the future.
      */
-    @Deprecated
-    protected LogLevel requestLogLevel() {
+    @VisibleForTesting
+    LogLevel requestLogLevel() {
         return requestLogLevel;
     }
 
@@ -115,11 +114,9 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Returns the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
-     *
-     * @deprecated It will be removed in the future.
      */
-    @Deprecated
-    protected LogLevel successfulResponseLogLevel() {
+    @VisibleForTesting
+    LogLevel successfulResponseLogLevel() {
         return successfulResponseLogLevel;
     }
 
@@ -138,11 +135,9 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Returns the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
-     *
-     * @deprecated It will be removed in the future.
      */
-    @Deprecated
-    protected LogLevel failedResponseLogLevel() {
+    @VisibleForTesting
+    LogLevel failedResponseLogLevel() {
         return failedResponseLogLevel;
     }
 

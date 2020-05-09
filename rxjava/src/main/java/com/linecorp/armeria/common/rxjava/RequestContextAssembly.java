@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,24 +16,23 @@
 
 package com.linecorp.armeria.common.rxjava;
 
-import java.util.concurrent.Callable;
-
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.RequestContext;
 
-import io.reactivex.Completable;
-import io.reactivex.Flowable;
-import io.reactivex.Maybe;
-import io.reactivex.Observable;
-import io.reactivex.Single;
-import io.reactivex.flowables.ConnectableFlowable;
-import io.reactivex.functions.Function;
-import io.reactivex.internal.fuseable.ScalarCallable;
-import io.reactivex.observables.ConnectableObservable;
-import io.reactivex.parallel.ParallelFlowable;
-import io.reactivex.plugins.RxJavaPlugins;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.flowables.ConnectableFlowable;
+import io.reactivex.rxjava3.functions.Function;
+import io.reactivex.rxjava3.functions.Supplier;
+import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
+import io.reactivex.rxjava3.observables.ConnectableObservable;
+import io.reactivex.rxjava3.parallel.ParallelFlowable;
+import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 
 /**
  * Utility class to keep {@link RequestContext} during RxJava operations.
@@ -78,9 +77,6 @@ public final class RequestContextAssembly {
     @GuardedBy("RequestContextAssembly.class")
     private static boolean enabled;
 
-    private RequestContextAssembly() {
-    }
-
     /**
      * Enable {@link RequestContext} during operators.
      */
@@ -96,13 +92,13 @@ public final class RequestContextAssembly {
                 new ConditionalOnCurrentRequestContextFunction<Observable>() {
                     @Override
                     Observable applyActual(Observable o, RequestContext ctx) {
-                        if (!(o instanceof Callable)) {
+                        if (!(o instanceof Supplier)) {
                             return new RequestContextObservable(o, ctx);
                         }
-                        if (o instanceof ScalarCallable) {
-                            return new RequestContextScalarCallableObservable(o, ctx);
+                        if (o instanceof ScalarSupplier) {
+                            return new RequestContextScalarSupplierObservable(o, ctx);
                         }
-                        return new RequestContextCallableObservable(o, ctx);
+                        return new RequestContextSupplierObservable(o, ctx);
                     }
                 }));
 
@@ -121,16 +117,8 @@ public final class RequestContextAssembly {
                 compose(oldOnCompletableAssembly,
                         new ConditionalOnCurrentRequestContextFunction<Completable>() {
                             @Override
-                            Completable applyActual(Completable c,
-                                                    RequestContext ctx) {
-                                if (!(c instanceof Callable)) {
-                                    return new RequestContextCompletable(c, ctx);
-                                }
-                                if (c instanceof ScalarCallable) {
-                                    return new RequestContextScalarCallableCompletable(
-                                            c, ctx);
-                                }
-                                return new RequestContextCallableCompletable(c, ctx);
+                            Completable applyActual(Completable c, RequestContext ctx) {
+                                return new RequestContextCompletable(c, ctx);
                             }
                         }));
 
@@ -139,13 +127,13 @@ public final class RequestContextAssembly {
                 compose(oldOnSingleAssembly, new ConditionalOnCurrentRequestContextFunction<Single>() {
                     @Override
                     Single applyActual(Single s, RequestContext ctx) {
-                        if (!(s instanceof Callable)) {
+                        if (!(s instanceof Supplier)) {
                             return new RequestContextSingle(s, ctx);
                         }
-                        if (s instanceof ScalarCallable) {
-                            return new RequestContextScalarCallableSingle(s, ctx);
+                        if (s instanceof ScalarSupplier) {
+                            return new RequestContextScalarSupplierSingle(s, ctx);
                         }
-                        return new RequestContextCallableSingle(s, ctx);
+                        return new RequestContextSupplierSingle(s, ctx);
                     }
                 }));
 
@@ -154,13 +142,13 @@ public final class RequestContextAssembly {
                 compose(oldOnMaybeAssembly, new ConditionalOnCurrentRequestContextFunction<Maybe>() {
                     @Override
                     Maybe applyActual(Maybe m, RequestContext ctx) {
-                        if (!(m instanceof Callable)) {
+                        if (!(m instanceof Supplier)) {
                             return new RequestContextMaybe(m, ctx);
                         }
-                        if (m instanceof ScalarCallable) {
-                            return new RequestContextScalarCallableMaybe(m, ctx);
+                        if (m instanceof ScalarSupplier) {
+                            return new RequestContextScalarSupplierMaybe(m, ctx);
                         }
-                        return new RequestContextCallableMaybe(m, ctx);
+                        return new RequestContextSupplierMaybe(m, ctx);
                     }
                 }));
 
@@ -169,13 +157,13 @@ public final class RequestContextAssembly {
                 compose(oldOnFlowableAssembly, new ConditionalOnCurrentRequestContextFunction<Flowable>() {
                     @Override
                     Flowable applyActual(Flowable f, RequestContext ctx) {
-                        if (!(f instanceof Callable)) {
+                        if (!(f instanceof Supplier)) {
                             return new RequestContextFlowable(f, ctx);
                         }
-                        if (f instanceof ScalarCallable) {
-                            return new RequestContextScalarCallableFlowable(f, ctx);
+                        if (f instanceof ScalarSupplier) {
+                            return new RequestContextScalarSupplierFlowable(f, ctx);
                         }
-                        return new RequestContextCallableFlowable(f, ctx);
+                        return new RequestContextSupplierFlowable(f, ctx);
                     }
                 }));
 
@@ -184,11 +172,8 @@ public final class RequestContextAssembly {
                 compose(oldOnConnectableFlowableAssembly,
                         new ConditionalOnCurrentRequestContextFunction<ConnectableFlowable>() {
                             @Override
-                            ConnectableFlowable applyActual(
-                                    ConnectableFlowable cf,
-                                    RequestContext ctx) {
-                                return new RequestContextConnectableFlowable(
-                                        cf, ctx);
+                            ConnectableFlowable applyActual(ConnectableFlowable cf, RequestContext ctx) {
+                                return new RequestContextConnectableFlowable(cf, ctx);
                             }
                         }
                 ));
@@ -231,6 +216,8 @@ public final class RequestContextAssembly {
         oldOnParallelAssembly = null;
         enabled = false;
     }
+
+    private RequestContextAssembly() {}
 
     private abstract static class ConditionalOnCurrentRequestContextFunction<T> implements Function<T, T> {
         @Override

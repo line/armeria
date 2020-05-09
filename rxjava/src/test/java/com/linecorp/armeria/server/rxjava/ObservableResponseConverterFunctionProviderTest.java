@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,7 +24,7 @@ import java.util.ServiceLoader;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -37,12 +37,12 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 
-public class ObservableResponseConverterFunctionProviderTest {
+class ObservableResponseConverterFunctionProviderTest {
 
     @Test
-    public void shouldBeLoaded() {
+    void shouldBeLoaded() {
         final ServiceLoader<ResponseConverterFunctionProvider> loader =
                 ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                    ObservableResponseConverterFunctionProviderTest.class.getClassLoader());
@@ -55,7 +55,7 @@ public class ObservableResponseConverterFunctionProviderTest {
     }
 
     @Test
-    public void shouldFailOnObservableOfObservable() throws NoSuchMethodException {
+    void shouldFailOnObservableOfObservable() throws NoSuchMethodException {
         final ObservableResponseConverterFunctionProvider provider =
                 new ObservableResponseConverterFunctionProvider();
         final Type returnType = Sample.class.getMethod("unsupported")
@@ -67,8 +67,9 @@ public class ObservableResponseConverterFunctionProviderTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Disallowed type exists in the generic type arguments of the return type " +
-                        "'io.reactivex.Observable<io.reactivex.Observable<java.lang.Object>>': " +
-                        "io.reactivex.Observable");
+                        "'io.reactivex.rxjava3.core.Observable" +
+                        "<io.reactivex.rxjava3.core.Observable<java.lang.Object>>': " +
+                        "io.reactivex.rxjava3.core.Observable");
     }
 
     public static class Sample {

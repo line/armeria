@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,8 +21,8 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.internal.fuseable.QueueSubscription;
-import io.reactivex.internal.subscribers.BasicFuseableSubscriber;
+import io.reactivex.rxjava3.internal.fuseable.QueueSubscription;
+import io.reactivex.rxjava3.internal.subscribers.BasicFuseableSubscriber;
 
 final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
 
@@ -66,7 +66,7 @@ final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
     }
 
     @Override
-    public T poll() throws Exception {
+    public T poll() throws Throwable {
         return qs.poll();
     }
 }

@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -141,17 +142,6 @@ public final class ClientFactoryOptions
     /**
      * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
      * applied to the SSL session.
-     *
-     * @deprecated Use {@link #tlsCustomizer()}.
-     */
-    @Deprecated
-    public Consumer<? super SslContextBuilder> sslContextCustomizer() {
-        return tlsCustomizer();
-    }
-
-    /**
-     * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session.
      */
     public Consumer<? super SslContextBuilder> tlsCustomizer() {
         return get(ClientFactoryOption.TLS_CUSTOMIZER);
@@ -229,6 +219,17 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns the PING interval in milliseconds.
+     * When neither read nor write was performed for the specified period of time,
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1.
+     */
+    public long pingIntervalMillis() {
+        return get(ClientFactoryOption.PING_INTERVAL_MILLIS);
+    }
+
+    /**
      * Returns whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
      */
@@ -256,5 +257,12 @@ public final class ClientFactoryOptions
      */
     public MeterRegistry meterRegistry() {
         return get(ClientFactoryOption.METER_REGISTRY);
+    }
+
+    /**
+     * The {@link ProxyConfig} which contains the proxy configuration.
+     */
+    public ProxyConfig proxyConfig() {
+        return get(ClientFactoryOption.PROXY_CONFIG);
     }
 }

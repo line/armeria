@@ -18,6 +18,10 @@ dependencies {
     implementation 'org.hibernate.validator:hibernate-validator'
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    // Preprocessor that enables you to use JavaDoc to add description to REST API parameters.
+    // If you don't want to use it, you can use the annotation
+    // com.linecorp.armeria.server.annotation.Description otherwise.
+    annotationProcessor project(':annotation-processor')
 
     runtimeOnly project(':spring:boot-actuator-starter')
 

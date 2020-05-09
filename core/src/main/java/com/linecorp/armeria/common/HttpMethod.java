@@ -35,7 +35,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.EnumSet;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 /**
  * HTTP request method.
@@ -108,12 +108,12 @@ public enum HttpMethod {
      */
     UNKNOWN;
 
-    private static final Set<HttpMethod> knownMethods;
+    private static final Set<HttpMethod> knownMethods; // ImmutableEnumSet
 
     static {
         final Set<HttpMethod> allMethods = EnumSet.allOf(HttpMethod.class);
         allMethods.remove(UNKNOWN);
-        knownMethods = ImmutableSet.copyOf(allMethods);
+        knownMethods = Sets.immutableEnumSet(allMethods);
     }
 
     /**

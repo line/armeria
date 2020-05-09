@@ -22,6 +22,9 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * Creates a new {@link ClientOptions} using the builder pattern.
@@ -30,21 +33,9 @@ import com.linecorp.armeria.common.RequestId;
  */
 public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
 
-    /**
-     * Creates a new instance with the default options.
-     *
-     * @deprecated Use {@link ClientOptions#builder()}.
-     */
-    @Deprecated
-    public ClientOptionsBuilder() {}
+    ClientOptionsBuilder() {}
 
-    /**
-     * Creates a new instance with the specified base options.
-     *
-     * @deprecated Use {@link ClientOptions#toBuilder()}.
-     */
-    @Deprecated
-    public ClientOptionsBuilder(ClientOptions options) {
+    ClientOptionsBuilder(ClientOptions options) {
         super(options);
     }
 
@@ -88,18 +79,6 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientOptionsBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (ClientOptionsBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientOptionsBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (ClientOptionsBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public ClientOptionsBuilder writeTimeout(Duration writeTimeout) {
         return (ClientOptionsBuilder) super.writeTimeout(writeTimeout);
     }
@@ -110,18 +89,6 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientOptionsBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (ClientOptionsBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientOptionsBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (ClientOptionsBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public ClientOptionsBuilder responseTimeout(Duration responseTimeout) {
         return (ClientOptionsBuilder) super.responseTimeout(responseTimeout);
     }
@@ -129,12 +96,6 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientOptionsBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (ClientOptionsBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public ClientOptionsBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (ClientOptionsBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override
@@ -195,5 +156,20 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     public ClientOptionsBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (ClientOptionsBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ClientOptionsBuilder auth(BasicToken token) {
+        return (ClientOptionsBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientOptionsBuilder auth(OAuth1aToken token) {
+        return (ClientOptionsBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientOptionsBuilder auth(OAuth2Token token) {
+        return (ClientOptionsBuilder) super.auth(token);
     }
 }

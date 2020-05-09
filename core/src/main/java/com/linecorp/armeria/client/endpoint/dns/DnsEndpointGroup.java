@@ -73,7 +73,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     int attemptsSoFar;
 
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                     EventLoop eventLoop, int minTtl, int maxTtl,
+                     EventLoop eventLoop, int minTtl, int maxTtl, long queryTimeoutMillis,
                      DnsServerAddressStreamProvider serverAddressStreamProvider,
                      Backoff backoff, Iterable<DnsQuestion> questions,
                      Consumer<DnsNameResolverBuilder> resolverConfigurator) {
@@ -97,9 +97,14 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
                 .ttl(minTtl, maxTtl)
                 .traceEnabled(true)
                 .nameServerProvider(serverAddressStreamProvider);
+        if (queryTimeoutMillis == 0) {
+            resolverBuilder.queryTimeoutMillis(Long.MAX_VALUE);
+        } else {
+            resolverBuilder.queryTimeoutMillis(queryTimeoutMillis);
+        }
 
         resolverConfigurator.accept(resolverBuilder);
-        resolver = new DefaultDnsNameResolver(resolverBuilder.build(), eventLoop);
+        resolver = new DefaultDnsNameResolver(resolverBuilder.build(), eventLoop, queryTimeoutMillis);
     }
 
     final Logger logger() {

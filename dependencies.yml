@@ -3,15 +3,15 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.10.2.20200130
-  - io.dropwizard.metrics:metrics-bom:4.1.3
-  - io.grpc:grpc-bom:1.27.1
-  - io.micrometer:micrometer-bom:1.3.5
+  - com.fasterxml.jackson:jackson-bom:2.10.3
+  - io.dropwizard.metrics:metrics-bom:4.1.5
+  - io.grpc:grpc-bom:1.28.0
+  - io.micrometer:micrometer-bom:1.3.6
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.45.Final
-  - io.zipkin.brave:brave-bom:5.9.5
-  - org.eclipse.jetty:jetty-bom:9.4.26.v20200117
-  - org.junit:junit-bom:5.6.0
+  - io.netty:netty-bom:4.1.48.Final
+  - io.zipkin.brave:brave-bom:5.11.2
+  - org.eclipse.jetty:jetty-bom:9.4.27.v20200227
+  - org.junit:junit-bom:5.6.1
 
 cglib:
   cglib: { version: '3.3.0' }
@@ -24,9 +24,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.10.0'
+    version: '3.10.2'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.10.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.10.2/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -54,16 +54,16 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.2.0' }
 
 com.github.node-gradle:
-  gradle-node-plugin: { version: '2.2.2' }
+  gradle-node-plugin: { version: '2.2.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.53.1' }
+  gax-grpc: { version: '1.55.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.26' }
+  dagger: { version: &DAGGER_VERSION '2.27' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
@@ -109,10 +109,10 @@ com.google.protobuf:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
-  protobuf-gradle-plugin: { version: '0.8.11' }
+  protobuf-gradle-plugin: { version: '0.8.12' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.29' }
+  checkstyle: { version: '8.31' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.0' }
@@ -128,7 +128,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.7.1'
+    version: &RETROFIT2_VERSION '2.8.1'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -138,42 +138,42 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '1.3.19'
+    version: &DROPWIZARD_VERSION '2.0.5'
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-core/1.3.18/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-core/2.0.5/
   dropwizard-jackson:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jackson/1.3.18/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jackson/2.0.5/
   dropwizard-lifecycle:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-lifecycle/1.3.18/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-lifecycle/2.0.5/
   dropwizard-jersey:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jersey/1.3.18/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jersey/2.0.5/
   dropwizard-jetty:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/1.3.18/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/2.0.5/
   dropwizard-testing:
     version: *DROPWIZARD_VERSION
     javadocs:
-      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/1.3.18/
+      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/2.0.5/
   dropwizard-util:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-util/1.3.18/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-util/2.0.5/
   dropwizard-validation:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-validation/1.3.18/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-validation/2.0.5/
 
 io.dropwizard.metrics:
   metrics-core:
     javadocs:
-    - https://metrics.dropwizard.io/4.0.0/apidocs/
+    - https://metrics.dropwizard.io/4.1.0/apidocs/
 
 # Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
@@ -197,6 +197,8 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.1' }
+  protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
   micrometer-core:
@@ -217,11 +219,11 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.28.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.30.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.2.RELEASE'
+    version: &REACTOR_VERSION '3.3.4.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -237,9 +239,15 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.18'
+    version: '2.2.19'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
+
+io.reactivex.rxjava3:
+  rxjava:
+    version: '3.0.1'
+    javadocs:
+      - http://reactivex.io/RxJava/3.x/javadoc/
 
 io.zipkin.brave:
   brave:
@@ -295,20 +303,22 @@ net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.13.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.16.2' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
   proguard-gradle: { version: '6.2.2' }
 
 net.shibboleth.utilities:
-  java-support: { version: '7.5.0' }
+  java-support: { version: '7.5.1' }
 
+# Ensure that we use the same ZooKeeper version as what Curator depends on.
+# See: https://github.com/apache/curator/blob/master/pom.xml
 org.apache.curator:
   curator-recipes:
-    version: '4.2.0'
+    version: '4.3.0'
     javadocs:
-    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.2.0/
+    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.3.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
 
@@ -323,7 +333,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.11'
+    version: '4.5.12'
     exclusions:
     - commons-logging:commons-logging
 
@@ -345,7 +355,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.31'
+    version: &TOMCAT_VERSION '9.0.33'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -412,13 +422,13 @@ org.jctools:
     - from: org.jctools
       to: com.linecorp.armeria.internal.shaded.jctools
 
-# If you want to change `org.jetbrains.kotlin:kotlin-allopen` version, 
+# If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.3.61' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.3.71' }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.3' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.4' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
@@ -426,21 +436,24 @@ org.jlleitschuh.gradle:
   ktlint-gradle: { version: '9.2.1' }
 
 org.jsoup:
-  jsoup: { version: '1.12.2' }
+  jsoup: { version: '1.13.1' }
+
+org.jooq:
+  joor: { version: '0.9.12' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.2.4' }
+  mockito-core: { version: &MOCKITO_VERSION '3.3.3' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
-  jetty-alpn-agent: { version: '2.0.9' }
+  jetty-alpn-agent: { version: '2.0.10' }
 
 org.openjdk.jmh:
   jmh-core: { version: &JMH_VERSION '1.23' }
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:
-  opensaml-core: { version: &OPENSAML_VERSION '3.4.3' }
+  opensaml-core: { version: &OPENSAML_VERSION '3.4.5' }
   opensaml-saml-api: { version: *OPENSAML_VERSION }
   opensaml-saml-impl: { version: *OPENSAML_VERSION }
   opensaml-messaging-api: { version: *OPENSAML_VERSION }
@@ -479,7 +492,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.2.4.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.2.6.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
@@ -499,3 +512,9 @@ pl.project13.scala:
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 xml-apis:
   xml-apis: { version: '1.4.01' }
+
+com.github.vladimir-bukhtoyarov:
+  bucket4j-core:
+    version: '4.10.0'
+    javadocs:
+    - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/4.10.0/

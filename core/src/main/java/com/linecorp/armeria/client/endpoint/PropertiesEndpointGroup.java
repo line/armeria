@@ -73,31 +73,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     /**
-     * Returns a new {@link PropertiesEndpointGroup} created from the specified classpath resource.
-     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
-     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
-     *
-     * <pre>{@code
-     * # endpointKeyPrefix = 'example.hosts.'
-     * example.hosts.0=example1.com:36462
-     * example.hosts.1=example2.com:36462
-     * example.hosts.2=example3.com:36462
-     * }</pre>
-     *
-     * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
-     * @param endpointKeyPrefix the property name prefix
-     * @param defaultPort the default port number to use
-     *
-     * @deprecated Use {@link #builder(ClassLoader, String, String)}
-     *             and {@link PropertiesEndpointGroupBuilder#defaultPort(int)}.
-     */
-    @Deprecated
-    public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
-                                             String endpointKeyPrefix, int defaultPort) {
-        return builder(classLoader, resourceName, endpointKeyPrefix).defaultPort(defaultPort).build();
-    }
-
-    /**
      * Returns a new {@link PropertiesEndpointGroup} created from the specified {@link Properties}.
      * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
      * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
@@ -114,31 +89,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      */
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix) {
         return builder(properties, endpointKeyPrefix).build();
-    }
-
-    /**
-     * Returns a new {@link PropertiesEndpointGroup} created from the specified {@link Properties}.
-     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
-     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
-     *
-     * <pre>{@code
-     * # endpointKeyPrefix = 'example.hosts.'
-     * example.hosts.0=example1.com:36462
-     * example.hosts.1=example2.com:36462
-     * example.hosts.2=example3.com:36462
-     * }</pre>
-     *
-     * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
-     * @param endpointKeyPrefix the property name prefix
-     * @param defaultPort the default port number to use
-     *
-     * @deprecated Use {@link #builder(Properties, String)}
-     *             and {@link PropertiesEndpointGroupBuilder#defaultPort(int)}.
-     */
-    @Deprecated
-    public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix,
-                                             int defaultPort) {
-        return builder(properties, endpointKeyPrefix).defaultPort(defaultPort).build();
     }
 
     /**
@@ -159,31 +109,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      */
     public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix) {
         return builder(path, endpointKeyPrefix).build();
-    }
-
-    /**
-     * Returns a new {@link PropertiesEndpointGroup} created from the file at the specified {@link Path}.
-     * Any updates in the file will trigger a dynamic reload. The value of each property whose name starts
-     * with {@code endpointKeyPrefix} will be parsed with {@link Endpoint#parse(String)}, and then loaded
-     * into the {@link PropertiesEndpointGroup}, e.g.
-     *
-     * <pre>{@code
-     * # endpointKeyPrefix = 'example.hosts.'
-     * example.hosts.0=example1.com:36462
-     * example.hosts.1=example2.com:36462
-     * example.hosts.2=example3.com:36462
-     * }</pre>
-     *
-     * @param path the path of the file where list of {@link Endpoint}s is loaded from
-     * @param endpointKeyPrefix the property name prefix
-     * @param defaultPort the default port number to use
-     *
-     * @deprecated Use {@link #builder(Path, String)}
-     *             and {@link PropertiesEndpointGroupBuilder#defaultPort(int)}.
-     */
-    @Deprecated
-    public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix, int defaultPort) {
-        return builder(path, endpointKeyPrefix).defaultPort(defaultPort).build();
     }
 
     /**

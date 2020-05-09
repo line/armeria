@@ -124,7 +124,7 @@ class ContentPreviewerTest {
         return ContentPreviewerFactory.builder()
                                       .maxLength(maxLength)
                                       .defaultCharset(StandardCharsets.UTF_8)
-                                      .disable(new MediaTypeSet(MediaType.BASIC_AUDIO))
+                                      .disable(MediaTypeSet.of(MediaType.BASIC_AUDIO))
                                       .build();
     }
 
@@ -282,18 +282,18 @@ class ContentPreviewerTest {
 
     @Test
     void testCustomPreviewer() throws Exception {
-        ContentPreviewer previewer = hexDumpContenPreviewer();
+        ContentPreviewer previewer = hexDumpContentPreviewer();
         previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3, 4 }));
         assertThat(previewer.produce()).isEqualTo("01020304");
 
-        previewer = hexDumpContenPreviewer();
+        previewer = hexDumpContentPreviewer();
         previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3 }));
         previewer.onData(HttpData.wrap(new byte[] { 4, 5 }));
         assertThat(previewer.produce()).isEqualTo("0102030405");
         assertThat(previewer.produce()).isEqualTo("0102030405");
     }
 
-    ContentPreviewer hexDumpContenPreviewer() {
+    ContentPreviewer hexDumpContentPreviewer() {
         return new ProducerBasedContentPreviewer(100, HttpHeaders.of(), hexDumpProducer());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,10 +19,10 @@ package com.linecorp.armeria.common.rxjava;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Observer;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
-import io.reactivex.observables.ConnectableObservable;
+import io.reactivex.rxjava3.core.Observer;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.Consumer;
+import io.reactivex.rxjava3.observables.ConnectableObservable;
 
 final class RequestContextConnectableObservable<T> extends ConnectableObservable<T> {
 
@@ -46,5 +46,10 @@ final class RequestContextConnectableObservable<T> extends ConnectableObservable
         try (SafeCloseable ignored = assemblyContext.push()) {
             source.connect(connection);
         }
+    }
+
+    @Override
+    public void reset() {
+        source.reset();
     }
 }

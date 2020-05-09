@@ -68,13 +68,7 @@ public final class ServerListenerBuilder {
      * */
     private final List<Consumer<? super Server>> serverStoppedCallbacks = new ArrayList<>();
 
-    /**
-     * Creates a new {@link ServerListenerBuilder}.
-     *
-     * @deprecated Use {@link ServerListener#builder()}.
-     */
-    @Deprecated
-    public ServerListenerBuilder() {}
+    ServerListenerBuilder() {}
 
     private static class CallbackServerListener implements ServerListener {
         /**

@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -36,7 +35,8 @@ final class RequestContextAwareProgressivePromise<T> implements ProgressivePromi
 
     @Override
     public ProgressivePromise<T> setProgress(long progress, long total) {
-        return delegate.setProgress(progress, total);
+        delegate.setProgress(progress, total);
+        return this;
     }
 
     @Override
@@ -46,50 +46,56 @@ final class RequestContextAwareProgressivePromise<T> implements ProgressivePromi
 
     @Override
     public ProgressivePromise<T> setSuccess(T result) {
-        return delegate.setSuccess(result);
+        delegate.setSuccess(result);
+        return this;
     }
 
     @Override
     public ProgressivePromise<T> setFailure(Throwable cause) {
-        return delegate.setFailure(cause);
+        delegate.setFailure(cause);
+        return this;
     }
 
     @Override
     public ProgressivePromise<T> addListener(
             GenericFutureListener<? extends Future<? super T>> listener) {
-        return delegate.addListener(context.makeContextAware(listener));
+        delegate.addListener(RequestContextAwareFutureListener.of(context, listener));
+        return this;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    public ProgressivePromise<T> addListeners(
+    @SafeVarargs
+    public final ProgressivePromise<T> addListeners(
             GenericFutureListener<? extends Future<? super T>>... listeners) {
-        return delegate.addListeners(Stream.of(listeners)
-                                           .map(context::makeContextAware)
-                                           .toArray(GenericFutureListener[]::new));
+        for (GenericFutureListener<? extends Future<? super T>> l : listeners) {
+            delegate.addListeners(RequestContextAwareFutureListener.of(context, l));
+        }
+        return this;
     }
 
     @Override
     public ProgressivePromise<T> removeListener(
             GenericFutureListener<? extends Future<? super T>> listener) {
-        return delegate.removeListener(listener);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     @SafeVarargs
     public final ProgressivePromise<T> removeListeners(
             GenericFutureListener<? extends Future<? super T>>... listeners) {
-        return delegate.removeListeners(listeners);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ProgressivePromise<T> sync() throws InterruptedException {
-        return delegate.sync();
+        delegate.sync();
+        return this;
     }
 
     @Override
     public ProgressivePromise<T> syncUninterruptibly() {
-        return delegate.syncUninterruptibly();
+        delegate.syncUninterruptibly();
+        return this;
     }
 
     @Override
@@ -124,7 +130,8 @@ final class RequestContextAwareProgressivePromise<T> implements ProgressivePromi
 
     @Override
     public ProgressivePromise<T> await() throws InterruptedException {
-        return delegate.await();
+        delegate.await();
+        return this;
     }
 
     @Override
@@ -139,7 +146,8 @@ final class RequestContextAwareProgressivePromise<T> implements ProgressivePromi
 
     @Override
     public ProgressivePromise<T> awaitUninterruptibly() {
-        return delegate.awaitUninterruptibly();
+        delegate.awaitUninterruptibly();
+        return this;
     }
 
     @Override

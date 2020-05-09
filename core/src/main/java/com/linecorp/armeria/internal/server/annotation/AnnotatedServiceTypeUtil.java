@@ -21,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableMap;
@@ -47,6 +48,7 @@ final class AnnotatedServiceTypeUtil {
                     .put(Double.TYPE, Double::valueOf)
                     .put(Double.class, Double::valueOf)
                     .put(String.class, Function.identity())
+                    .put(UUID.class, UUID::fromString)
                     .build();
 
     /**

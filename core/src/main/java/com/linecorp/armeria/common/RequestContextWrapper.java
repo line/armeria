@@ -146,6 +146,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
         return delegate().eventLoop();
     }
 
+    @Override
+    public ByteBufAllocator alloc() {
+        return delegate().alloc();
+    }
+
     @Nullable
     @Override
     public <V> V attr(AttributeKey<V> key) {
@@ -176,7 +181,7 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     }
 
     @Override
-    public ByteBufAllocator alloc() {
-        return delegate().alloc();
+    public String toString() {
+        return delegate().toString();
     }
 }

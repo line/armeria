@@ -16,9 +16,14 @@
 
 package com.linecorp.armeria.server;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -28,14 +33,22 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final GracefulShutdownSupport gracefulShutdownSupport;
     private final Http2RequestDecoder requestDecoder;
 
+    @Nullable
+    private final Http2KeepAliveHandler keepAliveHandler;
+
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
                                  GracefulShutdownSupport gracefulShutdownSupport, String scheme) {
 
         super(decoder, encoder, initialSettings);
-
         this.gracefulShutdownSupport = gracefulShutdownSupport;
-        requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme);
+
+        keepAliveHandler = config.idleTimeoutMillis() > 0 ?
+                           new Http2ServerKeepAliveHandler(channel, encoder().frameWriter(),
+                                                           config.idleTimeoutMillis(),
+                                                           config.pingIntervalMillis()) : null;
+
+        requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
 
@@ -52,5 +65,52 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     @Override
     protected boolean needsImmediateDisconnection() {
         return gracefulShutdownSupport.isShuttingDown() || requestDecoder.goAwayHandler().receivedErrorGoAway();
+    }
+
+    @Override
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
+        destroyKeepAliveHandler();
+        super.channelInactive(ctx);
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
+        super.channelActive(ctx);
+    }
+
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
+        super.channelRegistered(ctx);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        destroyKeepAliveHandler();
+        super.handlerRemoved0(ctx);
+    }
+
+    private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
+        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+            keepAliveHandler.initialize(ctx);
+        }
+    }
+
+    private void destroyKeepAliveHandler() {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
+    }
+
+    @Nullable
+    KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
     }
 }

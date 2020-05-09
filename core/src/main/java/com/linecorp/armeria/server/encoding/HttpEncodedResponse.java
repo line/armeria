@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.encoding;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.function.Predicate;
@@ -24,6 +26,8 @@ import java.util.zip.DeflaterOutputStream;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -31,16 +35,18 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
  */
 class HttpEncodedResponse extends FilteredHttpResponse {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpEncodedResponse.class);
 
     private final HttpEncodingType encodingType;
     private final Predicate<MediaType> encodableContentTypePredicate;
@@ -70,18 +76,13 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             final ResponseHeaders headers = (ResponseHeaders) obj;
 
             // Skip informational headers.
-            final String status = headers.get(HttpHeaderNames.STATUS);
-            if (ArmeriaHttpUtil.isInformational(status)) {
+            final HttpStatus status = headers.status();
+            if (status.isInformational()) {
                 return obj;
             }
 
             if (headersSent) {
                 // Trailers, no modification.
-                return obj;
-            }
-
-            if (status == null) {
-                // Follow-up headers for informational headers, no modification.
                 return obj;
             }
 
@@ -137,7 +138,14 @@ class HttpEncodedResponse extends FilteredHttpResponse {
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
         closeEncoder();
         if (encodedStream != null && encodedStream.size() > 0) {
-            subscriber.onNext(HttpData.wrap(encodedStream.toByteArray()));
+            try {
+                subscriber.onNext(HttpData.wrap(encodedStream.toByteArray()));
+            } catch (Throwable t) {
+                subscriber.onError(t);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onNext() should not raise an exception. subscriber: {}",
+                            subscriber, t);
+            }
         }
     }
 
@@ -160,7 +168,10 @@ class HttpEncodedResponse extends FilteredHttpResponse {
         }
     }
 
-    private boolean shouldEncodeResponse(HttpHeaders headers) {
+    private boolean shouldEncodeResponse(ResponseHeaders headers) {
+        if (headers.status().isContentAlwaysEmpty()) {
+            return false;
+        }
         if (headers.contains(HttpHeaderNames.CONTENT_ENCODING)) {
             // We don't do automatic encoding if the user-supplied headers contain
             // Content-Encoding.

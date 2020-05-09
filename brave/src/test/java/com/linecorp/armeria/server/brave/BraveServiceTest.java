@@ -148,7 +148,8 @@ class BraveServiceTest {
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
-        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(3);
+        // check the service invocation had the current span in scope.
+        assertThat(scopeDecoratorCallingCounter.get()).isOne();
     }
 
     private static RequestLog testServiceInvocation(Reporter<Span> reporter,
@@ -162,7 +163,8 @@ class BraveServiceTest {
                                        .build();
 
         final HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                                   .serverParser(ArmeriaHttpServerParser.get())
+                                                   .serverRequestParser(ArmeriaHttpServerParser.get())
+                                                   .serverResponseParser(ArmeriaHttpServerParser.get())
                                                    .build();
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",

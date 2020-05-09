@@ -89,38 +89,27 @@ class DefaultAggregatedHttpResponseTest {
     }
 
     @Test
-    void errorWhenContentOrTrailersExistsShouldBeEmpty() {
-        contentAndTrailersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.ofUtf8("bob"),
-                                        HttpHeaders.of());
-        contentAndTrailersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"),
-                                        HttpHeaders.of());
-        contentAndTrailersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"),
-                                        HttpHeaders.of());
-        contentAndTrailersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"),
-                                        HttpHeaders.of());
-
-        contentAndTrailersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.empty(),
-                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.empty(),
-                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.empty(),
-                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.empty(),
-                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+    void errorWhenContentShouldBeEmpty() {
+        contentShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"));
+        contentShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"));
+        contentShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"));
     }
 
-    private static void contentAndTrailersShouldBeEmpty(HttpStatus status, HttpData content,
-                                                        HttpHeaders trailers) {
-        assertThatThrownBy(() -> AggregatedHttpResponse.of(status, PLAIN_TEXT_UTF_8, content, trailers))
+    private static void contentShouldBeEmpty(HttpStatus status, HttpData content) {
+        assertThatThrownBy(() -> AggregatedHttpResponse.of(status, PLAIN_TEXT_UTF_8, content))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void contentLengthIsNotSetWhen1xxOr204Or205() {
-        ResponseHeaders headers = ResponseHeaders.of(HttpStatus.CONTINUE, CONTENT_LENGTH, 100);
-        assertThat(AggregatedHttpResponse.of(headers).headers().get(CONTENT_LENGTH)).isNull();
+    void statusOfResponseHeadersShouldNotBeInformational() {
+        assertThatThrownBy(() -> AggregatedHttpResponse.of(HttpStatus.CONTINUE, PLAIN_TEXT_UTF_8,
+                                                           HttpData.ofUtf8("bob")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("non-1xx");
+    }
 
-        headers = ResponseHeaders.of(HttpStatus.NO_CONTENT, CONTENT_LENGTH, 100);
+    @Test
+    void contentLengthIsNotSetWhen204Or205() {
+        ResponseHeaders headers = ResponseHeaders.of(HttpStatus.NO_CONTENT, CONTENT_LENGTH, 100);
         assertThat(AggregatedHttpResponse.of(headers).headers().get(CONTENT_LENGTH)).isNull();
 
         headers = ResponseHeaders.of(HttpStatus.RESET_CONTENT, CONTENT_LENGTH, 100);

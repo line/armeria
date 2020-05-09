@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,8 +22,8 @@ import static org.awaitility.Awaitility.await;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -41,18 +42,18 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.reactivex.Completable;
-import io.reactivex.Maybe;
-import io.reactivex.Observable;
-import io.reactivex.Single;
-import io.reactivex.subscribers.DefaultSubscriber;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.subscribers.DefaultSubscriber;
 
-public class ObservableResponseConverterFunctionTest {
+class ObservableResponseConverterFunctionTest {
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/maybe", new Object() {
@@ -76,6 +77,11 @@ public class ObservableResponseConverterFunctionTest {
                 public Maybe<String> error() {
                     return Maybe.error(new AnticipatedException());
                 }
+
+                @Get("/http-response")
+                public Maybe<HttpResponse> httpResponse() {
+                    return Maybe.just(HttpResponse.of("a"));
+                }
             });
 
             sb.annotatedService("/single", new Object() {
@@ -93,6 +99,11 @@ public class ObservableResponseConverterFunctionTest {
                 @Get("/error")
                 public Single<String> error() {
                     return Single.error(new AnticipatedException());
+                }
+
+                @Get("/http-response")
+                public Single<HttpResponse> httpResponse() {
+                    return Single.just(HttpResponse.of("a"));
                 }
             });
 
@@ -169,8 +180,8 @@ public class ObservableResponseConverterFunctionTest {
     };
 
     @Test
-    public void maybe() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/maybe");
+    void maybe() {
+        final WebClient client = WebClient.of(server.httpUri() + "/maybe");
 
         AggregatedHttpResponse res;
 
@@ -188,11 +199,15 @@ public class ObservableResponseConverterFunctionTest {
 
         res = client.get("/error").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        res = client.get("/http-response").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
     }
 
     @Test
-    public void single() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/single");
+    void single() {
+        final WebClient client = WebClient.of(server.httpUri() + "/single");
 
         AggregatedHttpResponse res;
 
@@ -206,11 +221,15 @@ public class ObservableResponseConverterFunctionTest {
 
         res = client.get("/error").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        res = client.get("/http-response").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
     }
 
     @Test
-    public void completable() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/completable");
+    void completable() {
+        final WebClient client = WebClient.of(server.httpUri() + "/completable");
 
         AggregatedHttpResponse res;
 
@@ -222,8 +241,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void observable() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/observable");
+    void observable() {
+        final WebClient client = WebClient.of(server.httpUri() + "/observable");
 
         AggregatedHttpResponse res;
 
@@ -246,8 +265,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void streaming() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/streaming");
+    void streaming() {
+        final WebClient client = WebClient.of(server.httpUri() + "/streaming");
         final AtomicBoolean isFinished = new AtomicBoolean();
         client.get("/json").subscribe(new DefaultSubscriber<HttpObject>() {
             final ImmutableList.Builder<HttpObject> received = new Builder<>();
@@ -284,8 +303,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void failure() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/failure");
+    void failure() {
+        final WebClient client = WebClient.of(server.httpUri() + "/failure");
 
         AggregatedHttpResponse res;
 

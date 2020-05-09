@@ -44,13 +44,7 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder {
     private boolean proxyRevalidate;
     private long sMaxAgeSeconds = -1;
 
-    /**
-     * Creates a new builder with all directives disabled initially.
-     *
-     * @deprecated Use {@link ServerCacheControl#builder()}.
-     */
-    @Deprecated
-    public ServerCacheControlBuilder() {}
+    ServerCacheControlBuilder() {}
 
     ServerCacheControlBuilder(ServerCacheControl c) {
         super(c);

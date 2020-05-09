@@ -27,18 +27,21 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 
 /**
  * Builds a new {@link AuthService}.
  */
-public class AuthServiceBuilder {
+public final class AuthServiceBuilder {
 
     @Nullable
     private Authorizer<HttpRequest> authorizer;
-    private AuthSuccessHandler<HttpRequest, HttpResponse> successHandler = Service::serve;
-    private AuthFailureHandler<HttpRequest, HttpResponse> failureHandler = (delegate, ctx, req, cause) -> {
+    private AuthSuccessHandler successHandler = Service::serve;
+    private AuthFailureHandler failureHandler = (delegate, ctx, req, cause) -> {
         if (cause != null) {
             AuthService.logger.warn("Unexpected exception during authorization.", cause);
         }
@@ -144,7 +147,7 @@ public class AuthServiceBuilder {
      * Sets the {@link AuthSuccessHandler} which handles successfully authorized requests.
      * By default, the request will be delegated to the next {@link HttpService}.
      */
-    public AuthServiceBuilder onSuccess(AuthSuccessHandler<HttpRequest, HttpResponse> successHandler) {
+    public AuthServiceBuilder onSuccess(AuthSuccessHandler successHandler) {
         this.successHandler = requireNonNull(successHandler, "successHandler");
         return this;
     }
@@ -154,7 +157,7 @@ public class AuthServiceBuilder {
      * By default, an exception thrown during authorization is logged at WARN level (if any) and a
      * {@code 401 Unauthorized} response will be sent.
      */
-    public AuthServiceBuilder onFailure(AuthFailureHandler<HttpRequest, HttpResponse> failureHandler) {
+    public AuthServiceBuilder onFailure(AuthFailureHandler failureHandler) {
         this.failureHandler = requireNonNull(failureHandler, "failureHandler");
         return this;
     }
@@ -167,15 +170,18 @@ public class AuthServiceBuilder {
                                successHandler, failureHandler);
     }
 
+    private AuthService build(HttpService delegate, Authorizer<HttpRequest> authorizer) {
+        return new AuthService(requireNonNull(delegate, "delegate"), authorizer,
+                               successHandler, failureHandler);
+    }
+
     /**
      * Returns a newly-created decorator that decorates an {@link HttpService} with a new
      * {@link AuthService} based on the {@link Authorizer}s added to this builder.
      */
     public Function<? super HttpService, AuthService> newDecorator() {
         final Authorizer<HttpRequest> authorizer = authorizer();
-        final AuthSuccessHandler<HttpRequest, HttpResponse> successHandler = this.successHandler;
-        final AuthFailureHandler<HttpRequest, HttpResponse> failureHandler = this.failureHandler;
-        return service -> new AuthService(service, authorizer, successHandler, failureHandler);
+        return delegate -> build(delegate, authorizer);
     }
 
     private Authorizer<HttpRequest> authorizer() {

@@ -88,7 +88,11 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
         validateAll(maxConcurrency, timeout, unit);
 
-        this.maxConcurrency = maxConcurrency;
+        if (maxConcurrency == Integer.MAX_VALUE) {
+            this.maxConcurrency = 0;
+        } else {
+            this.maxConcurrency = maxConcurrency;
+        }
         timeoutMillis = unit.toMillis(timeout);
     }
 
@@ -228,7 +232,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                 }
             }
 
-            try (SafeCloseable ignored = ctx.push()) {
+            try (SafeCloseable ignored = ctx.replace()) {
                 try {
                     final O actualRes = delegate().execute(ctx, req);
                     actualRes.whenComplete().handleAsync((unused, cause) -> {

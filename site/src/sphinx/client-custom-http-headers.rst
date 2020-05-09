@@ -41,7 +41,7 @@ You can also nest ``withHttpHeader(s)``. The following example will send both ``
 
     import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
 
-    try (SafeClosedble ignored1 = Clients.withHttpHeader(USER_AGENT, myUserAgent)) {
+    try (SafeCloseable ignored1 = Clients.withHttpHeader(USER_AGENT, myUserAgent)) {
         for (String cred : credentials) {
             try (SafeCloseable ignored2 = Clients.withHttpHeaders(AUTHORIZATION, cred)) {
                 client.hello("authorized personnel");
@@ -99,8 +99,9 @@ headers to an existing client:
 
     HelloService.Iface client = ...;
     HelloService.Iface derivedClient = Clients.newDerivedClient(client, options -> {
-        ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
-        builder.decorator(...);  // Add a decorator.
-        builder.httpHeader(AUTHORIZATION, credential); // Add an HTTP header.
-        return builder.build();
+        return ClientOptions.builder()
+                            .options(options)
+                            .decorator(...)  // Add a decorator.
+                            .httpHeader(AUTHORIZATION, credential)  // Add an HTTP header.
+                            .build();
     });

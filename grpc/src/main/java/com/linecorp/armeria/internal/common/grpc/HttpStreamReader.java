@@ -24,8 +24,6 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -46,8 +44,6 @@ import io.grpc.Status;
  * A {@link Subscriber} to read HTTP messages and pass to gRPC business logic.
  */
 public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
-
-    private static final Logger logger = LoggerFactory.getLogger(HttpStreamReader.class);
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
@@ -144,7 +140,12 @@ public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunctio
                             "Can't find decompressor for " + grpcEncoding));
                     return;
                 }
-                deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                try {
+                    deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                } catch (Throwable t) {
+                    transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(t));
+                    return;
+                }
             }
             requestHttpFrame();
             return;
@@ -165,12 +166,12 @@ public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunctio
 
     @Override
     public void onError(Throwable cause) {
-        // Handled by accept() below.
+        // Handled by apply() below.
     }
 
     @Override
     public void onComplete() {
-        // Handled by accept() below.
+        // Handled by apply() below.
     }
 
     @Override
@@ -199,7 +200,15 @@ public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunctio
     }
 
     void closeDeframer() {
-        if (!deframer.isClosed()) {
+        // closeDeframer() could be called when deframer.isClosing() due to a race condition like the following:
+        //
+        // 1) HttpStreamReader received all data from publisher and added them to unprocessed of deframer.
+        // 2) A gRPC client does not request next messages yet, so deframer still has unprocessedBytes and
+        //    is not stalled.
+        // 3) HttpStreamReader receives onCompleted signal and closes deframer.
+        // 4) A gRPC client requests a message and the received message contains trailers,
+        //    so ArmeriaClientCall tries to close deframer.
+        if (!deframer.isClosing() && !deframer.isClosed()) {
             deframer.deframe(HttpData.empty(), true);
             deframer.closeWhenComplete();
         }

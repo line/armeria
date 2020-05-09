@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.client.HttpSessionHandler.PENDING_EXCEPTION;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -47,6 +46,8 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -229,7 +230,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    ctx.channel().attr(PENDING_EXCEPTION).set(cause.getCause());
+                    HttpSessionHandler.setPendingException(ctx, cause.getCause());
                     return;
                 }
 
@@ -337,11 +338,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
-        final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
-        if (idleTimeoutMillis > 0) {
-            pipeline.addFirst(new HttpClientIdleTimeoutHandler(idleTimeoutMillis));
-        }
-
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
     }
 
@@ -402,7 +398,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             //       because they are filled by Http2ClientUpgradeCodec.
 
             assert remoteAddress != null;
-            final String host = HttpHeaderUtil.hostHeader(
+            final String host = ArmeriaHttpUtil.authorityHeader(
                     remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
 
             upgradeReq.headers().set(HttpHeaderNames.HOST, host);

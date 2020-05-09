@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 
@@ -82,6 +83,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private final RequestContext ctx;
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
 
+    @Nullable
+    private RequestLogAccess parent;
     @Nullable
     private List<RequestLogAccess> children;
     private boolean hasLastChild;
@@ -281,6 +284,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return ctx;
     }
 
+    @Nullable
+    @Override
+    public RequestLogAccess parent() {
+        return parent;
+    }
+
     @Override
     public List<RequestLogAccess> children() {
         return children != null ? ImmutableList.copyOf(children) : ImmutableList.of();
@@ -409,12 +418,23 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
+    private boolean isDeferredFlagSet(RequestLogProperty property) {
+        final int flag = property.flag();
+        return (deferredFlags & flag) == flag;
+    }
+
     // Methods required for adding children.
 
     @Override
     public void addChild(RequestLogAccess child) {
         checkState(!hasLastChild, "last child is already added");
         requireNonNull(child, "child");
+
+        if (child instanceof DefaultRequestLog) {
+            checkState(((DefaultRequestLog) child).parent == null, "child has parent already");
+            ((DefaultRequestLog) child).parent = this;
+        }
+
         if (children == null) {
             // first child's all request-side logging events are propagated immediately to the parent
             children = new ArrayList<>();
@@ -502,13 +522,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
         }
 
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
-            responseContent(lastChild.responseContent(), lastChild.rawResponseContent());
-        } else {
-            lastChild.whenAvailable(RequestLogProperty.RESPONSE_CONTENT)
-                     .thenAccept(log -> responseContent(log.responseContent(), log.rawResponseContent()));
-        }
-
         if (lastChild.isComplete()) {
             propagateResponseEndData(lastChild);
         } else {
@@ -517,6 +530,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateResponseEndData(RequestLog log) {
+        responseContent(log.responseContent(), log.rawResponseContent());
         responseLength(log.responseLength());
         responseContentPreview(log.responseContentPreview());
         responseTrailers(log.responseTrailers());
@@ -646,6 +660,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             scheme = Scheme.of(serializationFormat, sessionProtocol);
             updateFlags(RequestLogProperty.SCHEME);
         }
+    }
+
+    @Override
+    public SerializationFormat serializationFormat() {
+        return serializationFormat;
     }
 
     @Override
@@ -809,11 +828,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public boolean isDeferRequestContentSet() {
+        return isDeferredFlagSet(RequestLogProperty.REQUEST_CONTENT);
+    }
+
+    @Override
     public void deferRequestContentPreview() {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
             return;
         }
         updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+    }
+
+    @Override
+    public boolean isDeferRequestContentPreviewSet() {
+        return isDeferredFlagSet(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
     }
 
     @Override
@@ -889,12 +918,19 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (name == null) {
+            String newName = null;
             final RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq != null) {
-                name = rpcReq.method();
+                newName = rpcReq.method();
             } else if (requestContent instanceof RpcRequest) {
-                name = ((RpcRequest) requestContent).method();
+                newName = ((RpcRequest) requestContent).method();
             }
+
+            if (newName == null && ctx instanceof ServiceRequestContext) {
+                newName = ((ServiceRequestContext) ctx).config().defaultLogName();
+            }
+
+            name = newName;
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
@@ -1117,11 +1153,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public boolean isDeferResponseContentSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT);
+    }
+
+    @Override
     public void deferResponseContentPreview() {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
             return;
         }
         updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+    }
+
+    @Override
+    public boolean isDeferResponseContentPreviewSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1561,6 +1607,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return ctx;
         }
 
+        @Nullable
+        @Override
+        public RequestLogAccess parent() {
+            return DefaultRequestLog.this.parent();
+        }
+
         @Override
         public List<RequestLogAccess> children() {
             return DefaultRequestLog.this.children();
@@ -1624,6 +1676,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public ClientConnectionTimings connectionTimings() {
             return connectionTimings;
+        }
+
+        @Override
+        public SerializationFormat serializationFormat() {
+            return serializationFormat;
         }
 
         @Override

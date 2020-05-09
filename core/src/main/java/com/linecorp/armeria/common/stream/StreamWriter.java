@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -115,20 +113,6 @@ public interface StreamWriter<T> {
     }
 
     /**
-     * Performs the specified {@code task} when there are enough demands from the {@link Subscriber}.
-     *
-     * @return the future that completes successfully when the {@code task} finishes or
-     *         exceptionally when the {@link StreamMessage} is closed unexpectedly.
-     *
-     * @deprecated Use {@link #whenConsumed()} and {@link CompletableFuture#thenRun(Runnable)}.
-     */
-    @Deprecated
-    default CompletableFuture<Void> onDemand(Runnable task) {
-        requireNonNull(task, "task");
-        return whenConsumed().thenRun(task);
-    }
-
-    /**
      * Returns a {@link CompletableFuture} which is completed when all elements written so far have been
      * consumed by the {@link Subscriber}.
      *
@@ -148,22 +132,4 @@ public interface StreamWriter<T> {
      * signal that the {@link Subscriber} did not consume the stream completely.
      */
     void close(Throwable cause);
-
-    /**
-     * Writes the given object and closes the stream successfully. The written object will be transferred to
-     * the {@link Subscriber}.
-     *
-     * @throws ClosedStreamException if the stream was already closed.
-     * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
-     *
-     * @deprecated Use {@link #tryWrite(Object)} and {@link #close()}.
-     */
-    @Deprecated
-    default void close(T obj) {
-        try {
-            write(obj);
-        } finally {
-            close();
-        }
-    }
 }

@@ -190,6 +190,7 @@ one of the following supported types:
 - ``double`` or ``Double``
 - ``String``
 - ``Enum``
+- ``UUID``
 
 Note that you can omit the value of :api:`@Param` if you compiled your code with ``-parameters`` javac
 option. In this case the variable name is used as the value.

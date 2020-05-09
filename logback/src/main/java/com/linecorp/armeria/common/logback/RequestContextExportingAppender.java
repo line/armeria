@@ -15,17 +15,19 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.MDC;
 import org.slf4j.Marker;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
@@ -40,7 +42,6 @@ import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.spi.AppenderAttachable;
 import ch.qos.logback.core.spi.AppenderAttachableImpl;
-import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
@@ -68,32 +69,18 @@ public final class RequestContextExportingAppender
     @Nullable
     private RequestContextExporter exporter;
 
+    @VisibleForTesting
+    RequestContextExporter exporter() {
+        checkState(exporter != null);
+        return exporter;
+    }
+
     /**
      * Adds the specified {@link BuiltInProperty} to the export list.
      */
     public void addBuiltIn(BuiltInProperty property) {
         ensureNotStarted();
         builder.addBuiltIn(property);
-    }
-
-    /**
-     * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsBuiltIn(BuiltInProperty property) {
-        return builder.containsBuiltIn(property);
-    }
-
-    /**
-     * Returns all {@link BuiltInProperty}s in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public Set<BuiltInProperty> getBuiltIns() {
-        return builder.getBuiltIns();
     }
 
     /**
@@ -123,86 +110,21 @@ public final class RequestContextExportingAppender
     }
 
     /**
-     * Returns {@code true} if the specified {@link AttributeKey} is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsAttribute(AttributeKey<?> key) {
-        requireNonNull(key, "key");
-        return builder.containsAttribute(key);
-    }
-
-    /**
-     * Returns all {@link AttributeKey}s in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     *
-     * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
-     */
-    @Deprecated
-    public Map<String, AttributeKey<?>> getAttributes() {
-        return builder.getAttributes();
-    }
-
-    /**
      * Adds the specified HTTP request header name to the export list.
      */
-    public void addHttpRequestHeader(CharSequence name) {
+    public void addRequestHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addHttpRequestHeader(name);
+        builder.addRequestHeader(name);
     }
 
     /**
      * Adds the specified HTTP response header name to the export list.
      */
-    public void addHttpResponseHeader(CharSequence name) {
+    public void addResponseHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addHttpResponseHeader(name);
-    }
-
-    /**
-     * Returns {@code true} if the specified HTTP request header name is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsHttpRequestHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        return builder.containsHttpRequestHeader(name);
-    }
-
-    /**
-     * Returns {@code true} if the specified HTTP response header name is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsHttpResponseHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        return builder.containsHttpResponseHeader(name);
-    }
-
-    /**
-     * Returns all HTTP request header names in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public Set<AsciiString> getHttpRequestHeaders() {
-        return builder.getHttpRequestHeaders();
-    }
-
-    /**
-     * Returns all HTTP response header names in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public Set<AsciiString> getHttpResponseHeaders() {
-        return builder.getHttpResponseHeaders();
+        builder.addResponseHeader(name);
     }
 
     /**

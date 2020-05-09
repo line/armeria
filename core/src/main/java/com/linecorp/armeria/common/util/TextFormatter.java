@@ -15,12 +15,17 @@
  */
 package com.linecorp.armeria.common.util;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nullable;
 
 /**
  * A utility class to format things as a {@link String} with ease.
@@ -30,17 +35,21 @@ public final class TextFormatter {
     private TextFormatter() {}
 
     /**
-     * Appends the human-readable representation of the specified byte-unit {@code size} to the specified
-     * {@link StringBuffer}.
+     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
+     * given as {@code elapsed}.
      */
-    public static void appendSize(StringBuilder buf, long size) {
-        if (size >= 104857600) { // >= 100 MiB
-            buf.append(size / 1048576).append("MiB(").append(size).append("B)");
-        } else if (size >= 102400) { // >= 100 KiB
-            buf.append(size / 1024).append("KiB(").append(size).append("B)");
-        } else {
-            buf.append(size).append('B');
-        }
+    public static StringBuilder elapsed(long elapsedNanos) {
+        final StringBuilder buf = new StringBuilder(16);
+        appendElapsed(buf, elapsedNanos);
+        return buf;
+    }
+
+    /**
+     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
+     * between the specified {@code startTimeNanos} and {@code endTimeNanos}.
+     */
+    public static StringBuilder elapsed(long startTimeNanos, long endTimeNanos) {
+        return elapsed(endTimeNanos - startTimeNanos);
     }
 
     /**
@@ -68,35 +77,6 @@ public final class TextFormatter {
     }
 
     /**
-     * A shortcut method that calls {@link #appendElapsed(StringBuilder, long, long)} and
-     * {@link #appendSize(StringBuilder, long)}, concatenated by {@code ", "}.
-     */
-    public static void appendElapsedAndSize(
-            StringBuilder buf, long startTimeNanos, long endTimeNanos, long size) {
-        appendElapsed(buf, startTimeNanos, endTimeNanos);
-        buf.append(", ");
-        appendSize(buf, size);
-    }
-
-    /**
-     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
-     * given as {@code elapsed}.
-     */
-    public static StringBuilder elapsed(long elapsedNanos) {
-        final StringBuilder buf = new StringBuilder(16);
-        appendElapsed(buf, elapsedNanos);
-        return buf;
-    }
-
-    /**
-     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
-     * between the specified {@code startTimeNanos} and {@code endTimeNanos}.
-     */
-    public static StringBuilder elapsed(long startTimeNanos, long endTimeNanos) {
-        return elapsed(endTimeNanos - startTimeNanos);
-    }
-
-    /**
      * Creates a new {@link StringBuilder} whose content is the human-readable representation of the byte-unit
      * {@code size}.
      */
@@ -104,6 +84,20 @@ public final class TextFormatter {
         final StringBuilder buf = new StringBuilder(16);
         appendSize(buf, size);
         return buf;
+    }
+
+    /**
+     * Appends the human-readable representation of the specified byte-unit {@code size} to the specified
+     * {@link StringBuffer}.
+     */
+    public static void appendSize(StringBuilder buf, long size) {
+        if (size >= 104857600) { // >= 100 MiB
+            buf.append(size / 1048576).append("MiB(").append(size).append("B)");
+        } else if (size >= 102400) { // >= 100 KiB
+            buf.append(size / 1024).append("KiB(").append(size).append("B)");
+        } else {
+            buf.append(size).append('B');
+        }
     }
 
     /**
@@ -116,40 +110,21 @@ public final class TextFormatter {
         return buf;
     }
 
+    /**
+     * A shortcut method that calls {@link #appendElapsed(StringBuilder, long, long)} and
+     * {@link #appendSize(StringBuilder, long)}, concatenated by {@code ", "}.
+     */
+    public static void appendElapsedAndSize(
+            StringBuilder buf, long startTimeNanos, long endTimeNanos, long size) {
+        appendElapsed(buf, startTimeNanos, endTimeNanos);
+        buf.append(", ");
+        appendSize(buf, size);
+    }
+
     private static final DateTimeFormatter dateTimeFormatter =
             new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
                                           .toFormatter(Locale.ENGLISH)
                                           .withZone(ZoneId.of("GMT"));
-
-    /**
-     * Formats the given epoch time in milliseconds to typical human-readable format
-     * "yyyy-MM-dd'T'HH:mm:ss.SSSX".
-     *
-     * @deprecated Use {@link #epochMillis(long)}.
-     *
-     * @param timeMillis epoch time in milliseconds
-     *
-     * @return the human readable string representation of the given epoch time
-     */
-    @Deprecated
-    public static StringBuilder epoch(long timeMillis) {
-        // 24 (human readable part) + 2 (parens) + 19 (max digits of a long integer)
-        final StringBuilder buf = new StringBuilder(45);
-        appendEpochMillis(buf, timeMillis);
-        return buf;
-    }
-
-    /**
-     * Formats the given epoch time in milliseconds to typical human-readable format
-     * "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends it to the specified {@link StringBuilder}.
-     *
-     * @deprecated Use {@link #appendEpochMillis(StringBuilder, long)}.
-     */
-    @Deprecated
-    public static void appendEpoch(StringBuilder buf, long timeMillis) {
-        buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis)))
-           .append('(').append(timeMillis).append(')');
-    }
 
     /**
      * Formats the given epoch time in milliseconds to typical human-readable format
@@ -197,5 +172,97 @@ public final class TextFormatter {
     public static void appendEpochMicros(StringBuilder buf, long timeMicros) {
         buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(TimeUnit.MICROSECONDS.toMillis(timeMicros))))
            .append('(').append(timeMicros).append(')');
+    }
+
+    /**
+     * Formats the given {@link SocketAddress}. The difference from {@link InetSocketAddress#toString()} is
+     * that it does not format a host name if it's not available or it's same with the IP address.
+     */
+    public static StringBuilder socketAddress(@Nullable SocketAddress addr) {
+        final StringBuilder buf = new StringBuilder(32);
+        appendSocketAddress(buf, addr);
+        return buf;
+    }
+
+    /**
+     * Formats the given {@link SocketAddress}. The difference from {@link InetSocketAddress#toString()} is
+     * that it does not format a host name if it's not available or it's same with the IP address.
+     */
+    public static void appendSocketAddress(StringBuilder buf, @Nullable SocketAddress addr) {
+        if (!(addr instanceof InetSocketAddress)) {
+            buf.append(addr);
+            return;
+        }
+
+        final InetSocketAddress isa = (InetSocketAddress) addr;
+        final String host = isa.getHostString();
+        final InetAddress resolvedAddr = isa.getAddress();
+        final String ip = resolvedAddr != null ? resolvedAddr.getHostAddress() : null;
+        if (host != null) {
+            if (ip != null) {
+                if (host.equals(ip)) {
+                    buf.append(ip);
+                } else {
+                    buf.append(host).append('/').append(ip);
+                }
+            } else {
+                buf.append(host);
+            }
+        } else {
+            buf.append(ip);
+        }
+        buf.append(':').append(isa.getPort());
+    }
+
+    /**
+     * Formats the given {@link InetAddress}. The difference from {@link InetAddress#toString()} is
+     * that it does not format a host name if it's not available or it's same with the IP address.
+     */
+    public static StringBuilder inetAddress(@Nullable InetAddress addr) {
+        final StringBuilder buf = new StringBuilder(32);
+        appendInetAddress(buf, addr);
+        return buf;
+    }
+
+    /**
+     * Formats the given {@link InetAddress}. The difference from {@link InetAddress#toString()} is
+     * that it does not format a host name if it's not available or it's same with the IP address.
+     */
+    public static void appendInetAddress(StringBuilder buf, @Nullable InetAddress addr) {
+        if (addr == null) {
+            buf.append("null");
+            return;
+        }
+
+        final String str = addr.toString();
+        final int slashPos = str.indexOf('/');
+        if (slashPos < 0) {
+            // Slash is not found; append as-is.
+            buf.append(str);
+            return;
+        }
+
+        if (slashPos == 0) {
+            // Slash is the first character; append without the leading slash.
+            buf.append(str, 1, str.length());
+            return;
+        }
+
+        if (slashPos * 2 + 1 != str.length()) {
+            // The host name and IP address have different lengths; append as-is.
+            buf.append(str);
+            return;
+        }
+
+        for (int i = 0; i < slashPos; i++) {
+            if (str.charAt(i) != str.charAt(i + slashPos + 1)) {
+                // The host name and IP address differ; append as-is.
+                buf.append(str);
+                return;
+            }
+        }
+
+        // The host name and IP address equals; append only the first part.
+        buf.append(str, 0, slashPos);
     }
 }

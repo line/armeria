@@ -196,6 +196,10 @@ public class AnnotatedService implements HttpService {
         }
     }
 
+    public String logName() {
+        return method.getName();
+    }
+
     Object object() {
         return object;
     }
@@ -223,7 +227,7 @@ public class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        ctx.logBuilder().name(method.getName());
+        ctx.logBuilder().name(logName());
 
         final CompletableFuture<AggregatedHttpRequest> f;
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
@@ -232,8 +236,8 @@ public class AnnotatedService implements HttpService {
             f = CompletableFuture.completedFuture(null);
         }
 
-        ctx.setAdditionalResponseHeaders(defaultHttpHeaders);
-        ctx.setAdditionalResponseTrailers(defaultHttpTrailers);
+        ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
+        ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
 
         switch (responseType) {
             case HTTP_RESPONSE:
@@ -462,6 +466,9 @@ public class AnnotatedService implements HttpService {
                                             ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
+            if (result instanceof HttpResponse) {
+                return (HttpResponse) result;
+            }
             try (SafeCloseable ignored = ctx.push()) {
                 for (final ResponseConverterFunction func : functions) {
                     try {

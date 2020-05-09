@@ -120,28 +120,33 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         ctx.logBuilder().addChild(derivedCtx.log());
 
         if (!initialAttempt) {
-            derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
+            derivedCtx.mutateAdditionalRequestHeaders(
+                    mutator -> mutator.add(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1)));
         }
 
         final RpcResponse res = executeWithFallback(delegate(), derivedCtx,
                                                     (context, cause) -> RpcResponse.ofFailure(cause));
 
         res.handle((unused1, unused2) -> {
-            retryStrategyWithContent().shouldRetry(derivedCtx, res).handle((backoff, unused3) -> {
-                if (backoff != null) {
-                    final long nextDelay = getNextDelay(derivedCtx, backoff);
-                    if (nextDelay < 0) {
-                        onRetryComplete(ctx, derivedCtx, res, future);
-                        return null;
-                    }
+            try {
+                retryStrategyWithContent().shouldRetry(derivedCtx, res).handle((backoff, unused3) -> {
+                    if (backoff != null) {
+                        final long nextDelay = getNextDelay(derivedCtx, backoff);
+                        if (nextDelay < 0) {
+                            onRetryComplete(ctx, derivedCtx, res, future);
+                            return null;
+                        }
 
-                    scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause, false),
-                                      () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
-                } else {
-                    onRetryComplete(ctx, derivedCtx, res, future);
-                }
-                return null;
-            });
+                        scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause, false),
+                                          () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
+                    } else {
+                        onRetryComplete(ctx, derivedCtx, res, future);
+                    }
+                    return null;
+                });
+            } catch (Throwable t) {
+                handleException(ctx, future, t, false);
+            }
             return null;
         });
     }

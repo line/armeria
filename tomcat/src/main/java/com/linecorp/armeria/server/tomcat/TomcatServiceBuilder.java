@@ -39,8 +39,6 @@ import org.apache.catalina.core.StandardService;
 import org.apache.catalina.realm.NullRealm;
 import org.apache.catalina.startup.Tomcat;
 
-import com.linecorp.armeria.common.util.AppRootFinder;
-
 /**
  * Builds a {@link TomcatService}. Use the factory methods in {@link TomcatService} if you do not override
  * the default settings or you have a configured {@link Tomcat} or {@link Connector} instance.
@@ -49,72 +47,6 @@ public final class TomcatServiceBuilder {
 
     // From Tomcat conf/server.xml
     private static final String DEFAULT_SERVICE_NAME = "Catalina";
-
-    /**
-     * Creates a new {@link TomcatServiceBuilder} with the web application at the root directory inside the
-     * JAR/WAR/directory where the caller class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link TomcatService#builder(Path)}.
-     */
-    @Deprecated
-    public static TomcatServiceBuilder forCurrentClassPath() {
-        return TomcatService.builder(AppRootFinder.findCurrent(1));
-    }
-
-    /**
-     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base
-     * directory inside the JAR/WAR/directory where the caller class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link TomcatService#builder(Path, String)}.
-     */
-    @Deprecated
-    public static TomcatServiceBuilder forCurrentClassPath(String docBase) {
-        return TomcatService.builder(AppRootFinder.findCurrent(1), docBase);
-    }
-
-    /**
-     * Creates a new {@link TomcatServiceBuilder} with the web application at the root directory inside the
-     * JAR/WAR/directory where the specified class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link TomcatService#builder(Path)}.
-     */
-    @Deprecated
-    public static TomcatServiceBuilder forClassPath(Class<?> clazz) {
-        return TomcatService.builder(AppRootFinder.find(clazz));
-    }
-
-    /**
-     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base
-     * directory inside the JAR/WAR/directory where the specified class is located at.
-     *
-     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link TomcatService#builder(Path, String)}.
-     */
-    @Deprecated
-    public static TomcatServiceBuilder forClassPath(Class<?> clazz, String docBaseOrJarRoot) {
-        return TomcatService.builder(AppRootFinder.find(clazz), docBaseOrJarRoot);
-    }
-
-    /**
-     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
-     * which can be a directory or a JAR/WAR file.
-     *
-     * @deprecated Use {@link TomcatService#builder(Path)}.
-     */
-    @Deprecated
-    public static TomcatServiceBuilder forFileSystem(String docBase) {
-        return TomcatService.builder(Paths.get(requireNonNull(docBase, "docBase")));
-    }
-
-    /**
-     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
-     * which can be a directory or a JAR/WAR file.
-     *
-     * @deprecated Use {@link TomcatService#builder(Path)}.
-     */
-    @Deprecated
-    public static TomcatServiceBuilder forFileSystem(Path docBase) {
-        return TomcatService.builder(docBase);
-    }
 
     private final Path docBase;
     @Nullable

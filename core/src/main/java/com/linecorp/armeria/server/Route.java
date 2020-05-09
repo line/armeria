@@ -119,7 +119,7 @@ public interface Route {
     int complexity();
 
     /**
-     * Returns the {@link Set} of {@link HttpMethod}s that this {@link Route} supports.
+     * Returns the {@link Set} of non-empty {@link HttpMethod}s that this {@link Route} supports.
      */
     Set<HttpMethod> methods();
 

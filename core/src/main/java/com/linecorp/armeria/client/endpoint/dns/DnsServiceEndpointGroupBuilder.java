@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint.dns;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -29,15 +30,7 @@ import io.netty.channel.EventLoop;
  */
 public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilder {
 
-    /**
-     * Creates a new instance that builds a {@link DnsServiceEndpointGroup} for the specified {@code hostname}.
-     *
-     * @param hostname the hostname to query DNS queries for
-     *
-     * @deprecated Use {@link DnsServiceEndpointGroup#builder(String)}.
-     */
-    @Deprecated
-    public DnsServiceEndpointGroupBuilder(String hostname) {
+    DnsServiceEndpointGroupBuilder(String hostname) {
         super(hostname);
     }
 
@@ -46,7 +39,8 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
      */
     public DnsServiceEndpointGroup build() {
         return new DnsServiceEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
-                                           serverAddressStreamProvider(), backoff(), hostname());
+                                           queryTimeoutMillis(), serverAddressStreamProvider(), backoff(),
+                                           hostname());
     }
 
     // Override the return type of the chaining methods in the superclass.
@@ -59,6 +53,16 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsServiceEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
         return (DnsServiceEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    }
+
+    @Override
+    public DnsServiceEndpointGroupBuilder queryTimeout(Duration queryTimeout) {
+        return (DnsServiceEndpointGroupBuilder) super.queryTimeout(queryTimeout);
+    }
+
+    @Override
+    public DnsServiceEndpointGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
+        return (DnsServiceEndpointGroupBuilder) super.queryTimeoutMillis(queryTimeoutMillis);
     }
 
     @Override

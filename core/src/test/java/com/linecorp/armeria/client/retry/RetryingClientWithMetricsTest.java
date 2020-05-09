@@ -67,7 +67,8 @@ class RetryingClientWithMetricsTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("foo"), "bar");
+                    ctx.mutateAdditionalResponseTrailers(
+                            mutator -> mutator.add(HttpHeaderNames.of("foo"), "bar"));
                     if (reqCount.getAndIncrement() < 2) {
                         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                     } else {

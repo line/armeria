@@ -8,10 +8,10 @@ public class Main {
 
     public static void main(String[] args) {
         final Server backend = Server.builder()
-                                     .service("/square/{num}", ((ctx, req) -> {
+                                     .service("/square/{num}", (ctx, req) -> {
                                          final long num = Long.parseLong(ctx.pathParam("num"));
                                          return HttpResponse.of(Long.toString(num * num));
-                                     }))
+                                     })
                                      .http(8081)
                                      .build();
 

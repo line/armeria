@@ -32,6 +32,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -60,19 +62,11 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
     };
 
-    /**
-     * Returns a new {@link ServiceRequestContextBuilder} created from the specified {@link HttpRequest}.
-     *
-     * @deprecated Use {@link ServiceRequestContext#builder(HttpRequest)}.
-     */
-    @Deprecated
-    public static ServiceRequestContextBuilder of(HttpRequest request) {
-        return new ServiceRequestContextBuilder(request);
-    }
-
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
     private HttpService service = fakeService;
+    @Nullable
+    private String defaultLogName;
     @Nullable
     private Route route;
     @Nullable
@@ -90,6 +84,17 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      */
     public ServiceRequestContextBuilder service(HttpService service) {
         this.service = requireNonNull(service, "service");
+        return this;
+    }
+
+    /**
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
+     * {@link RequestLogBuilder#name(String)}.
+     *
+     * @param defaultLogName the default log name.
+     */
+    public ServiceRequestContextBuilder defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
         return this;
     }
 
@@ -145,11 +150,17 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final ServerBuilder serverBuilder = Server.builder()
                                                   .meterRegistry(meterRegistry())
                                                   .workerGroup(eventLoop(), false);
+
+        final ServiceBindingBuilder serviceBindingBuilder;
         if (route != null) {
-            serverBuilder.service(route, service);
+            serviceBindingBuilder = serverBuilder.route().addRoute(route);
         } else {
-            serverBuilder.service(path(), service);
+            serviceBindingBuilder = serverBuilder.route().path(path());
         }
+        if (defaultLogName != null) {
+            serviceBindingBuilder.defaultLogName(defaultLogName);
+        }
+        serviceBindingBuilder.build(service);
 
         serverConfigurators.forEach(configurator -> configurator.accept(serverBuilder));
 

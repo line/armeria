@@ -160,21 +160,6 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link SslContext}.
-     *
-     * @deprecated This unsafe method has been deprecated because an incorrectly built {@link SslContext}
-     *             can cause a {@link Server} to malfunction. Use other {@code tls()} methods.
-     */
-    @Deprecated
-    public VirtualHostBuilder tls(SslContext sslContext) {
-        requireNonNull(sslContext, "sslContext");
-        checkState(this.sslContext == null && sslContextBuilderSupplier == null,
-                   "TLS has been configured already.");
-        this.sslContext = sslContext;
-        return this;
-    }
-
-    /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
      *
@@ -182,19 +167,6 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
         return tls(keyCertChainFile, keyFile, (String) null);
-    }
-
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
-     * cleartext {@code keyFile} and {@code tlsCustomizer}.
-     *
-     * @deprecated Use {@link #tls(File, File)} and {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder tls(File keyCertChainFile, File keyFile,
-                                  Consumer<SslContextBuilder> tlsCustomizer) {
-        tls(keyCertChainFile, keyFile);
-        return tlsCustomizer(tlsCustomizer);
     }
 
     /**
@@ -207,19 +179,6 @@ public final class VirtualHostBuilder {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         requireNonNull(keyFile, "keyFile");
         return tls(() -> SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword));
-    }
-
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
-     * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
-     *
-     * @deprecated Use {@link #tls(File, File, String)} and {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword,
-                                  Consumer<SslContextBuilder> tlsCustomizer) {
-        tls(keyCertChainFile, keyFile, keyPassword);
-        return tlsCustomizer(tlsCustomizer);
     }
 
     /**
@@ -317,19 +276,6 @@ public final class VirtualHostBuilder {
         return tls(() -> SslContextBuilder.forServer(keyManagerFactory));
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyManagerFactory}
-     * and {@code tlsCustomizer}.
-     *
-     * @deprecated Use {@link #tls(KeyManagerFactory)} and {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder tls(KeyManagerFactory keyManagerFactory,
-                                  Consumer<SslContextBuilder> tlsCustomizer) {
-        tls(keyManagerFactory);
-        return tlsCustomizer(tlsCustomizer);
-    }
-
     private VirtualHostBuilder tls(Supplier<SslContextBuilder> sslContextBuilderSupplier) {
         requireNonNull(sslContextBuilderSupplier, "sslContextBuilderSupplier");
         checkState(sslContext == null && this.sslContextBuilderSupplier == null,
@@ -392,16 +338,6 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostDecoratingServiceBindingBuilder routeDecorator() {
         return new VirtualHostDecoratingServiceBindingBuilder(this);
-    }
-
-    /**
-     * Binds the specified {@link HttpService} at the specified path pattern.
-     *
-     * @deprecated Use {@link #service(String, HttpService)} instead.
-     */
-    @Deprecated
-    public VirtualHostBuilder serviceAt(String pathPattern, HttpService service) {
-        return service(pathPattern, service);
     }
 
     /**

@@ -18,17 +18,21 @@ import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { ChangeEvent } from 'react';
+import Dropdown, { Option } from 'react-dropdown';
 
 const endpointPathPlaceHolder = '/foo/bar';
 
 interface Props {
+  editable: boolean;
   endpointPathOpen: boolean;
-  endpointPath: string;
+  examplePaths: Option[];
+  additionalPath: string;
+  onSelectedPathChange: (selectedPath: Option) => void;
   onEditEndpointPathClick: React.Dispatch<unknown>;
-  onEndpointPathChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onPathFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const EndpointPath: React.FunctionComponent<Props> = (props) => (
+const EndpointPath: React.FunctionComponent<Props> = props => (
   <>
     <Typography variant="body2" paragraph />
     <Button color="secondary" onClick={props.onEditEndpointPathClick}>
@@ -37,14 +41,24 @@ const EndpointPath: React.FunctionComponent<Props> = (props) => (
     <Typography variant="body2" paragraph />
     {props.endpointPathOpen && (
       <>
+        {props.examplePaths.length > 0 && (
+          <>
+            <Typography variant="body2" paragraph />
+            <Dropdown
+              placeholder="Select an example path..."
+              options={props.examplePaths}
+              onChange={props.onSelectedPathChange}
+            />
+          </>
+        )}
+        <Typography variant="body2" paragraph />
         <TextField
-          multiline
           fullWidth
-          rows={1}
-          value={props.endpointPath}
+          value={props.additionalPath}
           placeholder={endpointPathPlaceHolder}
-          onChange={props.onEndpointPathChange}
+          onChange={props.onPathFormChange}
           inputProps={{
+            readOnly: !props.editable,
             className: 'code',
           }}
         />

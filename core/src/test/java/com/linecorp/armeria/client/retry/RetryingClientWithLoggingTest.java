@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -31,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
@@ -41,6 +44,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -63,8 +67,9 @@ class RetryingClientWithLoggingTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("foo"), "bar");
-                    if (reqCount.getAndIncrement() < 2) {
+                    ctx.mutateAdditionalResponseTrailers(
+                            mutator -> mutator.add(HttpHeaderNames.of("foo"), "bar"));
+                    if (reqCount.getAndIncrement() < 1) {
                         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                     } else {
                         return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello");
@@ -100,8 +105,8 @@ class RetryingClientWithLoggingTest {
     // WebClient -> RetryingClient -> LoggingClient -> HttpClientDelegate
     // In this case, all of the requests and responses are logged.
     @Test
-    void retryingThenLogging() {
-        successLogIndex = 5;
+    void retryingThenLogging() throws InterruptedException {
+        successLogIndex = 3;
         final RetryStrategyWithContent<HttpResponse> retryStrategy =
                 (ctx, response) -> response.aggregate().handle((msg, cause) -> {
                     if ("hello".equals(msg.contentUtf8())) {
@@ -113,11 +118,38 @@ class RetryingClientWithLoggingTest {
                                           .decorator(loggingDecorator())
                                           .decorator(RetryingClient.builder(retryStrategy)
                                                                    .newDecorator())
+                                          .decorator((delegate, ctx, req) -> {
+                                              final RequestLogBuilder logBuilder = ctx.logBuilder();
+                                              logBuilder.name("foo");
+                                              logBuilder.requestContent("bar", null);
+                                              logBuilder.deferRequestContentPreview();
+                                              logBuilder.deferResponseContent();
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .build();
-        assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
+            final RequestLogBuilder logBuilder = captor.get().logBuilder();
+            logBuilder.requestContentPreview("baz");
 
-        // wait until 6 logs(3 requests and 3 responses) are called back
-        await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
+            await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex));
+            TimeUnit.SECONDS.sleep(1);
+            // The last log is not complete because the parent log doesn't set the response content yet.
+            assertThat(logResult).hasSize(successLogIndex);
+            logBuilder.responseContent("qux", null);
+        }
+
+        // wait until 4 logs(2 requests and 2 responses) are called back
+        await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex + 1));
+        // Let's just check the first request log.
+        final RequestLog requestLog = logResult.get(0);
+        assertThat(requestLog.name()).isEqualTo("foo");
+        assertThat(requestLog.requestContent()).isEqualTo("bar");
+        assertThat(requestLog.requestContentPreview()).isEqualTo("baz");
+
+        assertThat(logResult.get(3).responseContent()).isEqualTo("qux");
+        // The response content of the first log is different.
+        assertThat(logResult.get(1).responseContent()).isNull();
     }
 
     // WebClient -> LoggingClient -> RetryingClient -> HttpClientDelegate
@@ -133,7 +165,7 @@ class RetryingClientWithLoggingTest {
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back
-        await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
+        await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex + 1));
 
         // toStringRequestOnly() is same in the request log and the response log
         assertThat(logResult.get(0).toStringRequestOnly()).isEqualTo(logResult.get(1).toStringRequestOnly());

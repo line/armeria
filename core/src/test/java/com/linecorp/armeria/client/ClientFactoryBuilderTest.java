@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_PING_INTERVAL_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -125,5 +126,63 @@ class ClientFactoryBuilderTest {
                     getClass().getResourceAsStream(resourceRoot + "test.crt"),
                     getClass().getResourceAsStream(resourceRoot + privateKeyPath));
         }).build();
+    }
+
+    @Test
+    void positivePingIntervalShouldBeGreaterThan10seconds() {
+        final ClientFactory factory1 = ClientFactory.builder()
+                                                    .idleTimeoutMillis(10000)
+                                                    .pingIntervalMillis(0)
+                                                    .build();
+        assertThat(factory1.options().idleTimeoutMillis()).isEqualTo(10000);
+        assertThat(factory1.options().pingIntervalMillis()).isEqualTo(0);
+
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                         .idleTimeoutMillis(10000)
+                         .pingIntervalMillis(5000)
+                         .build();
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("(expected: >= " + MIN_PING_INTERVAL_MILLIS + " or == 0)");
+
+        final ClientFactory factory3 = ClientFactory.builder()
+                                                    .idleTimeoutMillis(10000)
+                                                    .pingIntervalMillis(15000)
+                                                    .build();
+        assertThat(factory3.options().idleTimeoutMillis()).isEqualTo(10000);
+        assertThat(factory3.options().pingIntervalMillis()).isEqualTo(0);
+
+        final ClientFactory factory4 = ClientFactory.builder()
+                                                    .idleTimeoutMillis(15000)
+                                                    .pingIntervalMillis(10000)
+                                                    .build();
+        assertThat(factory4.options().idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(factory4.options().pingIntervalMillis()).isEqualTo(10000);
+
+        final ClientFactory factory5 = ClientFactory.builder()
+                                                    .idleTimeoutMillis(15000)
+                                                    .pingIntervalMillis(12000)
+                                                    .build();
+        assertThat(factory5.options().idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(factory5.options().pingIntervalMillis()).isEqualTo(12000);
+    }
+
+    @CsvSource({
+            "0,     10000",
+            "15000, 20000",
+            "20000, 15000",
+    })
+    @ParameterizedTest
+    void pingIntervalShouldBeLessThanIdleTimeout(long idleTimeoutMillis, long pingIntervalMillis) {
+        final ClientFactory factory1 = ClientFactory.builder()
+                                                    .idleTimeoutMillis(idleTimeoutMillis)
+                                                    .pingIntervalMillis(pingIntervalMillis)
+                                                    .build();
+        assertThat(factory1.options().idleTimeoutMillis()).isEqualTo(idleTimeoutMillis);
+        if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
+            assertThat(factory1.options().pingIntervalMillis()).isEqualTo(0);
+        } else {
+            assertThat(factory1.options().pingIntervalMillis()).isEqualTo(pingIntervalMillis);
+        }
     }
 }

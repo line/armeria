@@ -43,35 +43,17 @@ public final class FieldInfoBuilder {
     @Nullable
     private String docString;
 
-    /**
-     * Creates a new {@link FieldInfoBuilder}.
-     *
-     * @deprecated Use {@link FieldInfo#builder(String, TypeSignature)}.
-     */
-    @Deprecated
-    public FieldInfoBuilder(String name, TypeSignature typeSignature) {
+    FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = requireNonNull(typeSignature, "typeSignature");
         childFieldInfos = ImmutableList.of();
     }
 
-    /**
-     * Creates a new {@link FieldInfoBuilder}.
-     *
-     * @deprecated Use {@link FieldInfo#builder(String, TypeSignature, FieldInfo...)}.
-     */
-    @Deprecated
-    public FieldInfoBuilder(String name, TypeSignature typeSignature, FieldInfo... childFieldInfos) {
+    FieldInfoBuilder(String name, TypeSignature typeSignature, FieldInfo... childFieldInfos) {
         this(name, typeSignature, ImmutableList.copyOf(childFieldInfos));
     }
 
-    /**
-     * Creates a new {@link FieldInfoBuilder}.
-     *
-     * @deprecated Use {@link FieldInfo#builder(String, TypeSignature, Iterable)}.
-     */
-    @Deprecated
-    public FieldInfoBuilder(String name, TypeSignature typeSignature, Iterable<FieldInfo> childFieldInfos) {
+    FieldInfoBuilder(String name, TypeSignature typeSignature, Iterable<FieldInfo> childFieldInfos) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = typeSignature;
         checkArgument(!Iterables.isEmpty(requireNonNull(childFieldInfos, "childFieldInfos")),

@@ -66,8 +66,8 @@ public final class DnsResolverGroupBuilder {
     // DnsNameResolverBuilder properties:
 
     private boolean traceEnabled = true;
-    @Nullable
-    private Long queryTimeoutMillis;
+    private long queryTimeoutMillis = 5000; // 5 seconds.
+
     @Nullable
     private ResolvedAddressTypes resolvedAddressTypes;
     @Nullable
@@ -137,19 +137,19 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
-     * Sets the timeout of each DNS query performed by this resolver.
+     * Sets the timeout of the DNS query performed by this resolver. {@code 0} disables the timeout.
      *
      * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
     public DnsResolverGroupBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
-        checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)",
-                      queryTimeout);
+        checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)", queryTimeout);
         return queryTimeoutMillis(queryTimeout.toMillis());
     }
 
     /**
-     * Sets the timeout of each DNS query performed by this resolver in milliseconds.
+     * Sets the timeout of the DNS query performed by this resolver in milliseconds.
+     * {@code 0} disables the timeout.
      *
      * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
@@ -302,9 +302,12 @@ public final class DnsResolverGroupBuilder {
                    .traceEnabled(traceEnabled)
                    .completeOncePreferredResolved(true);
 
-            if (queryTimeoutMillis != null) {
+            if (queryTimeoutMillis == 0) {
+                builder.queryTimeoutMillis(Long.MAX_VALUE);
+            } else {
                 builder.queryTimeoutMillis(queryTimeoutMillis);
             }
+
             if (resolvedAddressTypes != null) {
                 builder.resolvedAddressTypes(resolvedAddressTypes);
             }
@@ -340,6 +343,6 @@ public final class DnsResolverGroupBuilder {
             }
         };
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
-                                                  refreshBackoff, resolvedAddressTypes);
+                                                  queryTimeoutMillis, refreshBackoff, resolvedAddressTypes);
     }
 }

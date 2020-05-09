@@ -1,3 +1,3 @@
 dependencies {
-    api 'io.reactivex.rxjava2:rxjava'
+    api 'io.reactivex.rxjava3:rxjava'
 }

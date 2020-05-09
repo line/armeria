@@ -119,24 +119,46 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
     @Override
     public boolean setStatusCode(@Nullable HttpStatus status) {
-        if (state != State.COMMITTED) {
-            if (status != null) {
-                armeriaHeaders.status(status.value());
-            }
-            return true;
-        } else {
+        if (state == State.COMMITTED) {
             return false;
         }
+
+        if (status != null) {
+            armeriaHeaders.status(status.value());
+        }
+        return true;
     }
 
     @Nullable
     @Override
     public HttpStatus getStatusCode() {
-        final String status = armeriaHeaders.get(HttpHeaderNames.STATUS);
-        if (status == null) {
+        final String statusCode = armeriaHeaders.get(HttpHeaderNames.STATUS);
+        if (statusCode == null) {
             return null;
         }
-        return HttpStatus.resolve(com.linecorp.armeria.common.HttpStatus.valueOf(status).code());
+        return HttpStatus.resolve(com.linecorp.armeria.common.HttpStatus.valueOf(statusCode).code());
+    }
+
+    @Override
+    public boolean setRawStatusCode(@Nullable Integer statusCode) {
+        if (state == State.COMMITTED) {
+            return false;
+        }
+
+        if (statusCode != null) {
+            armeriaHeaders.status(statusCode);
+        }
+        return true;
+    }
+
+    @Nullable
+    @Override
+    public Integer getRawStatusCode() {
+        final String statusCode = armeriaHeaders.get(HttpHeaderNames.STATUS);
+        if (statusCode == null) {
+            return null;
+        }
+        return com.linecorp.armeria.common.HttpStatus.valueOf(statusCode).code();
     }
 
     @Override
@@ -183,7 +205,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
         return Mono.defer(() -> {
             final HttpResponse response = HttpResponse.of(
-                    new HttpResponseProcessor(ctx.eventLoop(), armeriaHeaders.build(),
+                    new HttpResponseProcessor(ctx.eventLoop(), buildResponseHeaders(),
                                               publisher.map(factoryWrapper::toHttpData)));
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
@@ -193,17 +215,20 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         });
     }
 
+    private ResponseHeaders buildResponseHeaders() {
+        if (!armeriaHeaders.contains(HttpHeaderNames.STATUS)) {
+            // If there is no status code specified, set 200 OK by default.
+            armeriaHeaders.status(com.linecorp.armeria.common.HttpStatus.OK);
+        }
+        return armeriaHeaders.build();
+    }
+
     private Mono<Void> doCommit(@Nullable Supplier<? extends Mono<Void>> writeAction) {
         if (!stateUpdater.compareAndSet(this, State.NEW, State.COMMITTING)) {
             return Mono.empty();
         }
 
         commitActions.add(() -> Mono.fromRunnable(() -> {
-            if (!armeriaHeaders.contains(HttpHeaderNames.STATUS)) {
-                // If there is no status code specified, set 200 OK by default.
-                armeriaHeaders.status(com.linecorp.armeria.common.HttpStatus.OK);
-            }
-
             getHeaders().forEach((name, values) -> armeriaHeaders.add(HttpHeaderNames.of(name), values));
 
             final List<String> cookieValues =
@@ -261,7 +286,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
             return Mono.empty();
         }
 
-        final HttpResponse response = HttpResponse.of(armeriaHeaders.build());
+        final HttpResponse response = HttpResponse.of(buildResponseHeaders());
         future.complete(response);
         logger.debug("{} Response future has been completed with an HttpResponse", ctx);
         return Mono.fromFuture(response.whenComplete());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,8 +21,8 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.internal.fuseable.ConditionalSubscriber;
-import io.reactivex.parallel.ParallelFlowable;
+import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.parallel.ParallelFlowable;
 
 final class RequestContextParallelFlowable<T> extends ParallelFlowable<T> {
 
@@ -50,9 +50,8 @@ final class RequestContextParallelFlowable<T> extends ParallelFlowable<T> {
         for (int i = 0; i < n; i++) {
             final Subscriber<? super T> z = s[i];
             if (z instanceof ConditionalSubscriber) {
-                parents[i] = new RequestContextConditionalSubscriber<>(
-                        (ConditionalSubscriber<? super T>) z, assemblyContext
-                );
+                parents[i] = new RequestContextConditionalSubscriber<>((ConditionalSubscriber<? super T>) z,
+                                                                       assemblyContext);
             } else {
                 parents[i] = new RequestContextSubscriber<>(z, assemblyContext);
             }

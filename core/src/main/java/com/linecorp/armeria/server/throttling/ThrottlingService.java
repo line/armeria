@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,17 +15,11 @@
  */
 package com.linecorp.armeria.server.throttling;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Decorates an {@link HttpService} to throttle incoming requests.
@@ -33,30 +27,41 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class ThrottlingService extends AbstractThrottlingService<HttpRequest, HttpResponse>
         implements HttpService {
     /**
-     * Creates a new decorator using the specified {@link ThrottlingStrategy} instance.
+     * Creates a new decorator using the specified {@link ThrottlingStrategy} and
+     * {@link ThrottlingRejectHandler}.
      *
-     * @param strategy The {@link ThrottlingStrategy} instance to be used
+     * @param strategy The {@link ThrottlingStrategy} instance to define throttling strategy
+     * @param rejectHandler The {@link ThrottlingRejectHandler} instance to define request rejection behaviour
+     */
+    public static Function<? super HttpService, ThrottlingService>
+    newDecorator(ThrottlingStrategy<HttpRequest> strategy,
+                 ThrottlingRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
+        return builder(strategy).onRejectedRequest(rejectHandler).newDecorator();
+    }
+
+    /**
+     * Creates a new decorator using the specified {@link ThrottlingStrategy}.
+     *
+     * @param strategy The {@link ThrottlingStrategy} instance to define throttling strategy
      */
     public static Function<? super HttpService, ThrottlingService>
     newDecorator(ThrottlingStrategy<HttpRequest> strategy) {
-        requireNonNull(strategy, "strategy");
-        return delegate -> new ThrottlingService(delegate, strategy);
+        return builder(strategy).newDecorator();
+    }
+
+    /**
+     * Returns a new {@link ThrottlingServiceBuilder}.
+     */
+    public static ThrottlingServiceBuilder builder(ThrottlingStrategy<HttpRequest> strategy) {
+        return new ThrottlingServiceBuilder(strategy);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    private ThrottlingService(HttpService delegate, ThrottlingStrategy<HttpRequest> strategy) {
-        super(delegate, strategy, HttpResponse::from);
-    }
-
-    /**
-     * Invoked when {@code req} is throttled. By default, this method responds with the
-     * {@link HttpStatus#SERVICE_UNAVAILABLE} status.
-     */
-    @Override
-    protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
-            throws Exception {
-        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+    ThrottlingService(HttpService delegate, ThrottlingStrategy<HttpRequest> strategy,
+                      ThrottlingAcceptHandler<HttpRequest, HttpResponse> acceptHandler,
+                      ThrottlingRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
+        super(delegate, strategy, HttpResponse::from, acceptHandler, rejectHandler);
     }
 }

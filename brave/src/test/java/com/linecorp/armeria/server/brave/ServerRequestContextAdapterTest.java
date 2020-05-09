@@ -83,7 +83,7 @@ class ServerRequestContextAdapterTest {
         ctx.logBuilder().endResponse();
 
         final HttpServerResponse res =
-                ServiceRequestContextAdapter.asHttpServerResponse(ctx.log().ensureComplete());
+                ServiceRequestContextAdapter.asHttpServerResponse(ctx.log().ensureComplete(), null);
 
         assertThat(res.statusCode()).isEqualTo(200);
     }
@@ -135,44 +135,42 @@ class ServerRequestContextAdapterTest {
 
     @Test
     void route() {
-        final HttpServerResponse res = newRouteResponse(Route.builder()
-                                                             .path("/foo/:bar/hoge")
-                                                             .build());
+        final HttpServerRequest res = newRouteRequest(Route.builder()
+                                                           .path("/foo/:bar/hoge")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo/:/hoge");
     }
 
     @Test
     void route_prefix() {
-        final HttpServerResponse res = newRouteResponse(Route.builder()
-                                                             .path("exact:/foo")
-                                                             .build());
+        final HttpServerRequest res = newRouteRequest(Route.builder()
+                                                           .path("exact:/foo")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo");
     }
 
     @Test
     void route_pathWithPrefix_glob() {
-        final HttpServerResponse res = newRouteResponse(Route.builder()
-                                                             .path("/foo/", "glob:bar")
-                                                             .build());
+        final HttpServerRequest res = newRouteRequest(Route.builder()
+                                                           .path("/foo/", "glob:bar")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo/**/bar");
     }
 
     @Test
     void route_pathWithPrefix_regex() {
-        final HttpServerResponse res = newRouteResponse(Route.builder()
-                                                             .path("/foo/", "regex:(bar|baz)")
-                                                             .build());
+        final HttpServerRequest res = newRouteRequest(Route.builder()
+                                                           .path("/foo/", "regex:(bar|baz)")
+                                                           .build());
         assertThat(res.route()).isEqualTo("/foo/(bar|baz)");
     }
 
-    private static HttpServerResponse newRouteResponse(Route route) {
+    private static HttpServerRequest newRouteRequest(Route route) {
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                      .route(route)
                                      .build();
-        ctx.logBuilder().endRequest();
-        ctx.logBuilder().endResponse();
 
-        return ServiceRequestContextAdapter.asHttpServerResponse(ctx.log().ensureComplete());
+        return ServiceRequestContextAdapter.asHttpServerRequest(ctx);
     }
 }

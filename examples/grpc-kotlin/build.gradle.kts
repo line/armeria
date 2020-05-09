@@ -13,9 +13,8 @@ buildscript {
 plugins {
     application
     id("org.jetbrains.kotlin.jvm")
+    id("org.jlleitschuh.gradle.ktlint") version "9.2.1"
 }
-
-apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
 application {
     mainClassName = "example.armeria.grpc.kotlin.MainKt"
@@ -29,8 +28,10 @@ dependencies {
     runtimeOnly("org.slf4j:slf4j-simple")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation(kotlin("reflect"))
+    implementation(kotlin("stdlib-jdk8"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    implementation("io.grpc:grpc-kotlin-stub")
 
     testImplementation("jakarta.annotation:jakarta.annotation-api")
     testImplementation("net.javacrumbs.json-unit:json-unit-fluent")
@@ -42,5 +43,27 @@ dependencies {
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xjsr305=strict", "-java-parameters")
+    }
+}
+
+// TODO(ikhoon): gRPC-Kotlin compiler does not run well in Windows. The generated stub files are added
+//               intentionally. Remove this once gRPC-Kotlin compiler supports Windows as well.
+kotlin {
+    sourceSets["main"].apply {
+        kotlin.srcDir("gen-src/main/kotlinGrpc")
+    }
+}
+
+ktlint {
+    filter {
+        exclude { element -> element.file.path.contains("gen-src") }
+    }
+}
+
+tasks.clean {
+    for (path in delete) {
+        if (path == project.ext["genSrcDir"]) {
+            delete.remove(path)
+        }
     }
 }

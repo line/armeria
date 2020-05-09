@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
@@ -54,7 +55,7 @@ import io.netty.handler.codec.DateFormatter;
 /**
  * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
  */
-public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResponse>
+public final class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResponse>
         implements HttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
@@ -202,25 +203,31 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
-            if (needsContentInStrategy) {
-                try (HttpResponseDuplicator duplicator =
-                             response.toDuplicator(derivedCtx.eventLoop(), derivedCtx.maxResponseLength())) {
-                    final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
-                            duplicator.duplicate(), contentPreviewLength);
-                    final HttpResponse duplicated = duplicator.duplicate();
-                    retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
-                                              .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                                    originalReq, returnedRes, future,
-                                                                    duplicated, duplicator::abort));
+            try {
+                if (needsContentInStrategy) {
+                    try (HttpResponseDuplicator duplicator =
+                                 response.toDuplicator(derivedCtx.eventLoop(),
+                                                       derivedCtx.maxResponseLength())) {
+                        final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
+                                duplicator.duplicate(), contentPreviewLength);
+                        final HttpResponse duplicated = duplicator.duplicate();
+                        retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
+                                                  .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                                        originalReq, returnedRes, future,
+                                                                        duplicated, duplicator::abort));
+                    }
+                } else {
+                    final Throwable responseCause =
+                            log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+                    final Runnable originalResClosingTask =
+                            responseCause == null ? response::abort : () -> response.abort(responseCause);
+                    retryStrategy().shouldRetry(derivedCtx, responseCause)
+                                   .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                         originalReq, returnedRes, future, response,
+                                                         originalResClosingTask));
                 }
-            } else {
-                final Throwable responseCause =
-                        log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-                final Runnable originalResClosingTask =
-                        responseCause == null ? response::abort : () -> response.abort(responseCause);
-                retryStrategy().shouldRetry(derivedCtx, responseCause)
-                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                                     returnedRes, future, response, originalResClosingTask));
+            } catch (Throwable t) {
+                handleException(ctx, rootReqDuplicator, future, t, false);
             }
         });
     }
@@ -246,6 +253,11 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
                                                                Runnable originalResClosingTask) {
         return (backoff, unused) -> {
             if (backoff != null) {
+                // Set response content with null to make sure that the log is complete.
+                final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
+                logBuilder.responseContent(null, null);
+                logBuilder.responseContentPreview(null);
+
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
                 final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
                 if (nextDelay >= 0) {

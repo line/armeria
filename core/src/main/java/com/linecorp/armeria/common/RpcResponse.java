@@ -33,17 +33,22 @@ import com.linecorp.armeria.common.util.Exceptions;
 public interface RpcResponse extends Response, Future<Object>, CompletionStage<Object> {
 
     /**
-     * Creates a new successfully complete {@link RpcResponse}.
+     * Returns a newly created successfully complete {@link RpcResponse}.
      */
     static RpcResponse of(@Nullable Object value) {
-        return new DefaultRpcResponse(value);
+        final CompletableRpcResponse future = new CompletableRpcResponse();
+        future.complete(value);
+        return future;
     }
 
     /**
-     * Creates a new exceptionally complete {@link RpcResponse}.
+     * Returns a newly created exceptionally complete {@link RpcResponse}.
      */
     static RpcResponse ofFailure(Throwable cause) {
-        return new DefaultRpcResponse(cause);
+        requireNonNull(cause, "cause");
+        final CompletableRpcResponse future = new CompletableRpcResponse();
+        future.completeExceptionally(cause);
+        return future;
     }
 
     /**
@@ -52,7 +57,7 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
      */
     static RpcResponse from(CompletionStage<?> stage) {
         requireNonNull(stage, "stage");
-        final DefaultRpcResponse res = new DefaultRpcResponse();
+        final CompletableRpcResponse res = new CompletableRpcResponse();
         stage.handle((value, cause) -> {
             if (cause != null) {
                 res.completeExceptionally(cause);

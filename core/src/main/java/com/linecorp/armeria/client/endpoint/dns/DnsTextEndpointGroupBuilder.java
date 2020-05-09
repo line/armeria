@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.dns;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -34,18 +35,7 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
 
     private final Function<byte[], Endpoint> mapping;
 
-    /**
-     * Creates a new instance that builds a {@link DnsTextEndpointGroup} for the specified {@code hostname}.
-     *
-     * @param hostname the hostname to query DNS queries for
-     * @param mapping the {@link Function} that maps the content of a {@code TXT} record into
-     *                an {@link Endpoint}. The {@link Function} is expected to return {@code null}
-     *                if the record contains unsupported content.
-     *
-     * @deprecated Use {@link DnsTextEndpointGroup#builder(String, Function)}.
-     */
-    @Deprecated
-    public DnsTextEndpointGroupBuilder(String hostname, Function<byte[], Endpoint> mapping) {
+    DnsTextEndpointGroupBuilder(String hostname, Function<byte[], Endpoint> mapping) {
         super(hostname);
         this.mapping = requireNonNull(mapping, "mapping");
     }
@@ -55,7 +45,8 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
      */
     public DnsTextEndpointGroup build() {
         return new DnsTextEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
-                                        serverAddressStreamProvider(), backoff(), hostname(), mapping);
+                                        queryTimeoutMillis(), serverAddressStreamProvider(), backoff(),
+                                        hostname(), mapping);
     }
 
     // Override the return type of the chaining methods in the superclass.
@@ -68,6 +59,16 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     @Override
     public DnsTextEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
         return (DnsTextEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder queryTimeout(Duration queryTimeout) {
+        return (DnsTextEndpointGroupBuilder) super.queryTimeout(queryTimeout);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
+        return (DnsTextEndpointGroupBuilder) super.queryTimeoutMillis(queryTimeoutMillis);
     }
 
     @Override

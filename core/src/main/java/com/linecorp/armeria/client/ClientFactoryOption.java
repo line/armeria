@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOption;
@@ -118,16 +119,6 @@ public final class ClientFactoryOption<T>
             define("TLS_CUSTOMIZER", b -> { /* no-op */ });
 
     /**
-     * The {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session.
-     *
-     * @deprecated Use {@link #TLS_CUSTOMIZER}.
-     */
-    @Deprecated
-    public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> SSL_CONTEXT_CUSTOMIZER =
-            TLS_CUSTOMIZER;
-
-    /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
@@ -189,6 +180,16 @@ public final class ClientFactoryOption<T>
             define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
     /**
+     * The PING interval in milliseconds.
+     * When neither read nor write was performed for the specified period of time,
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1.
+     */
+    public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS =
+            define("PING_INTERVAL_MILLIS", Flags.defaultPingIntervalMillis());
+
+    /**
      * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
      */
@@ -213,6 +214,12 @@ public final class ClientFactoryOption<T>
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
             define("METER_REGISTRY", Metrics.globalRegistry);
+
+    /**
+     * The {@link ProxyConfig} which contains proxy related configuration.
+     */
+    public static final ClientFactoryOption<ProxyConfig> PROXY_CONFIG =
+            define("PROXY_CONFIG", ProxyConfig.direct());
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.

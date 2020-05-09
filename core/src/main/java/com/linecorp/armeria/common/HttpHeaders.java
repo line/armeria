@@ -148,14 +148,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
-     * An empty {@link HttpHeaders}.
-     *
-     * @deprecated Use {@link #of()}.
-     */
-    @Deprecated
-    HttpHeaders EMPTY_HEADERS = of();
-
-    /**
      * Returns a new empty builder.
      */
     static HttpHeadersBuilder builder() {

@@ -29,8 +29,9 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -67,97 +68,27 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private final EndpointGroup endpointGroup;
     @Nullable
+    private final String path;
     private final Scheme scheme;
-    @Nullable
-    private final SessionProtocol protocol;
-    @Nullable
-    private String path;
 
-    private SerializationFormat format = SerializationFormat.NONE;
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
-     *
-     * @deprecated Use {@link Clients#builder(String)}.
-     */
-    @Deprecated
-    public ClientBuilder(String uri) {
-        this(URI.create(requireNonNull(uri, "uri")));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
-     *
-     * @deprecated Use {@link Clients#builder(URI)}.
-     */
-    @Deprecated
-    public ClientBuilder(URI uri) {
-        this(requireNonNull(uri, "uri"), null, null, null);
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@code scheme}.
-     *
-     * @deprecated Use {@link Clients#builder(String, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(String scheme, Endpoint endpoint) {
-        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpoint, "endpoint"));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@link Scheme}.
-     *
-     * @deprecated Use {@link Clients#builder(Scheme, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(Scheme scheme, Endpoint endpoint) {
-        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpoint, "endpoint"));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@link SessionProtocol}.
-     *
-     * @deprecated Use {@link Clients#builder(SessionProtocol, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
-        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpoint, "endpoint"));
-    }
-
-    ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
-                  @Nullable EndpointGroup endpointGroup) {
+    ClientBuilder(URI uri) {
+        checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
+        checkArgument(uri.getRawAuthority() != null, "uri must have authority: %s", uri);
         this.uri = uri;
-        this.scheme = scheme;
-        this.protocol = protocol;
-        this.endpointGroup = endpointGroup;
+        endpointGroup = null;
+        path = null;
+        scheme = Scheme.parse(uri.getScheme());
     }
 
-    /**
-     * Sets the {@code path} of the client.
-     */
-    public ClientBuilder path(String path) {
-        ensureEndpointGroup();
-        requireNonNull(path, "path");
-        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
-        this.path = path;
-        return this;
-    }
-
-    /**
-     * Sets the {@link SerializationFormat} of the client. The default is {@link SerializationFormat#NONE}.
-     */
-    public ClientBuilder serializationFormat(SerializationFormat format) {
-        ensureEndpointGroup();
-        if (scheme != null) {
-            throw new IllegalStateException("scheme is already given");
+    ClientBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
+        if (path != null) {
+            checkArgument(path.startsWith("/"),
+                          "path: %s (expected: an absolute path starting with '/')", path);
         }
-
-        this.format = requireNonNull(format, "format");
-        return this;
+        uri = null;
+        this.endpointGroup = endpointGroup;
+        this.path = path;
+        this.scheme = scheme;
     }
 
     /**
@@ -178,25 +109,13 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
             client = factory.newClient(ClientBuilderParams.of(uri, clientType, options));
         } else {
             assert endpointGroup != null;
-            client = factory.newClient(ClientBuilderParams.of(scheme(), endpointGroup,
+            client = factory.newClient(ClientBuilderParams.of(scheme, endpointGroup,
                                                               path, clientType, options));
         }
 
         @SuppressWarnings("unchecked")
         final T cast = (T) client;
         return cast;
-    }
-
-    private Scheme scheme() {
-        return scheme == null ? Scheme.of(format, protocol) : scheme;
-    }
-
-    private void ensureEndpointGroup() {
-        if (endpointGroup == null) {
-            throw new IllegalStateException(
-                    getClass().getSimpleName() + " must be created with an " +
-                    EndpointGroup.class.getSimpleName() + " to call this method.");
-        }
     }
 
     // Override the return type of the chaining methods in the superclass.
@@ -232,18 +151,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (ClientBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (ClientBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public ClientBuilder writeTimeout(Duration writeTimeout) {
         return (ClientBuilder) super.writeTimeout(writeTimeout);
     }
@@ -254,18 +161,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (ClientBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (ClientBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public ClientBuilder responseTimeout(Duration responseTimeout) {
         return (ClientBuilder) super.responseTimeout(responseTimeout);
     }
@@ -273,12 +168,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (ClientBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (ClientBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override
@@ -339,5 +228,20 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     public ClientBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (ClientBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ClientBuilder auth(BasicToken token) {
+        return (ClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientBuilder auth(OAuth1aToken token) {
+        return (ClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientBuilder auth(OAuth2Token token) {
+        return (ClientBuilder) super.auth(token);
     }
 }

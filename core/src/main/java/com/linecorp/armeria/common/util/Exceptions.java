@@ -177,7 +177,6 @@ public final class Exceptions {
         }
 
         return cause instanceof ClosedStreamException ||
-               cause instanceof ClosedSessionException ||
                cause instanceof CancelledSubscriptionException ||
                cause instanceof WriteTimeoutException ||
                cause instanceof AbortedStreamException ||
@@ -220,6 +219,37 @@ public final class Exceptions {
     public static <T> T throwUnsafely(Throwable cause) {
         doThrowUnsafely(requireNonNull(cause, "cause"));
         return null; // Never reaches here.
+    }
+
+    // This is copied from
+    // https://github.com/ReactiveX/RxJava/blob/v3.0.0/src/main/java/io/reactivex/rxjava3/exceptions/Exceptions.java
+
+    /**
+     * Throws a particular {@code Throwable} only if it belongs to a set of "fatal" error varieties. These
+     * varieties are as follows:
+     * <ul>
+     * <li>{@code VirtualMachineError}</li>
+     * <li>{@code ThreadDeath}</li>
+     * <li>{@code LinkageError}</li>
+     * </ul>
+     * This can be useful if you are writing an operator that calls user-supplied code, and you want to
+     * notify subscribers of errors encountered in that code by calling their {@code onError} methods, but only
+     * if the errors are not so catastrophic that such a call would be futile, in which case you simply want to
+     * rethrow the error.
+     *
+     * @param t the {@code Throwable} to test and perhaps throw
+     * @see <a href="https://github.com/ReactiveX/RxJava/issues/748#issuecomment-32471495">
+     *     RxJava: StackOverflowError is swallowed (Issue #748)</a>
+     */
+    public static void throwIfFatal(Throwable t) {
+        requireNonNull(t, "t");
+        if (t instanceof VirtualMachineError) {
+            throw (VirtualMachineError) t;
+        } else if (t instanceof ThreadDeath) {
+            throw (ThreadDeath) t;
+        } else if (t instanceof LinkageError) {
+            throw (LinkageError) t;
+        }
     }
 
     // This black magic causes the Java compiler to believe E is an unchecked exception type.

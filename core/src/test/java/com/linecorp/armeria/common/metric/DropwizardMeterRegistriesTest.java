@@ -25,7 +25,7 @@ import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
@@ -39,9 +39,9 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.prometheus.client.Collector.MetricFamilySamples;
 import io.prometheus.client.Collector.MetricFamilySamples.Sample;
 
-public class DropwizardMeterRegistriesTest {
+class DropwizardMeterRegistriesTest {
     @Test
-    public void micrometerAddsUnwantedGauges() {
+    void micrometerAddsUnwantedGauges() {
         final DropwizardMeterRegistry micrometer = new DropwizardMeterRegistry(
                 DEFAULT_DROPWIZARD_CONFIG, new MetricRegistry(), DEFAULT_NAME_MAPPER, Clock.SYSTEM) {
             @Override
@@ -84,7 +84,7 @@ public class DropwizardMeterRegistriesTest {
     }
 
     @Test
-    public void unwantedGaugesAreFilteredOut() {
+    void unwantedGaugesAreFilteredOut() {
         final DropwizardMeterRegistry micrometer = DropwizardMeterRegistries.newRegistry();
         final MetricRegistry dropwizard = micrometer.getDropwizardRegistry();
 
@@ -117,7 +117,7 @@ public class DropwizardMeterRegistriesTest {
     }
 
     @Test
-    public void filteredGaugesDoNotAffectOthers() {
+    void filteredGaugesDoNotAffectOthers() {
         final CompositeMeterRegistry micrometer = new CompositeMeterRegistry();
         final PrometheusMeterRegistry prometheus = PrometheusMeterRegistries.newRegistry();
         final DropwizardMeterRegistry dropwizard = DropwizardMeterRegistries.newRegistry();

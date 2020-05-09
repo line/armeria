@@ -17,6 +17,7 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -24,8 +25,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -35,6 +36,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -46,7 +48,8 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
+import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -209,22 +212,22 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @Override
     default SafeCloseable push() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
             return noopSafeCloseable();
         }
 
-        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
-            return () -> RequestContextThreadLocal.set(oldCtx);
+        if (oldCtx == null) {
+            return () -> RequestContextUtil.pop(this, null);
         }
 
-        if (oldCtx == null) {
-            return RequestContextThreadLocal::remove;
+        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
+            return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
-        RequestContextThreadLocal.set(oldCtx);
+        RequestContextUtil.pop(this, oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
 
@@ -234,20 +237,40 @@ public interface ServiceRequestContext extends RequestContext {
                                             @Nullable RpcRequest rpcReq);
 
     /**
-     * Returns the {@link Server} that is handling the current {@link Request}.
+     * Returns the {@link ServiceConfig} of the {@link Service} that is handling the current {@link Request}.
      */
-    Server server();
+    ServiceConfig config();
+
+    /**
+     * Returns the {@link Server} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
+     */
+    @Deprecated
+    default Server server() {
+        return config().server();
+    }
 
     /**
      * Returns the {@link VirtualHost} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    VirtualHost virtualHost();
+    @Deprecated
+    default VirtualHost virtualHost() {
+        return config().virtualHost();
+    }
 
     /**
      * Returns the {@link Route} associated with the {@link Service} that is handling the current
      * {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    Route route();
+    @Deprecated
+    default Route route() {
+        return config().route();
+    }
 
     /**
      * Returns the {@link RoutingContext} used to find the {@link Service}.
@@ -255,7 +278,7 @@ public interface ServiceRequestContext extends RequestContext {
     RoutingContext routingContext();
 
     /**
-     * Returns the path parameters mapped by the {@link #route()} associated with the {@link Service}
+     * Returns the path parameters mapped by the {@link Route} associated with the {@link Service}
      * that is handling the current {@link Request}.
      */
     Map<String, String> pathParams();
@@ -270,8 +293,13 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the {@link HttpService} that is handling the current {@link Request}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    HttpService service();
+    @Deprecated
+    default HttpService service() {
+        return config().service();
+    }
 
     /**
      * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
@@ -303,18 +331,6 @@ public interface ServiceRequestContext extends RequestContext {
     MediaType negotiatedResponseMediaType();
 
     /**
-     * Returns the negotiated producible media type. If the media type negotiation is not used for the
-     * {@link Service}, {@code null} would be returned.
-     *
-     * @deprecated Use {@link #negotiatedResponseMediaType()}.
-     */
-    @Deprecated
-    @Nullable
-    default MediaType negotiatedProduceType() {
-        return negotiatedResponseMediaType();
-    }
-
-    /**
      * Returns the amount of time allowed from the start time of the {@link Request} until receiving
      * the current {@link Request} and sending the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
@@ -329,47 +345,122 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely since the {@link Request} started.
+     * the corresponding {@link Response} is not sent completely within the specified amount time from now.
+     * Note that the specified {@code requestTimeout} must be positive.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     * This method is a shortcut for
+     * {@code setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis)}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setRequestTimeoutMillis(1000);
-     * assert ctx.requestTimeoutMillis() == 1000;
-     * ctx.setRequestTimeoutMillis(2000);
-     * assert ctx.requestTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @param requestTimeoutMillis the amount of time in milliseconds from the start time of the request
+     * @param requestTimeoutMillis the amount of time allowed in milliseconds from now
      *
-     * @deprecated Use {@link #extendRequestTimeoutMillis(long)})}, {@link #setRequestTimeoutAfterMillis(long)},
-     *                 {@link #setRequestTimeoutAtMillis(long)} or {@link #clearRequestTimeout()}
      */
-    @Deprecated
-    void setRequestTimeoutMillis(long requestTimeoutMillis);
+    default void setRequestTimeoutMillis(long requestTimeoutMillis) {
+        setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
+    }
 
     /**
      * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely since the {@link Request} started.
-     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     * the corresponding {@link Response} is not sent completely within the specified {@link TimeoutMode}
+     * and the specified {@code requestTimeoutMillis}.
+     *
+     * <table>
+     * <tr><th>Timeout mode</th><th>description</th></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
+     *     <td>Sets a given amount of timeout from the current time.</td></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_START}</td>
+     *     <td>Sets a given amount of timeout since the current {@link Request} began processing.</td></tr>
+     * <tr><td>{@link TimeoutMode#EXTEND}</td>
+     *     <td>Extends the previously scheduled timeout by the given amount of timeout.</td></tr>
+     * </table>
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
-     * ctx.setRequestTimeout(Duration.ofSeconds(1));
-     * assert ctx.requestTimeoutMillis() == 1000;
-     * ctx.setRequestTimeout(Duration.ofSeconds(2));
+     * // Schedules a timeout from the start time of the request
+     * ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
      * assert ctx.requestTimeoutMillis() == 2000;
+     * ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
+     * assert ctx.requestTimeoutMillis() == 1000;
+     *
+     * // Schedules timeout after 3 seconds from now.
+     * ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 3000);
+     *
+     * // Extends the previously scheduled timeout.
+     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
+     * ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, 1000);
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
+     * ctx.extendRequestTimeoutMillis(TimeoutMode.EXTEND, -500);
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
+     * }</pre>
+     */
+    void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis);
+
+    /**
+     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
+     * the corresponding {@link Response} is not sent completely within the specified amount time from now.
+     * Note that the specified {@code requestTimeout} must be positive.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     * This method is a shortcut for {@code setRequestTimeout(TimeoutMode.SET_FROM_NOW, requestTimeout)}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * // Schedules timeout after 1 seconds from now.
+     * ctx.setRequestTimeout(Duration.ofSeconds(1));
      * }</pre>
      *
-     * @param requestTimeout the amount of time from the start time of the request
+     * @param requestTimeout the amount of time allowed from now
      *
-     * @deprecated Use {@link #extendRequestTimeout(Duration)}, {@link #setRequestTimeoutAfter(Duration)},
-     *             {@link #setRequestTimeoutAt(Instant)} or {@link #clearRequestTimeout()}
      */
-    @Deprecated
-    void setRequestTimeout(Duration requestTimeout);
+    default void setRequestTimeout(Duration requestTimeout) {
+        setRequestTimeout(TimeoutMode.SET_FROM_NOW, requestTimeout);
+    }
+
+    /**
+     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
+     * the corresponding {@link Response} is not sent completely within the specified {@link TimeoutMode}
+     * and the specified {@code requestTimeout}.
+     *
+     * <table>
+     * <tr><th>Timeout mode</th><th>description</th></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
+     *     <td>Sets a given amount of timeout from the current time.</td></tr>
+     * <tr><td>{@link TimeoutMode#SET_FROM_START}</td>
+     *     <td>Sets a given amount of timeout since the current {@link Request} began processing.</td></tr>
+     * <tr><td>{@link TimeoutMode#EXTEND}</td>
+     *     <td>Extends the previously scheduled timeout by the given amount of timeout.</td></tr>
+     * </table>
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * // Schedules a timeout from the start time of the request
+     * ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(2));
+     * assert ctx.requestTimeoutMillis() == 2000;
+     * ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(1));
+     * assert ctx.requestTimeoutMillis() == 1000;
+     *
+     * // Schedules timeout after 3 seconds from now.
+     * ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(3));
+     *
+     * // Extends the previously scheduled timeout.
+     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
+     * ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(1));
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
+     * ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofMillis(-500));
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
+     * }</pre>
+     */
+    default void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
+        setRequestTimeoutMillis(mode, requireNonNull(requestTimeout, "requestTimeout").toMillis());
+    }
 
     /**
      * Extends the previously scheduled request timeout by the specified amount of {@code adjustmentMillis}.
@@ -388,8 +479,13 @@ public interface ServiceRequestContext extends RequestContext {
      * }</pre>
      *
      * @param adjustmentMillis the amount of time in milliseconds to extend the current timeout by
+     *
+     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}} with {@link TimeoutMode#EXTEND}.
      */
-    void extendRequestTimeoutMillis(long adjustmentMillis);
+    @Deprecated
+    default void extendRequestTimeoutMillis(long adjustmentMillis) {
+        setRequestTimeoutMillis(TimeoutMode.EXTEND, adjustmentMillis);
+    }
 
     /**
      * Extends the previously scheduled request timeout by the specified amount of {@code adjustment}.
@@ -408,8 +504,13 @@ public interface ServiceRequestContext extends RequestContext {
      * }</pre>
      *
      * @param adjustment the amount of time to extend the current timeout by
+     *
+     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#EXTEND}.
      */
-    void extendRequestTimeout(Duration adjustment);
+    @Deprecated
+    default void extendRequestTimeout(Duration adjustment) {
+        extendRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
+    }
 
     /**
      * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
@@ -425,8 +526,14 @@ public interface ServiceRequestContext extends RequestContext {
      * }</pre>
      *
      * @param requestTimeoutMillis the amount of time allowed in milliseconds from now
+     *
+     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}}
+     *             with {@link TimeoutMode#SET_FROM_NOW}.
      */
-    void setRequestTimeoutAfterMillis(long requestTimeoutMillis);
+    @Deprecated
+    default void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
+        setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
+    }
 
     /**
      * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
@@ -442,8 +549,13 @@ public interface ServiceRequestContext extends RequestContext {
      * }</pre>
      *
      * @param requestTimeout the amount of time allowed from now
+     *
+     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#SET_FROM_NOW}.
      */
-    void setRequestTimeoutAfter(Duration requestTimeout);
+    @Deprecated
+    default void setRequestTimeoutAfter(Duration requestTimeout) {
+        setRequestTimeoutAfterMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
+    }
 
     /**
      * Schedules the request timeout that is triggered at the specified time represented
@@ -461,7 +573,11 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * @param requestTimeoutAtMillis the request timeout represented as the number of milliseconds
      *                               since the epoch ({@code 1970-01-01T00:00:00Z})
+     *
+     * @deprecated This method will be removed without a replacement.
+     *             Use {@link #setRequestTimeout(TimeoutMode, Duration)} or {@link #clearRequestTimeout()}.
      */
+    @Deprecated
     void setRequestTimeoutAtMillis(long requestTimeoutAtMillis);
 
     /**
@@ -479,8 +595,14 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * @param requestTimeoutAt the request timeout represented as the number of milliseconds
      *                         since the epoch ({@code 1970-01-01T00:00:00Z})
+     *
+     * @deprecated This method will be removed without a replacement.
+     *             Use {@link #setRequestTimeout(TimeoutMode, Duration)} or {@link #clearRequestTimeout()}.
      */
-    void setRequestTimeoutAt(Instant requestTimeoutAt);
+    @Deprecated
+    default void setRequestTimeoutAt(Instant requestTimeoutAt) {
+        setRequestTimeoutAtMillis(requireNonNull(requestTimeoutAt, "requestTimeoutAt").toEpochMilli());
+    }
 
     /**
      * Returns {@link Request} timeout handler which is executed when
@@ -537,16 +659,26 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns whether the verbose response mode is enabled. When enabled, the service responses will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the service responses will not expose such server-side details to the client.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    boolean verboseResponses();
+    @Deprecated
+    default boolean verboseResponses() {
+        return config().verboseResponses();
+    }
 
     /**
      * Returns the {@link AccessLogWriter}.
+     *
+     * @deprecated Access via {@link #config()}.
      */
-    AccessLogWriter accessLogWriter();
+    @Deprecated
+    default AccessLogWriter accessLogWriter() {
+        return config().accessLogWriter();
+    }
 
     /**
-     * Returns an immutable {@link HttpHeaders} which is included when a {@link Service} sends an
+     * Returns the {@link HttpHeaders} which will be included when a {@link Service} sends an
      * {@link HttpResponse}.
      */
     HttpHeaders additionalResponseHeaders();
@@ -559,32 +691,21 @@ public interface ServiceRequestContext extends RequestContext {
     void setAdditionalResponseHeader(CharSequence name, Object value);
 
     /**
-     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
-     * {@link Service} sends an {@link HttpResponse}.
-     */
-    void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Service} sends an {@link HttpResponse}.
      */
     void addAdditionalResponseHeader(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} sends an
+     * Mutates the {@link HttpHeaders} which will be included when a {@link Service} sends an
      * {@link HttpResponse}.
-     */
-    void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
-     * Removes all headers with the specified {@code name}.
      *
-     * @return {@code true} if at least one entry has been removed
+     * @param mutator the {@link Consumer} that mutates the additional response headers
      */
-    boolean removeAdditionalResponseHeader(CharSequence name);
+    void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator);
 
     /**
-     * Returns the {@link HttpHeaders} which is returned along with any other trailers when a
+     * Returns the {@link HttpHeaders} which is included along with any other trailers when a
      * {@link Service} completes an {@link HttpResponse}.
      */
     HttpHeaders additionalResponseTrailers();
@@ -597,29 +718,18 @@ public interface ServiceRequestContext extends RequestContext {
     void setAdditionalResponseTrailer(CharSequence name, Object value);
 
     /**
-     * Clears the current trailer and sets the specified {@link HttpHeaders} which is included when a
-     * {@link Service} completes an {@link HttpResponse}.
-     */
-    void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
      * Adds a trailer with the specified {@code name} and {@code value}. The trailer will be included when
      * a {@link Service} completes an {@link HttpResponse}.
      */
     void addAdditionalResponseTrailer(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} completes an
-     * {@link HttpResponse}.
-     */
-    void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
-     * Removes all trailers with the specified {@code name}.
+     * Mutates the {@link HttpHeaders} which is included along with any other trailers when a
+     * {@link Service} completes an {@link HttpResponse}.
      *
-     * @return {@code true} if at least one entry has been removed
+     * @param mutator the {@link Consumer} that mutates the additional trailers
      */
-    boolean removeAdditionalResponseTrailer(CharSequence name);
+    void mutateAdditionalResponseTrailers(Consumer<HttpHeadersBuilder> mutator);
 
     /**
      * Returns the proxied addresses of the current {@link Request}.

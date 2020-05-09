@@ -38,6 +38,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
+import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
+import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
@@ -51,6 +55,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.proxy.ProxyHandler;
+import io.netty.handler.proxy.Socks4ProxyHandler;
+import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
@@ -74,6 +82,9 @@ final class HttpChannelPool implements AsyncCloseable {
     // Fields for creating a new connection:
     private final Bootstrap[] bootstraps;
     private final int connectTimeoutMillis;
+    private final boolean useHttp1Pipelining;
+    private final long idleTimeoutMillis;
+    private final long pingIntervalMillis;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
@@ -105,6 +116,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
+                            configureProxy(ch, clientFactory.proxyConfig(), sslCtx);
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
@@ -116,6 +128,46 @@ final class HttpChannelPool implements AsyncCloseable {
                 SessionProtocol.H2, SessionProtocol.H2C);
         connectTimeoutMillis = (Integer) baseBootstrap.config().options()
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        useHttp1Pipelining = clientFactory.useHttp1Pipelining();
+        idleTimeoutMillis = clientFactory.idleTimeoutMillis();
+        pingIntervalMillis = clientFactory.pingIntervalMillis();
+    }
+
+    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
+        final ProxyHandler proxyHandler;
+        switch (proxyConfig.proxyType()) {
+            case DIRECT:
+                return;
+            case SOCKS4:
+                final Socks4ProxyConfig socks4ProxyConfig = (Socks4ProxyConfig) proxyConfig;
+                proxyHandler = new Socks4ProxyHandler(socks4ProxyConfig.proxyAddress(),
+                                                      socks4ProxyConfig.username());
+                break;
+            case SOCKS5:
+                final Socks5ProxyConfig socks5ProxyConfig = (Socks5ProxyConfig) proxyConfig;
+                proxyHandler = new Socks5ProxyHandler(
+                        socks5ProxyConfig.proxyAddress(), socks5ProxyConfig.username(),
+                        socks5ProxyConfig.password());
+                break;
+            case CONNECT:
+                final ConnectProxyConfig connectProxyConfig = (ConnectProxyConfig) proxyConfig;
+                final String username = connectProxyConfig.username();
+                final String password = connectProxyConfig.password();
+                if (username == null || password == null) {
+                    proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress());
+                } else {
+                    proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress(), username, password);
+                }
+                if (connectProxyConfig.useTls()) {
+                    ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
+                }
+                break;
+            default:
+                logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig.proxyType());
+                return;
+        }
+        proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
+        ch.pipeline().addLast(proxyHandler);
     }
 
     /**
@@ -373,7 +425,7 @@ final class HttpChannelPool implements AsyncCloseable {
             if (future.isSuccess()) {
                 initSession(desiredProtocol, future, sessionPromise);
             } else {
-                sessionPromise.setFailure(future.cause());
+                sessionPromise.tryFailure(future.cause());
             }
         });
     }
@@ -399,7 +451,9 @@ final class HttpChannelPool implements AsyncCloseable {
             }
         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
 
-        ch.pipeline().addLast(new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture));
+        ch.pipeline().addLast(
+                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture,
+                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,
@@ -416,7 +470,8 @@ final class HttpChannelPool implements AsyncCloseable {
                 if (protocol == null || closeable.isClosing()) {
                     channel.close();
                     promise.completeExceptionally(
-                            new UnprocessedRequestException(ClosedSessionException.get()));
+                            new UnprocessedRequestException(
+                                    new ClosedSessionException("acquired an unhealthy connection")));
                     return;
                 }
 

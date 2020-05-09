@@ -49,6 +49,8 @@ export interface Method {
   endpoints: Endpoint[];
   exampleHttpHeaders: { [name: string]: string }[];
   exampleRequests: string[];
+  examplePaths: string[];
+  exampleQueries: string[];
   httpMethod: string;
   docString?: DocString;
 }
@@ -108,14 +110,16 @@ interface NamedObject {
 }
 
 function createMapByName<T extends NamedObject>(objs: T[]): Map<string, T> {
-  return new Map(objs.map((obj) => [obj.name, obj] as [string, T]));
+  return new Map(objs.map(obj => [obj.name, obj] as [string, T]));
 }
 
 export class Specification {
   private data: SpecificationData;
 
   private enumsByName: Map<string, Enum>;
+
   private servicesByName: Map<string, Service>;
+
   private structsByName: Map<string, Struct>;
 
   constructor(data: SpecificationData) {
@@ -166,7 +170,7 @@ export class Specification {
   public getTypeSignatureHtml(typeSignature: string) {
     // Split on all non-identifier parts and optimistically find matches for type identifiers.
     const parts = typeSignature.split(/([^\w.]+)/g);
-    return <>{parts.map((part) => this.renderTypePart(part))}</>;
+    return <>{parts.map(part => this.renderTypePart(part))}</>;
   }
 
   private renderTypePart(part: string) {
@@ -248,7 +252,7 @@ export class Specification {
     if (!docString) {
       return parameters;
     }
-    const pattern = /@param\s+(\w+)[\s\.]+(({@|[^@])*)(?=(@[\w]+|$|\s))/gm;
+    const pattern = /@param\s+(\w+)[\s.]+(({@|[^@])*)(?=(@[\w]+|$|\s))/gm;
     let match = pattern.exec(docString);
     while (match != null) {
       parameters.set(match[1], match[2]);
@@ -270,9 +274,11 @@ export class Specification {
     }
     const docString = item.docString as string;
     const lines = docString.split(/(?:\r\n|\n|\r)/gim);
+    // eslint-disable-next-line no-param-reassign
     item.docString = (
       <>
         {lines.map((line, i) => (
+          // eslint-disable-next-line react/no-array-index-key
           <React.Fragment key={`${line}-${i}`}>
             {line}
             {i < lines.length - 1 ? <br /> : null}

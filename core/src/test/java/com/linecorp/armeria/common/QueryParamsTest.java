@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.PercentDecoder.decodeComponent;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -226,13 +227,11 @@ class QueryParamsTest {
         for (int i = 0; i < encoded.size(); i++) {
             final String src = encoded.get(i);
             final String expected = decoded.get(i);
-            String actual = QueryStringDecoder.decodeComponent(TemporaryThreadLocals.get(),
-                                                               src, 0, src.length());
+            String actual = decodeComponent(src);
             assertThat(actual).isEqualTo(expected);
 
             // Off-by-one check
-            actual = QueryStringDecoder.decodeComponent(TemporaryThreadLocals.get(),
-                                                        ' ' + src + ' ', 1, src.length() + 1);
+            actual = decodeComponent(TemporaryThreadLocals.get(), ' ' + src + ' ', 1, src.length() + 1);
             assertThat(actual).isEqualTo(expected);
         }
     }
@@ -252,6 +251,7 @@ class QueryParamsTest {
     @Test
     @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     void testDefaultEncoding() throws Exception {
+        assertThat(QueryParams.of().toQueryString()).isEmpty();
         assertThat(QueryParams.of("a", "b=c").toQueryString()).isEqualTo("a=b%3Dc");
         assertThat(QueryParams.of("a", "\u00A5").toQueryString()).isEqualTo("a=%C2%A5");
         assertThat(QueryParams.of("a", "1", "b", "2").toQueryString()).isEqualTo("a=1&b=2");

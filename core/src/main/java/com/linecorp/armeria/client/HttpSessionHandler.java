@@ -22,7 +22,9 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 
 import javax.annotation.Nullable;
@@ -30,16 +32,11 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -52,6 +49,8 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.proxy.ProxyConnectException;
+import io.netty.handler.proxy.ProxyConnectionEvent;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AttributeKey;
@@ -62,19 +61,17 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     private static final Logger logger = LoggerFactory.getLogger(HttpSessionHandler.class);
 
-    /**
-     * 2^29 - We could have used 2^30 but this should be large enough.
-     */
-    private static final int MAX_NUM_REQUESTS_SENT = 536870912;
-
-    static final AttributeKey<Throwable> PENDING_EXCEPTION =
+    private static final AttributeKey<Throwable> PENDING_EXCEPTION =
             AttributeKey.valueOf(HttpSessionHandler.class, "PENDING_EXCEPTION");
 
     private final HttpChannelPool channelPool;
     private final Channel channel;
+    private final SocketAddress remoteAddress;
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
-    private final SocketAddress remoteAddress;
+    private final boolean useHttp1Pipelining;
+    private final long idleTimeoutMillis;
+    private final long pingIntervalMillis;
 
     /**
      * Whether the current channel is active or not.
@@ -90,7 +87,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Nullable
     private HttpResponseDecoder responseDecoder;
     @Nullable
-    private HttpObjectEncoder requestEncoder;
+    private ClientHttpObjectEncoder requestEncoder;
 
     /**
      * The maximum number of unfinished requests. In HTTP/2, this value is identical to MAX_CONCURRENT_STREAMS.
@@ -110,14 +107,16 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private boolean needsRetryWithH1C;
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
-                       Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture) {
-
+                       Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
+                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
-        final SocketAddress remoteAddress = channel.remoteAddress();
-        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
+        remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
+        this.useHttp1Pipelining = useHttp1Pipelining;
+        this.idleTimeoutMillis = idleTimeoutMillis;
+        this.pingIntervalMillis = pingIntervalMillis;
     }
 
     @Override
@@ -149,37 +148,41 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res) {
+    public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
+                       HttpRequest req, DecodedHttpResponse res) {
         if (handleEarlyCancellation(ctx, req, res)) {
-            return true;
+            pooledChannel.release();
+            return;
         }
 
         final long writeTimeoutMillis = ctx.writeTimeoutMillis();
-        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
-        final long maxContentLength = ctx.maxResponseLength();
 
+        assert protocol != null;
         assert responseDecoder != null;
         assert requestEncoder != null;
-
-        final int numRequestsSent = ++this.numRequestsSent;
-        final HttpResponseWrapper wrappedRes =
-                responseDecoder.addResponse(numRequestsSent, res, ctx,
-                                            channel.eventLoop(), responseTimeoutMillis, maxContentLength);
-        if (ctx instanceof DefaultClientRequestContext) {
-            ((DefaultClientRequestContext) ctx).setResponseTimeoutController(wrappedRes);
+        if (!protocol.isMultiplex()) {
+            // When HTTP/1.1 is used:
+            // If pipelining is enabled, return as soon as the request is fully sent.
+            // If pipelining is disabled, return after the response is fully received.
+            final CompletableFuture<Void> completionFuture =
+                    useHttp1Pipelining ? req.whenComplete() : res.whenComplete();
+            completionFuture.handle((ret, cause) -> {
+                if (!responseDecoder.needsToDisconnectWhenFinished()) {
+                    pooledChannel.release();
+                }
+                return null;
+            });
         }
 
         final HttpRequestSubscriber reqSubscriber =
-                new HttpRequestSubscriber(channel, remoteAddress, requestEncoder, numRequestsSent,
-                                          req, wrappedRes, ctx, writeTimeoutMillis);
+                new HttpRequestSubscriber(channel, requestEncoder, responseDecoder,
+                                          req, res, ctx, writeTimeoutMillis);
         req.subscribe(reqSubscriber, channel.eventLoop(), WITH_POOLED_OBJECTS);
+    }
 
-        if (numRequestsSent >= MAX_NUM_REQUESTS_SENT) {
-            responseDecoder.disconnectWhenFinished();
-            return false;
-        } else {
-            return true;
-        }
+    @Override
+    public int incrementAndGetNumRequestsSent() {
+        return ++numRequestsSent;
     }
 
     private boolean handleEarlyCancellation(ClientRequestContext ctx, HttpRequest req,
@@ -219,6 +222,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void retryWithH1C() {
         needsRetryWithH1C = true;
+    }
+
+    @Override
+    public boolean isActive() {
+        return active;
     }
 
     @Override
@@ -276,12 +284,24 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                requestEncoder = new Http1ObjectEncoder(channel, false, protocol.isTls());
-                responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
+                final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
+                final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
+                if (idleTimeoutMillis > 0) {
+                    final Http1ClientKeepAliveHandler keepAliveHandler =
+                            new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
+                                                            idleTimeoutMillis, pingIntervalMillis);
+                    requestEncoder.setKeepAliveHandler(keepAliveHandler);
+                    responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
+                }
+                this.requestEncoder = requestEncoder;
+                this.responseDecoder = responseDecoder;
             } else if (protocol == H2 || protocol == H2C) {
                 final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-                requestEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
-                responseDecoder = ctx.pipeline().get(Http2ClientConnectionHandler.class).responseDecoder();
+                final Http2ClientConnectionHandler clientHandler =
+                        ctx.pipeline().get(Http2ClientConnectionHandler.class);
+                requestEncoder = new ClientHttp2ObjectEncoder(ctx, handler.encoder(),
+                                                              protocol, clientHandler.keepAliveHandler());
+                responseDecoder = clientHandler.responseDecoder();
             } else {
                 throw new Error(); // Should never reach here.
             }
@@ -303,7 +323,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
             evt instanceof SslHandshakeCompletionEvent ||
             evt instanceof SslCloseCompletionEvent ||
-            evt instanceof ChannelInputShutdownReadComplete) {
+            evt instanceof ChannelInputShutdownReadComplete ||
+            evt instanceof ProxyConnectionEvent) {
             // Expected events
             return;
         }
@@ -319,37 +340,54 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            channelPool.connect(channel.remoteAddress(), H1C, sessionPromise);
+            channelPool.connect(remoteAddress, H1C, sessionPromise);
         } else {
             // Fail all pending responses.
-            final Throwable throwable;
-            if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
-                throwable = ctx.channel().attr(PENDING_EXCEPTION).get();
+            final HttpResponseDecoder responseDecoder = this.responseDecoder;
+            final Throwable pendingException;
+            if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
+                pendingException = getPendingException(ctx);
+                responseDecoder.failUnfinishedResponses(pendingException);
             } else {
-                throwable = ClosedSessionException.get();
+                pendingException = null;
             }
-            failUnfinishedResponses(throwable);
+
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
             sessionTimeoutFuture.cancel(false);
-            sessionPromise.tryFailure(throwable);
+            if (!sessionPromise.isDone()) {
+                sessionPromise.tryFailure(pendingException != null ? pendingException
+                                                                   : getPendingException(ctx));
+            }
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        Exceptions.logIfUnexpected(logger, channel, protocol(), cause);
-        if (channel.isActive()) {
+        if (cause instanceof ProxyConnectException) {
+            setPendingException(ctx, new UnprocessedRequestException(cause));
+            return;
+        }
+        setPendingException(ctx, new ClosedSessionException(cause));
+        if (!(cause instanceof IOException)) {
             ctx.close();
+        } else {
+            // Netty will close the connection automatically on an IOException.
         }
     }
 
-    private void failUnfinishedResponses(Throwable e) {
-        final HttpResponseDecoder responseDecoder = this.responseDecoder;
-        if (responseDecoder == null) {
-            return;
+    private static Throwable getPendingException(ChannelHandlerContext ctx) {
+        if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
+            return ctx.channel().attr(PENDING_EXCEPTION).get();
         }
 
-        responseDecoder.failUnfinishedResponses(e);
+        return ClosedSessionException.get();
+    }
+
+    static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {
+        final Throwable previousCause = ctx.channel().attr(PENDING_EXCEPTION).setIfAbsent(cause);
+        if (previousCause != null && logger.isWarnEnabled()) {
+            logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
+        }
     }
 }

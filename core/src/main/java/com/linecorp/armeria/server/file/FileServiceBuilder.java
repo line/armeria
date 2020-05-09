@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.HttpResponse;
  * Builds a new {@link FileService} and its {@link FileServiceConfig}. Use the factory methods in
  * {@link FileService} if you do not override the default settings.
  */
-public class FileServiceBuilder {
+public final class FileServiceBuilder {
 
     @Nullable
     private static final String DEFAULT_ENTRY_CACHE_SPEC = Flags.fileServiceCacheSpec();

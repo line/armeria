@@ -38,11 +38,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.internal.common.metric.ExecutorServiceMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import io.micrometer.core.instrument.internal.TimedExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
@@ -72,6 +70,7 @@ public final class ServerConfig {
     private final int maxNumConnections;
 
     private final long idleTimeoutMillis;
+    private final long pingIntervalMillis;
 
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -110,11 +109,11 @@ public final class ServerConfig {
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
-            int maxNumConnections, long idleTimeoutMillis,
+            int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
-            long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
-            int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
-            Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
+            long http2MaxStreamsPerConnection, int http2MaxFrameSize,
+            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
+            int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
@@ -136,6 +135,7 @@ public final class ServerConfig {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
+        this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
@@ -155,9 +155,10 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (!(blockingTaskExecutor instanceof TimedExecutorService)) {
-            blockingTaskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                                                  "armeriaBlockingTaskExecutor");
+        if (!ExecutorServiceMetrics.isMonitoredExecutor(blockingTaskExecutor)) {
+            blockingTaskExecutor =
+                    ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
+                                                   "blockingTaskExecutor", "armeria.executor");
         }
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
@@ -241,6 +242,13 @@ public final class ServerConfig {
             throw new IllegalArgumentException("idleTimeoutMillis: " + idleTimeoutMillis + " (expected: >= 0)");
         }
         return idleTimeoutMillis;
+    }
+
+    static long validateNonNegative(long value, String fieldName) {
+        if (value < 0) {
+            throw new IllegalArgumentException(fieldName + ": " + value + " (expected: >= 0)");
+        }
+        return value;
     }
 
     static int validateNonNegative(int value, String fieldName) {
@@ -409,62 +417,10 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the timeout of a request.
-     *
-     * @deprecated Use {@link ServiceConfig#requestTimeoutMillis()} or
-     *             {@link VirtualHost#requestTimeoutMillis()}.
+     * Returns the HTTP/2 PING interval in milliseconds.
      */
-    @Deprecated
-    public long defaultRequestTimeoutMillis() {
-        return requestTimeoutMillis();
-    }
-
-    /**
-     * Returns the timeout of a request.
-     *
-     * @deprecated Use {@link ServiceConfig#requestTimeoutMillis()} or
-     *             {@link VirtualHost#requestTimeoutMillis()}.
-     */
-    @Deprecated
-    public long requestTimeoutMillis() {
-        return defaultVirtualHost.requestTimeoutMillis();
-    }
-
-    /**
-     * Returns the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @deprecated Use {@link ServiceConfig#maxRequestLength()} or
-     *             {@link VirtualHost#maxRequestLength()}.
-     */
-    @Deprecated
-    public long defaultMaxRequestLength() {
-        return maxRequestLength();
-    }
-
-    /**
-     * Returns the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @deprecated Use {@link ServiceConfig#maxRequestLength()} or
-     *             {@link VirtualHost#maxRequestLength()}.
-     */
-    @Deprecated
-    public long maxRequestLength() {
-        return defaultVirtualHost.maxRequestLength();
-    }
-
-    /**
-     * Returns whether the verbose response mode is enabled. When enabled, the server responses will contain
-     * the exception type and its full stack trace, which may be useful for debugging while potentially
-     * insecure. When disabled, the server responses will not expose such server-side details to the client.
-     *
-     * @deprecated Use {@link ServiceConfig#verboseResponses()} or
-     *             {@link VirtualHost#verboseResponses()}.
-     */
-    @Deprecated
-    public boolean verboseResponses() {
-        return defaultVirtualHost.verboseResponses();
+    public long pingIntervalMillis() {
+        return pingIntervalMillis;
     }
 
     /**
@@ -566,28 +522,6 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the access log writer.
-     *
-     * @deprecated Use {@link ServiceConfig#accessLogWriter()} or
-     *             {@link VirtualHost#accessLogWriter()}.
-     */
-    @Deprecated
-    public AccessLogWriter accessLogWriter() {
-        return defaultVirtualHost.accessLogWriter();
-    }
-
-    /**
-     * Returns whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
-     *
-     * @deprecated Use {@link ServiceConfig#shutdownAccessLogWriterOnStop()} or
-     *             {@link VirtualHost#shutdownAccessLogWriterOnStop()}.
-     */
-    @Deprecated
-    public boolean shutdownAccessLogWriterOnStop() {
-        return defaultVirtualHost.shutdownAccessLogWriterOnStop();
-    }
-
-    /**
      * Returns the maximum size of additional data (TLV, Tag-Length-Value). It is only used when
      * PROXY protocol is enabled on the server port.
      */
@@ -658,7 +592,7 @@ public final class ServerConfig {
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop(),
-                    meterRegistry(),channelOptions(), childChannelOptions(),
+                    meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled());

@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
 import brave.Span;
@@ -67,7 +66,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     public static Function<? super HttpClient, BraveClient> newDecorator(
             Tracing tracing, @Nullable String remoteServiceName) {
         HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                             .clientParser(ArmeriaHttpClientParser.get())
+                                             .clientRequestParser(ArmeriaHttpClientParser.get())
+                                             .clientResponseParser(ArmeriaHttpClientParser.get())
                                              .build();
         if (remoteServiceName != null) {
             httpTracing = httpTracing.clientOf(remoteServiceName);
@@ -105,8 +105,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
-        final HttpClientRequest request = ClientRequestContextAdapter.asHttpClientRequest(ctx, newHeaders);
-        final Span span = handler.handleSend(request);
+        final HttpClientRequest braveReq = ClientRequestContextAdapter.asHttpClientRequest(ctx, newHeaders);
+        final Span span = handler.handleSend(braveReq);
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
@@ -159,10 +159,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 }
             }
 
-            final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(log);
-            try (SafeCloseable ignored = ctx.push()) {
-                handler.handleReceive(response, log.responseCause(), span);
-            }
+            final HttpClientResponse braveRes = ClientRequestContextAdapter.asHttpClientResponse(log, braveReq);
+            handler.handleReceive(braveRes, braveRes.error(), span);
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

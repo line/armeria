@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.Server;
@@ -47,7 +47,7 @@ class THttpClientTest {
                                      @Override
                                      public RpcResponse serve(
                                              ServiceRequestContext ctx, RpcRequest req) throws Exception {
-                                         return new DefaultRpcResponse();
+                                         return new CompletableRpcResponse();
                                      }
                                  }).decorate(THttpService.newDecorator());
         Server.builder().service("/", tHttpService).build();

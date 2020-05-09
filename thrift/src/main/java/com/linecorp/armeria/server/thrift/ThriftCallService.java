@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -128,7 +128,7 @@ public final class ThriftCallService implements RpcService {
             final ThriftFunction f = e.metadata.function(method);
             if (f != null) {
                 if (f.implementation() != null) {
-                    final DefaultRpcResponse reply = new DefaultRpcResponse();
+                    final CompletableRpcResponse reply = new CompletableRpcResponse();
                     invoke(ctx, f.implementation(), f, call.params(), reply);
                     return reply;
                 }
@@ -143,7 +143,7 @@ public final class ThriftCallService implements RpcService {
 
     private static void invoke(
             ServiceRequestContext ctx,
-            Object impl, ThriftFunction func, List<Object> args, DefaultRpcResponse reply) {
+            Object impl, ThriftFunction func, List<Object> args, CompletableRpcResponse reply) {
 
         try {
             final TBase<?, ?> tArgs = func.newArgs(args);
@@ -158,7 +158,7 @@ public final class ThriftCallService implements RpcService {
     }
 
     private static void invokeAsynchronously(Object impl, ThriftFunction func, TBase<?, ?> args,
-                                             DefaultRpcResponse reply) throws TException {
+                                             CompletableRpcResponse reply) throws TException {
 
         final AsyncProcessFunction<Object, TBase<?, ?>, Object> f = func.asyncFunc();
         if (func.isOneWay()) {
@@ -181,7 +181,7 @@ public final class ThriftCallService implements RpcService {
 
     private static void invokeSynchronously(
             ServiceRequestContext ctx, Object impl,
-            ThriftFunction func, TBase<?, ?> args, DefaultRpcResponse reply) {
+            ThriftFunction func, TBase<?, ?> args, CompletableRpcResponse reply) {
 
         final ProcessFunction<Object, TBase<?, ?>> f = func.syncFunc();
         ctx.blockingTaskExecutor().execute(() -> {

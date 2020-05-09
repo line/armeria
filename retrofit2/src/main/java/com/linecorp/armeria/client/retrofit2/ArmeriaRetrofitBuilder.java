@@ -49,6 +49,9 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 import okhttp3.HttpUrl;
 import retrofit2.Call;
@@ -300,18 +303,6 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (ArmeriaRetrofitBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (ArmeriaRetrofitBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public ArmeriaRetrofitBuilder writeTimeout(Duration writeTimeout) {
         return (ArmeriaRetrofitBuilder) super.writeTimeout(writeTimeout);
     }
@@ -322,18 +313,6 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (ArmeriaRetrofitBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (ArmeriaRetrofitBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public ArmeriaRetrofitBuilder responseTimeout(Duration responseTimeout) {
         return (ArmeriaRetrofitBuilder) super.responseTimeout(responseTimeout);
     }
@@ -341,12 +320,6 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ArmeriaRetrofitBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (ArmeriaRetrofitBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (ArmeriaRetrofitBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override
@@ -407,5 +380,20 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     public ArmeriaRetrofitBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (ArmeriaRetrofitBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder auth(BasicToken token) {
+        return (ArmeriaRetrofitBuilder) super.auth(token);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder auth(OAuth1aToken token) {
+        return (ArmeriaRetrofitBuilder) super.auth(token);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder auth(OAuth2Token token) {
+        return (ArmeriaRetrofitBuilder) super.auth(token);
     }
 }

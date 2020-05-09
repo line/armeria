@@ -31,13 +31,7 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
 
     private final ImmutableList.Builder<Pattern> nonRequestThreadPatterns = ImmutableList.builder();
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link RequestContextCurrentTraceContext#builder()}.
-     */
-    @Deprecated
-    public RequestContextCurrentTraceContextBuilder() {}
+    RequestContextCurrentTraceContextBuilder() {}
 
     /**
      * Sets a regular expression that matches names of threads that should be considered non-request

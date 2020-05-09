@@ -101,31 +101,6 @@ public final class JettyService implements HttpService {
     }
 
     /**
-     * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
-     *
-     * @param jettyServer the Jetty {@link Server}
-     *
-     * @deprecated Use {@link #of(Server)}.
-     */
-    @Deprecated
-    public static JettyService forServer(Server jettyServer) {
-        return of(jettyServer);
-    }
-
-    /**
-     * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
-     *
-     * @param hostname the default hostname
-     * @param jettyServer the Jetty {@link Server}
-     *
-     * @deprecated Use {@link #of(Server, String)}.
-     */
-    @Deprecated
-    public static JettyService forServer(String hostname, Server jettyServer) {
-        return of(jettyServer, hostname);
-    }
-
-    /**
      * Returns a new {@link JettyServiceBuilder}.
      */
     public static JettyServiceBuilder builder() {

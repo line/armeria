@@ -30,13 +30,7 @@ import io.prometheus.client.CollectorRegistry;
  */
 public final class PrometheusMeterRegistries {
 
-    /**
-     * The default {@link PrometheusMeterRegistry} that uses {@link CollectorRegistry#defaultRegistry}.
-     *
-     * @deprecated Use {@link #defaultRegistry()}.
-     */
-    @Deprecated
-    public static final PrometheusMeterRegistry defaultRegistry =
+    private static final PrometheusMeterRegistry defaultRegistry =
             newRegistry(CollectorRegistry.defaultRegistry);
 
     /**

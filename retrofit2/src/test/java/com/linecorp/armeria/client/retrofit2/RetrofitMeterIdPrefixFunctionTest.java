@@ -98,11 +98,6 @@ class RetrofitMeterIdPrefixFunctionTest {
                              ""),
                 Arguments.of(RetrofitMeterIdPrefixFunction
                                      .builder("foo")
-                                     .withServiceTag("tservice", "fallbackService")
-                                     .build(),
-                             ",tservice=Example"),
-                Arguments.of(RetrofitMeterIdPrefixFunction
-                                     .builder("foo")
                                      .serviceTag("tservice")
                                      .build(),
                              ",tservice=Example"),
@@ -111,13 +106,7 @@ class RetrofitMeterIdPrefixFunctionTest {
                                      .serviceTag("tservice")
                                      .serviceName("serviceName")
                                      .build(),
-                             ",tservice=serviceName"),
-                Arguments.of(RetrofitMeterIdPrefixFunction
-                                     .builder("foo")
-                                     .withServiceTag("serviceTagName", "defaultServiceName")
-                                     .serviceName("serviceName")
-                                     .build(),
-                             ",serviceTagName=serviceName")
+                             ",tservice=serviceName")
         );
     }
 

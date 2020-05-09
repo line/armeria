@@ -38,6 +38,7 @@ import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.SimpleDecoratingRpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -133,7 +134,7 @@ class ThriftDynamicTimeoutTest {
 
         @Override
         public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
-            ctx.extendRequestTimeoutMillis(((Number) req.params().get(0)).longValue());
+            ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, ((Number) req.params().get(0)).longValue());
             return delegate().serve(ctx, req);
         }
     }
@@ -159,7 +160,7 @@ class ThriftDynamicTimeoutTest {
 
         @Override
         public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-            ctx.extendResponseTimeoutMillis(((Number) req.params().get(0)).longValue());
+            ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, ((Number) req.params().get(0)).longValue());
             return delegate().execute(ctx, req);
         }
     }

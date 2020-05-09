@@ -16,29 +16,24 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
-
-import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -54,9 +49,12 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TextFormatter;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -80,12 +78,13 @@ public final class DefaultServiceRequestContext
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
-    private boolean timedOut;
+    private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
     private final Channel ch;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
+    private final TimeoutScheduler timeoutScheduler;
     @Nullable
     private final SSLSession sslSession;
 
@@ -97,8 +96,6 @@ public final class DefaultServiceRequestContext
 
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
-
-    private long requestTimeoutMillis;
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
@@ -107,11 +104,6 @@ public final class DefaultServiceRequestContext
     private volatile HttpHeaders additionalResponseHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseTrailersUpdater`
     private volatile HttpHeaders additionalResponseTrailers;
-
-    @Nullable
-    private volatile TimeoutController requestTimeoutController;
-    @Nullable
-    private Consumer<TimeoutController> pendingTimeoutTask;
 
     @Nullable
     private String strVal;
@@ -141,6 +133,18 @@ public final class DefaultServiceRequestContext
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             long requestStartTimeNanos, long requestStartTimeMicros) {
 
+        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
+             sslSession, proxiedAddresses, clientAddress, requestStartTimeNanos, requestStartTimeMicros,
+             HttpHeaders.of(), HttpHeaders.of());
+    }
+
+    private DefaultServiceRequestContext(
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
+            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            long requestStartTimeNanos, long requestStartTimeMicros,
+            HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
+
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
@@ -150,6 +154,7 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
+        timeoutScheduler = new TimeoutScheduler(cfg.requestTimeoutMillis());
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -164,29 +169,24 @@ public final class DefaultServiceRequestContext
         // now.
         log.requestFirstBytesTransferred();
 
-        requestTimeoutMillis = cfg.requestTimeoutMillis();
         maxRequestLength = cfg.maxRequestLength();
-        additionalResponseHeaders = HttpHeaders.of();
-        additionalResponseTrailers = HttpHeaders.of();
+        this.additionalResponseHeaders = additionalResponseHeaders;
+        this.additionalResponseTrailers = additionalResponseTrailers;
     }
 
     @Nonnull
     @Override
     public <A extends SocketAddress> A remoteAddress() {
-        final Channel ch = channel();
-        assert ch != null;
         @SuppressWarnings("unchecked")
-        final A addr = (A) ch.remoteAddress();
+        final A addr = (A) firstNonNull(ch.remoteAddress(), UNKNOWN_ADDR);
         return addr;
     }
 
     @Nonnull
     @Override
     public <A extends SocketAddress> A localAddress() {
-        final Channel ch = channel();
-        assert ch != null;
         @SuppressWarnings("unchecked")
-        final A addr = (A) ch.localAddress();
+        final A addr = (A) firstNonNull(ch.localAddress(), UNKNOWN_ADDR);
         return addr;
     }
 
@@ -207,25 +207,17 @@ public final class DefaultServiceRequestContext
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), id, routingContext,
                 routingResult, req, sslSession(), proxiedAddresses(), clientAddress(),
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                System.nanoTime(), SystemInfo.currentTimeMicros(),
+                additionalResponseHeaders, additionalResponseTrailers);
 
         if (rpcReq != null) {
             ctx.updateRpcRequest(rpcReq);
         }
 
-        final HttpHeaders additionalHeaders = additionalResponseHeaders();
-        if (!additionalHeaders.isEmpty()) {
-            ctx.setAdditionalResponseHeaders(additionalHeaders);
-        }
-
-        final HttpHeaders additionalTrailers = additionalResponseTrailers();
-        if (!additionalTrailers.isEmpty()) {
-            ctx.setAdditionalResponseTrailers(additionalTrailers);
-        }
-
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
+
         return ctx;
     }
 
@@ -240,18 +232,8 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public Server server() {
-        return cfg.server();
-    }
-
-    @Override
-    public VirtualHost virtualHost() {
-        return cfg.virtualHost();
-    }
-
-    @Override
-    public Route route() {
-        return cfg.route();
+    public ServiceConfig config() {
+        return cfg;
     }
 
     @Override
@@ -265,17 +247,12 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public HttpService service() {
-        return cfg.service();
-    }
-
-    @Override
     public ScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = makeContextAware(server().config().blockingTaskExecutor());
+        return blockingTaskExecutor = makeContextAware(config().server().config().blockingTaskExecutor());
     }
 
     @Override
@@ -299,6 +276,11 @@ public final class DefaultServiceRequestContext
         return ch.eventLoop();
     }
 
+    @Override
+    public ByteBufAllocator alloc() {
+        return ch.alloc();
+    }
+
     @Nullable
     @Override
     public SSLSession sslSession() {
@@ -307,134 +289,23 @@ public final class DefaultServiceRequestContext
 
     @Override
     public long requestTimeoutMillis() {
-        return requestTimeoutMillis;
+        return timeoutScheduler.timeoutMillis();
     }
 
-    // TODO(ikhoon): Deduplicate timeout logics and detach pending timeout controls from
-    //               DefaultServiceRequestContext and DefaultClientRequestContext
     @Override
     public void clearRequestTimeout() {
-        if (requestTimeoutMillis == 0) {
-            return;
-        }
-
-        final TimeoutController requestTimeoutController = this.requestTimeoutController;
-        requestTimeoutMillis = 0;
-        if (requestTimeoutController != null) {
-            if (eventLoop().inEventLoop()) {
-                requestTimeoutController.cancelTimeout();
-            } else {
-                eventLoop().execute(requestTimeoutController::cancelTimeout);
-            }
-        } else {
-            addPendingTimeoutTask(TimeoutController::cancelTimeout);
-        }
+        timeoutScheduler.clearTimeout();
     }
 
     @Override
-    public void setRequestTimeoutMillis(long requestTimeoutMillis) {
-        checkArgument(requestTimeoutMillis >= 0,
-                      "requestTimeoutMillis: %s (expected: >= 0)", requestTimeoutMillis);
-        if (requestTimeoutMillis == 0) {
-            clearRequestTimeout();
-        }
-
-        final long adjustmentMillis =
-                LongMath.saturatedSubtract(requestTimeoutMillis, this.requestTimeoutMillis);
-        extendRequestTimeoutMillis(adjustmentMillis);
+    public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
+        timeoutScheduler.setTimeoutMillis(mode, requestTimeoutMillis);
     }
 
-    @Override
-    public void setRequestTimeout(Duration requestTimeout) {
-        setRequestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
-
-    @Override
-    public void extendRequestTimeoutMillis(long adjustmentMillis) {
-        if (adjustmentMillis == 0 || requestTimeoutMillis == 0) {
-            return;
-        }
-
-        final long oldRequestTimeoutMillis = requestTimeoutMillis;
-        requestTimeoutMillis = LongMath.saturatedAdd(oldRequestTimeoutMillis, adjustmentMillis);
-        final TimeoutController requestTimeoutController = this.requestTimeoutController;
-        if (requestTimeoutController != null) {
-            if (eventLoop().inEventLoop()) {
-                requestTimeoutController.extendTimeout(adjustmentMillis);
-            } else {
-                eventLoop().execute(() -> requestTimeoutController.extendTimeout(adjustmentMillis));
-            }
-        } else {
-            addPendingTimeoutTask(timeoutController -> timeoutController.extendTimeout(adjustmentMillis));
-        }
-    }
-
-    @Override
-    public void extendRequestTimeout(Duration adjustment) {
-        extendRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
-    }
-
-    @Override
-    public void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
-        checkArgument(requestTimeoutMillis > 0,
-                      "requestTimeoutMillis: %s (expected: > 0)", requestTimeoutMillis);
-
-        long passedTimeMillis = 0;
-        final TimeoutController requestTimeoutController = this.requestTimeoutController;
-        if (requestTimeoutController != null) {
-            final Long startTimeNanos = requestTimeoutController.startTimeNanos();
-            if (startTimeNanos != null) {
-                passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-            }
-            if (eventLoop().inEventLoop()) {
-                requestTimeoutController.resetTimeout(requestTimeoutMillis);
-            } else {
-                eventLoop().execute(() -> requestTimeoutController
-                        .resetTimeout(requestTimeoutMillis));
-            }
-        } else {
-            final long startTimeNanos = System.nanoTime();
-            addPendingTimeoutTask(timeoutController -> {
-                final long passedTimeMillis0 =
-                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-                final long timeoutMillis = Math.max(1, requestTimeoutMillis - passedTimeMillis0);
-                timeoutController.resetTimeout(timeoutMillis);
-            });
-        }
-
-        this.requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, requestTimeoutMillis);
-    }
-
-    @Override
-    public void setRequestTimeoutAfter(Duration requestTimeout) {
-        setRequestTimeoutAfterMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
-
+    @Deprecated
     @Override
     public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
-        checkArgument(requestTimeoutAtMillis >= 0,
-                      "requestTimeoutAtMillis: %s (expected: >= 0)", requestTimeoutAtMillis);
-        final long requestTimeoutAfter = requestTimeoutAtMillis - System.currentTimeMillis();
-
-        if (requestTimeoutAfter <= 0) {
-            final TimeoutController requestTimeoutController = this.requestTimeoutController;
-            if (requestTimeoutController != null) {
-                if (eventLoop().inEventLoop()) {
-                    requestTimeoutController.timeoutNow();
-                } else {
-                    eventLoop().execute(requestTimeoutController::timeoutNow);
-                }
-            } else {
-                addPendingTimeoutTask(TimeoutController::timeoutNow);
-            }
-        } else {
-            setRequestTimeoutAfterMillis(requestTimeoutAfter);
-        }
-    }
-
-    @Override
-    public void setRequestTimeoutAt(Instant requestTimeoutAt) {
-        setRequestTimeoutAtMillis(requireNonNull(requestTimeoutAt, "requestTimeoutAt").toEpochMilli());
+        timeoutScheduler.setTimeoutAtMillis(requestTimeoutAtMillis);
     }
 
     @Nullable
@@ -450,14 +321,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public boolean isTimedOut() {
-        return timedOut;
-    }
-
-    /**
-     * Marks this {@link ServiceRequestContext} as having been timed out.
-     */
-    void setTimedOut() {
-        timedOut = true;
+        return timeoutScheduler.isTimedOut();
     }
 
     @Override
@@ -472,16 +336,6 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public boolean verboseResponses() {
-        return cfg.verboseResponses();
-    }
-
-    @Override
-    public AccessLogWriter accessLogWriter() {
-        return cfg.accessLogWriter();
-    }
-
-    @Override
     public HttpHeaders additionalResponseHeaders() {
         return additionalResponseHeaders;
     }
@@ -490,62 +344,34 @@ public final class DefaultServiceRequestContext
     public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
                                         builder -> builder.setObject(name, value));
-    }
-
-    @Override
-    public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
                                         builder -> builder.addObject(name, value));
     }
 
     @Override
-    public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                        builder -> builder.addObject(headers));
+    public void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator) {
+        requireNonNull(mutator, "mutator");
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater, mutator);
     }
 
-    private void updateAdditionalResponseHeaders(
+    private void mutateAdditionalResponseHeaders(
             AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
-            Function<HttpHeadersBuilder, HttpHeadersBuilder> valueUpdater) {
+            Consumer<HttpHeadersBuilder> mutator) {
         for (;;) {
             final HttpHeaders oldValue = atomicUpdater.get(this);
-            final HttpHeaders newValue = valueUpdater.apply(oldValue.toBuilder()).build();
+            final HttpHeadersBuilder builder = oldValue.toBuilder();
+            mutator.accept(builder);
+            final HttpHeaders newValue = builder.build();
             if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
                 return;
-            }
-        }
-    }
-
-    @Override
-    public boolean removeAdditionalResponseHeader(CharSequence name) {
-        return removeAdditionalResponseHeader(additionalResponseHeadersUpdater, name);
-    }
-
-    private boolean removeAdditionalResponseHeader(
-            AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
-            CharSequence name) {
-        requireNonNull(name, "name");
-        for (;;) {
-            final HttpHeaders oldValue = atomicUpdater.get(this);
-            if (oldValue.isEmpty() || !oldValue.contains(name)) {
-                return false;
-            }
-
-            final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
-            if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
-                return true;
             }
         }
     }
@@ -559,35 +385,22 @@ public final class DefaultServiceRequestContext
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
                                         builder -> builder.setObject(name, value));
-    }
-
-    @Override
-    public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
                                         builder -> builder.addObject(name, value));
     }
 
     @Override
-    public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                        builder -> builder.addObject(headers));
-    }
-
-    @Override
-    public boolean removeAdditionalResponseTrailer(CharSequence name) {
-        return removeAdditionalResponseHeader(additionalResponseTrailersUpdater, name);
+    public void mutateAdditionalResponseTrailers(Consumer<HttpHeadersBuilder> mutator) {
+        requireNonNull(mutator, "mutator");
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater, mutator);
     }
 
     @Override
@@ -605,11 +418,6 @@ public final class DefaultServiceRequestContext
         return log;
     }
 
-    @Override
-    public ByteBufAllocator alloc() {
-        return ch.alloc();
-    }
-
     /**
      * Sets the {@code requestTimeoutController} that is set to a new timeout when
      * the {@linkplain #requestTimeoutMillis()} request timeout} of the request is changed.
@@ -618,72 +426,50 @@ public final class DefaultServiceRequestContext
      * a timeout task when a user updates the request timeout configuration.
      */
     void setRequestTimeoutController(TimeoutController requestTimeoutController) {
-        requireNonNull(requestTimeoutController, "requestTimeoutController");
-        checkState(this.requestTimeoutController == null, "requestTimeoutController is set already.");
-        this.requestTimeoutController = requestTimeoutController;
-
-        final Consumer<TimeoutController> pendingTimeoutTask = this.pendingTimeoutTask;
-        if (pendingTimeoutTask != null) {
-            if (eventLoop().inEventLoop()) {
-                pendingTimeoutTask.accept(requestTimeoutController);
-            } else {
-                eventLoop().execute(() -> pendingTimeoutTask.accept(requestTimeoutController));
-            }
-        }
-    }
-
-    private void addPendingTimeoutTask(Consumer<TimeoutController> pendingTimeoutTask) {
-        if (this.pendingTimeoutTask == null) {
-            this.pendingTimeoutTask = pendingTimeoutTask;
-        } else {
-            this.pendingTimeoutTask = this.pendingTimeoutTask.andThen(pendingTimeoutTask);
-        }
+        timeoutScheduler.setTimeoutController(requestTimeoutController, eventLoop());
     }
 
     @Override
     public String toString() {
-        String strVal = this.strVal;
         if (strVal != null) {
             return strVal;
-        }
-
-        final StringBuilder buf = new StringBuilder(108);
-        buf.append("[S]");
-
-        // Prepend the current channel information if available.
-        final Channel ch = channel();
-        final boolean hasChannel = ch != null;
-        if (hasChannel) {
-            buf.append(ch);
-
-            final InetAddress remote = ((InetSocketAddress) remoteAddress()).getAddress();
-            final InetAddress client = clientAddress();
-            if (remote != null && !remote.equals(client)) {
-                buf.append("[C:").append(client.getHostAddress()).append(']');
-            }
-        }
-
-        buf.append('[')
-           .append(sessionProtocol().uriText())
-           .append("://")
-           .append(virtualHost().defaultHostname());
-
-        final InetSocketAddress laddr = localAddress();
-        if (laddr != null) {
-            buf.append(':').append(laddr.getPort());
         } else {
-            buf.append(":-1"); // Port unknown.
+            return toStringSlow();
+        }
+    }
+
+    private String toStringSlow() {
+        // Prepare all properties required for building a String, so that we don't have a chance of
+        // building one String with a thread-local StringBuilder while building another String with
+        // the same StringBuilder. See TemporaryThreadLocals for more information.
+        final String sreqId = id().shortText();
+        final String chanId = ch.id().asShortText();
+        final InetSocketAddress raddr = remoteAddress();
+        final InetSocketAddress laddr = localAddress();
+        final InetAddress caddr = clientAddress();
+        final String proto = sessionProtocol().uriText();
+        final String authority = config().virtualHost().defaultHostname();
+        final String path = path();
+        final String method = method().name();
+
+        // Build the string representation.
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("[sreqId=").append(sreqId)
+           .append(", chanId=").append(chanId);
+
+        if (!Objects.equals(caddr, raddr.getAddress())) {
+            buf.append(", caddr=");
+            TextFormatter.appendInetAddress(buf, caddr);
         }
 
-        buf.append(path())
-           .append('#')
-           .append(method())
+        buf.append(", raddr=");
+        TextFormatter.appendSocketAddress(buf, raddr);
+        buf.append(", laddr=");
+        TextFormatter.appendSocketAddress(buf, laddr);
+        buf.append("][")
+           .append(proto).append("://").append(authority).append(path).append('#').append(method)
            .append(']');
 
-        strVal = buf.toString();
-        if (hasChannel) {
-            this.strVal = strVal;
-        }
-        return strVal;
+        return strVal = buf.toString();
     }
 }

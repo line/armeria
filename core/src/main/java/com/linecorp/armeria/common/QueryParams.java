@@ -253,7 +253,7 @@ public interface QueryParams extends QueryParamGetters {
      * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
      * HTML5 W3C Recommendation</a>.
      *
-     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param queryString the query string without leading question mark ({@code '?'}).
      * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
      *         if {@code queryString} is {@code null}.
      */
@@ -266,7 +266,7 @@ public interface QueryParams extends QueryParamGetters {
      * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
      * HTML5 W3C Recommendation</a>.
      *
-     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param queryString the query string without leading question mark ({@code '?'}).
      * @param maxParams   the max number of parameters to decode. If the {@code queryString} contains
      *                    more parameters than this value, the extra parameters will not be decoded.
      * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
@@ -289,7 +289,7 @@ public interface QueryParams extends QueryParamGetters {
      * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
      * HTML5 W3C Recommendation</a>.
      *
-     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param queryString the query string without leading question mark ({@code '?'}).
      * @param semicolonAsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
      *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
      *                             ampersand as a separator. Enable this flag only when you need to
@@ -306,7 +306,7 @@ public interface QueryParams extends QueryParamGetters {
      * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
      * HTML5 W3C Recommendation</a>.
      *
-     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param queryString the query string without leading question mark ({@code '?'}).
      * @param maxParams   the max number of parameters to decode. If the {@code queryString} contains
      *                    more parameters than this value, the extra parameters will not be decoded.
      * @param semicolonAsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
@@ -334,7 +334,7 @@ public interface QueryParams extends QueryParamGetters {
     QueryParamsBuilder toBuilder();
 
     /**
-     * Returns a new parameters which is the result from the mutation by the specified {@link Consumer}.
+     * Returns new parameters which is the result from the mutation by the specified {@link Consumer}.
      * This method is a shortcut for:
      * <pre>{@code
      * builder = toBuilder();

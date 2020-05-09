@@ -184,7 +184,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
             {servicesSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
           <Collapse in={servicesSectionOpen} timeout="auto">
-            {specification.getServices().map((service) => (
+            {specification.getServices().map(service => (
               <div key={service.name}>
                 <ListItem
                   button
@@ -198,7 +198,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   {openServices[service.name] ? <ExpandLess /> : <ExpandMore />}
                 </ListItem>
                 <Collapse in={openServices[service.name]} timeout="auto">
-                  {service.methods.map((method) => (
+                  {service.methods.map(method => (
                     <ListItem
                       dense
                       key={`${service.name}/${method.name}/${method.httpMethod}`}
@@ -210,7 +210,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                       }
                     >
                       <Grid container alignItems="center" spacing={2}>
-                        <Grid item xs={'auto'}>
+                        <Grid item xs="auto">
                           <Typography
                             className={httpMethodClass(method.httpMethod)}
                           >
@@ -244,7 +244,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
             {enumsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
           <Collapse in={enumsSectionOpen} timeout="auto">
-            {specification.getEnums().map((enm) => (
+            {specification.getEnums().map(enm => (
               <ListItem
                 dense
                 key={enm.name}
@@ -273,7 +273,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
             {structsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
           <Collapse in={structsSectionOpen} timeout="auto">
-            {specification.getStructs().map((struct) => (
+            {specification.getStructs().map(struct => (
               <ListItem
                 dense
                 key={struct.name}
@@ -302,7 +302,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
             {exceptionsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
           <Collapse in={exceptionsOpen} timeout="auto">
-            {specification.getExceptions().map((struct) => (
+            {specification.getExceptions().map(struct => (
               <ListItem
                 dense
                 key={struct.name}
@@ -332,7 +332,7 @@ interface OpenServices {
 
 const toggle = (current: boolean) => !current;
 
-const App: React.FunctionComponent<Props> = (props) => {
+const App: React.FunctionComponent<Props> = props => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [specification, setSpecification] = useState<
     Specification | undefined
@@ -355,7 +355,7 @@ const App: React.FunctionComponent<Props> = (props) => {
       const httpResponse = await fetch('specification.json');
       const specificationData: SpecificationData = await httpResponse.json();
       const initialSpecification = new Specification(specificationData);
-      initialSpecification.getServices().forEach((service) => {
+      initialSpecification.getServices().forEach(service => {
         toggleOpenService(service.name);
       });
       setSpecification(initialSpecification);
@@ -375,15 +375,10 @@ const App: React.FunctionComponent<Props> = (props) => {
 
   const navigateTo = useCallback(
     (to: string) => {
-      const params = new URLSearchParams(props.location.search);
-      params.delete('args');
-      const url = params.has('http_headers_sticky')
-        ? `${to}?${params.toString()}`
-        : to;
-      props.history.push(url);
+      props.history.push(to);
       setMobileDrawerOpen(false);
     },
-    [props.location.search, props.history],
+    [props.history],
   );
 
   const toggleMobileDrawer = useCallback(() => {
@@ -466,14 +461,14 @@ const App: React.FunctionComponent<Props> = (props) => {
             color="inherit"
             noWrap
           >
-            <a href="#" className={classes.mainHeader}>
+            <span className={classes.mainHeader}>
               Armeria documentation service
               {versions
                 ? ` ${extractSimpleArtifactVersion(
                     versions.getArmeriaArtifactVersion(),
                   )}`
                 : ''}
-            </a>
+            </span>
           </Typography>
           <div style={{ flex: 1 }} />
           <GotoSelect specification={specification} navigateTo={navigateTo} />
@@ -531,19 +526,19 @@ const App: React.FunctionComponent<Props> = (props) => {
         <Route
           exact
           path="/"
-          render={(p) => <HomePage {...p} versions={versions} />}
+          render={p => <HomePage {...p} versions={versions} />}
         />
         <Route
           path="/enums/:name"
-          render={(p) => <EnumPage {...p} specification={specification} />}
+          render={p => <EnumPage {...p} specification={specification} />}
         />
         <Route
           path="/methods/:serviceName/:methodName/:httpMethod"
-          render={(p) => <MethodPage {...p} specification={specification} />}
+          render={p => <MethodPage {...p} specification={specification} />}
         />
         <Route
           path="/structs/:name"
-          render={(p) => <StructPage {...p} specification={specification} />}
+          render={p => <StructPage {...p} specification={specification} />}
         />
       </main>
     </div>

@@ -36,6 +36,9 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * Creates a new web client that connects to the specified {@link URI} using the builder pattern.
@@ -61,7 +64,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private final Scheme scheme;
     @Nullable
-    private String path;
+    private final String path;
 
     /**
      * Creates a new instance.
@@ -70,6 +73,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
         uri = UNDEFINED_URI;
         scheme = null;
         endpointGroup = null;
+        path = null;
     }
 
     /**
@@ -96,6 +100,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
         }
         scheme = null;
         endpointGroup = null;
+        path = null;
     }
 
     /**
@@ -104,12 +109,17 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+    WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
+        if (path != null) {
+            checkArgument(path.startsWith("/"),
+                          "path: %s (expected: an absolute path starting with '/')", path);
+        }
 
         uri = null;
         scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
+        this.path = path;
     }
 
     private static Scheme validateScheme(String scheme) {
@@ -123,22 +133,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
 
         throw new IllegalArgumentException("scheme : " + scheme +
                                            " (expected: one of " + SUPPORTED_PROTOCOLS + ')');
-    }
-
-    /**
-     * Sets the {@code path} of the client.
-     */
-    public WebClientBuilder path(String path) {
-        if (endpointGroup == null) {
-            throw new IllegalStateException(
-                    getClass().getSimpleName() + " must be created with an " +
-                    EndpointGroup.class.getSimpleName() + " to call this method.");
-        }
-
-        requireNonNull(path, "path");
-        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
-        this.path = path;
-        return this;
     }
 
     /**
@@ -207,18 +201,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public WebClientBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (WebClientBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public WebClientBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (WebClientBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public WebClientBuilder writeTimeout(Duration writeTimeout) {
         return (WebClientBuilder) super.writeTimeout(writeTimeout);
     }
@@ -229,18 +211,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public WebClientBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (WebClientBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public WebClientBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (WebClientBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public WebClientBuilder responseTimeout(Duration responseTimeout) {
         return (WebClientBuilder) super.responseTimeout(responseTimeout);
     }
@@ -248,12 +218,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public WebClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (WebClientBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public WebClientBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (WebClientBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override
@@ -303,5 +267,20 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     public WebClientBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (WebClientBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public WebClientBuilder auth(BasicToken token) {
+        return (WebClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public WebClientBuilder auth(OAuth1aToken token) {
+        return (WebClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public WebClientBuilder auth(OAuth2Token token) {
+        return (WebClientBuilder) super.auth(token);
     }
 }

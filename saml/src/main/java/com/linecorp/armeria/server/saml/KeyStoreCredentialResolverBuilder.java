@@ -76,27 +76,6 @@ public final class KeyStoreCredentialResolverBuilder {
     }
 
     /**
-     * Creates a builder with the specified {@code resourcePath} and the default {@link ClassLoader}.
-     *
-     * @deprecated Use {@link #KeyStoreCredentialResolverBuilder(ClassLoader, String)}.
-     */
-    @Deprecated
-    public KeyStoreCredentialResolverBuilder(String resourcePath) {
-        this(KeyStoreCredentialResolverBuilder.class.getClassLoader(), resourcePath);
-    }
-
-    /**
-     * Creates a builder with the specified {@code resourcePath} and {@link ClassLoader}.
-     *
-     * @deprecated Use {@link #KeyStoreCredentialResolverBuilder(ClassLoader, String)}.
-     */
-    @Deprecated
-    public KeyStoreCredentialResolverBuilder(String resourcePath, @Nullable ClassLoader classLoader) {
-        this(classLoader != null ? classLoader : KeyStoreCredentialResolverBuilder.class.getClassLoader(),
-             resourcePath);
-    }
-
-    /**
      * Sets a type of the {@link KeyStore}. If not set, the default value retrieved from
      * {@link KeyStore#getDefaultType()} will be used.
      */

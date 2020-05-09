@@ -34,16 +34,6 @@ interface AggregatedHttpMessage {
 
     /**
      * Returns the HTTP trailers.
-     *
-     * @deprecated Use {@link #trailers()}.
-     */
-    @Deprecated
-    default HttpHeaders trailingHeaders() {
-        return trailers();
-    }
-
-    /**
-     * Returns the HTTP trailers.
      */
     HttpHeaders trailers();
 

@@ -16,29 +16,58 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 
 /**
  * A {@link RuntimeException} that is raised when a {@link StreamMessage} has been closed unexpectedly.
  */
-public final class ClosedStreamException extends ClosedPublisherException {
+public class ClosedStreamException extends RuntimeException {
 
     private static final long serialVersionUID = -7665826869012452735L;
 
-    private static final ClosedStreamException INSTANCE = new ClosedStreamException(false);
+    private static final ClosedStreamException INSTANCE = new ClosedStreamException(null, null, false, false);
 
     /**
      * Returns a {@link ClosedStreamException} which may be a singleton or a new instance, depending on
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static ClosedStreamException get() {
-        return Flags.verboseExceptionSampler().isSampled(ClosedStreamException.class) ?
-               new ClosedStreamException() : INSTANCE;
+        return isSampled() ? new ClosedStreamException(null, null, true, true) : INSTANCE;
     }
 
-    private ClosedStreamException() {}
+    private static boolean isSampled() {
+        return Flags.verboseExceptionSampler().isSampled(ClosedStreamException.class);
+    }
 
-    private ClosedStreamException(boolean dummy) {
-        super(dummy);
+    /**
+     * Creates a new instance with the specified {@code message}.
+     */
+    public ClosedStreamException(@Nullable String message) {
+        this(message, null, true, isSampled());
+    }
+
+    /**
+     * Creates a new instance with the specified {@code message} and {@code cause}.
+     */
+    public ClosedStreamException(@Nullable String message, @Nullable Throwable cause) {
+        this(message, cause, true, isSampled());
+    }
+
+    /**
+     * Creates a new instance with the specified {@code cause}.
+     */
+    public ClosedStreamException(@Nullable Throwable cause) {
+        this(null, cause, true, isSampled());
+    }
+
+    /**
+     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
+     * disabled, and writable stack trace enabled or disabled.
+     */
+    protected ClosedStreamException(@Nullable String message, @Nullable Throwable cause,
+                                  boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

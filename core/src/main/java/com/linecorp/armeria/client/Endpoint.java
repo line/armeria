@@ -108,17 +108,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     //                We could specify an additional attributes such as weight/priority
     //                when adding an Endpoint to an EndpointGroup.
 
-    /**
-     * Creates a new host {@link Endpoint}.
-     *
-     * @deprecated Use {@link #of(String, int)} and {@link #withWeight(int)},
-     *             e.g. {@code Endpoint.of("foo.com", 80).withWeight(500)}.
-     */
-    @Deprecated
-    public static Endpoint of(String host, int port, int weight) {
-        return of(host, port).withWeight(weight);
-    }
-
     private static Endpoint create(String host, int port) {
         requireNonNull(host, "host");
 

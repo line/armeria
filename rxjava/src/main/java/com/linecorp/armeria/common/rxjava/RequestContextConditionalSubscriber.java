@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,9 +19,9 @@ package com.linecorp.armeria.common.rxjava;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.internal.fuseable.ConditionalSubscriber;
-import io.reactivex.internal.fuseable.QueueSubscription;
-import io.reactivex.internal.subscribers.BasicFuseableConditionalSubscriber;
+import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.internal.fuseable.QueueSubscription;
+import io.reactivex.rxjava3.internal.subscribers.BasicFuseableConditionalSubscriber;
 
 final class RequestContextConditionalSubscriber<T> extends BasicFuseableConditionalSubscriber<T, T> {
 
@@ -73,7 +73,7 @@ final class RequestContextConditionalSubscriber<T> extends BasicFuseableConditio
     }
 
     @Override
-    public T poll() throws Exception {
+    public T poll() throws Throwable {
         return qs.poll();
     }
 }

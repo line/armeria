@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 
 import javax.annotation.Nullable;
 
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.netty.channel.EventLoop;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
@@ -44,6 +46,7 @@ abstract class DnsEndpointGroupBuilder {
     private EventLoop eventLoop;
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
+    private long queryTimeoutMillis = 5000; // 5 seconds
     private DnsServerAddressStreamProvider serverAddressStreamProvider =
             DnsServerAddressStreamProviders.platformDefault();
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
@@ -99,6 +102,34 @@ abstract class DnsEndpointGroupBuilder {
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         return this;
+    }
+
+    /**
+     * Sets the timeout of the DNS query performed by this endpoint group. {@code 0} disables the timeout.
+     *
+     * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
+     */
+    public DnsEndpointGroupBuilder queryTimeout(Duration queryTimeout) {
+        requireNonNull(queryTimeout, "queryTimeout");
+        checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)",
+                      queryTimeout);
+        return queryTimeoutMillis(queryTimeout.toMillis());
+    }
+
+    /**
+     * Sets the timeout of the DNS query performed by this endpoint group in milliseconds.
+     * {@code 0} disables the timeout.
+     *
+     * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
+     */
+    public DnsEndpointGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
+        checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
+        this.queryTimeoutMillis = queryTimeoutMillis;
+        return this;
+    }
+
+    final long queryTimeoutMillis() {
+        return queryTimeoutMillis;
     }
 
     final DnsServerAddressStreamProvider serverAddressStreamProvider() {

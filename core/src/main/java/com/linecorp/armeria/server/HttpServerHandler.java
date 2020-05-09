@@ -53,14 +53,12 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.common.stream.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -74,7 +72,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
@@ -105,11 +102,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     static final ChannelFutureListener CLOSE_ON_FAILURE = future -> {
         final Throwable cause = future.cause();
-        if (cause != null && !(cause instanceof ClosedPublisherException)) {
-            final Channel ch = future.channel();
-            logException(ch, cause);
-            safeClose(ch);
+        if (cause == null) {
+            return;
         }
+        if (cause instanceof ClosedSessionException) {
+            safeClose(future.channel());
+            return;
+        }
+        if (cause instanceof ClosedStreamException) {
+            return;
+        }
+
+        final Channel ch = future.channel();
+        logException(ch, cause);
+        safeClose(ch);
     };
 
     private static boolean warnedNullRequestId;
@@ -155,7 +161,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private SSLSession sslSession;
 
     @Nullable
-    private HttpObjectEncoder responseEncoder;
+    private ServerHttpObjectEncoder responseEncoder;
 
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
@@ -166,7 +172,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
-                      @Nullable HttpObjectEncoder responseEncoder,
+                      @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
                       @Nullable ProxiedAddresses proxiedAddresses) {
 
@@ -223,11 +229,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseEncoder.close();
         }
 
-        unfinishedRequests.forEach((req, res) -> {
-            // Mark the request stream as closed due to disconnection.
-            req.close(ClosedSessionException.get());
-            res.abort(ClosedSessionException.get());
-        });
+        if (!unfinishedRequests.isEmpty()) {
+            final ClosedSessionException cause = ClosedSessionException.get();
+            unfinishedRequests.forEach((req, res) -> {
+                // Mark the request stream as closed due to disconnection.
+                req.close(cause);
+                res.abort(cause);
+            });
+        }
     }
 
     @Override
@@ -255,12 +264,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final ChannelPipeline pipeline = ctx.pipeline();
-        final Http2ConnectionHandler handler = pipeline.get(Http2ConnectionHandler.class);
+        final Http2ServerConnectionHandler handler = pipeline.get(Http2ServerConnectionHandler.class);
         if (responseEncoder == null) {
-            responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
+            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
+                                                           config.isDateHeaderEnabled(),
+                                                           config.isServerHeaderEnabled()
+            );
         } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
-            responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
+            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
+                                                           config.isDateHeaderEnabled(),
+                                                           config.isServerHeaderEnabled()
+            );
         }
 
         // Update the connection-level flow-control window size.
@@ -437,8 +452,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req,
-                                               config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
             reqCtx.setRequestTimeoutController(resSubscriber);
             res.subscribe(resSubscriber, eventLoop, WITH_POOLED_OBJECTS);
         }
@@ -563,7 +577,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     // Respect the first specified cause.
                     logBuilder.endResponse(firstNonNull(cause, f.cause()));
                 }
-                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
             }
         });
         return future;

@@ -50,12 +50,12 @@ interface Props {
 
 export default function({ title, variables, specification }: Props) {
   const hasBean = variables.some(
-    (variable) =>
+    variable =>
       !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
   );
 
   const hasLocation = variables.some(
-    (variable) =>
+    variable =>
       variable.location &&
       variable.location.length > 0 &&
       variable.location !== 'UNSPECIFIED',
@@ -113,7 +113,7 @@ const indentString = (indent: number, s: string): string => {
 
 const formatRequirement = (s: string): string => {
   const lowerCase = s.toLowerCase();
-  if ('unspecified' === lowerCase) {
+  if (lowerCase === 'unspecified') {
     return '-';
   }
 
@@ -133,7 +133,7 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
 }) => {
   const styles = useStyles();
 
-  const [expanded, toggleExpanded] = useReducer((value) => !value, false);
+  const [expanded, toggleExpanded] = useReducer(value => !value, false);
 
   const hasChildren =
     variable.childFieldInfos && variable.childFieldInfos.length > 0;
@@ -179,20 +179,20 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
   );
 };
 
-const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
+const FieldInfos: React.FunctionComponent<FieldInfosProps> = props => {
   const styles = useStyles();
 
   const isEmpty = props.variables.length === 0;
 
   let colSpanLength = 4;
 
-  if (props.variables.some((variable) => !!variable.location)) {
+  if (props.variables.some(variable => !!variable.location)) {
     colSpanLength += 1;
   }
 
   if (
     props.variables.some(
-      (variable) =>
+      variable =>
         variable.childFieldInfos && variable.childFieldInfos.length > 0,
     )
   ) {
@@ -205,6 +205,7 @@ const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
           <FieldInfo
             hasLocation={props.hasLocation}
             hidden={props.hidden}
+            // eslint-disable-next-line react/no-array-index-key
             key={`${variable.name}-${index}`}
             indent={props.indent}
             variable={variable}

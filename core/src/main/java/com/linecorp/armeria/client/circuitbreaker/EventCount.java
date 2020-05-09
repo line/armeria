@@ -45,13 +45,7 @@ public final class EventCount {
 
     private final long failure;
 
-    /**
-     * Creates a new instance with the specified number of successes and failures.
-     *
-     * @deprecated Use {@link EventCount#of(long, long)}.
-     */
-    @Deprecated
-    public EventCount(long success, long failure) {
+    private EventCount(long success, long failure) {
         checkArgument(success >= 0, "success: %s (expected: >= 0)", success);
         checkArgument(failure >= 0, "failure: %s (expected: >= 0)", failure);
         this.success = success;

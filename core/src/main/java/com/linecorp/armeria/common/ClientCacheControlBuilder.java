@@ -39,13 +39,7 @@ public final class ClientCacheControlBuilder extends CacheControlBuilder {
     private long staleWhileRevalidateSeconds = -1;
     private long staleIfErrorSeconds = -1;
 
-    /**
-     * Creates a new builder with all directives disabled initially.
-     *
-     * @deprecated Use {@link ClientCacheControl#builder()}.
-     */
-    @Deprecated
-    public ClientCacheControlBuilder() {}
+    ClientCacheControlBuilder() {}
 
     ClientCacheControlBuilder(ClientCacheControl c) {
         super(c);

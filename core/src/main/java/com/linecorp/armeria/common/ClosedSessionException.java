@@ -15,27 +15,58 @@
  */
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.stream.ClosedStreamException;
+
 /**
  * A {@link RuntimeException} raised when the connection to the remote peer has been closed unexpectedly.
  */
-public final class ClosedSessionException extends RuntimeException {
+public final class ClosedSessionException extends ClosedStreamException {
 
     private static final long serialVersionUID = -78487475521731580L;
 
-    private static final ClosedSessionException INSTANCE = new ClosedSessionException(false);
+    private static final ClosedSessionException INSTANCE = new ClosedSessionException(null, null, false, false);
 
     /**
      * Returns a {@link ClosedSessionException} which may be a singleton or a new instance, depending on
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static ClosedSessionException get() {
-        return Flags.verboseExceptionSampler().isSampled(ClosedSessionException.class) ?
-               new ClosedSessionException() : INSTANCE;
+        return isSampled() ? new ClosedSessionException(null, null, true, true) : INSTANCE;
     }
 
-    private ClosedSessionException() {}
+    private static boolean isSampled() {
+        return Flags.verboseExceptionSampler().isSampled(ClosedSessionException.class);
+    }
 
-    private ClosedSessionException(@SuppressWarnings("unused") boolean dummy) {
-        super(null, null, false, false);
+    /**
+     * Creates a new instance with the specified {@code message}.
+     */
+    public ClosedSessionException(@Nullable String message) {
+        this(message, null, true, isSampled());
+    }
+
+    /**
+     * Creates a new instance with the specified {@code message} and {@code cause}.
+     */
+    public ClosedSessionException(@Nullable String message, @Nullable Throwable cause) {
+        this(message, cause, true, isSampled());
+    }
+
+    /**
+     * Creates a new instance with the specified {@code cause}.
+     */
+    public ClosedSessionException(@Nullable Throwable cause) {
+        this(null, cause, true, isSampled());
+    }
+
+    /**
+     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
+     * disabled, and writable stack trace enabled or disabled.
+     */
+    private ClosedSessionException(@Nullable String message, @Nullable Throwable cause,
+                                   boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

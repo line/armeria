@@ -21,6 +21,9 @@ import org.slf4j.Marker;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+
 @SuppressWarnings("MethodParameterNamingConvention")
 final class RequestContextAwareLogger implements Logger {
 
@@ -34,10 +37,10 @@ final class RequestContextAwareLogger implements Logger {
 
     private String decorate(String msg) {
         final String prefix = ctx.toString();
-        return new StringBuilder(prefix.length() + 1 + msg.length())
-                .append(prefix)
-                .append(' ')
-                .append(msg).toString();
+        return TemporaryThreadLocals.get().stringBuilder()
+                                    .append(prefix)
+                                    .append(' ')
+                                    .append(msg).toString();
     }
 
     @Override
@@ -58,70 +61,90 @@ final class RequestContextAwareLogger implements Logger {
     @Override
     public void trace(String msg) {
         if (isTraceEnabled()) {
-            logger.trace(decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(decorate(msg));
+            }
         }
     }
 
     @Override
     public void trace(String format, Object arg) {
         if (isTraceEnabled()) {
-            logger.trace(decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void trace(String format, Object arg1, Object arg2) {
         if (isTraceEnabled()) {
-            logger.trace(decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void trace(String format, Object... arguments) {
         if (isTraceEnabled()) {
-            logger.trace(decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void trace(String msg, Throwable t) {
         if (isTraceEnabled()) {
-            logger.trace(decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(decorate(msg), t);
+            }
         }
     }
 
     @Override
     public void trace(Marker marker, String msg) {
         if (isTraceEnabled(marker)) {
-            logger.trace(marker, decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(marker, decorate(msg));
+            }
         }
     }
 
     @Override
     public void trace(Marker marker, String format, Object arg) {
         if (isTraceEnabled(marker)) {
-            logger.trace(marker, decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(marker, decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void trace(Marker marker, String format, Object arg1, Object arg2) {
         if (isTraceEnabled(marker)) {
-            logger.trace(marker, decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(marker, decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void trace(Marker marker, String format, Object... argArray) {
         if (isTraceEnabled(marker)) {
-            logger.trace(marker, decorate(format), argArray);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(marker, decorate(format), argArray);
+            }
         }
     }
 
     @Override
     public void trace(Marker marker, String msg, Throwable t) {
         if (isTraceEnabled(marker)) {
-            logger.trace(marker, decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.trace(marker, decorate(msg), t);
+            }
         }
     }
 
@@ -138,70 +161,90 @@ final class RequestContextAwareLogger implements Logger {
     @Override
     public void debug(String msg) {
         if (isDebugEnabled()) {
-            logger.debug(decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(decorate(msg));
+            }
         }
     }
 
     @Override
     public void debug(String format, Object arg) {
         if (isDebugEnabled()) {
-            logger.debug(decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void debug(String format, Object arg1, Object arg2) {
         if (isDebugEnabled()) {
-            logger.debug(decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void debug(String format, Object... arguments) {
         if (isDebugEnabled()) {
-            logger.debug(decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void debug(String msg, Throwable t) {
         if (isDebugEnabled()) {
-            logger.debug(decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(decorate(msg), t);
+            }
         }
     }
 
     @Override
     public void debug(Marker marker, String msg) {
         if (isDebugEnabled(marker)) {
-            logger.debug(marker, decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(marker, decorate(msg));
+            }
         }
     }
 
     @Override
     public void debug(Marker marker, String format, Object arg) {
         if (isDebugEnabled(marker)) {
-            logger.debug(marker, decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(marker, decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void debug(Marker marker, String format, Object arg1, Object arg2) {
         if (isDebugEnabled(marker)) {
-            logger.debug(marker, decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(marker, decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void debug(Marker marker, String format, Object... arguments) {
         if (isDebugEnabled(marker)) {
-            logger.debug(marker, decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(marker, decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void debug(Marker marker, String msg, Throwable t) {
         if (isDebugEnabled(marker)) {
-            logger.debug(marker, decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.debug(marker, decorate(msg), t);
+            }
         }
     }
 
@@ -218,70 +261,90 @@ final class RequestContextAwareLogger implements Logger {
     @Override
     public void info(String msg) {
         if (isInfoEnabled()) {
-            logger.info(decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(decorate(msg));
+            }
         }
     }
 
     @Override
     public void info(String format, Object arg) {
         if (isInfoEnabled()) {
-            logger.info(decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void info(String format, Object arg1, Object arg2) {
         if (isInfoEnabled()) {
-            logger.info(decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void info(String format, Object... arguments) {
         if (isInfoEnabled()) {
-            logger.info(decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void info(String msg, Throwable t) {
         if (isInfoEnabled()) {
-            logger.info(decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(decorate(msg), t);
+            }
         }
     }
 
     @Override
     public void info(Marker marker, String msg) {
         if (isInfoEnabled(marker)) {
-            logger.info(marker, decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(marker, decorate(msg));
+            }
         }
     }
 
     @Override
     public void info(Marker marker, String format, Object arg) {
         if (isInfoEnabled(marker)) {
-            logger.info(decorate(format), format, arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(decorate(format), format, arg);
+            }
         }
     }
 
     @Override
     public void info(Marker marker, String format, Object arg1, Object arg2) {
         if (isInfoEnabled(marker)) {
-            logger.info(marker, decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(marker, decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void info(Marker marker, String format, Object... arguments) {
         if (isInfoEnabled(marker)) {
-            logger.info(marker, decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(marker, decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void info(Marker marker, String msg, Throwable t) {
         if (isInfoEnabled(marker)) {
-            logger.info(marker, decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.info(marker, decorate(msg), t);
+            }
         }
     }
 
@@ -298,70 +361,90 @@ final class RequestContextAwareLogger implements Logger {
     @Override
     public void warn(String msg) {
         if (isWarnEnabled()) {
-            logger.warn(decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(decorate(msg));
+            }
         }
     }
 
     @Override
     public void warn(String format, Object arg) {
         if (isWarnEnabled()) {
-            logger.warn(decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void warn(String format, Object... arguments) {
         if (isWarnEnabled()) {
-            logger.warn(decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void warn(String format, Object arg1, Object arg2) {
         if (isWarnEnabled()) {
-            logger.warn(decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void warn(String msg, Throwable t) {
         if (isWarnEnabled()) {
-            logger.warn(decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(decorate(msg), t);
+            }
         }
     }
 
     @Override
     public void warn(Marker marker, String msg) {
         if (isWarnEnabled(marker)) {
-            logger.warn(marker, decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(marker, decorate(msg));
+            }
         }
     }
 
     @Override
     public void warn(Marker marker, String format, Object arg) {
         if (isWarnEnabled(marker)) {
-            logger.warn(marker, decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(marker, decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void warn(Marker marker, String format, Object arg1, Object arg2) {
         if (isWarnEnabled(marker)) {
-            logger.warn(marker, decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(marker, decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void warn(Marker marker, String format, Object... arguments) {
         if (isWarnEnabled(marker)) {
-            logger.warn(marker, decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(marker, decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void warn(Marker marker, String msg, Throwable t) {
         if (isWarnEnabled(marker)) {
-            logger.warn(marker, decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn(marker, decorate(msg), t);
+            }
         }
     }
 
@@ -378,70 +461,90 @@ final class RequestContextAwareLogger implements Logger {
     @Override
     public void error(String msg) {
         if (isErrorEnabled()) {
-            logger.error(decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(decorate(msg));
+            }
         }
     }
 
     @Override
     public void error(String format, Object arg) {
         if (isErrorEnabled()) {
-            logger.error(decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void error(String format, Object arg1, Object arg2) {
         if (isErrorEnabled()) {
-            logger.error(decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void error(String format, Object... arguments) {
         if (isErrorEnabled()) {
-            logger.error(decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void error(String msg, Throwable t) {
         if (isErrorEnabled()) {
-            logger.error(decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(decorate(msg), t);
+            }
         }
     }
 
     @Override
     public void error(Marker marker, String msg) {
         if (isErrorEnabled(marker)) {
-            logger.error(marker, decorate(msg));
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(marker, decorate(msg));
+            }
         }
     }
 
     @Override
     public void error(Marker marker, String format, Object arg) {
         if (isErrorEnabled(marker)) {
-            logger.error(marker, decorate(format), arg);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(marker, decorate(format), arg);
+            }
         }
     }
 
     @Override
     public void error(Marker marker, String format, Object arg1, Object arg2) {
         if (isErrorEnabled(marker)) {
-            logger.error(marker, decorate(format), arg1, arg2);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(marker, decorate(format), arg1, arg2);
+            }
         }
     }
 
     @Override
     public void error(Marker marker, String format, Object... arguments) {
         if (isErrorEnabled(marker)) {
-            logger.error(marker, decorate(format), arguments);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(marker, decorate(format), arguments);
+            }
         }
     }
 
     @Override
     public void error(Marker marker, String msg, Throwable t) {
         if (isErrorEnabled(marker)) {
-            logger.error(marker, decorate(msg), t);
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.error(marker, decorate(msg), t);
+            }
         }
     }
 

@@ -89,13 +89,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
 
     private final CorsConfig config;
 
-    /**
-     * Creates a new {@link CorsService} that decorates the specified {@code delegate} to add CORS support.
-     *
-     * @deprecated Use {@link #builder(String...)} or {@link #builderForAnyOrigin()}.
-     */
-    @Deprecated
-    public CorsService(HttpService delegate, CorsConfig config) {
+    CorsService(HttpService delegate, CorsConfig config) {
         super(delegate);
         this.config = requireNonNull(config, "config");
     }

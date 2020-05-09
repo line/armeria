@@ -105,22 +105,6 @@ public final class MoreMeters {
     }
 
     /**
-     * Returns a newly-registered {@link DistributionSummary} with percentile publication configured.
-     * @deprecated Use {@link #newDistributionSummary(MeterRegistry, String, Iterable)}.
-     */
-    @Deprecated
-    public static DistributionSummary summaryWithDefaultQuantiles(MeterRegistry registry,
-                                                                  String name, Iterable<Tag> tags) {
-        requireNonNull(registry, "registry");
-        requireNonNull(name, "name");
-        requireNonNull(tags, "tags");
-        return DistributionSummary.builder(name)
-                                  .tags(tags)
-                                  .publishPercentiles(PERCENTILES)
-                                  .register(registry);
-    }
-
-    /**
      * Returns a newly-registered {@link Timer} configured by {@link #distributionStatisticConfig()}.
      */
     public static Timer newTimer(MeterRegistry registry, String name, Iterable<Tag> tags) {
@@ -143,21 +127,6 @@ public final class MoreMeters {
                     .publishPercentileHistogram(distStatCfg.isPercentileHistogram())
                     .distributionStatisticBufferLength(distStatCfg.getBufferLength())
                     .distributionStatisticExpiry(distStatCfg.getExpiry())
-                    .register(registry);
-    }
-
-    /**
-     * Returns a newly-registered {@link Timer} with percentile publication configured.
-     * @deprecated Use {@link #newTimer(MeterRegistry, String, Iterable)}.
-     */
-    @Deprecated
-    public static Timer timerWithDefaultQuantiles(MeterRegistry registry, String name, Iterable<Tag> tags) {
-        requireNonNull(registry, "registry");
-        requireNonNull(name, "name");
-        requireNonNull(tags, "tags");
-        return Timer.builder(name)
-                    .tags(tags)
-                    .publishPercentiles(PERCENTILES)
                     .register(registry);
     }
 

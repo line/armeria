@@ -49,7 +49,7 @@ public interface Sampler<T> {
      * @param probability the probability expressed as a floating point number
      *                    between {@code 0.0} and {@code 1.0}.
      */
-    static <T> Sampler<T> random(double probability) {
+    static <T> Sampler<T> random(float probability) {
         return CountingSampler.create(probability);
     }
 
@@ -60,18 +60,6 @@ public interface Sampler<T> {
      */
     static <T> Sampler<T> rateLimiting(int samplesPerSecond) {
         return RateLimitingSampler.create(samplesPerSecond);
-    }
-
-    /**
-     * Returns a rate-limiting sampler which rate-limits up to the specified {@code samplesPerSecond}.
-     *
-     * @param samplesPerSecond an integer between {@code 0} and {@value Integer#MAX_VALUE}
-     *
-     * @deprecated Use {@link #rateLimiting(int)}.
-     */
-    @Deprecated
-    static <T> Sampler<T> rateLimited(int samplesPerSecond) {
-        return rateLimiting(samplesPerSecond);
     }
 
     /**

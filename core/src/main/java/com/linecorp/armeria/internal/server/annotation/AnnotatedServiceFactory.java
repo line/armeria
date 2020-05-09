@@ -80,7 +80,6 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Blocking;
-import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
@@ -100,7 +99,6 @@ import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
-import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.RequestConverter;
@@ -283,7 +281,7 @@ public final class AnnotatedServiceFactory {
 
         if (defaultHeaders.status().isContentAlwaysEmpty() && !defaultTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
-                        "Trailers defined at '{}' might be ignored.",
+                        "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
                         defaultHeaders.status().code(), methodAlias);
         }
 
@@ -395,18 +393,16 @@ public final class AnnotatedServiceFactory {
      */
     private static Set<MediaType> consumableMediaTypes(Method method, Class<?> clazz) {
         List<Consumes> consumes = AnnotationUtil.findAll(method, Consumes.class);
-        List<ConsumeType> consumeTypes = AnnotationUtil.findAll(method, ConsumeType.class);
 
-        if (consumes.isEmpty() && consumeTypes.isEmpty()) {
+        if (consumes.isEmpty()) {
             consumes = AnnotationUtil.findAll(clazz, Consumes.class);
-            consumeTypes = AnnotationUtil.findAll(clazz, ConsumeType.class);
         }
 
         final List<MediaType> types =
-                Stream.concat(consumes.stream().map(Consumes::value),
-                              consumeTypes.stream().map(ConsumeType::value))
-                      .map(MediaType::parse)
-                      .collect(toImmutableList());
+                consumes.stream()
+                        .map(Consumes::value)
+                        .map(MediaType::parse)
+                        .collect(toImmutableList());
         return listToSet(types, Consumes.class);
     }
 
@@ -415,24 +411,22 @@ public final class AnnotatedServiceFactory {
      */
     private static Set<MediaType> producibleMediaTypes(Method method, Class<?> clazz) {
         List<Produces> produces = AnnotationUtil.findAll(method, Produces.class);
-        List<ProduceType> produceTypes = AnnotationUtil.findAll(method, ProduceType.class);
 
-        if (produces.isEmpty() && produceTypes.isEmpty()) {
+        if (produces.isEmpty()) {
             produces = AnnotationUtil.findAll(clazz, Produces.class);
-            produceTypes = AnnotationUtil.findAll(clazz, ProduceType.class);
         }
 
         final List<MediaType> types =
-                Stream.concat(produces.stream().map(Produces::value),
-                              produceTypes.stream().map(ProduceType::value))
-                      .map(MediaType::parse)
-                      .peek(type -> {
-                          if (type.hasWildcard()) {
-                              throw new IllegalArgumentException(
-                                      "Producible media types must not have a wildcard: " + type);
-                          }
-                      })
-                      .collect(toImmutableList());
+                produces.stream()
+                        .map(Produces::value)
+                        .map(MediaType::parse)
+                        .peek(type -> {
+                            if (type.hasWildcard()) {
+                                throw new IllegalArgumentException(
+                                        "Producible media types must not have a wildcard: " + type);
+                            }
+                        })
+                        .collect(toImmutableList());
         return listToSet(types, Produces.class);
     }
 
