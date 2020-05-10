@@ -30,6 +30,8 @@ final class DefaultPooledHttpService extends AbstractUnwrappable<HttpService> im
 
     @Override
     public PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
-        return PooledHttpResponse.of(delegate().serve(ctx, PooledHttpRequest.of(req)));
+        // Always a wrapped non-pooled service, make sure it gets a normal request.
+        assert !(delegate() instanceof PooledHttpService);
+        return PooledHttpResponse.of(delegate().serve(ctx, req.toUnpooled()));
     }
 }

@@ -43,7 +43,7 @@ public abstract class SimplePooledDecoratingHttpService extends SimpleDecorating
 
     @Override
     public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return serve(delegate(), ctx, PooledHttpRequest.of(req));
+        return serve(ctx, PooledHttpRequest.of(req));
     }
 
     @Override
@@ -57,6 +57,6 @@ public abstract class SimplePooledDecoratingHttpService extends SimpleDecorating
      * @see SimpleDecoratingHttpService#serve(ServiceRequestContext, HttpRequest)
      */
     protected abstract HttpResponse serve(
-            PooledHttpService service, ServiceRequestContext ctx, PooledHttpRequest req)
+            PooledHttpService delegate, ServiceRequestContext ctx, PooledHttpRequest req)
             throws Exception;
 }

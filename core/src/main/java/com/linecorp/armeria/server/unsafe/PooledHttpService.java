@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.unsafe;
 
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
@@ -29,10 +28,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * An HTTP/2 {@link Service} which publishes {@link PooledHttpData}.
  */
+@FunctionalInterface
 public interface PooledHttpService extends HttpService {
 
     /**
-     * Creates a {@link PooledHttpService} that delegates to the provided {@link HttpClient} for issuing
+     * Creates a {@link PooledHttpService} that delegates to the provided {@link HttpService} for issuing
      * requests.
      */
     static PooledHttpService of(HttpService delegate) {
@@ -42,7 +42,14 @@ public interface PooledHttpService extends HttpService {
         return new DefaultPooledHttpService(delegate);
     }
 
+    /**
+     * Called by framework to serve the request.
+     *
+     * @deprecated Do not extend this method, extend {@link #serve(ServiceRequestContext, PooledHttpRequest)}
+     *     instead because this is a {@link PooledHttpService}.
+     */
     @Override
+    @Deprecated
     default HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return serve(ctx, PooledHttpRequest.of(req));
     }

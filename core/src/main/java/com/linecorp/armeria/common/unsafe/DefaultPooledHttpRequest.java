@@ -33,8 +33,11 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultPooledHttpRequest extends FilteredHttpRequest implements PooledHttpRequest {
 
+    private final HttpRequest unpooled;
+
     DefaultPooledHttpRequest(HttpRequest delegate) {
         super(delegate, true);
+        unpooled = delegate;
     }
 
     @Override
@@ -111,5 +114,10 @@ final class DefaultPooledHttpRequest extends FilteredHttpRequest implements Pool
 
     private static SubscriptionOption[] withPooled(SubscriptionOption[] options) {
         return ObjectArrays.concat(options, SubscriptionOption.WITH_POOLED_OBJECTS);
+    }
+
+    @Override
+    public HttpRequest toUnpooled() {
+        return unpooled;
     }
 }

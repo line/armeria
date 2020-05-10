@@ -17,11 +17,11 @@
 package com.linecorp.armeria.server.unsafe;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -32,7 +32,42 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @see AbstractHttpService
  * @see PooledHttpData
  */
-public abstract class AbstractPooledHttpService extends AbstractHttpService {
+public abstract class AbstractPooledHttpService implements PooledHttpService {
+
+    @Override
+    public PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
+        final HttpResponse response;
+        switch (req.method()) {
+            case OPTIONS:
+                response = doOptions(ctx, req);
+                break;
+            case GET:
+                response = doGet(ctx, req);
+                break;
+            case HEAD:
+                response = doHead(ctx, req);
+                break;
+            case POST:
+                response = doPost(ctx, req);
+                break;
+            case PUT:
+                response = doPut(ctx, req);
+                break;
+            case PATCH:
+                response = doPatch(ctx, req);
+                break;
+            case DELETE:
+                response = doDelete(ctx, req);
+                break;
+            case TRACE:
+                response = doTrace(ctx, req);
+                break;
+            default:
+                response = HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+                break;
+        }
+        return PooledHttpResponse.of(response);
+    }
 
     /**
      * Handles an {@link HttpMethod#OPTIONS OPTIONS} request.
@@ -40,11 +75,6 @@ public abstract class AbstractPooledHttpService extends AbstractHttpService {
      */
     protected HttpResponse doOptions(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-    }
-
-    @Override
-    protected final HttpResponse doOptions(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doOptions(ctx, PooledHttpRequest.of(req));
     }
 
     /**
@@ -55,22 +85,12 @@ public abstract class AbstractPooledHttpService extends AbstractHttpService {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
-    @Override
-    protected final HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doGet(ctx, PooledHttpRequest.of(req));
-    }
-
     /**
      * Handles a {@link HttpMethod#HEAD HEAD} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doHead(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-    }
-
-    @Override
-    protected final HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doHead(ctx, PooledHttpRequest.of(req));
     }
 
     /**
@@ -81,22 +101,12 @@ public abstract class AbstractPooledHttpService extends AbstractHttpService {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
-    @Override
-    protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doPost(ctx, PooledHttpRequest.of(req));
-    }
-
     /**
      * Handles a {@link HttpMethod#PUT PUT} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doPut(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-    }
-
-    @Override
-    protected final HttpResponse doPut(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doPut(ctx, PooledHttpRequest.of(req));
     }
 
     /**
@@ -107,11 +117,6 @@ public abstract class AbstractPooledHttpService extends AbstractHttpService {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
-    @Override
-    protected final HttpResponse doPatch(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doPatch(ctx, PooledHttpRequest.of(req));
-    }
-
     /**
      * Handles a {@link HttpMethod#DELETE DELETE} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
@@ -120,21 +125,11 @@ public abstract class AbstractPooledHttpService extends AbstractHttpService {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
-    @Override
-    protected final HttpResponse doDelete(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doDelete(ctx, PooledHttpRequest.of(req));
-    }
-
     /**
      * Handles a {@link HttpMethod#TRACE TRACE} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doTrace(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-    }
-
-    @Override
-    protected final HttpResponse doTrace(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return doTrace(ctx, PooledHttpRequest.of(req));
     }
 }

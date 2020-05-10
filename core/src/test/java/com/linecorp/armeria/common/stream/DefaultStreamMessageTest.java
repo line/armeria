@@ -32,8 +32,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;

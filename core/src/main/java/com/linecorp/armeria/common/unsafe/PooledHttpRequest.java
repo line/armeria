@@ -60,6 +60,15 @@ public interface PooledHttpRequest extends HttpRequest {
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request are received fully.
      */
+    default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+        requireNonNull(alloc);
+        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
+    }
+
+    /**
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the request are received fully.
+     */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects(EventExecutor executor) {
         requireNonNull(executor);
         return aggregateWithPooledObjects(executor, PooledByteBufAllocator.DEFAULT);
@@ -100,4 +109,11 @@ public interface PooledHttpRequest extends HttpRequest {
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         return HttpRequest.super.aggregate(executor);
     }
+
+    /**
+     * Converts this {@link PooledHttpRequest} to an unpooled {@link HttpRequest}. Only one of this
+     * {@link PooledHttpRequest} or the returned {@link HttpRequest} can be subscribed to, if both are attempted
+     * to be used, it will cause an error or bad behavior.
+     */
+    HttpRequest toUnpooled();
 }

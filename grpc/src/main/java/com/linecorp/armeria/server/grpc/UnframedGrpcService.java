@@ -117,19 +117,19 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
 
     @Override
     public HttpResponse serve(
-            PooledHttpService service, ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
+            PooledHttpService delegate, ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
-            return service.serve(ctx, req);
+            return delegate.serve(ctx, req);
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
                 // Framed request, so just delegate.
-                return service.serve(ctx, req);
+                return delegate.serve(ctx, req);
             }
         }
 
@@ -137,7 +137,7 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
         final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
-            return service.serve(ctx, req);
+            return delegate.serve(ctx, req);
         }
 
         if (method.getType() != MethodType.UNARY) {
