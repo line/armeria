@@ -686,8 +686,8 @@ final class HttpChannelPool implements AsyncCloseable {
                     final HttpSession session = HttpSession.get(pch.get());
                     if (session.incrementNumUnfinishedResponses()) {
                         childPromise.complete(pch);
-                    } else {
-                        acquireLater(actualProtocol, key, timingsBuilder, childPromise);
+                    } else if (!usePendingAcquisition(actualProtocol, key, childPromise, timingsBuilder)) {
+                        connect(actualProtocol, key, childPromise, timingsBuilder);
                     }
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
@@ -705,15 +705,6 @@ final class HttpChannelPool implements AsyncCloseable {
                 // The pending connection attempt has failed.
                 connect(desiredProtocol, key, childPromise, timingsBuilder);
             }
-        }
-
-        private ChannelAcquisitionFuture acquireLater(SessionProtocol desiredProtocol, PoolKey key,
-                                                      ClientConnectionTimingsBuilder timingsBuilder,
-                                                      ChannelAcquisitionFuture promise) {
-            if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
-                connect(desiredProtocol, key, promise, timingsBuilder);
-            }
-            return promise;
         }
 
         @Override
