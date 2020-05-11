@@ -308,15 +308,6 @@ final class HttpChannelPool implements AsyncCloseable {
         return promise;
     }
 
-    private ChannelAcquisitionFuture acquireLater(SessionProtocol desiredProtocol, PoolKey key,
-                                                  ClientConnectionTimingsBuilder timingsBuilder,
-                                                  ChannelAcquisitionFuture promise) {
-        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
-            connect(desiredProtocol, key, promise, timingsBuilder);
-        }
-        return promise;
-    }
-
     /**
      * Tries to use the pending HTTP/2 connection to avoid creating an extra connection.
      *
@@ -714,6 +705,15 @@ final class HttpChannelPool implements AsyncCloseable {
                 // The pending connection attempt has failed.
                 connect(desiredProtocol, key, childPromise, timingsBuilder);
             }
+        }
+
+        private ChannelAcquisitionFuture acquireLater(SessionProtocol desiredProtocol, PoolKey key,
+                                                      ClientConnectionTimingsBuilder timingsBuilder,
+                                                      ChannelAcquisitionFuture promise) {
+            if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
+                connect(desiredProtocol, key, promise, timingsBuilder);
+            }
+            return promise;
         }
 
         @Override
