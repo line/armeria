@@ -98,7 +98,9 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return clientFactory.isClosing() || responseDecoder.goAwayHandler().receivedErrorGoAway();
+        return clientFactory.isClosing() ||
+               responseDecoder.goAwayHandler().receivedErrorGoAway() ||
+               keepAliveHandler.isClosing();
     }
 
     @Override
