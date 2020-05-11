@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.annotation.processor;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.annotation.helper.ProcessedDocumentationHelper.getFileName;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -36,6 +37,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
@@ -73,6 +75,9 @@ public class DocumentationProcessor extends AbstractProcessor {
             try {
                 writeProperties(className, properties);
             } catch (IOException e) {
+                processingEnv.getMessager().printMessage(Kind.WARNING,
+                                                         String.format("Could not write properties for `%s`",
+                                                                       className));
                 e.printStackTrace();
             }
         });
@@ -122,6 +127,9 @@ public class DocumentationProcessor extends AbstractProcessor {
                     try {
                         processMethod((ExecutableElement) element);
                     } catch (IOException e) {
+                        processingEnv.getMessager().printMessage(Kind.ERROR,
+                                                                 "Could not process all elements",
+                                                                 element);
                         e.printStackTrace();
                     }
                 });
@@ -175,15 +183,6 @@ public class DocumentationProcessor extends AbstractProcessor {
         final String methodName = method.getSimpleName().toString();
         final String parameterName = parameter.getSimpleName().toString();
         properties.setProperty(methodName + '.' + parameterName, description);
-    }
-
-    /**
-     * Creates the file name used in the rest api documentation properties files.
-     * @param className The class name used for generating the file name.
-     * @return The used file name.
-     */
-    public static String getFileName(String className) {
-        return "com.linecorp.armeria.docstrings.annotated." + className + ".properties";
     }
 
     private enum JavaDocParserState {

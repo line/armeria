@@ -27,6 +27,7 @@ public class HelloAnnotatedService {
 
     /**
      * An example in order to show how to use validation framework in an annotated HTTP service.
+     * @param name The name that should be greeted.
      */
     @Get("/hello/{name}")
     public String hello(

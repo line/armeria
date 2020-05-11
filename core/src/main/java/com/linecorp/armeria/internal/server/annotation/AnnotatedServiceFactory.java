@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.server.annotation.helper.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.getConstructors;
@@ -29,11 +30,15 @@ import static org.reflections.ReflectionUtils.withModifier;
 import static org.reflections.ReflectionUtils.withName;
 import static org.reflections.ReflectionUtils.withParametersCount;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -42,6 +47,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -736,6 +742,26 @@ public final class AnnotatedServiceFactory {
             if (DefaultValues.isSpecified(value)) {
                 checkArgument(!value.isEmpty(), "value is empty.");
                 return value;
+            }
+        } else if (annotatedElement instanceof Parameter) {
+            // JavaDoc/KDoc descriptions only exist for method parameters
+            final Parameter parameter = (Parameter) annotatedElement;
+            final Executable executable = parameter.getDeclaringExecutable();
+            final Class<?> clazz = executable.getDeclaringClass();
+            final String fileName = getFileName(clazz.getCanonicalName());
+            final String propertyName = executable.getName() + '.' + parameter.getName();
+            try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
+                                                                   .getResourceAsStream(fileName)) {
+                if (stream == null) {
+                    return null;
+                }
+                final Properties properties = new Properties();
+                properties.load(stream);
+                if (properties.containsKey(propertyName)) {
+                    return properties.getProperty(propertyName);
+                }
+            } catch (IOException exception) {
+                exception.printStackTrace();
             }
         }
         return null;
