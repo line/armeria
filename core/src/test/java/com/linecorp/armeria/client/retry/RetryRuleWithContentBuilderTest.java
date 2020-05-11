@@ -97,12 +97,12 @@ class RetryRuleWithContentBuilderTest {
                         }),
                         RetryRuleWithContent.<HttpResponse>onResponse(response -> {
                             return response.aggregate().thenApply(content -> false);
-                        }).orElse(RetryRule.builder().onUnprocessed().thenBackoff()),
+                        }).orElse(RetryRule.builder().onUnprocessed().thenBackoff(backoff)),
                         RetryRuleWithContent.<HttpResponse>builder()
                                 .onResponse(response -> {
                                     return response.aggregate()
                                                    .thenApply(content -> "hello".equals(content.contentUtf8()));
-                                }).thenBackoff(backoff));
+                                }).thenBackoff());
 
         final HttpResponse response = HttpResponse.of("hello");
         response.abort(new UnprocessedRequestException(ClosedSessionException.get()));
