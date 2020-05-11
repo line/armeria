@@ -21,14 +21,18 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -75,7 +79,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     // Fields for pooling connections:
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
-    private final Map<PoolKey, CompletableFuture<PooledChannel>>[] pendingAcquisitions;
+    private final Map<PoolKey, ChannelAcquisitionFuture>[] pendingAcquisitions;
     private final Map<Channel, Boolean> allChannels;
     private final ConnectionPoolListener listener;
 
@@ -200,13 +204,12 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     @Nullable
-    private CompletableFuture<PooledChannel> getPendingAcquisition(SessionProtocol desiredProtocol,
-                                                                   PoolKey key) {
+    private ChannelAcquisitionFuture getPendingAcquisition(SessionProtocol desiredProtocol, PoolKey key) {
         return pendingAcquisitions[desiredProtocol.ordinal()].get(key);
     }
 
     private void setPendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
-                                       CompletableFuture<PooledChannel> future) {
+                                       ChannelAcquisitionFuture future) {
         pendingAcquisitions[desiredProtocol.ordinal()].put(key, future);
     }
 
@@ -259,7 +262,7 @@ final class HttpChannelPool implements AsyncCloseable {
             }
 
             final HttpSession session = HttpSession.get(pooledChannel.get());
-            if (session.unfinishedResponses() >= session.maxUnfinishedResponses()) {
+            if (!session.incrementNumUnfinishedResponses()) {
                 // The channel is full of streams so we cannot create a new one.
                 // Move the channel to the beginning of the queue so it has low priority.
                 queue.removeLast();
@@ -298,16 +301,16 @@ final class HttpChannelPool implements AsyncCloseable {
      */
     CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
                                                   ClientConnectionTimingsBuilder timingsBuilder) {
-        final CompletableFuture<PooledChannel> promise = new CompletableFuture<>();
+        final ChannelAcquisitionFuture promise = new ChannelAcquisitionFuture();
         if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
             connect(desiredProtocol, key, promise, timingsBuilder);
         }
         return promise;
     }
 
-    private CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
-                                                          ClientConnectionTimingsBuilder timingsBuilder,
-                                                          CompletableFuture<PooledChannel> promise) {
+    private ChannelAcquisitionFuture acquireLater(SessionProtocol desiredProtocol, PoolKey key,
+                                                  ClientConnectionTimingsBuilder timingsBuilder,
+                                                  ChannelAcquisitionFuture promise) {
         if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
             connect(desiredProtocol, key, promise, timingsBuilder);
         }
@@ -320,7 +323,7 @@ final class HttpChannelPool implements AsyncCloseable {
      * @return {@code true} if succeeded to reuse the pending connection.
      */
     private boolean usePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
-                                          CompletableFuture<PooledChannel> promise,
+                                          ChannelAcquisitionFuture promise,
                                           ClientConnectionTimingsBuilder timingsBuilder) {
 
         if (desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C) {
@@ -329,51 +332,18 @@ final class HttpChannelPool implements AsyncCloseable {
             return false;
         }
 
-        final CompletableFuture<PooledChannel> pendingAcquisition =
-                getPendingAcquisition(desiredProtocol, key);
-
+        final ChannelAcquisitionFuture pendingAcquisition = getPendingAcquisition(desiredProtocol, key);
         if (pendingAcquisition == null) {
             return false;
         }
 
         timingsBuilder.pendingAcquisitionStart();
-        pendingAcquisition.handle((pch, cause) -> {
-            timingsBuilder.pendingAcquisitionEnd();
-
-            if (cause == null) {
-                final SessionProtocol actualProtocol = pch.protocol();
-                if (actualProtocol.isMultiplex()) {
-                    final HttpSession session = HttpSession.get(pch.get());
-                    if (session.maxUnfinishedResponses() - session.unfinishedResponses() <= 1) {
-                        acquireLater(actualProtocol, key, timingsBuilder, promise);
-                    } else {
-                        promise.complete(pch);
-                    }
-                } else {
-                    // Try to acquire again because the connection was not HTTP/2.
-                    // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
-                    // we do not waste our time looking for pending acquisitions for the host
-                    // that does not support HTTP/2.
-                    final PooledChannel ch = acquireNow(actualProtocol, key);
-                    if (ch != null) {
-                        promise.complete(ch);
-                    } else {
-                        connect(actualProtocol, key, promise, timingsBuilder);
-                    }
-                }
-            } else {
-                // The pending connection attempt has failed.
-                connect(desiredProtocol, key, promise, timingsBuilder);
-            }
-            return null;
-        });
-
+        pendingAcquisition.addChild(desiredProtocol, key, promise, timingsBuilder);
         return true;
     }
 
-    private void connect(SessionProtocol desiredProtocol, PoolKey key, CompletableFuture<PooledChannel> promise,
+    private void connect(SessionProtocol desiredProtocol, PoolKey key, ChannelAcquisitionFuture promise,
                          ClientConnectionTimingsBuilder timingsBuilder) {
-
         setPendingAcquisition(desiredProtocol, key, promise);
         timingsBuilder.socketConnectStart();
 
@@ -411,8 +381,8 @@ final class HttpChannelPool implements AsyncCloseable {
     /**
      * A low-level operation that triggers a new connection attempt. Used only by:
      * <ul>
-     *   <li>{@link #connect(SessionProtocol, PoolKey, CompletableFuture, ClientConnectionTimingsBuilder)} -
-     *       The pool has been exhausted.</li>
+     *   <li>{@link #connect(SessionProtocol, PoolKey, ChannelAcquisitionFuture,
+     *       ClientConnectionTimingsBuilder)} - The pool has been exhausted.</li>
      *   <li>{@link HttpSessionHandler} - HTTP/2 upgrade has failed.</li>
      * </ul>
      */
@@ -457,7 +427,7 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,
-                               CompletableFuture<PooledChannel> promise,
+                               ChannelAcquisitionFuture promise,
                                ClientConnectionTimingsBuilder timingsBuilder) {
         assert future.isDone();
         removePendingAcquisition(desiredProtocol, key);
@@ -490,7 +460,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 }
 
                 final HttpSession session = HttpSession.get(channel);
-                if (session.unfinishedResponses() < session.maxUnfinishedResponses()) {
+                if (session.incrementNumUnfinishedResponses()) {
                     if (protocol.isMultiplex()) {
                         final Http2PooledChannel pooledChannel = new Http2PooledChannel(channel, protocol);
                         addToPool(protocol, key, pooledChannel);
@@ -679,6 +649,104 @@ final class HttpChannelPool implements AsyncCloseable {
             } else {
                 // Channel not healthy. Do not add it back to the pool.
             }
+        }
+    }
+
+    /**
+     * A variant of {@link CompletableFuture} that keeps its completion handlers into a separate list.
+     * This yields better performance than {@link CompletableFuture#handle(BiFunction)} as the number of
+     * added handlers increases because it does not create a long linked list with extra wrappers, which is
+     * especially beneficial for Java 8 which suffers a huge performance hit when complementing a future with
+     * a deep stack. See {@code cleanStack()} in Java 8 {@link CompletableFuture} for more information.
+     */
+    private final class ChannelAcquisitionFuture extends CompletableFuture<PooledChannel> {
+
+        @Nullable
+        private List<Consumer<PooledChannel>> notifications;
+
+        void addChild(SessionProtocol desiredProtocol, PoolKey key,
+                      ChannelAcquisitionFuture childPromise,
+                      ClientConnectionTimingsBuilder timingsBuilder) {
+
+            // Add to the notification list if not complete yet.
+            if (!isDone()) {
+                if (notifications == null) {
+                    notifications = new ArrayList<>();
+                }
+                notifications.add(pch -> notifyChild(desiredProtocol, key, childPromise, timingsBuilder, pch));
+                return;
+            }
+
+            // Invoke the notification task immediately if complete already.
+            notifyChild(desiredProtocol, key, childPromise, timingsBuilder,
+                        isCompletedExceptionally() ? null : getNow(null));
+        }
+
+        private void notifyChild(SessionProtocol desiredProtocol, PoolKey key,
+                                 ChannelAcquisitionFuture childPromise,
+                                 ClientConnectionTimingsBuilder timingsBuilder,
+                                 @Nullable PooledChannel pch) {
+
+            timingsBuilder.pendingAcquisitionEnd();
+
+            if (pch != null) {
+                final SessionProtocol actualProtocol = pch.protocol();
+                if (actualProtocol.isMultiplex()) {
+                    final HttpSession session = HttpSession.get(pch.get());
+                    if (session.incrementNumUnfinishedResponses()) {
+                        childPromise.complete(pch);
+                    } else {
+                        acquireLater(actualProtocol, key, timingsBuilder, childPromise);
+                    }
+                } else {
+                    // Try to acquire again because the connection was not HTTP/2.
+                    // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
+                    // we do not waste our time looking for pending acquisitions for the host
+                    // that does not support HTTP/2.
+                    final PooledChannel ch = acquireNow(actualProtocol, key);
+                    if (ch != null) {
+                        childPromise.complete(ch);
+                    } else {
+                        connect(actualProtocol, key, childPromise, timingsBuilder);
+                    }
+                }
+            } else {
+                // The pending connection attempt has failed.
+                connect(desiredProtocol, key, childPromise, timingsBuilder);
+            }
+        }
+
+        @Override
+        public boolean complete(PooledChannel value) {
+            assert value != null;
+            if (!super.complete(value)) {
+                return false;
+            }
+
+            final List<Consumer<PooledChannel>> notifications = this.notifications;
+            if (notifications != null) {
+                this.notifications = null;
+                for (Consumer<PooledChannel> handler : notifications) {
+                    handler.accept(value);
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public boolean completeExceptionally(Throwable ex) {
+            if (!super.completeExceptionally(ex)) {
+                return false;
+            }
+
+            final List<Consumer<PooledChannel>> notifications = this.notifications;
+            if (notifications != null) {
+                this.notifications = null;
+                for (Consumer<PooledChannel> handler : notifications) {
+                    handler.accept(null);
+                }
+            }
+            return true;
         }
     }
 }

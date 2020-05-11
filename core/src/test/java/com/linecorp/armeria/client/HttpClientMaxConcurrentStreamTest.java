@@ -275,7 +275,7 @@ public class HttpClientMaxConcurrentStreamTest {
                     assertThat(throwable.getCause().getCause()).satisfiesAnyOf(
                             e -> assertThat(e).isInstanceOf(ClosedSessionException.class),
                             e -> assertThat(e).isInstanceOf(ConnectException.class)
-                                                .hasMessageContaining("reset by peer"));
+                                              .hasMessageContaining("reset by peer"));
                 });
     }
 
