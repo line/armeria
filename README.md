@@ -29,3 +29,13 @@ It is open-sourced by the creator of [Netty](https://netty.io/) and his colleagu
 ## How to reach us — chat, questions and newsletters
 
 Visit [the community](https://line.github.io/armeria/community/) to chat with us, ask questions and learn how to contribute.
+
+## Hall of fame
+
+See [the complete list of our contributors](https://github.com/line/armeria/contributors).
+
+<img
+  src="https://opencollective.com/armeria/contributors.svg?width=890&button=false"
+  title="Contributors"
+  alt="Contributors"
+/>
