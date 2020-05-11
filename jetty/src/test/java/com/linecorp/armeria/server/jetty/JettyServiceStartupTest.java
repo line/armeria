@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class JettyServiceStartupTest extends WebAppContainerTest {
+class JettyServiceStartupTest {
 
     private static final List<Object> jettyBeans = new ArrayList<>();
 
@@ -66,7 +66,7 @@ class JettyServiceStartupTest extends WebAppContainerTest {
                                 .build());
 
             final ResourceHandler resourceHandler = new ResourceHandler();
-            resourceHandler.setResourceBase(webAppRoot().getPath());
+            resourceHandler.setResourceBase(WebAppContainerTest.webAppRoot().getPath());
             sb.serviceUnder(
                     "/resources/",
                     JettyService.builder()
@@ -76,12 +76,13 @@ class JettyServiceStartupTest extends WebAppContainerTest {
     };
 
     static WebAppContext newWebAppContext() throws MalformedURLException {
+        final File webAppRoot = WebAppContainerTest.webAppRoot();
         final WebAppContext handler = new WebAppContext();
         handler.setContextPath("/");
-        handler.setBaseResource(Resource.newResource(webAppRoot()));
+        handler.setBaseResource(Resource.newResource(webAppRoot));
         handler.setClassLoader(new URLClassLoader(
                 new URL[] {
-                        Resource.newResource(new File(webAppRoot(),
+                        Resource.newResource(new File(webAppRoot,
                                                       "WEB-INF" + File.separatorChar +
                                                       "lib" + File.separatorChar +
                                                       "hello.jar")).getURI().toURL()
@@ -93,11 +94,6 @@ class JettyServiceStartupTest extends WebAppContainerTest {
                 "org.eclipse.jetty.containerInitializers",
                 Collections.singletonList(new ContainerInitializer(new JettyJasperInitializer(), null)));
         return handler;
-    }
-
-    @Override
-    protected ServerExtension server() {
-        return server;
     }
 
     @Test

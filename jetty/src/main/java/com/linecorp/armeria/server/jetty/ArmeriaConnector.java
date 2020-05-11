@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,8 +17,6 @@
 package com.linecorp.armeria.server.jetty;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Collections;
 import java.util.List;
@@ -31,6 +29,8 @@ import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.util.concurrent.GlobalEventExecutor;
 
@@ -68,11 +68,7 @@ final class ArmeriaConnector extends ServerConnector {
             // This method could be called during ServerConnector construction (for diagnostic purposes)
             // BEFORE {@code armeriaServer} gets assigned. In such case case,
             // return some reasonable mockup value in order to prevent NPE.
-            try {
-                return InetAddress.getLocalHost().getHostName();
-            } catch (UnknownHostException e) {
-                return "";
-            }
+            return SystemInfo.hostname();
         }
         return armeriaServer.defaultHostname();
     }
