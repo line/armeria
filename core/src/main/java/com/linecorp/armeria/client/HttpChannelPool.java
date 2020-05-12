@@ -644,6 +644,24 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     /**
+     * The result of piggybacked channel acquisition attempt.
+     */
+    private enum PiggybackedChannelAcquisitionResult {
+        /**
+         * Piggybacking succeeded. Use the channel from the current pending acquisition.
+         */
+        SUCCESS,
+        /**
+         * Piggybacking failed. Attempt to establish a new connection.
+         */
+        NEW_CONNECTION,
+        /**
+         * Piggybacking failed, but there's another pending acquisition.
+         */
+        PIGGYBACKED_AGAIN;
+    }
+
+    /**
      * A variant of {@link CompletableFuture} that keeps its completion handlers into a separate list.
      * This yields better performance than {@link CompletableFuture#handle(BiFunction)} as the number of
      * added handlers increases because it does not create a long linked list with extra wrappers, which is
@@ -678,20 +696,17 @@ final class HttpChannelPool implements AsyncCloseable {
                                  ClientConnectionTimingsBuilder timingsBuilder,
                                  @Nullable PooledChannel pch) {
 
-            // 1 - use the current pending acquisition.
-            // 2 - create a new connection.
-            // 3 - use another pending acquisition.
-            final int result;
+            final PiggybackedChannelAcquisitionResult result;
             if (pch != null) {
                 final SessionProtocol actualProtocol = pch.protocol();
                 if (actualProtocol.isMultiplex()) {
                     final HttpSession session = HttpSession.get(pch.get());
                     if (session.incrementNumUnfinishedResponses()) {
-                        result = 1;
+                        result = PiggybackedChannelAcquisitionResult.SUCCESS;
                     } else if (usePendingAcquisition(actualProtocol, key, childPromise, timingsBuilder)) {
-                        result = 3;
+                        result = PiggybackedChannelAcquisitionResult.PIGGYBACKED_AGAIN;
                     } else {
-                        result = 2;
+                        result = PiggybackedChannelAcquisitionResult.NEW_CONNECTION;
                     }
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
@@ -701,25 +716,25 @@ final class HttpChannelPool implements AsyncCloseable {
                     final PooledChannel ch = acquireNow(actualProtocol, key);
                     if (ch != null) {
                         pch = ch;
-                        result = 1;
+                        result = PiggybackedChannelAcquisitionResult.SUCCESS;
                     } else {
-                        result = 2;
+                        result = PiggybackedChannelAcquisitionResult.NEW_CONNECTION;
                     }
                 }
             } else {
-                result = 2;
+                result = PiggybackedChannelAcquisitionResult.NEW_CONNECTION;
             }
 
             switch (result) {
-                case 1:
+                case SUCCESS:
                     timingsBuilder.pendingAcquisitionEnd();
                     childPromise.complete(pch);
                     break;
-                case 2:
+                case NEW_CONNECTION:
                     timingsBuilder.pendingAcquisitionEnd();
                     connect(desiredProtocol, key, childPromise, timingsBuilder);
                     break;
-                case 3:
+                case PIGGYBACKED_AGAIN:
                     // There's nothing to do because usePendingAcquisition() was called successfully above.
                     break;
             }
