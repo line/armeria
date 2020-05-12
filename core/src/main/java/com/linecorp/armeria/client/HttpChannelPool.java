@@ -678,16 +678,20 @@ final class HttpChannelPool implements AsyncCloseable {
                                  ClientConnectionTimingsBuilder timingsBuilder,
                                  @Nullable PooledChannel pch) {
 
-            timingsBuilder.pendingAcquisitionEnd();
-
+            // 1 - use the current pending acquisition.
+            // 2 - create a new connection.
+            // 3 - use another pending acquisition.
+            final int result;
             if (pch != null) {
                 final SessionProtocol actualProtocol = pch.protocol();
                 if (actualProtocol.isMultiplex()) {
                     final HttpSession session = HttpSession.get(pch.get());
                     if (session.incrementNumUnfinishedResponses()) {
-                        childPromise.complete(pch);
-                    } else if (!usePendingAcquisition(actualProtocol, key, childPromise, timingsBuilder)) {
-                        connect(actualProtocol, key, childPromise, timingsBuilder);
+                        result = 1;
+                    } else if (usePendingAcquisition(actualProtocol, key, childPromise, timingsBuilder)) {
+                        result = 2;
+                    } else {
+                        result = 3;
                     }
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
@@ -696,14 +700,28 @@ final class HttpChannelPool implements AsyncCloseable {
                     // that does not support HTTP/2.
                     final PooledChannel ch = acquireNow(actualProtocol, key);
                     if (ch != null) {
-                        childPromise.complete(ch);
+                        pch = ch;
+                        result = 1;
                     } else {
-                        connect(actualProtocol, key, childPromise, timingsBuilder);
+                        result = 2;
                     }
                 }
             } else {
-                // The pending connection attempt has failed.
-                connect(desiredProtocol, key, childPromise, timingsBuilder);
+                result = 2;
+            }
+
+            switch (result) {
+                case 1:
+                    timingsBuilder.pendingAcquisitionEnd();
+                    childPromise.complete(pch);
+                    break;
+                case 2:
+                    timingsBuilder.pendingAcquisitionEnd();
+                    connect(desiredProtocol, key, childPromise, timingsBuilder);
+                    break;
+                case 3:
+                    // There's nothing to do because usePendingAcquisition() was called successfully above.
+                    break;
             }
         }
 
