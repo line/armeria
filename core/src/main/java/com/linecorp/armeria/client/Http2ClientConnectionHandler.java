@@ -41,10 +41,13 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
-        keepAliveHandler = clientFactory.idleTimeoutMillis() > 0 ?
-                           new Http2ClientKeepAliveHandler(channel, encoder.frameWriter(),
-                                                           clientFactory.idleTimeoutMillis(),
-                                                           clientFactory.pingIntervalMillis()) : null;
+        if (clientFactory.idleTimeoutMillis() > 0 || clientFactory.pingIntervalMillis() > 0) {
+            keepAliveHandler = new Http2ClientKeepAliveHandler(channel, encoder.frameWriter(),
+                                                               clientFactory.idleTimeoutMillis(),
+                                                               clientFactory.pingIntervalMillis());
+        } else {
+            keepAliveHandler = null;
+        }
 
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler);
         connection().addListener(responseDecoder);

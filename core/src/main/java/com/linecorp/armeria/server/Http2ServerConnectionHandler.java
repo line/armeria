@@ -43,10 +43,13 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
-        keepAliveHandler = config.idleTimeoutMillis() > 0 ?
-                           new Http2ServerKeepAliveHandler(channel, encoder().frameWriter(),
-                                                           config.idleTimeoutMillis(),
-                                                           config.pingIntervalMillis()) : null;
+        if (config.idleTimeoutMillis() > 0 || config.pingIntervalMillis() > 0) {
+            keepAliveHandler = new Http2ServerKeepAliveHandler(channel, encoder().frameWriter(),
+                                                               config.idleTimeoutMillis(),
+                                                               config.pingIntervalMillis());
+        } else {
+            keepAliveHandler = null;
+        }
 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
