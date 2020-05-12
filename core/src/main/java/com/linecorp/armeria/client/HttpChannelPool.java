@@ -689,9 +689,9 @@ final class HttpChannelPool implements AsyncCloseable {
                     if (session.incrementNumUnfinishedResponses()) {
                         result = 1;
                     } else if (usePendingAcquisition(actualProtocol, key, childPromise, timingsBuilder)) {
-                        result = 2;
-                    } else {
                         result = 3;
+                    } else {
+                        result = 2;
                     }
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
