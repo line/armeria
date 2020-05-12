@@ -37,9 +37,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.client.ClientHttp1ObjectEncoder;
-import com.linecorp.armeria.internal.client.ClientHttp2ObjectEncoder;
-import com.linecorp.armeria.internal.client.ClientHttpObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -73,6 +70,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
     private final boolean useHttp1Pipelining;
+    private final long idleTimeoutMillis;
+    private final long pingIntervalMillis;
 
     /**
      * Whether the current channel is active or not.
@@ -109,13 +108,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       boolean useHttp1Pipelining) {
+                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
         this.useHttp1Pipelining = useHttp1Pipelining;
+        this.idleTimeoutMillis = idleTimeoutMillis;
+        this.pingIntervalMillis = pingIntervalMillis;
     }
 
     @Override
@@ -130,14 +131,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public int unfinishedResponses() {
+    public boolean hasUnfinishedResponses() {
         assert responseDecoder != null;
-        return responseDecoder.unfinishedResponses();
+        return responseDecoder.hasUnfinishedResponses();
     }
 
     @Override
-    public int maxUnfinishedResponses() {
-        return maxUnfinishedResponses;
+    public boolean incrementNumUnfinishedResponses() {
+        assert responseDecoder != null;
+        return responseDecoder.reserveUnfinishedResponse(maxUnfinishedResponses);
     }
 
     @Override
@@ -283,12 +285,24 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
-                responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
+                final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
+                final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
+                if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
+                    final Http1ClientKeepAliveHandler keepAliveHandler =
+                            new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
+                                                            idleTimeoutMillis, pingIntervalMillis);
+                    requestEncoder.setKeepAliveHandler(keepAliveHandler);
+                    responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
+                }
+                this.requestEncoder = requestEncoder;
+                this.responseDecoder = responseDecoder;
             } else if (protocol == H2 || protocol == H2C) {
                 final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-                requestEncoder = new ClientHttp2ObjectEncoder(ctx, handler.encoder(), protocol);
-                responseDecoder = ctx.pipeline().get(Http2ClientConnectionHandler.class).responseDecoder();
+                final Http2ClientConnectionHandler clientHandler =
+                        ctx.pipeline().get(Http2ClientConnectionHandler.class);
+                requestEncoder = new ClientHttp2ObjectEncoder(ctx, handler.encoder(),
+                                                              protocol, clientHandler.keepAliveHandler());
+                responseDecoder = clientHandler.responseDecoder();
             } else {
                 throw new Error(); // Should never reach here.
             }

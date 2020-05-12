@@ -41,6 +41,7 @@ includeWithFlags ':bucket4j',                           'java', 'publish', 'relo
 includeWithFlags ':javadoc',                            'java', 'publish', 'no_aggregation'
 
 // Unpublished Java projects
+includeWithFlags ':annotation-processor',     'java'
 includeWithFlags ':benchmarks',               'java'
 includeWithFlags ':it:context-storage',       'java'
 includeWithFlags ':it:server',                'java', 'relocate'

@@ -93,6 +93,14 @@ class ServerBuilderTest {
         clientFactory.close();
     }
 
+    private static Server newServerWithKeepAlive(long idleTimeoutMillis, long pingIntervalMillis) {
+        return Server.builder()
+                     .service("/", (ctx, req) -> HttpResponse.of(200))
+                     .idleTimeoutMillis(idleTimeoutMillis)
+                     .pingIntervalMillis(pingIntervalMillis)
+                     .build();
+    }
+
     @Test
     void acceptDuplicatePort() throws Exception {
         final Server server = Server.builder()
@@ -504,5 +512,41 @@ class ServerBuilderTest {
               .build();
         Schedulers.enableMetrics();
         Schedulers.decorateExecutorService(Schedulers.single(), Executors.newSingleThreadScheduledExecutor());
+    }
+
+    @Test
+    void positivePingIntervalShouldBeGreaterThan10seconds() {
+        final ServerConfig config1 = newServerWithKeepAlive(15000, 0).config();
+        assertThat(config1.idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(config1.pingIntervalMillis()).isEqualTo(0);
+
+        assertThatThrownBy(() -> newServerWithKeepAlive(10000, 5000))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("(expected: >= " + ServerBuilder.MIN_PING_INTERVAL_MILLIS + " or == 0)");
+
+        final ServerConfig config2 = newServerWithKeepAlive(15000, 20000).config();
+        assertThat(config2.idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(config2.pingIntervalMillis()).isEqualTo(0);
+
+        final ServerConfig config3 = newServerWithKeepAlive(15000, 10000).config();
+        assertThat(config3.idleTimeoutMillis()).isEqualTo(15000);
+        assertThat(config3.pingIntervalMillis()).isEqualTo(10000);
+
+        final ServerConfig config4 = newServerWithKeepAlive(20000, 15000).config();
+        assertThat(config4.idleTimeoutMillis()).isEqualTo(20000);
+        assertThat(config4.pingIntervalMillis()).isEqualTo(15000);
+    }
+
+    @CsvSource({
+            "0,     10000, 10000",
+            "15000, 20000, 0",
+            "20000, 15000, 15000",
+    })
+    @ParameterizedTest
+    void pingIntervalShouldBeLessThanIdleTimeout(long idleTimeoutMillis, long pingIntervalMillis,
+                                                 long expectedPingIntervalMillis) {
+        final ServerConfig config = newServerWithKeepAlive(idleTimeoutMillis, pingIntervalMillis).config();
+        assertThat(config.idleTimeoutMillis()).isEqualTo(idleTimeoutMillis);
+        assertThat(config.pingIntervalMillis()).isEqualTo(expectedPingIntervalMillis);
     }
 }

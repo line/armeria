@@ -38,6 +38,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
@@ -77,6 +78,14 @@ import io.netty.resolver.dns.DnsNameResolverBuilder;
  * }</pre>
  */
 public final class ClientFactoryBuilder {
+
+    private static final ClientFactoryOptionValue<Long> ZERO_PING_INTERVAL =
+            ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(0L);
+
+    @VisibleForTesting
+    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    private static final ClientFactoryOptionValue<Long> MIN_PING_INTERVAL =
+            ClientFactoryOption.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
 
     static {
         RequestContextUtil.init();
@@ -419,36 +428,47 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     * Sets the PING interval in milliseconds.
+     * When neither read nor write was performed for the given {@code pingIntervalMillis},
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1.
      *
-     * @param http2PingTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@code 0} means the client will not send a PING.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
-    public ClientFactoryBuilder http2PingTimeoutMillis(long http2PingTimeoutMillis) {
-        checkArgument(http2PingTimeoutMillis >= 0,
-                      "http2PingTimeoutMillis: %s (expected: >= 0)", http2PingTimeoutMillis);
-        option(ClientFactoryOption.HTTP2_PING_TIMEOUT_MILLIS, http2PingTimeoutMillis);
+    public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
+        checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
+                      "pingIntervalMillis: %s (expected: >= %s or == 0)", pingIntervalMillis,
+                      MIN_PING_INTERVAL_MILLIS);
+        option(ClientFactoryOption.PING_INTERVAL_MILLIS, pingIntervalMillis);
         return this;
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     * Sets the PING interval.
+     * When neither read nor write was performed for the given {@code pingInterval},
+     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
+     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * is sent for HTTP/1.
      *
-     * @param http2PingTimeout the timeout. {@code 0} disables the timeout.
+     * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
+     * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
+     *
+     * <p>The minimum allowed PING interval is {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@code 0} means the client will not send a PING.
+     *
+     * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than
+     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
-    public ClientFactoryBuilder http2PingTimeout(Duration http2PingTimeout) {
-        requireNonNull(http2PingTimeout, "http2PingTimeout");
-        checkArgument(http2PingTimeout.toMillis() >= 0,
-                      "http2PingTimeoutMillis: %s (expected: >= 0)", http2PingTimeout.toMillis());
-        http2PingTimeoutMillis(http2PingTimeout.toMillis());
-        return this;
-    }
-
-    /**
-     * Sets whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
-     * when there are no active streams open.
-     */
-    public ClientFactoryBuilder useHttp2PingWhenNoActiveStreams(boolean useHttp2PingWhenNoActiveStreams) {
-        option(ClientFactoryOption.USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS, useHttp2PingWhenNoActiveStreams);
+    public ClientFactoryBuilder pingInterval(Duration pingInterval) {
+        pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
         return this;
     }
 
@@ -558,7 +578,22 @@ public final class ClientFactoryBuilder {
             return ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
 
-        return ClientFactoryOptions.of(options.values());
+        final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
+        final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
+        final long pingIntervalMillis = newOptions.pingIntervalMillis();
+        if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
+            final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
+            if (clampedPingIntervalMillis >= idleTimeoutMillis) {
+                return ClientFactoryOptions.of(newOptions, ZERO_PING_INTERVAL);
+            }
+            if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                return newOptions;
+            }
+            if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                return ClientFactoryOptions.of(newOptions, MIN_PING_INTERVAL);
+            }
+        }
+        return newOptions;
     }
 
     /**

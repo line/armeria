@@ -29,6 +29,9 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -225,5 +228,20 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     public ClientBuilder setHttpHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         return (ClientBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ClientBuilder auth(BasicToken token) {
+        return (ClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientBuilder auth(OAuth1aToken token) {
+        return (ClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientBuilder auth(OAuth2Token token) {
+        return (ClientBuilder) super.auth(token);
     }
 }

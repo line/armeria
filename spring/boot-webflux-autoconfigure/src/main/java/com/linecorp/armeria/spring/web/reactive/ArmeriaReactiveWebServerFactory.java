@@ -203,7 +203,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        return new ArmeriaWebServer(server, protocol, address, port);
+        return new ArmeriaWebServer(server, protocol, address, port, beanFactory);
     }
 
     private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,

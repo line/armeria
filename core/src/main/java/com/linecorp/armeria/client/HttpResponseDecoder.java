@@ -50,6 +50,7 @@ abstract class HttpResponseDecoder {
     private final IntObjectMap<HttpResponseWrapper> responses = new IntObjectHashMap<>();
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
+    private int unfinishedResponses;
     private boolean disconnectWhenFinished;
 
     HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
@@ -91,15 +92,24 @@ abstract class HttpResponseDecoder {
 
     @Nullable
     final HttpResponseWrapper removeResponse(int id) {
-        return responses.remove(id);
-    }
-
-    final int unfinishedResponses() {
-        return responses.size();
+        final HttpResponseWrapper removed = responses.remove(id);
+        if (removed != null) {
+            unfinishedResponses--;
+        }
+        return removed;
     }
 
     final boolean hasUnfinishedResponses() {
-        return !responses.isEmpty();
+        return unfinishedResponses != 0;
+    }
+
+    final boolean reserveUnfinishedResponse(int maxUnfinishedResponses) {
+        if (unfinishedResponses >= maxUnfinishedResponses) {
+            return false;
+        }
+
+        unfinishedResponses++;
+        return true;
     }
 
     final void failUnfinishedResponses(Throwable cause) {
@@ -108,6 +118,7 @@ abstract class HttpResponseDecoder {
                 res.close(cause);
             }
         } finally {
+            unfinishedResponses -= responses.size();
             responses.clear();
         }
     }

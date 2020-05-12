@@ -32,6 +32,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * A skeletal builder implementation for {@link ClientOptions}.
@@ -291,6 +294,37 @@ public class AbstractClientOptionsBuilder {
             Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
         this.httpHeaders.setObject(httpHeaders);
+        return this;
+    }
+
+    /**
+     * Sets the
+     * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>
+     * header using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractClientOptionsBuilder auth(BasicToken token) {
+        requireNonNull(token, "token");
+        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        return this;
+    }
+
+    /**
+     * Sets the <a href="https://oauth.net/core/1.0a/">OAuth Core 1.0 Revision A</a> header
+     * using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
+        requireNonNull(token, "token");
+        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        return this;
+    }
+
+    /**
+     * Sets the <a href="https://www.oauth.com/">OAuth 2.0</a> header using
+     * {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractClientOptionsBuilder auth(OAuth2Token token) {
+        requireNonNull(token, "token");
+        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
         return this;
     }
 

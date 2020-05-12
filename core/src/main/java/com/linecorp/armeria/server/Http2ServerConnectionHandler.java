@@ -20,14 +20,13 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
-import com.linecorp.armeria.internal.common.IdleTimeoutHandler;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.timeout.IdleStateEvent;
 
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
 
@@ -35,7 +34,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final Http2RequestDecoder requestDecoder;
 
     @Nullable
-    private final Http2KeepAliveHandler keepAlive;
+    private final Http2KeepAliveHandler keepAliveHandler;
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
@@ -44,11 +43,15 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
-        keepAlive = config.http2PingTimeoutMillis() > 0 ?
-                    new Http2KeepAliveHandler(channel, encoder().frameWriter(), connection(),
-                                              config.http2PingTimeoutMillis(),
-                                              config.useHttpPingWhenNoActiveStreams()) : null;
-        requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAlive);
+        if (config.idleTimeoutMillis() > 0 || config.pingIntervalMillis() > 0) {
+            keepAliveHandler = new Http2ServerKeepAliveHandler(channel, encoder().frameWriter(),
+                                                               config.idleTimeoutMillis(),
+                                                               config.pingIntervalMillis());
+        } else {
+            keepAliveHandler = null;
+        }
+
+        requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
 
@@ -64,45 +67,55 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return gracefulShutdownSupport.isShuttingDown() || requestDecoder.goAwayHandler().receivedErrorGoAway();
+        return gracefulShutdownSupport.isShuttingDown() ||
+               requestDecoder.goAwayHandler().receivedErrorGoAway() ||
+               keepAliveHandler.isClosing();
     }
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        if (keepAlive != null) {
-            keepAlive.onChannelInactive();
-        }
+        destroyKeepAliveHandler();
         super.channelInactive(ctx);
     }
 
     @Override
-    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
-        if (evt instanceof IdleStateEvent) {
-            if (keepAlive != null) {
-                keepAlive.onChannelIdle(ctx, (IdleStateEvent) evt);
-            }
-            return;
-        }
-        super.userEventTriggered(ctx, evt);
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
+        super.channelActive(ctx);
+    }
+
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
+        super.channelRegistered(ctx);
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        maybeInitializeKeepAliveHandler(ctx);
         super.handlerAdded(ctx);
-        changeIdleStateHandlerToHttp2(ctx);
     }
 
-    /**
-     * When a client upgrades the connection from HTTP/1.1 to HTTP/2, then change the
-     * {@link IdleTimeoutHandler#setHttp2(boolean)} to true so we can send PING's.
-     */
-    private static void changeIdleStateHandlerToHttp2(ChannelHandlerContext ctx) {
-        final IdleTimeoutHandler idleTimeoutHandler = ctx.pipeline().get(
-                IdleTimeoutHandler.class);
-        if (idleTimeoutHandler == null) {
-            // Means that config.idleTimeoutMillis() < 0; So ignore.
-            return;
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        destroyKeepAliveHandler();
+        super.handlerRemoved0(ctx);
+    }
+
+    private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
+        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+            keepAliveHandler.initialize(ctx);
         }
-        idleTimeoutHandler.setHttp2(true);
+    }
+
+    private void destroyKeepAliveHandler() {
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
+    }
+
+    @Nullable
+    KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
     }
 }

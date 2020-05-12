@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.server.WebServerException;
 
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.spring.ArmeriaBeanPostProcessor;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 
 /**
@@ -45,6 +47,7 @@ public final class ArmeriaWebServer implements WebServer {
     @Nullable
     private final InetAddress address;
     private int port;
+    private final ConfigurableListableBeanFactory beanFactory;
 
     private boolean isRunning;
 
@@ -55,11 +58,15 @@ public final class ArmeriaWebServer implements WebServer {
      * @param protocol the session protocol which is used for the primary port
      * @param address the primary local address that the server will be bound to
      * @param port the primary local port that the server will be bound to
+     * @param beanFactory the bean factory that adding {@link ArmeriaBeanPostProcessor} to
+     *                    the application context.
      */
-    public ArmeriaWebServer(Server server, SessionProtocol protocol, @Nullable InetAddress address, int port) {
+    public ArmeriaWebServer(Server server, SessionProtocol protocol, @Nullable InetAddress address, int port,
+                            ConfigurableListableBeanFactory beanFactory) {
         this.server = requireNonNull(server, "server");
         this.protocol = requireNonNull(protocol, "protocol");
         this.address = address;
+        this.beanFactory = requireNonNull(beanFactory, "beanFactory");
         checkArgument(port >= 0 && port <= 65535, "port: %s (expected: 0...65535)", port);
         this.port = port;
     }
@@ -82,6 +89,9 @@ public final class ArmeriaWebServer implements WebServer {
                     assert port.isPresent() : "the primary port doest not exist.";
                     this.port = port.get().localAddress().getPort();
                 }
+                beanFactory.registerSingleton("server", server);
+                final ArmeriaBeanPostProcessor beanPostProcessor = new ArmeriaBeanPostProcessor(beanFactory);
+                beanFactory.addBeanPostProcessor(beanPostProcessor);
                 isRunning = true;
             }
         } catch (Exception cause) {
