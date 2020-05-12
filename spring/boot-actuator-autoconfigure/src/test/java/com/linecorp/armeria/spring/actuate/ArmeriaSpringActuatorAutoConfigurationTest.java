@@ -32,7 +32,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -60,7 +59,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
-import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
 import io.prometheus.client.exporter.common.TextFormat;
@@ -303,23 +301,20 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
         @SpringBootApplication
         class TestConfiguration {}
 
-        @Autowired
-        ArmeriaSettings settings;
-
         @ParameterizedTest
         @CsvSource({
                 "8080, /actuator, 404",
-                "8081, /actuator, 200",
-                "8082, /actuator, 404",
+                "8081, /actuator, 404",
+                "8082, /actuator, 200",
                 "8080, /actuator/health, 404",
-                "8081, /actuator/health, 200",
-                "8082, /actuator/health, 404",
+                "8081, /actuator/health, 404",
+                "8082, /actuator/health, 200",
                 "8080, /actuator/loggers/" + TEST_LOGGER_NAME + ", 404",
-                "8081, /actuator/loggers/" + TEST_LOGGER_NAME + ", 200",
-                "8082, /actuator/loggers/" + TEST_LOGGER_NAME + ", 404",
+                "8081, /actuator/loggers/" + TEST_LOGGER_NAME + ", 404",
+                "8082, /actuator/loggers/" + TEST_LOGGER_NAME + ", 200",
                 "8080, /actuator/prometheus, 404",
-                "8081, /actuator/prometheus, 200",
-                "8082, /actuator/prometheus, 404",
+                "8081, /actuator/prometheus, 404",
+                "8082, /actuator/prometheus, 200",
         })
         void normal(Integer port, String path, Integer statusCode) throws Exception {
             assertStatus(port, path, statusCode);

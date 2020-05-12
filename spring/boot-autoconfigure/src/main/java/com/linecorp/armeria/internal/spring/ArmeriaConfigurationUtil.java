@@ -44,9 +44,7 @@ import javax.net.ssl.TrustManagerFactory;
 import org.apache.thrift.TBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ResourceUtils;
-import org.springframework.util.StringUtils;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
@@ -58,7 +56,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.server.DecoratingServiceBindingBuilder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -164,32 +161,6 @@ public final class ArmeriaConfigurationUtil {
                                                       compression.getExcludedUserAgents(),
                                                       minBytesToForceChunkedAndEncoding));
         }
-
-        final ArmeriaSettings.Security security = settings.getSecurity();
-        if (security != null && security.isEnabled() && !CollectionUtils.isEmpty(security.getPorts())) {
-            configureSecureInternalService(server, security.getPorts(),
-                                           Arrays.asList(settings.getHealthCheckPath(),
-                                                         settings.getMetricsPath(),
-                                                         settings.getDocsPath()));
-        }
-    }
-
-    private static void configureSecureInternalService(ServerBuilder server, List<Integer> ports,
-                                                       Iterable<String> paths) {
-        requireNonNull(server, "server");
-        requireNonNull(ports, "ports");
-        requireNonNull(paths, "paths");
-
-        final DecoratingServiceBindingBuilder secureDecoratingBuilder = server.routeDecorator();
-
-        for (String path : paths) {
-            if (!StringUtils.isEmpty(path)) {
-                secureDecoratingBuilder.path(path);
-            }
-        }
-
-        secureDecoratingBuilder
-                .build(InternalSecurityService.newDecorator(ports));
     }
 
     private static boolean hasAllClasses(String... classNames) {

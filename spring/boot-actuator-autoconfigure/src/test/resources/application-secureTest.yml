@@ -4,7 +4,6 @@ armeria:
     - port: 8081
   security:
     enabled: true
-    ports: 8080
 
 management:
   server:

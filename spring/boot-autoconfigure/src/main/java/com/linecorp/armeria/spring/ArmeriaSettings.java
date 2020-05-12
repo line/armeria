@@ -270,18 +270,10 @@ public class ArmeriaSettings {
      * Configurations for the internal service security.
      */
     public static class Security {
-
         /**
          * Specifies whether the internal service security is enabled.
          */
         private boolean enabled;
-
-        /**
-         * Ports that applied to be security.
-         * If not set, check `management.server.port` and use it as the default if it is not null.
-         */
-        @Nullable
-        private List<Integer> ports;
 
         /**
          * Returns {@code true} if the internal service security is enabled.
@@ -295,21 +287,6 @@ public class ArmeriaSettings {
          */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
-        }
-
-        /**
-         * Returns the ports to be applied security.
-         */
-        @Nullable
-        public List<Integer> getPorts() {
-            return ports;
-        }
-
-        /**
-         * Sets the ports to be applied security.
-         */
-        public void setPorts(List<Integer> ports) {
-            this.ports = ports;
         }
     }
 
