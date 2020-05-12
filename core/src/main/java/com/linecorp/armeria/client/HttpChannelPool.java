@@ -329,7 +329,7 @@ final class HttpChannelPool implements AsyncCloseable {
         }
 
         timingsBuilder.pendingAcquisitionStart();
-        pendingAcquisition.addChild(desiredProtocol, key, promise, timingsBuilder);
+        pendingAcquisition.piggyback(desiredProtocol, key, promise, timingsBuilder);
         return true;
     }
 
@@ -670,31 +670,57 @@ final class HttpChannelPool implements AsyncCloseable {
      */
     private final class ChannelAcquisitionFuture extends CompletableFuture<PooledChannel> {
 
+        /**
+         * A {@code Consumer<PooledChannel>} if only 1 handler.
+         * A {@code List<Consumer<PooledChannel>>} if there are 2+ handlers.
+         */
         @Nullable
-        private List<Consumer<PooledChannel>> notifications;
+        private Object pendingPiggybackHandlers;
 
-        void addChild(SessionProtocol desiredProtocol, PoolKey key,
-                      ChannelAcquisitionFuture childPromise,
-                      ClientConnectionTimingsBuilder timingsBuilder) {
+        void piggyback(SessionProtocol desiredProtocol, PoolKey key,
+                       ChannelAcquisitionFuture childPromise,
+                       ClientConnectionTimingsBuilder timingsBuilder) {
 
             // Add to the notification list if not complete yet.
             if (!isDone()) {
-                if (notifications == null) {
-                    notifications = new ArrayList<>();
+                final Consumer<PooledChannel> handler =
+                        pch -> handlePiggyback(desiredProtocol, key, childPromise, timingsBuilder, pch);
+
+                if (pendingPiggybackHandlers == null) {
+                    // The 1st handler
+                    pendingPiggybackHandlers = handler;
+                    return;
                 }
-                notifications.add(pch -> notifyChild(desiredProtocol, key, childPromise, timingsBuilder, pch));
+
+                if (!(pendingPiggybackHandlers instanceof List)) {
+                    // The 2nd handler
+                    @SuppressWarnings("unchecked")
+                    final Consumer<PooledChannel> firstHandler =
+                            (Consumer<PooledChannel>) pendingPiggybackHandlers;
+                    final List<Consumer<PooledChannel>> list = new ArrayList<>();
+                    list.add(firstHandler);
+                    list.add(handler);
+                    pendingPiggybackHandlers = list;
+                    return;
+                }
+
+                // The 3rd or later handler
+                @SuppressWarnings("unchecked")
+                final List<Consumer<PooledChannel>> list =
+                        (List<Consumer<PooledChannel>>) pendingPiggybackHandlers;
+                list.add(handler);
                 return;
             }
 
             // Invoke the notification task immediately if complete already.
-            notifyChild(desiredProtocol, key, childPromise, timingsBuilder,
-                        isCompletedExceptionally() ? null : getNow(null));
+            handlePiggyback(desiredProtocol, key, childPromise, timingsBuilder,
+                            isCompletedExceptionally() ? null : getNow(null));
         }
 
-        private void notifyChild(SessionProtocol desiredProtocol, PoolKey key,
-                                 ChannelAcquisitionFuture childPromise,
-                                 ClientConnectionTimingsBuilder timingsBuilder,
-                                 @Nullable PooledChannel pch) {
+        private void handlePiggyback(SessionProtocol desiredProtocol, PoolKey key,
+                                     ChannelAcquisitionFuture childPromise,
+                                     ClientConnectionTimingsBuilder timingsBuilder,
+                                     @Nullable PooledChannel pch) {
 
             final PiggybackedChannelAcquisitionResult result;
             if (pch != null) {
@@ -747,13 +773,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 return false;
             }
 
-            final List<Consumer<PooledChannel>> notifications = this.notifications;
-            if (notifications != null) {
-                this.notifications = null;
-                for (Consumer<PooledChannel> handler : notifications) {
-                    handler.accept(value);
-                }
-            }
+            handlePendingPiggybacks(value);
             return true;
         }
 
@@ -763,14 +783,34 @@ final class HttpChannelPool implements AsyncCloseable {
                 return false;
             }
 
-            final List<Consumer<PooledChannel>> notifications = this.notifications;
-            if (notifications != null) {
-                this.notifications = null;
-                for (Consumer<PooledChannel> handler : notifications) {
-                    handler.accept(null);
-                }
-            }
+            handlePendingPiggybacks(null);
             return true;
+        }
+
+        private void handlePendingPiggybacks(@Nullable PooledChannel value) {
+            final Object pendingPiggybackHandlers = this.pendingPiggybackHandlers;
+            if (pendingPiggybackHandlers == null) {
+                return;
+            }
+
+            this.pendingPiggybackHandlers = null;
+
+            if (!(pendingPiggybackHandlers instanceof List)) {
+                // 1 handler
+                @SuppressWarnings("unchecked")
+                final Consumer<PooledChannel> handler =
+                        (Consumer<PooledChannel>) pendingPiggybackHandlers;
+                handler.accept(value);
+                return;
+            }
+
+            // 2+ handlers
+            @SuppressWarnings("unchecked")
+            final List<Consumer<PooledChannel>> list =
+                    (List<Consumer<PooledChannel>>) pendingPiggybackHandlers;
+            for (Consumer<PooledChannel> handler : list) {
+                handler.accept(value);
+            }
         }
     }
 }
