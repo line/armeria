@@ -13,21 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Copyright 2012 Netflix, Inc.
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
 package com.linecorp.armeria.internal.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -40,13 +25,13 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * An instance information.
@@ -110,7 +95,7 @@ public final class InstanceInfo {
                         @Nullable @JsonProperty("secureHealthCheckUrl") String secureHealthCheckUrl,
                         @JsonProperty("dataCenterInfo") DataCenterInfo dataCenterInfo,
                         @JsonProperty("leaseInfo") LeaseInfo leaseInfo,
-                        @JsonProperty("metadata") Map<String, String> metadata) {
+                        @Nullable @JsonProperty("metadata") Map<String, String> metadata) {
         this.instanceId = requireNonNull(instanceId, "instanceId");
         this.hostName = hostName;
         this.appName = appName;
@@ -127,14 +112,18 @@ public final class InstanceInfo {
         this.secureHealthCheckUrl = secureHealthCheckUrl;
         this.dataCenterInfo = dataCenterInfo;
         this.leaseInfo = requireNonNull(leaseInfo, "leaseInfo");
-        this.metadata = requireNonNull(metadata, "metadata");
+        if (metadata != null) {
+            this.metadata = metadata;
+        } else {
+            this.metadata = ImmutableMap.of();
+        }
 
         lastUpdatedTimestamp = System.currentTimeMillis();
         lastDirtyTimestamp = lastUpdatedTimestamp;
     }
 
     /**
-     * Returns the instance ID of this instance.
+     * Returns the ID of this instance.
      */
     public String getInstanceId() {
         return instanceId;
@@ -174,7 +163,7 @@ public final class InstanceInfo {
     }
 
     /**
-     * Returns the VIP address of this instance. The {@link #getHostName()} is set if not specified.
+     * Returns the VIP address of this instance.
      */
     @Nullable
     public String getVipAddress() {
@@ -182,7 +171,7 @@ public final class InstanceInfo {
     }
 
     /**
-     * Returns the secure VIP address of this instance. The {@link #getHostName()} is set if not specified.
+     * Returns the secure VIP address of this instance.
      */
     @Nullable
     public String getSecureVipAddress() {
@@ -373,7 +362,6 @@ public final class InstanceInfo {
         private final boolean enabled;
         private final int port;
 
-        @JsonCreator
         public PortWrapper(@JsonProperty("@enabled") boolean enabled, @JsonProperty("$") int port) {
             this.enabled = enabled;
             this.port = port;

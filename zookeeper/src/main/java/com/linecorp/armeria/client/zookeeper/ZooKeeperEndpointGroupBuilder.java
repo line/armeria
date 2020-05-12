@@ -64,7 +64,7 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
     }
 
     /**
-     * Returns a new {@link ZooKeeperEndpointGroup} created with the properties set so far.
+     * Returns a newly-created {@link ZooKeeperEndpointGroup} based on the properties set so far.
      */
     public ZooKeeperEndpointGroup build() {
         final CuratorFramework client = buildCuratorFramework();

@@ -39,7 +39,7 @@ import io.netty.util.NetUtil;
 public final class InstanceInfoBuilder {
 
     /**
-     * The {@link PortWrapper} which represent that the port is disabled.
+     * The {@link PortWrapper} which represents the port which is disabled.
      */
     public static final PortWrapper disabledPort = new PortWrapper(false, 0);
 

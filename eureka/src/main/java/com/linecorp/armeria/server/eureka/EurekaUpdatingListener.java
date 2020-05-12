@@ -85,7 +85,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
     @Nullable
     private volatile String appName; // Set when serverStarted is called.
-    private boolean closed;
+    private volatile boolean closed;
 
     /**
      * Creates a new instance.

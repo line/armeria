@@ -144,7 +144,10 @@ public final class EurekaEndpointGroupBuilder {
     }
 
     /**
-     * Sets the interval between fetching registry requests.
+     * Sets the interval between fetching registry requests. {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS}
+     * is used by default and it's not recommended to modify this value. See
+     * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#fetch-registry">
+     * fetch-registry</a>.
      */
     public EurekaEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
         requireNonNull(registryFetchInterval, "registryFetchInterval");
@@ -155,6 +158,10 @@ public final class EurekaEndpointGroupBuilder {
 
     /**
      * Sets the interval between fetching registry requests in seconds.
+     * {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS} is used by default and it's not recommended to modify
+     * this value. See
+     * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#fetch-registry">
+     * fetch-registry</a>.
      */
     public EurekaEndpointGroupBuilder registryFetchIntervalSeconds(long registryFetchIntervalSeconds) {
         checkArgument(registryFetchIntervalSeconds > 0, "registryFetchIntervalSeconds: %s (expected: > 0)",
@@ -173,7 +180,7 @@ public final class EurekaEndpointGroupBuilder {
     }
 
     /**
-     * Returns a new {@link EurekaEndpointGroup} created with the properties set so far.
+     * Returns a newly-created {@link EurekaEndpointGroup} based on the properties set so far.
      */
     public EurekaEndpointGroup build() {
         return new EurekaEndpointGroup(eurekaUri, registryFetchIntervalSeconds, appName, instanceId, vipAddress,

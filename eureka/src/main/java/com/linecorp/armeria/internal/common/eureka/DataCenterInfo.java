@@ -16,13 +16,17 @@
 package com.linecorp.armeria.internal.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+
+import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.eureka.DataCenterName;
 
@@ -41,9 +45,13 @@ public final class DataCenterInfo {
      * Creates a new instance.
      */
     public DataCenterInfo(@JsonProperty("name") DataCenterName name,
-                          @JsonProperty("metadata") Map<String, String> metadata) {
-        this.name = name;
-        this.metadata = metadata;
+                          @Nullable @JsonProperty("metadata") Map<String, String> metadata) {
+        this.name = requireNonNull(name, "name");
+        if (metadata != null) {
+            this.metadata = metadata;
+        } else {
+            this.metadata = ImmutableMap.of();
+        }
     }
 
     public DataCenterName getName() {

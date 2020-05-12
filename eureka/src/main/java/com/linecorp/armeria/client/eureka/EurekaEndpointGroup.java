@@ -52,7 +52,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -84,9 +84,9 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private static final Predicate<InstanceInfo> allInstances = instanceInfo -> true;
 
     private static final String APPS = "/apps";
-    private static final String VIPS = "/vips";
-    private static final String SVIPS = "/svips";
-    private static final String INSTANCES = "/instances";
+    private static final String VIPS = "/vips/";
+    private static final String SVIPS = "/svips/";
+    private static final String INSTANCES = "/instances/";
 
     /**
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
@@ -135,7 +135,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();
         headersBuilder.method(HttpMethod.GET);
-        headersBuilder.addObject(HttpHeaderNames.ACCEPT, MediaType.JSON_UTF_8);
+        headersBuilder.add(HttpHeaderNames.ACCEPT, MediaTypeNames.JSON_UTF_8);
         responseConverter = responseConverter(headersBuilder, appName, instanceId,
                                               vipAddress, secureVipAddress, regions);
         requestHeaders = headersBuilder.build();
@@ -169,9 +169,9 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 } else {
                     final HttpStatus status = aggregatedRes.status();
                     if (!status.isSuccess()) {
-                        logger.warn("Unexpected response from: {}. status: {}, content: {}. " +
-                                    "(requestHeaders: {})", webClient.uri(), status,
-                                    aggregatedRes.contentUtf8(), requestHeaders, cause);
+                        logger.warn("Unexpected response from: {}. (status: {}, content: {}, " +
+                                    "requestHeaders: {})", webClient.uri(), status,
+                                    aggregatedRes.contentUtf8(), requestHeaders);
                     } else {
                         final HttpData content = aggregatedRes.content();
                         try {
@@ -179,8 +179,9 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                             setEndpoints(endpoints);
                         } catch (Exception e) {
                             logger.warn("Unexpected exception while parsing response from: {}. " +
-                                        "(responseConverter: {}, requestHeaders: {})",
-                                        webClient.uri(), responseConverter, requestHeaders, e);
+                                        "(content: {}, responseConverter: {}, requestHeaders: {})",
+                                        webClient.uri(), content.toStringUtf8(),
+                                        responseConverter, requestHeaders, e);
                         }
                     }
                 }
@@ -211,11 +212,11 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
             final String path;
             boolean secureVip = false;
             if (vipAddress != null) {
-                path = VIPS + '/' + vipAddress;
+                path = VIPS + vipAddress;
                 filter = instanceInfo -> vipAddress.equals(instanceInfo.getVipAddress());
             } else if (secureVipAddress != null) {
                 secureVip = true;
-                path = SVIPS + '/' + secureVipAddress;
+                path = SVIPS + secureVipAddress;
                 filter = instanceInfo -> secureVipAddress.equals(instanceInfo.getSecureVipAddress());
             } else {
                 // If regions is specified, we fetch all registry information and filter what we need because
@@ -240,12 +241,12 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         }
 
         if (vipAddress != null) {
-            builder.path(VIPS + '/' + vipAddress);
+            builder.path(VIPS + vipAddress);
             return new ApplicationsConverter();
         }
 
         if (secureVipAddress != null) {
-            builder.path(SVIPS + '/' + secureVipAddress);
+            builder.path(SVIPS + secureVipAddress);
             return new ApplicationsConverter(allInstances, true);
         }
 
@@ -263,7 +264,9 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
             builder.path(APPS + '/' + appName);
             return new ApplicationConverter();
         }
-        builder.path(INSTANCES + '/' + instanceId);
+
+        // instanceId is not null at this point.
+        builder.path(INSTANCES + instanceId);
         return new InstanceInfoConverter();
     }
 

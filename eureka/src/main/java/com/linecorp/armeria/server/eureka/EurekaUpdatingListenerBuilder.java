@@ -23,8 +23,12 @@ import java.util.Map;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.eureka.DataCenterName;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfoBuilder;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 
 /**
  * Builds a {@link EurekaUpdatingListener}, which registers the server to Eureka.
@@ -79,7 +83,7 @@ public final class EurekaUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the hostname.
+     * Sets the hostname. {@link Server#defaultHostname()} is set if not specified.
      */
     public EurekaUpdatingListenerBuilder hostname(String hostname) {
         instanceInfoBuilder.hostname(hostname);
@@ -87,7 +91,7 @@ public final class EurekaUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the name of the application.
+     * Sets the name of the application. {@link #hostname(String)} is set if not specified.
      */
     public EurekaUpdatingListenerBuilder appName(String appName) {
         instanceInfoBuilder.appName(appName);
@@ -103,7 +107,7 @@ public final class EurekaUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the IP address.
+     * Sets the IP address. {@link SystemInfo#defaultNonLoopbackIpV4Address()} is set if not specified.
      */
     public EurekaUpdatingListenerBuilder ipAddr(String ipAddr) {
         instanceInfoBuilder.ipAddr(ipAddr);
@@ -127,7 +131,7 @@ public final class EurekaUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the VIP address.
+     * Sets the VIP address. {@link #hostname(String)} is set if not specified.
      */
     public EurekaUpdatingListenerBuilder vipAddress(String vipAddress) {
         instanceInfoBuilder.vipAddress(vipAddress);
@@ -135,7 +139,7 @@ public final class EurekaUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the secure VIP address.
+     * Sets the secure VIP address. {@link #hostname(String)} is set if not specified.
      */
     public EurekaUpdatingListenerBuilder secureVipAddress(String secureVipAddress) {
         instanceInfoBuilder.secureVipAddress(secureVipAddress);
@@ -159,7 +163,10 @@ public final class EurekaUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the health check URL.
+     * Sets the health check URL. If {@link HealthCheckService} is added to {@link ServerBuilder} and
+     * {@linkplain Server#activePort(SessionProtocol) Server.activePort(SessionProtocol.HTTP)} returns
+     * an active port, then this URL will be automatically create using the information of the
+     * {@link HealthCheckService}.
      */
     public EurekaUpdatingListenerBuilder healthCheckUrl(String healthCheckUrl) {
         instanceInfoBuilder.healthCheckUrl(healthCheckUrl);
@@ -167,7 +174,10 @@ public final class EurekaUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the secure health check URL.
+     * Sets the secure health check URL. If {@link HealthCheckService} is added to {@link ServerBuilder} and
+     * {@linkplain Server#activePort(SessionProtocol) Server.activePort(SessionProtocol.HTTPS)} returns
+     * an active port, then this URL will be automatically create using the information of the
+     * {@link HealthCheckService}.
      */
     public EurekaUpdatingListenerBuilder secureHealthCheckUrl(String secureHealthCheckUrl) {
         instanceInfoBuilder.secureHealthCheckUrl(secureHealthCheckUrl);

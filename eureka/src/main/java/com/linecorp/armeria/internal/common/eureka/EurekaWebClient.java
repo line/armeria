@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.common.eureka;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.util.StringJoiner;
 
@@ -43,6 +45,11 @@ import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
  */
 public final class EurekaWebClient {
 
+    private static final String APPS = "/apps/";
+    private static final String VIPS = "/vips/";
+    private static final String SVIPS = "/svips/";
+    private static final String INSTANCES = "/instances/";
+
     private final WebClient webClient;
     private final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.WRAP_ROOT_VALUE)
                                                           .setSerializationInclusion(Include.NON_NULL);
@@ -51,7 +58,7 @@ public final class EurekaWebClient {
      * Creates a new instance.
      */
     public EurekaWebClient(WebClient webClient) {
-        this.webClient = webClient;
+        this.webClient = requireNonNull(webClient, "webClient");
     }
 
     /**
@@ -65,7 +72,8 @@ public final class EurekaWebClient {
      * Registers the specified {@link InstanceInfo} to the Eureka registry.
      */
     public HttpResponse register(InstanceInfo info) {
-        final String path = "/apps/" + info.getAppName();
+        requireNonNull(info, "info");
+        final String path = APPS + info.getAppName();
         final RequestHeaders headers = RequestHeaders.builder(HttpMethod.POST, path)
                                                      .contentType(MediaType.JSON)
                                                      .build();
@@ -81,7 +89,10 @@ public final class EurekaWebClient {
      */
     public HttpResponse sendHeartBeat(String appName, String instanceId, InstanceInfo instanceInfo,
                                       @Nullable InstanceStatus overriddenStatus) {
-        final String path = "/apps/" + appName + '/' + instanceId;
+        requireNonNull(appName, "appName");
+        requireNonNull(instanceId, "instanceId");
+        requireNonNull(instanceInfo, "instanceInfo");
+        final String path = APPS + appName + '/' + instanceId;
         final QueryParamsBuilder queryBuilder =
                 QueryParams.builder()
                            .add("status", instanceInfo.getStatus().toString())
@@ -100,7 +111,9 @@ public final class EurekaWebClient {
      * Deregisters the specified {@code instanceId} in {@code appName} from the Eureka registry.
      */
     public HttpResponse cancel(String appName, String instanceId) {
-        final String path = "/apps/" + appName + '/' + instanceId;
+        requireNonNull(appName, "appName");
+        requireNonNull(instanceId, "instanceId");
+        final String path = APPS + appName + '/' + instanceId;
         return webClient.delete(path);
     }
 
@@ -108,7 +121,7 @@ public final class EurekaWebClient {
      * Retrieves the registry information whose regions are the specified {@code regions} from the Eureka.
      */
     public HttpResponse getApplications(Iterable<String> regions) {
-        return getApplications("/apps/", regions);
+        return getApplications(APPS, requireNonNull(regions, "regions"));
     }
 
     private HttpResponse getApplications(String path, Iterable<String> regions) {
@@ -133,7 +146,7 @@ public final class EurekaWebClient {
      * https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#fetch-registry.
      */
     public HttpResponse getDelta(Iterable<String> regions) {
-        return getApplications("/apps/delta", regions);
+        return getApplications(APPS + "delta", requireNonNull(regions, "regions"));
     }
 
     /**
@@ -141,7 +154,7 @@ public final class EurekaWebClient {
      * from the Eureka.
      */
     public HttpResponse getApplication(String appName) {
-        return sendGetRequest("/apps/" + appName);
+        return sendGetRequest(APPS + requireNonNull(appName, "appName"));
     }
 
     /**
@@ -149,15 +162,17 @@ public final class EurekaWebClient {
      * are the specified {@code regions} from the Eureka.
      */
     public HttpResponse getVip(String vipAddress, Iterable<String> regions) {
-        return getApplications("/vips/" + vipAddress, regions);
+        return getApplications(VIPS + requireNonNull(vipAddress, "vipAddress"),
+                               requireNonNull(regions, "regions"));
     }
 
     /**
-     * Retrieves the registry information whose sercure VIP address is the specified {@code secureVipAddress}
+     * Retrieves the registry information whose VIP address is the specified {@code secureVipAddress}
      * and regions are the specified {@code regions} from the Eureka.
      */
     public HttpResponse getSecureVip(String secureVipAddress, Iterable<String> regions) {
-        return getApplications("/svips/" + secureVipAddress, regions);
+        return getApplications(SVIPS + requireNonNull(secureVipAddress, "secureVipAddress"),
+                               requireNonNull(regions, "regions"));
     }
 
     /**
@@ -165,13 +180,14 @@ public final class EurekaWebClient {
      * and instance ID is the specified {@code instanceId} from the Eureka.
      */
     public HttpResponse getInstance(String appName, String instanceId) {
-        return sendGetRequest("/apps/" + appName + '/' + instanceId);
+        return sendGetRequest(APPS + requireNonNull(appName, "appName") + '/' +
+                              requireNonNull(instanceId, "instanceId"));
     }
 
     /**
      * Retrieves the registry information whose instance ID is the specified {@code instanceId} from the Eureka.
      */
     public HttpResponse getInstance(String instanceId) {
-        return sendGetRequest("/instances/" + instanceId);
+        return sendGetRequest(INSTANCES + requireNonNull(instanceId, "instanceId"));
     }
 }

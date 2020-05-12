@@ -52,7 +52,7 @@ final class DataCenterInfoSerializer extends StdSerializer<DataCenterInfo> {
                 gen.writeStringField(entry.getKey(), entry.getValue());
             }
         }
-        gen.writeEndObject();
-        gen.writeEndObject();
+        gen.writeEndObject(); // end for metadata
+        gen.writeEndObject(); // end for DataCenter
     }
 }
