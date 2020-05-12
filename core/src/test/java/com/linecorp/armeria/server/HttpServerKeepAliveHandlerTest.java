@@ -97,8 +97,7 @@ class HttpServerKeepAliveHandlerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.idleTimeoutMillis(0);
             sb.pingIntervalMillis(0);
-            sb.decorator(LoggingService.newDecorator())
-              .service("/streaming", (ctx, req) -> HttpResponse.streaming());
+            sb.service("/streaming", (ctx, req) -> HttpResponse.streaming());
         }
     };
 
@@ -194,7 +193,7 @@ class HttpServerKeepAliveHandlerTest {
 
         client.get("/").aggregate().join();
         assertThat(counter).hasValue(1);
-        await().untilAsserted(this::assertPing);
+        await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
     }
 
     @CsvSource({ "H1C", "H2C" })
@@ -207,7 +206,7 @@ class HttpServerKeepAliveHandlerTest {
 
         client.get("/").aggregate().join();
         assertThat(counter).hasValue(1);
-        await().untilAsserted(this::assertPing);
+        await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
     }
 
     private WebClient newWebClient(long clientIdleTimeout, long pingIntervalMillis, URI uri) {
