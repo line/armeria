@@ -58,8 +58,8 @@ abstract class AbstractRetryRuleBuilder {
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRule} which will retry
+     * if the {@code responseHeadersFilter} returns {@code true}.
      */
     public AbstractRetryRuleBuilder onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {

@@ -64,14 +64,12 @@ public interface RetryRule {
      *                       .onServerErrorStatus()
      *                       .onUnprocessed()
      *                       .thenBackoff(),
-     *              RetryRule.builder()
-     *                       .onUnprocessed()
-     *                       .thenBackoff());
+     *              RetryRule.onUnprocessed());
      * }</pre>
      */
     static RetryRule failsafe() {
         return of(builder(HttpMethod.idempotentMethods()).onServerErrorStatus().onException().thenBackoff(),
-                  builder().onUnprocessed().thenBackoff());
+                  onUnprocessed());
     }
 
     /**
@@ -199,7 +197,7 @@ public interface RetryRule {
     }
 
     /**
-     * Returns a {@link RetryRule} that combines the specified {@code retryRule} and {@code otherRules}.
+     * Returns a {@link RetryRule} that combines the specified {@code retryRules}.
      */
     static RetryRule of(RetryRule... retryRules) {
         requireNonNull(retryRules, "retryRules");

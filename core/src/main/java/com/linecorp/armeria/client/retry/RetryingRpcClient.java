@@ -130,8 +130,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     /**
      * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
-    public static RetryingRpcClientBuilder builder(RetryRuleWithContent<RpcResponse> retryRuleWithRpcResponse) {
-        return new RetryingRpcClientBuilder(retryRuleWithRpcResponse);
+    public static RetryingRpcClientBuilder builder(RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
+        return new RetryingRpcClientBuilder(retryRuleWithContent);
     }
 
     /**

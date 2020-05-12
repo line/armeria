@@ -88,8 +88,7 @@ public interface RetryRuleWithContent<T extends Response> {
     }
 
     /**
-     * Returns a {@link RetryRuleWithContent} that combines the specified {@code retryRule} and
-     * {@code otherRules}.
+     * Returns a {@link RetryRuleWithContent} that combines the specified {@code retryRules}.
      */
     @SafeVarargs
     static <T extends Response> RetryRuleWithContent<T> of(RetryRuleWithContent<T>... retryRules) {
