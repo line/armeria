@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpStatus.OK;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -69,7 +70,9 @@ import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
@@ -241,11 +244,19 @@ public class ProxyClientIntegrationTest {
             if (!(msg instanceof FullHttpRequest)) {
                 ctx.close();
             }
+            final HttpRequest request = (HttpRequest) msg;
+            final DefaultFullHttpResponse response;
+            if (request.method() == HttpMethod.OPTIONS) {
+                // reject http2 upgrade requests
+                final HttpHeaders headers = new DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, "close");
+                response = new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_IMPLEMENTED, Unpooled.EMPTY_BUFFER,
+                        headers, EmptyHttpHeaders.INSTANCE);
 
-            final HttpHeaders headers = new DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, "close");
-            final DefaultFullHttpResponse response = new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_IMPLEMENTED, Unpooled.EMPTY_BUFFER,
-                    headers, EmptyHttpHeaders.INSTANCE);
+            } else {
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                                                       Unpooled.copiedBuffer("success", US_ASCII));
+            }
             ctx.writeAndFlush(response);
             ctx.close();
         });
@@ -253,7 +264,6 @@ public class ProxyClientIntegrationTest {
         final ClientFactory clientFactory =
                 ClientFactory.builder().proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
                              .connectTimeoutMillis(Integer.MAX_VALUE).useHttp2Preface(false).build();
-
         final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
