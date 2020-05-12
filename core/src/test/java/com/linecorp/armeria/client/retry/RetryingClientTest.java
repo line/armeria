@@ -90,7 +90,7 @@ class RetryingClientTest {
             ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
     private static final RetryRule retryAlways =
-            (ctx, cause) -> CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.fixed(500)));
+            (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
 
     private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
 
@@ -368,9 +368,9 @@ class RetryingClientTest {
         final RetryRule strategy =
                 (ctx, cause) -> {
                     if (cause instanceof ResponseTimeoutException) {
-                        return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
+                        return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
                     }
-                    return CompletableFuture.completedFuture(RetryRuleDecision.noRetry());
+                    return CompletableFuture.completedFuture(RetryDecision.noRetry());
                 };
 
         final WebClient client = client(strategy, 0, 500, 100);
@@ -574,7 +574,7 @@ class RetryingClientTest {
         final AtomicInteger retryCounter = new AtomicInteger();
         final RetryRule strategy = (ctx, cause) -> {
             retryCounter.incrementAndGet();
-            return CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.withoutDelay()));
+            return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
         };
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator((delegate, ctx, req) -> {
@@ -642,14 +642,14 @@ class RetryingClientTest {
 
     private static class RetryIfContentMatch implements RetryRuleWithContent<HttpResponse> {
         private final String retryContent;
-        private final RetryRuleDecision decision = RetryRuleDecision.retry(Backoff.fixed(100));
+        private final RetryDecision decision = RetryDecision.retry(Backoff.fixed(100));
 
         RetryIfContentMatch(String retryContent) {
             this.retryContent = retryContent;
         }
 
         @Override
-        public CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
+        public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
             final CompletableFuture<AggregatedHttpResponse> future = response.aggregate();
             return future.handle((aggregatedResponse, unused) -> {
                 if (aggregatedResponse != null &&

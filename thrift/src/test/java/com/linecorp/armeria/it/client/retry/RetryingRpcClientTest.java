@@ -46,7 +46,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.client.retry.RetryRuleDecision;
+import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.HttpRequest;
@@ -62,7 +62,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 class RetryingRpcClientTest {
 
     private static final RetryRuleWithContent<RpcResponse> retryAlways =
-            (ctx, response) -> CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.fixed(500)));
+            (ctx, response) -> CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
 
     private static final RetryRuleWithContent<RpcResponse> retryOnException =
             RetryRuleWithContent.<RpcResponse>builder().onException().thenBackoff(Backoff.withoutDelay());
@@ -129,7 +129,7 @@ class RetryingRpcClientTest {
         final BlockingQueue<RequestLog> logQueue = new LinkedTransferQueue<>();
         final RetryRuleWithContent<RpcResponse> strategy =
                 (ctx, response) -> CompletableFuture.completedFuture(
-                        RetryRuleDecision.retry(Backoff.fixed(10000000)));
+                        RetryDecision.retry(Backoff.fixed(10000000)));
         final HelloService.Iface client = helloClient(strategy, 100, logQueue);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
         final Throwable thrown = catchThrowable(() -> client.hello("hello"));
@@ -199,7 +199,7 @@ class RetryingRpcClientTest {
         final RetryRuleWithContent<RpcResponse> strategy =
                 (ctx, response) -> {
                     // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
-                    return CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.fixed(8000)));
+                    return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(8000)));
                 };
 
         final HelloService.Iface client =

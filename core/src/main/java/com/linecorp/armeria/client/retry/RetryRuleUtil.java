@@ -31,31 +31,31 @@ import com.linecorp.armeria.common.Response;
 final class RetryRuleUtil {
 
     static RetryStrategy toRetryStrategy(RetryRule rule) {
-        return (ctx, cause) -> rule.shouldRetry(ctx, cause).thenApply(RetryRuleDecision::backoff);
+        return (ctx, cause) -> rule.shouldRetry(ctx, cause).thenApply(RetryDecision::backoff);
     }
 
     static RetryRule fromRetryStrategy(RetryStrategy strategy) {
         return (ctx, cause) -> strategy.shouldRetry(ctx, cause).thenApply(backoff -> {
             if (backoff == null) {
-                return RetryRuleDecision.noRetry();
+                return RetryDecision.noRetry();
             } else {
-                return RetryRuleDecision.retry(backoff);
+                return RetryDecision.retry(backoff);
             }
         });
     }
 
     static <T extends Response> RetryStrategyWithContent<T> toRetryStrategyWithContent(
             RetryRuleWithContent<T> rule) {
-        return (ctx, content) -> rule.shouldRetry(ctx, content).thenApply(RetryRuleDecision::backoff);
+        return (ctx, content) -> rule.shouldRetry(ctx, content).thenApply(RetryDecision::backoff);
     }
 
     static <T extends Response> RetryRuleWithContent<T> fromRetryStrategyWithContent(
             RetryStrategyWithContent<T> strategy) {
         return (ctx, content) -> strategy.shouldRetry(ctx, content).thenApply(backoff -> {
             if (backoff == null) {
-                return RetryRuleDecision.noRetry();
+                return RetryDecision.noRetry();
             } else {
-                return RetryRuleDecision.retry(backoff);
+                return RetryDecision.retry(backoff);
             }
         });
     }
@@ -64,7 +64,7 @@ final class RetryRuleUtil {
         return (ctx, content) -> {
             final CompletableFuture<?> completionFuture = content.whenComplete();
             if (completionFuture.isCompletedExceptionally()) {
-                final CompletableFuture<RetryRuleDecision> decisionFuture = new CompletableFuture<>();
+                final CompletableFuture<RetryDecision> decisionFuture = new CompletableFuture<>();
                 completionFuture.exceptionally(cause -> {
                     retryRule.shouldRetry(ctx, cause).thenAccept(decisionFuture::complete);
                     return null;
@@ -133,19 +133,19 @@ final class RetryRuleUtil {
         };
     }
 
-    private static <T extends Response> CompletionStage<RetryRuleDecision> orElse(
+    private static <T extends Response> CompletionStage<RetryDecision> orElse(
             ClientRequestContext ctx, T response,
             RetryRuleWithContent<T> first, RetryRuleWithContent<T> second) {
         return orElse0(ctx, response, first::shouldRetry, second::shouldRetry);
     }
 
-    private static <T> CompletionStage<RetryRuleDecision> orElse0(
+    private static <T> CompletionStage<RetryDecision> orElse0(
             ClientRequestContext ctx, T causeOrResponse,
             BiFunction<? super ClientRequestContext, ? super T,
-                    ? extends CompletionStage<RetryRuleDecision>> first,
+                    ? extends CompletionStage<RetryDecision>> first,
             BiFunction<? super ClientRequestContext, ? super T,
-                    ? extends CompletionStage<RetryRuleDecision>> second) {
-        final CompletionStage<RetryRuleDecision> decisionFuture = first.apply(ctx, causeOrResponse);
+                    ? extends CompletionStage<RetryDecision>> second) {
+        final CompletionStage<RetryDecision> decisionFuture = first.apply(ctx, causeOrResponse);
         if (decisionFuture == DEFAULT_DECISION) {
             return decisionFuture;
         }
@@ -153,7 +153,7 @@ final class RetryRuleUtil {
             return second.apply(ctx, causeOrResponse);
         }
         return decisionFuture.thenCompose(decision -> {
-            if (decision != RetryRuleDecision.next()) {
+            if (decision != RetryDecision.next()) {
                 return decisionFuture;
             } else {
                 return second.apply(ctx, causeOrResponse);

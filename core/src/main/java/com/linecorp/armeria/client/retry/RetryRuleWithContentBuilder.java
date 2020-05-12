@@ -83,18 +83,18 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      */
     public RetryRuleWithContent<T> thenBackoff(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return build(RetryRuleDecision.retry(backoff));
+        return build(RetryDecision.retry(backoff));
     }
 
     /**
      * Returns a newly created {@link RetryRuleWithContent} that never retries.
      */
     public RetryRuleWithContent<T> thenNoRetry() {
-        return build(RetryRuleDecision.noRetry());
+        return build(RetryDecision.noRetry());
     }
 
-    RetryRuleWithContent<T> build(RetryRuleDecision decision) {
-        if (decision != RetryRuleDecision.noRetry() && exceptionFilter() == null &&
+    RetryRuleWithContent<T> build(RetryDecision decision) {
+        if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
             responseHeadersFilter() == null && retryFunction == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
@@ -108,9 +108,9 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
                 retryFunction.apply(content)
                              .handle((matched, cause) -> {
                                  if (cause != null) {
-                                     return RetryRuleDecision.next();
+                                     return RetryDecision.next();
                                  }
-                                 return matched ? decision : RetryRuleDecision.next();
+                                 return matched ? decision : RetryDecision.next();
                              });
         return RetryRuleUtil.orElse(first, second);
     }

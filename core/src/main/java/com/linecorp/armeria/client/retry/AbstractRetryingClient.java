@@ -81,8 +81,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected AbstractRetryingClient(Client<I, O> delegate, RetryRule retryRule,
-                                     int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+    AbstractRetryingClient(Client<I, O> delegate, RetryRule retryRule,
+                           int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         this(delegate, requireNonNull(retryRule, "retryRule"), null,
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
@@ -90,7 +90,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      *
-     * @deprecated Use {@link #AbstractRetryingClient(Client, RetryRule, int, long)}
+     * @deprecated Use {@link RetryingClient#builder(RetryRule)} or
+     *             {@link RetryingRpcClient#builder(RetryRuleWithContent)}.
      */
     @Deprecated
     protected AbstractRetryingClient(Client<I, O> delegate, RetryStrategy retryStrategy,
@@ -102,16 +103,18 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected AbstractRetryingClient(Client<I, O> delegate,
-                                     RetryRuleWithContent<O> retryRuleWithContent,
-                                     int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+    AbstractRetryingClient(Client<I, O> delegate,
+                           RetryRuleWithContent<O> retryRuleWithContent,
+                           int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         this(delegate, null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
-     * @deprecated Use {@link #AbstractRetryingClient(Client, RetryRule, RetryRuleWithContent, int, long)}
+     *
+     * @deprecated Use {@link RetryingClient#builder(RetryRuleWithContent)} or
+     *             {@link RetryingRpcClient#builder(RetryRuleWithContent)}.
      */
     @Deprecated
     protected AbstractRetryingClient(Client<I, O> delegate,
@@ -168,7 +171,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      *
      * @throws IllegalStateException if the {@link RetryRule} is not set
      */
-    protected RetryRule retryRule() {
+    protected final RetryRule retryRule() {
         checkState(retryRule != null, "retryRule is not set.");
         return retryRule;
     }
@@ -189,7 +192,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      *
      * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
      */
-    protected RetryRuleWithContent<O> retryRuleWithContent() {
+    protected final RetryRuleWithContent<O> retryRuleWithContent() {
         checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
         return retryRuleWithContent;
     }

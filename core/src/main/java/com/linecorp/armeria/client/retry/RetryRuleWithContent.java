@@ -72,7 +72,7 @@ public interface RetryRuleWithContent<T extends Response> {
      */
     static <T extends Response> RetryRuleWithContentBuilder<T> builder(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
-        checkArgument(!Iterables.isEmpty(methods), "methods can't be empty");
+        checkArgument(!Iterables.isEmpty(methods), "methods can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
         return builder(headers -> httpMethods.contains(headers.method()));
     }
@@ -93,7 +93,7 @@ public interface RetryRuleWithContent<T extends Response> {
     @SafeVarargs
     static <T extends Response> RetryRuleWithContent<T> of(RetryRuleWithContent<T>... retryRules) {
         requireNonNull(retryRules, "retryRules");
-        checkArgument(retryRules.length > 0, "retryRules can't be empty");
+        checkArgument(retryRules.length > 0, "retryRules can't be empty.");
         if (retryRules.length == 1) {
             return retryRules[0];
         }
@@ -108,7 +108,7 @@ public interface RetryRuleWithContent<T extends Response> {
     static <T extends Response> RetryRuleWithContent<T> of(
             Iterable<? extends RetryRuleWithContent<T>> retryRules) {
         requireNonNull(retryRules, "retryRules");
-        checkArgument(!Iterables.isEmpty(retryRules), "retryRules should not be empty");
+        checkArgument(!Iterables.isEmpty(retryRules), "retryRules should not be empty.");
         if (Iterables.size(retryRules) == 1) {
             return Iterables.get(retryRules, 0);
         }
@@ -121,7 +121,7 @@ public interface RetryRuleWithContent<T extends Response> {
     /**
      * Returns a composed {@link RetryRuleWithContent} that represents a logical OR of this
      * {@link RetryRuleWithContent} and the specified {@link RetryRule}.
-     * If this {@link RetryRuleWithContent} completes with {@link RetryRuleDecision#next()},
+     * If this {@link RetryRuleWithContent} completes with {@link RetryDecision#next()},
      * then other {@link RetryRule} is evaluated.
      */
     default RetryRuleWithContent<T> orElse(RetryRule other) {
@@ -132,7 +132,7 @@ public interface RetryRuleWithContent<T extends Response> {
     /**
      * Returns a composed {@link RetryRuleWithContent} that represents a logical OR of this
      * {@link RetryRuleWithContent} and another.
-     * If this {@link RetryRuleWithContent} completes with {@link RetryRuleDecision#next()},
+     * If this {@link RetryRuleWithContent} completes with {@link RetryDecision#next()},
      * then other {@link RetryRuleWithContent} is evaluated.
      */
     default RetryRuleWithContent<T> orElse(RetryRuleWithContent<T> other) {
@@ -148,5 +148,5 @@ public interface RetryRuleWithContent<T extends Response> {
      * @param ctx the {@link ClientRequestContext} of this request
      * @param response the {@link Response} from the server
      */
-    CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, T response);
+    CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, T response);
 }

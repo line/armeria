@@ -20,44 +20,44 @@ import static java.util.Objects.requireNonNull;
 import javax.annotation.Nullable;
 
 /**
- * A {@link RetryRuleDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff},
+ * A {@link RetryDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff},
  * skips the current {@link RetryRule} or no retries.
  */
-public final class RetryRuleDecision {
+public final class RetryDecision {
 
-    private static final RetryRuleDecision NO_RETRY = new RetryRuleDecision(null);
-    private static final RetryRuleDecision NEXT = new RetryRuleDecision(null);
-    static final RetryRuleDecision DEFAULT = new RetryRuleDecision(Backoff.ofDefault());
+    private static final RetryDecision NO_RETRY = new RetryDecision(null);
+    private static final RetryDecision NEXT = new RetryDecision(null);
+    static final RetryDecision DEFAULT = new RetryDecision(Backoff.ofDefault());
 
     /**
-     * Returns a {@link RetryRuleDecision} that retries with the specified {@link Backoff}.
+     * Returns a {@link RetryDecision} that retries with the specified {@link Backoff}.
      */
-    public static RetryRuleDecision retry(Backoff backoff) {
+    public static RetryDecision retry(Backoff backoff) {
         if (backoff == Backoff.ofDefault()) {
             return DEFAULT;
         }
-        return new RetryRuleDecision(requireNonNull(backoff, "backoff"));
+        return new RetryDecision(requireNonNull(backoff, "backoff"));
     }
 
     /**
-     * Returns a {@link RetryRuleDecision} that never retries.
+     * Returns a {@link RetryDecision} that never retries.
      */
-    public static RetryRuleDecision noRetry() {
+    public static RetryDecision noRetry() {
         return NO_RETRY;
     }
 
     /**
-     * Returns a {@link RetryRuleDecision} that skips the current {@link RetryRule} and
+     * Returns a {@link RetryDecision} that skips the current {@link RetryRule} and
      * tries to retry with the next {@link RetryRule}.
      */
-    public static RetryRuleDecision next() {
+    public static RetryDecision next() {
         return NEXT;
     }
 
     @Nullable
     private final Backoff backoff;
 
-    private RetryRuleDecision(@Nullable Backoff backoff) {
+    private RetryDecision(@Nullable Backoff backoff) {
         this.backoff = backoff;
     }
 
@@ -69,11 +69,11 @@ public final class RetryRuleDecision {
     @Override
     public String toString() {
         if (this == NO_RETRY) {
-            return "RetryRuleDecision(NO_RETRY)";
+            return "RetryDecision(NO_RETRY)";
         } else if (this == NEXT) {
-            return "RetryRuleDecision(NEXT)";
+            return "RetryDecision(NEXT)";
         } else {
-            return "RetryRuleDecision(RETRY(" + backoff + "))";
+            return "RetryDecision(RETRY(" + backoff + "))";
         }
     }
 }

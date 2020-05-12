@@ -25,8 +25,8 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryRuleDecision;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
@@ -40,7 +40,7 @@ class GrpcClientUnwrapTest {
                        .decorator(LoggingClient.newDecorator())
                        .decorator(RetryingClient.newDecorator(
                                (RetryRule) (ctx, cause) ->
-                                       CompletableFuture.completedFuture(RetryRuleDecision.noRetry())))
+                                       CompletableFuture.completedFuture(RetryDecision.noRetry())))
                        .build(TestServiceBlockingStub.class);
 
         assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).isSameAs(client);

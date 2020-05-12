@@ -229,8 +229,8 @@ public final class ExecutorServiceMetrics implements MeterBinder {
 
     private ExecutorServiceMetrics(@Nullable ExecutorService executorService, String executorServiceName,
                                    String metricPrefix, Iterable<Tag> tags) {
-        checkArgument(!executorServiceName.isEmpty(), "executorServiceName is empty");
-        checkArgument(!metricPrefix.isEmpty(), "metricPrefix is empty");
+        checkArgument(!executorServiceName.isEmpty(), "executorServiceName is empty.");
+        checkArgument(!metricPrefix.isEmpty(), "metricPrefix is empty.");
         this.executorService = executorService;
         this.metricPrefix = metricPrefix;
         this.tags = Tags.concat(tags, "name", executorServiceName);

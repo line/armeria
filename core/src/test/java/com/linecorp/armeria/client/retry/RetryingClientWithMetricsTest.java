@@ -104,9 +104,9 @@ class RetryingClientWithMetricsTest {
         final RetryRuleWithContent<HttpResponse> retryStrategy =
                 (ctx, response) -> response.aggregate().handle((msg, cause) -> {
                     if ("hello".equals(msg.contentUtf8())) {
-                        return RetryRuleDecision.noRetry();
+                        return RetryDecision.noRetry();
                     }
-                    return RetryRuleDecision.retry(Backoff.ofDefault());
+                    return RetryDecision.retry(Backoff.ofDefault());
                 });
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)

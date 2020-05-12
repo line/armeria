@@ -51,31 +51,31 @@ public final class RetryRuleBuilder extends AbstractRetryRuleBuilder {
      */
     public RetryRule thenBackoff(Backoff backoff) {
         requireNonNull(backoff, "backoff");
-        return build(RetryRuleDecision.retry(backoff));
+        return build(RetryDecision.retry(backoff));
     }
 
     /**
      * Returns a newly created {@link RetryRule} that never retries.
      */
     public RetryRule thenNoRetry() {
-        return build(RetryRuleDecision.noRetry());
+        return build(RetryDecision.noRetry());
     }
 
-    RetryRule build(RetryRuleDecision decision) {
-        if (decision != RetryRuleDecision.noRetry() &&
+    RetryRule build(RetryDecision decision) {
+        if (decision != RetryDecision.noRetry() &&
             exceptionFilter() == null && responseHeadersFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         return build(this, decision);
     }
 
-    static RetryRule build(AbstractRetryRuleBuilder builder, RetryRuleDecision decision) {
+    static RetryRule build(AbstractRetryRuleBuilder builder, RetryDecision decision) {
         final Predicate<RequestHeaders> requestHeadersFilter = builder.requestHeadersFilter();
         final Predicate<ResponseHeaders> responseHeaderFilter = builder.responseHeadersFilter();
         final Predicate<Throwable> exceptionFilter = builder.exceptionFilter();
 
-        final CompletableFuture<RetryRuleDecision> decisionFuture;
-        if (decision == RetryRuleDecision.DEFAULT) {
+        final CompletableFuture<RetryDecision> decisionFuture;
+        if (decision == RetryDecision.DEFAULT) {
             decisionFuture = DEFAULT_DECISION;
         } else {
             decisionFuture = CompletableFuture.completedFuture(decision);

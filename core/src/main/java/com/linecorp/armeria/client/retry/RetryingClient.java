@@ -308,7 +308,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         rootReqDuplicator.abort(cause);
     }
 
-    private BiFunction<RetryRuleDecision, Throwable, Void> handleBackoff(
+    private BiFunction<RetryDecision, Throwable, Void> handleBackoff(
             ClientRequestContext ctx, ClientRequestContext derivedCtx, HttpRequestDuplicator rootReqDuplicator,
             HttpRequest originalReq, HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
             HttpResponse originalRes, Runnable originalResClosingTask) {

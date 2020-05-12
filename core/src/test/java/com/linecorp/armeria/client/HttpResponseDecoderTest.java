@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryRuleDecision;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -65,7 +65,7 @@ class HttpResponseDecoderTest {
             throws InterruptedException {
         final AtomicBoolean failed = new AtomicBoolean();
         final RetryRule strategy = (ctx, cause) ->
-                CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.withoutDelay()));
+                CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
 
         final WebClientBuilder builder = WebClient.builder(server.uri(protocol));
         // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,

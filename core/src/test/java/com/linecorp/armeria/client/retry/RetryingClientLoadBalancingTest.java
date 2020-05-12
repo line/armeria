@@ -106,9 +106,9 @@ class RetryingClientLoadBalancingTest {
 
             // Retry only once on failure.
             if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
-                return CompletableFuture.completedFuture(RetryRuleDecision.retry(Backoff.withoutDelay()));
+                return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
             } else {
-                return CompletableFuture.completedFuture(RetryRuleDecision.noRetry());
+                return CompletableFuture.completedFuture(RetryDecision.noRetry());
             }
         };
         final WebClient c = WebClient.builder(SessionProtocol.H2C, group)

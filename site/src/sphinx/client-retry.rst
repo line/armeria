@@ -65,29 +65,29 @@ Or you can customize the ``rule`` by implementing :api:`RetryRule`.
     import com.linecorp.armeria.client.ClientRequestContext;
     import com.linecorp.armeria.client.UnprocessedRequestException;
     import com.linecorp.armeria.client.retry.Backoff;
-    import com.linecorp.armeria.client.retry.RetryRuleDecision;
+    import com.linecorp.armeria.client.retry.RetryDecision;
 
     new RetryRule() {
         Backoff backoff = Backoff.ofDefault();
 
         @Override
-        public CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx,
-                                                              @Nullable Throwable cause) {
+        public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
+                                                          @Nullable Throwable cause) {
             if (cause != null) {
                 if (cause instanceof ResponseTimeoutException ||
                     cause instanceof UnprocessedRequestException) {
                     // The response timed out or the request has not been handled
                     // by the server.
-                    return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
+                    return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
                 }
             }
 
             if (ctx.log().responseHeaders().status() == HttpStatus.TOO_MANY_REQUESTS) {
-                return CompletableFuture.completedFuture(RetryRuleDecision.stop());
+                return CompletableFuture.completedFuture(RetryDecision.stop());
             }
 
             // Return 'next()' to lookup other rules.
-            return CompletableFuture.completedFuture(RetryRuleDecision.next());
+            return CompletableFuture.completedFuture(RetryDecision.next());
         }
     };
 

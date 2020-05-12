@@ -60,7 +60,7 @@ class RetryRuleWithContentBuilderTest {
                 .hasMessageContaining("Should set at least one retry rule");
 
         assertThatThrownBy(
-                () -> RetryRuleWithContent.builder().build(RetryRuleDecision.retry(Backoff.ofDefault())))
+                () -> RetryRuleWithContent.builder().build(RetryDecision.retry(Backoff.ofDefault())))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set at least one retry rule");
 
@@ -83,7 +83,7 @@ class RetryRuleWithContentBuilderTest {
 
         assertBackoff(rule.shouldRetry(ctx1, response)).isSameAs(backoff);
         assertThatThrownBy(
-                () -> RetryRuleWithContent.builder().build(RetryRuleDecision.retry(Backoff.ofDefault())))
+                () -> RetryRuleWithContent.builder().build(RetryDecision.retry(Backoff.ofDefault())))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set at least one retry rule");
     }

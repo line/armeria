@@ -74,6 +74,6 @@ class RetryRuleTest {
 
         assertThatThrownBy(() -> RetryRule.of(ImmutableList.of()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("should not be empty");
+                .hasMessageContaining("should not be empty.");
     }
 }

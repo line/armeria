@@ -52,7 +52,7 @@ public interface RetryRule {
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
      * and an {@link Exception} is raised or the class of the response status is
      * {@link HttpStatusClass#SERVER_ERROR}.
-     * Otherwise an {@link UnprocessedRequestException} is raised regardless of the request HTTP method.
+     * Otherwise, an {@link UnprocessedRequestException} is raised regardless of the request HTTP method.
      *
      * <p>Note that a client can safely retry a failed request with this rule if an endpoint service produces
      * the same result (no side effects) on idempotent HTTP methods or {@link UnprocessedRequestException}.
@@ -184,7 +184,7 @@ public interface RetryRule {
      */
     static RetryRuleBuilder builder(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
-        checkArgument(!Iterables.isEmpty(methods), "method can't be empty");
+        checkArgument(!Iterables.isEmpty(methods), "method can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
         return builder(headers -> httpMethods.contains(headers.method()));
     }
@@ -201,7 +201,7 @@ public interface RetryRule {
      */
     static RetryRule of(RetryRule... retryRules) {
         requireNonNull(retryRules, "retryRules");
-        checkArgument(retryRules.length > 0, "retryRules can't be empty");
+        checkArgument(retryRules.length > 0, "retryRules can't be empty.");
         if (retryRules.length == 1) {
             return retryRules[0];
         }
@@ -215,7 +215,7 @@ public interface RetryRule {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     static RetryRule of(Iterable<? extends RetryRule> retryRules) {
         requireNonNull(retryRules, "retryRules");
-        checkArgument(!Iterables.isEmpty(retryRules), "retryRules can't be empty");
+        checkArgument(!Iterables.isEmpty(retryRules), "retryRules can't be empty.");
         if (Iterables.size(retryRules) == 1) {
             return Iterables.get(retryRules, 0);
         }
@@ -227,7 +227,7 @@ public interface RetryRule {
 
     /**
      * Returns a composed {@link RetryRule} that represents a logical OR of this {@link RetryRule} and another.
-     * If this {@link RetryRule} completes with {@link RetryRuleDecision#next()}, then other {@link RetryRule}
+     * If this {@link RetryRule} completes with {@link RetryDecision#next()}, then other {@link RetryRule}
      * is evaluated.
      */
     default RetryRule orElse(RetryRule other) {
@@ -237,29 +237,29 @@ public interface RetryRule {
     /**
      * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
      * Implement this method to return a {@link CompletionStage} and to complete it with a desired
-     * {@link RetryRuleDecision#retry(Backoff)}.
-     * To not retry, complete it with {@link RetryRuleDecision#noRetry()}.
+     * {@link RetryDecision#retry(Backoff)}.
+     * To not retry, complete it with {@link RetryDecision#noRetry()}.
      * To skip this {@link RetryRule} and find other {@link RetryRule}, complete it with
-     * {@link RetryRuleDecision#next()}.
-     * If the return value of the last {@link RetryRule} completes with {@link RetryRuleDecision#next()},
+     * {@link RetryDecision#next()}.
+     * If the return value of the last {@link RetryRule} completes with {@link RetryDecision#next()},
      * the request never retries.
      *
      * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      * <pre>{@code
-     * CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+     * CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
      *     if (cause != null) {
-     *         return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
+     *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }
      *
      *     ResponseHeaders responseHeaders = ctx.log().partial().responseHeaders();
      *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
-     *         return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
+     *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }
      *     if (responseHeaders.status() == HttpStatus.TOO_MANY_REQUESTS) {
-     *         return CompletableFuture.completedFuture(RetryRuleDecision.noRetry());
+     *         return CompletableFuture.completedFuture(RetryDecision.noRetry());
      *     }
      *
-     *     return CompletableFuture.completedFuture(RetryRuleDecision.next());
+     *     return CompletableFuture.completedFuture(RetryDecision.next());
      * }
      * }</pre>
      *
@@ -267,5 +267,5 @@ public interface RetryRule {
      * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no
      *              exception.
      */
-    CompletionStage<RetryRuleDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);
+    CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);
 }

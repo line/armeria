@@ -45,7 +45,7 @@ class RetryStrategyBuilderTest {
     private static final Backoff statusBackOff = Backoff.fibonacci(5000, 10000);
     private static final Backoff clientErrorBackOff = Backoff.fixed(3000);
 
-    static ObjectAssert<Backoff> assertBackoff(CompletionStage<RetryRuleDecision> future) {
+    static ObjectAssert<Backoff> assertBackoff(CompletionStage<RetryDecision> future) {
         return assertThat(future.toCompletableFuture().join().backoff());
     }
 
@@ -147,10 +147,10 @@ class RetryStrategyBuilderTest {
                                  final HttpStatus status = ctx.log().partial().responseHeaders().status();
                                  if (status.isClientError()) {
                                      return CompletableFuture.completedFuture(
-                                             RetryRuleDecision.retry(clientErrorBackOff));
+                                             RetryDecision.retry(clientErrorBackOff));
                                  }
                              }
-                             return CompletableFuture.completedFuture(RetryRuleDecision.next());
+                             return CompletableFuture.completedFuture(RetryDecision.next());
                          })
                          .orElse(RetryRule.builder().onServerErrorStatus().thenBackoff(statusErrorBackOff))
                          .orElse(RetryRule.builder().onStatus(HttpStatus.TOO_MANY_REQUESTS)
@@ -183,14 +183,14 @@ class RetryStrategyBuilderTest {
         final RetryRule retryRule = RetryRule.of((ctx, cause) -> {
             if (cause instanceof UnprocessedRequestException) {
                 // retry with backoff
-                return CompletableFuture.completedFuture(RetryRuleDecision.retry(backoff));
+                return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
             }
             if (ctx.log().partial().responseHeaders().status().isClientError()) {
                 // stop retrying
-                return CompletableFuture.completedFuture(RetryRuleDecision.noRetry());
+                return CompletableFuture.completedFuture(RetryDecision.noRetry());
             }
             // will lookup next strategies
-            return CompletableFuture.completedFuture(RetryRuleDecision.next());
+            return CompletableFuture.completedFuture(RetryDecision.next());
         }, RetryRule.builder()
                     .onStatus(HttpStatus.SERVICE_UNAVAILABLE)
                     .thenBackoff(backoff));

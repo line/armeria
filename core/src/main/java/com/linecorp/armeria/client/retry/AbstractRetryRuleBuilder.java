@@ -40,10 +40,10 @@ import com.linecorp.armeria.common.ResponseHeaders;
  */
 abstract class AbstractRetryRuleBuilder {
 
-    static final CompletableFuture<RetryRuleDecision> NEXT_DECISION =
-            CompletableFuture.completedFuture(RetryRuleDecision.next());
-    static final CompletableFuture<RetryRuleDecision> DEFAULT_DECISION =
-            CompletableFuture.completedFuture(RetryRuleDecision.DEFAULT);
+    static final CompletableFuture<RetryDecision> NEXT_DECISION =
+            CompletableFuture.completedFuture(RetryDecision.next());
+    static final CompletableFuture<RetryDecision> DEFAULT_DECISION =
+            CompletableFuture.completedFuture(RetryDecision.DEFAULT);
 
     private final Predicate<RequestHeaders> requestHeadersFilter;
 
@@ -88,7 +88,7 @@ abstract class AbstractRetryRuleBuilder {
      */
     public AbstractRetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
         requireNonNull(statusClasses, "statusClasses");
-        checkArgument(!Iterables.isEmpty(statusClasses), "statusClasses can't be empty");
+        checkArgument(!Iterables.isEmpty(statusClasses), "statusClasses can't be empty.");
 
         final Set<HttpStatusClass> statusClasses0 = Sets.immutableEnumSet(statusClasses);
         onResponseHeaders(headers -> statusClasses0.contains(headers.status().codeClass()));
@@ -117,7 +117,7 @@ abstract class AbstractRetryRuleBuilder {
      */
     public AbstractRetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
         requireNonNull(statuses, "statuses");
-        checkArgument(!Iterables.isEmpty(statuses), "statuses can't be empty");
+        checkArgument(!Iterables.isEmpty(statuses), "statuses can't be empty.");
 
         final Set<HttpStatus> statuses0 = ImmutableSet.copyOf(statuses);
         onResponseHeaders(headers -> statuses0.contains(headers.status()));
