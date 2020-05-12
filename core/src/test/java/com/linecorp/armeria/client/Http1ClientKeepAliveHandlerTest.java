@@ -25,20 +25,22 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 class Http1ClientKeepAliveHandlerTest {
 
-    @Test
-    void shouldCloseConnectionWhenNoPingAck() throws Exception {
+    @CsvSource({ "20000", "0" })
+    @ParameterizedTest
+    void shouldCloseConnectionWhenNoPingAck(long idleTimeoutMillis) throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
             final int port = ss.getLocalPort();
 
             final ClientFactory factory = ClientFactory.builder()
-                                                       .idleTimeoutMillis(20000)
+                                                       .idleTimeoutMillis(idleTimeoutMillis)
                                                        .pingIntervalMillis(10000)
                                                        .useHttp1Pipelining(true)
                                                        .build();
