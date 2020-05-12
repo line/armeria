@@ -16,10 +16,12 @@
 package com.linecorp.armeria.server.eureka;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -53,7 +55,9 @@ class EurekaUpdatingListenerTest {
             new ObjectMapper().enable(DeserializationFeature.UNWRAP_ROOT_VALUE)
                               .setSerializationInclusion(Include.NON_NULL);
 
-    private static final CompletableFuture<HttpData> registerContentCaptor = new CompletableFuture<>();
+    private static final AtomicReference<HttpData> registerContentCaptor = new AtomicReference<>();
+
+
     private static final CompletableFuture<RequestHeaders> heartBeatHeadersCaptor = new CompletableFuture<>();
     private static final CompletableFuture<RequestHeaders> deregisterHeadersCaptor = new CompletableFuture<>();
 
@@ -63,12 +67,12 @@ class EurekaUpdatingListenerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/apps/" + APP_NAME, (ctx, req) -> {
                 if (req.method() != HttpMethod.POST) {
-                    registerContentCaptor.completeExceptionally(new IllegalArgumentException());
+                    registerContentCaptor.set(null);
                     return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
                 }
                 final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
                 req.aggregate().handle((aggregatedRes, cause) -> {
-                    registerContentCaptor.complete(aggregatedRes.content());
+                    registerContentCaptor.set(aggregatedRes.content());
                     future.complete(HttpResponse.of(HttpStatus.NO_CONTENT));
                     return null;
                 });
@@ -103,8 +107,9 @@ class EurekaUpdatingListenerTest {
                                          .serverListener(listener)
                                          .build();
         application.start().join();
-        final HttpData content = registerContentCaptor.join();
-        final InstanceInfo instanceInfo = mapper.readValue(content.array(), InstanceInfo.class);
+        await().until(() -> registerContentCaptor.get() != null);
+        final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
+                                                           InstanceInfo.class);
         final InstanceInfo expected = expectedInstanceInfo(application);
         assertThat(instanceInfo).isEqualTo(expected);
 
@@ -144,5 +149,28 @@ class EurekaUpdatingListenerTest {
                .secureHealthCheckUrl("https://" + hostnameOrIpAddr + ':' + securePort + "/health")
                .dataCenterName(DataCenterName.MyOwn);
         return builder.build();
+    }
+
+    @Test
+    void misconfiguredPortNumberIsChanged() throws IOException {
+        final EurekaUpdatingListener listener =
+                EurekaUpdatingListener.builder(eurekaServer.httpUri(), INSTANCE_ID)
+                                      .renewalIntervalSeconds(2)
+                                      .port(1) // misconfigued!
+                                      .appName(APP_NAME)
+                                      .build();
+
+        final Server application = Server.builder()
+                                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .serverListener(listener)
+                                         .build();
+        application.start().join();
+        await().until(() -> registerContentCaptor.get() != null);
+        final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
+                                                           InstanceInfo.class);
+        final int port = instanceInfo.getPort().getPort();
+        assertThat(port).isNotEqualTo(1);
+        assertThat(port).isEqualTo(application.activeLocalPort());
+        application.stop().join();
     }
 }

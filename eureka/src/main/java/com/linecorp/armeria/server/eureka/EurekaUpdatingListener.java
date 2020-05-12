@@ -116,9 +116,10 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                     if (headers.status() != HttpStatus.NO_CONTENT) {
                         logger.warn("Failed to register {} to Eureka: {}. (status: {}, content: {})",
                                     newInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
+                    } else {
+                        logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
+                        scheduleHeartBeat(ctx, newInfo);
                     }
-                    logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
-                    scheduleHeartBeat(ctx, newInfo);
                     return null;
                 } finally {
                     ReferenceCountUtil.release(res.content());
@@ -275,7 +276,8 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                           if (cause != null) {
                               logger.warn("Failed to send a heart beat to Eureka: {}", client.uri(), cause);
                           } else if (res.headers().status() != HttpStatus.OK) {
-                              logger.warn("Failed to send heart beat to Eureka: {}, (status: {}, content: {})",
+                              logger.warn("Failed to send a heart beat to Eureka: {}, " +
+                                          "(status: {}, content: {})",
                                           client.uri(), res.headers().status(), res.contentUtf8());
                           }
                           heartBeatFuture = ctx.eventLoop().schedule(
