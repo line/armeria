@@ -28,8 +28,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.eureka.DataCenterName;
-
 /**
  * The data center information.
  */
@@ -37,14 +35,14 @@ import com.linecorp.armeria.common.eureka.DataCenterName;
 @JsonSerialize(using = DataCenterInfoSerializer.class)
 public final class DataCenterInfo {
 
-    private final DataCenterName name;
+    private final String name;
 
     private final Map<String, String> metadata;
 
     /**
      * Creates a new instance.
      */
-    public DataCenterInfo(@JsonProperty("name") DataCenterName name,
+    public DataCenterInfo(@JsonProperty("name") String name,
                           @Nullable @JsonProperty("metadata") Map<String, String> metadata) {
         this.name = requireNonNull(name, "name");
         if (metadata != null) {
@@ -54,7 +52,7 @@ public final class DataCenterInfo {
         }
     }
 
-    public DataCenterName getName() {
+    public String getName() {
         return name;
     }
 
@@ -71,8 +69,7 @@ public final class DataCenterInfo {
             return false;
         }
         final DataCenterInfo that = (DataCenterInfo) o;
-        return name == that.name &&
-               Objects.equal(metadata, that.metadata);
+        return name.equals(that.name) && Objects.equal(metadata, that.metadata);
     }
 
     @Override

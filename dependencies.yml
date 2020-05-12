@@ -103,13 +103,13 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protoc: { version: &PROTOBUF_VERSION '3.11.4' }
-  protobuf-java: { version: *PROTOBUF_VERSION }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.11.4' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
   protobuf-gradle-plugin: { version: '0.8.12' }
+  protoc: { version: *PROTOBUF_VERSION }
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:

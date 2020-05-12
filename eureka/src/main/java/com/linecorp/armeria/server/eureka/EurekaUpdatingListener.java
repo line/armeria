@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.eureka;
 
-import static com.linecorp.armeria.internal.common.eureka.InstanceInfoBuilder.disabledPort;
+import static com.linecorp.armeria.server.eureka.InstanceInfoBuilder.disabledPort;
 import static java.util.Objects.requireNonNull;
 
 import java.net.Inet4Address;
@@ -49,14 +49,15 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 
+import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
- * A {@link ServerListener} which registers the current {@link Server} to Eureka. This
+ * A {@link ServerListener} which registers the current {@link Server} to Eureka.
  * {@link EurekaUpdatingListener} sends renewal requests periodically so that the {@link Server} is not removed
- * from the registry. When the {@link Server} stops, This {@link EurekaUpdatingListener} deregister the
- * {@link Server} from Eureka by sending the cancel request.
+ * from the registry. When the {@link Server} stops, {@link EurekaUpdatingListener} deregisters the
+ * {@link Server} from Eureka by sending a cancellation request.
  */
 public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
@@ -66,16 +67,16 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri} and
      * {@code instanceId}.
      */
-    public static EurekaUpdatingListenerBuilder builder(String eurekaUri, String instanceId) {
-        return builder(URI.create(requireNonNull(eurekaUri, "eurekaUri")), instanceId);
+    public static EurekaUpdatingListenerBuilder builder(String eurekaUri) {
+        return builder(URI.create(requireNonNull(eurekaUri, "eurekaUri")));
     }
 
     /**
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri} and
      * {@code instanceId}.
      */
-    public static EurekaUpdatingListenerBuilder builder(URI eurekaUri, String instanceId) {
-        return new EurekaUpdatingListenerBuilder(eurekaUri, instanceId);
+    public static EurekaUpdatingListenerBuilder builder(URI eurekaUri) {
+        return new EurekaUpdatingListenerBuilder(eurekaUri);
     }
 
     private final EurekaWebClient client;
@@ -102,42 +103,39 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         try (ClientRequestContextCaptor contextCaptor = Clients.newContextCaptor()) {
             final HttpResponse response = client.register(newInfo);
             final ClientRequestContext ctx = contextCaptor.get();
-            response.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((res, cause) -> {
+            response.aggregate().handle((res, cause) -> {
                 if (closed) {
                     return null;
                 }
-                try {
-                    if (cause != null) {
-                        logger.warn("Failed to register {} to Eureka: {}",
-                                    newInfo.getHostName(), client.uri(), cause);
-                        return null;
-                    }
-                    final ResponseHeaders headers = res.headers();
-                    if (headers.status() != HttpStatus.NO_CONTENT) {
-                        logger.warn("Failed to register {} to Eureka: {}. (status: {}, content: {})",
-                                    newInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
-                    } else {
-                        logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
-                        scheduleHeartBeat(ctx, newInfo);
-                    }
+                if (cause != null) {
+                    logger.warn("Failed to register {} to Eureka: {}",
+                                newInfo.getHostName(), client.uri(), cause);
                     return null;
-                } finally {
-                    ReferenceCountUtil.release(res.content());
                 }
+                final ResponseHeaders headers = res.headers();
+                if (headers.status() != HttpStatus.NO_CONTENT) {
+                    logger.warn("Failed to register {} to Eureka: {}. (status: {}, content: {})",
+                                newInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
+                } else {
+                    logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
+                    scheduleHeartBeat(ctx.eventLoop(), newInfo);
+                }
+                return null;
             });
         }
     }
 
-    private void scheduleHeartBeat(ClientRequestContext ctx, InstanceInfo newInfo) {
-        heartBeatFuture = ctx.eventLoop().schedule(new HeartBeatTask(ctx, newInfo),
-                                                   newInfo.getLeaseInfo().getRenewalIntervalInSecs(),
-                                                   TimeUnit.SECONDS);
+    private void scheduleHeartBeat(EventLoop eventLoop, InstanceInfo newInfo) {
+        heartBeatFuture = eventLoop.schedule(new HeartBeatTask(eventLoop, newInfo),
+                                             newInfo.getLeaseInfo().getRenewalIntervalInSecs(),
+                                             TimeUnit.SECONDS);
     }
 
     private InstanceInfo fillAndCreateNewInfo(InstanceInfo oldInfo, Server server) {
         final String defaultHostname = server.defaultHostname();
         final String hostName = oldInfo.getHostName() != null ? oldInfo.getHostName() : defaultHostname;
-        appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : defaultHostname;
+        appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
+        final String instanceId = oldInfo.getInstanceId() != null ? oldInfo.getInstanceId() : hostName;
 
         final Inet4Address defaultInet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         final String defaultIpAddr = defaultInet4Address != null ? defaultInet4Address.getHostAddress()
@@ -171,7 +169,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                 healthCheckUrl(hostnameOrIpAddr, oldInfo.getSecureHealthCheckUrl(), securePortWrapper,
                                healthCheckService, SessionProtocol.HTTPS);
 
-        return new InstanceInfo(oldInfo.getInstanceId(), appName, oldInfo.getAppGroupName(), hostName, ipAddr,
+        return new InstanceInfo(instanceId, appName, oldInfo.getAppGroupName(), hostName, ipAddr,
                                 vipAddress, secureVipAddress, portWrapper, securePortWrapper, InstanceStatus.UP,
                                 oldInfo.getHomePageUrl(), oldInfo.getStatusPageUrl(), healthCheckUrl,
                                 secureHealthCheckUrl, oldInfo.getDataCenterInfo(),
@@ -236,7 +234,9 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         }
         final String appName = this.appName;
         if (appName != null) {
-            client.cancel(appName, instanceInfo.getInstanceId()).aggregate().handle((res, cause) -> {
+            final String instanceId = instanceInfo.getInstanceId();
+            assert instanceId != null;
+            client.cancel(appName, instanceId).aggregate().handle((res, cause) -> {
                 if (cause != null) {
                     logger.warn("Failed to deregister from Eureka: {}", client.uri(), cause);
                 } else if (!res.status().isSuccess()) {
@@ -250,20 +250,22 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
     private class HeartBeatTask implements Runnable {
 
-        private final ClientRequestContext ctx;
+        private final EventLoop eventLoop;
         private final InstanceInfo instanceInfo;
 
-        HeartBeatTask(ClientRequestContext ctx, InstanceInfo instanceInfo) {
-            this.ctx = ctx;
+        HeartBeatTask(EventLoop eventLoop, InstanceInfo instanceInfo) {
+            this.eventLoop = eventLoop;
             this.instanceInfo = instanceInfo;
         }
 
         @Override
         public void run() {
             final String appName = instanceInfo.getAppName();
+            final String instanceId = instanceInfo.getInstanceId();
             assert appName != null;
-            client.sendHeartBeat(appName, instanceInfo.getInstanceId(), instanceInfo, null)
-                  .aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
+            assert instanceId != null;
+            client.sendHeartBeat(appName, instanceId, instanceInfo, null)
+                  .aggregate()
                   .handle((res, cause) -> {
                       try {
                           if (closed) {
@@ -280,7 +282,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                           "(status: {}, content: {})",
                                           client.uri(), res.headers().status(), res.contentUtf8());
                           }
-                          heartBeatFuture = ctx.eventLoop().schedule(
+                          heartBeatFuture = eventLoop.schedule(
                                   this, instanceInfo.getLeaseInfo().getRenewalIntervalInSecs(),
                                   TimeUnit.SECONDS);
                           return null;

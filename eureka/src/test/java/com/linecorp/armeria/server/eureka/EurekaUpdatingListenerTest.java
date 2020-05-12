@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.eureka;
 
+import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_DATA_CENTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -37,10 +38,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.eureka.DataCenterName;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfoBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -56,7 +55,6 @@ class EurekaUpdatingListenerTest {
                               .setSerializationInclusion(Include.NON_NULL);
 
     private static final AtomicReference<HttpData> registerContentCaptor = new AtomicReference<>();
-
 
     private static final CompletableFuture<RequestHeaders> heartBeatHeadersCaptor = new CompletableFuture<>();
     private static final CompletableFuture<RequestHeaders> deregisterHeadersCaptor = new CompletableFuture<>();
@@ -93,7 +91,8 @@ class EurekaUpdatingListenerTest {
     @Test
     void registerHeartBeatAndDeregisterAreSent() throws IOException {
         final EurekaUpdatingListener listener =
-                EurekaUpdatingListener.builder(eurekaServer.httpUri(), INSTANCE_ID)
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .instanceId(INSTANCE_ID)
                                       .renewalIntervalSeconds(2)
                                       .appName(APP_NAME)
                                       .build();
@@ -126,10 +125,10 @@ class EurekaUpdatingListenerTest {
     }
 
     private static InstanceInfo expectedInstanceInfo(Server application) {
-        final InstanceInfoBuilder builder =
-                new InstanceInfoBuilder(INSTANCE_ID).appName(APP_NAME)
-                                                    .hostname(application.defaultHostname())
-                                                    .renewalIntervalSeconds(2);
+        final InstanceInfoBuilder builder = new InstanceInfoBuilder().appName(APP_NAME)
+                                                                     .instanceId(INSTANCE_ID)
+                                                                     .hostname(application.defaultHostname())
+                                                                     .renewalIntervalSeconds(2);
         final Inet4Address inet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         final String hostnameOrIpAddr;
         if (inet4Address != null) {
@@ -147,14 +146,15 @@ class EurekaUpdatingListenerTest {
                .securePort(securePort)
                .healthCheckUrl("http://" + hostnameOrIpAddr + ':' + port + "/health")
                .secureHealthCheckUrl("https://" + hostnameOrIpAddr + ':' + securePort + "/health")
-               .dataCenterName(DataCenterName.MyOwn);
+               .dataCenterName(DEFAULT_DATA_CENTER_NAME);
         return builder.build();
     }
 
     @Test
     void misconfiguredPortNumberIsChanged() throws IOException {
         final EurekaUpdatingListener listener =
-                EurekaUpdatingListener.builder(eurekaServer.httpUri(), INSTANCE_ID)
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .instanceId(INSTANCE_ID)
                                       .renewalIntervalSeconds(2)
                                       .port(1) // misconfigued!
                                       .appName(APP_NAME)

@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -44,7 +43,6 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpData;
@@ -127,10 +125,10 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private volatile ScheduledFuture<?> scheduledFuture;
     private volatile boolean closed;
 
-    EurekaEndpointGroup(URI eurekaUri, long registryFetchIntervalSeconds, @Nullable String appName,
+    EurekaEndpointGroup(WebClient webClient, long registryFetchIntervalSeconds, @Nullable String appName,
                         @Nullable String instanceId, @Nullable String vipAddress,
-                        @Nullable String secureVipAddress, @Nullable List<String> regions,
-                        @Nullable Consumer<WebClientBuilder> customizer) {
+                        @Nullable String secureVipAddress, @Nullable List<String> regions) {
+        this.webClient = webClient;
         this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();
@@ -140,11 +138,6 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                                               vipAddress, secureVipAddress, regions);
         requestHeaders = headersBuilder.build();
 
-        final WebClientBuilder webClientBuilder = WebClient.builder(eurekaUri);
-        if (customizer != null) {
-            customizer.accept(webClientBuilder);
-        }
-        webClient = webClientBuilder.build();
         webClient.options().factory().whenClosed().thenRun(this::closeAsync);
         fetchRegistry();
     }
@@ -178,7 +171,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                             final List<Endpoint> endpoints = responseConverter.apply(content.array());
                             setEndpoints(endpoints);
                         } catch (Exception e) {
-                            logger.warn("Unexpected exception while parsing response from: {}. " +
+                            logger.warn("Unexpected exception while parsing a response from: {}. " +
                                         "(content: {}, responseConverter: {}, requestHeaders: {})",
                                         webClient.uri(), content.toStringUtf8(),
                                         responseConverter, requestHeaders, e);

@@ -18,14 +18,31 @@ package com.linecorp.armeria.server.eureka;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
+import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptionValue;
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
+import com.linecorp.armeria.client.DecoratingRpcClientFunction;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.eureka.DataCenterName;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfoBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -44,20 +61,21 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
  * sb.addListener(listener);
  * }</pre>
  */
-public final class EurekaUpdatingListenerBuilder {
+public final class EurekaUpdatingListenerBuilder extends AbstractClientOptionsBuilder {
 
-    public static final int DEFAULT_LEASE_RENEWAL_INTERVAL = 30;
-    public static final int DEFAULT_LEASE_DURATION = 90;
+    static final int DEFAULT_LEASE_RENEWAL_INTERVAL = 30;
+    static final int DEFAULT_LEASE_DURATION = 90;
+    static final String DEFAULT_DATA_CENTER_NAME = "MyOwn";
 
-    private final EurekaWebClient eurekaWebClient;
+    private final URI eurekaUri;
     private final InstanceInfoBuilder instanceInfoBuilder;
 
     /**
      * Creates a new instance.
      */
-    EurekaUpdatingListenerBuilder(URI eurekaUri, String instanceId) {
-        eurekaWebClient = new EurekaWebClient(WebClient.of(requireNonNull(eurekaUri, "eurekaUri")));
-        instanceInfoBuilder = new InstanceInfoBuilder(instanceId);
+    EurekaUpdatingListenerBuilder(URI eurekaUri) {
+        this.eurekaUri = requireNonNull(eurekaUri, "eurekaUri");
+        instanceInfoBuilder = new InstanceInfoBuilder();
     }
 
     /**
@@ -87,6 +105,14 @@ public final class EurekaUpdatingListenerBuilder {
      */
     public EurekaUpdatingListenerBuilder hostname(String hostname) {
         instanceInfoBuilder.hostname(hostname);
+        return this;
+    }
+
+    /**
+     * Sets the ID of this instance. {@link #hostname(String)} is set if not specified.
+     */
+    public EurekaUpdatingListenerBuilder instanceId(String instanceId) {
+        instanceInfoBuilder.instanceId(instanceId);
         return this;
     }
 
@@ -195,7 +221,7 @@ public final class EurekaUpdatingListenerBuilder {
     /**
      * Sets the name of the data center.
      */
-    public EurekaUpdatingListenerBuilder dataCenterName(DataCenterName dataCenterName) {
+    public EurekaUpdatingListenerBuilder dataCenterName(String dataCenterName) {
         instanceInfoBuilder.dataCenterName(dataCenterName);
         return this;
     }
@@ -212,6 +238,134 @@ public final class EurekaUpdatingListenerBuilder {
      * Returns a newly-created {@link EurekaUpdatingListener} based on the properties of this builder.
      */
     public EurekaUpdatingListener build() {
-        return new EurekaUpdatingListener(eurekaWebClient, instanceInfoBuilder.build());
+        final WebClient webClient = WebClient.builder(eurekaUri).options(buildOptions()).build();
+        return new EurekaUpdatingListener(new EurekaWebClient(webClient), instanceInfoBuilder.build());
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public EurekaUpdatingListenerBuilder options(ClientOptions options) {
+        return (EurekaUpdatingListenerBuilder) super.options(options);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder options(ClientOptionValue<?>... options) {
+        return (EurekaUpdatingListenerBuilder) super.options(options);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder options(Iterable<ClientOptionValue<?>> options) {
+        return (EurekaUpdatingListenerBuilder) super.options(options);
+    }
+
+    @Override
+    public <T> EurekaUpdatingListenerBuilder option(ClientOption<T> option, T value) {
+        return (EurekaUpdatingListenerBuilder) super.option(option, value);
+    }
+
+    @Override
+    public <T> EurekaUpdatingListenerBuilder option(ClientOptionValue<T> optionValue) {
+        return (EurekaUpdatingListenerBuilder) super.option(optionValue);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder factory(ClientFactory factory) {
+        return (EurekaUpdatingListenerBuilder) super.factory(factory);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder writeTimeout(Duration writeTimeout) {
+        return (EurekaUpdatingListenerBuilder) super.writeTimeout(writeTimeout);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder writeTimeoutMillis(long writeTimeoutMillis) {
+        return (EurekaUpdatingListenerBuilder) super.writeTimeoutMillis(writeTimeoutMillis);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder responseTimeout(Duration responseTimeout) {
+        return (EurekaUpdatingListenerBuilder) super.responseTimeout(responseTimeout);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder responseTimeoutMillis(long responseTimeoutMillis) {
+        return (EurekaUpdatingListenerBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder maxResponseLength(long maxResponseLength) {
+        return (EurekaUpdatingListenerBuilder) super.maxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+        return (EurekaUpdatingListenerBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder endpointRemapper(
+            Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
+        return (EurekaUpdatingListenerBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder decorator(
+            Function<? super HttpClient, ? extends HttpClient> decorator) {
+        return (EurekaUpdatingListenerBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder decorator(DecoratingHttpClientFunction decorator) {
+        return (EurekaUpdatingListenerBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator) {
+        return (EurekaUpdatingListenerBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+        return (EurekaUpdatingListenerBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder addHttpHeader(CharSequence name, Object value) {
+        return (EurekaUpdatingListenerBuilder) super.addHttpHeader(name, value);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder addHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (EurekaUpdatingListenerBuilder) super.addHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder setHttpHeader(CharSequence name, Object value) {
+        return (EurekaUpdatingListenerBuilder) super.setHttpHeader(name, value);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder setHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (EurekaUpdatingListenerBuilder) super.setHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder auth(BasicToken token) {
+        return (EurekaUpdatingListenerBuilder) super.auth(token);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder auth(OAuth1aToken token) {
+        return (EurekaUpdatingListenerBuilder) super.auth(token);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder auth(OAuth2Token token) {
+        return (EurekaUpdatingListenerBuilder) super.auth(token);
     }
 }

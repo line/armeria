@@ -23,8 +23,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-import com.linecorp.armeria.common.eureka.DataCenterName;
-
 final class DataCenterInfoSerializer extends StdSerializer<DataCenterInfo> {
 
     private static final long serialVersionUID = -5766818057428683420L;
@@ -37,12 +35,12 @@ final class DataCenterInfoSerializer extends StdSerializer<DataCenterInfo> {
     public void serialize(DataCenterInfo value, JsonGenerator gen, SerializerProvider provider)
             throws IOException {
         gen.writeStartObject();
-        if (value.getName() == DataCenterName.Amazon) {
+        if ("Amazon".equalsIgnoreCase(value.getName())) {
             gen.writeStringField("@class", "com.netflix.appinfo.AmazonInfo");
         } else {
             gen.writeStringField("@class", "com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo");
         }
-        gen.writeStringField("name", value.getName().name());
+        gen.writeStringField("name", value.getName());
 
         final Map<String, String> metadata = value.getMetadata();
         gen.writeFieldName("metadata");

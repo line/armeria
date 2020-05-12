@@ -13,9 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.eureka;
+package com.linecorp.armeria.server.eureka;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_DATA_CENTER_NAME;
 import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_DURATION;
 import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_RENEWAL_INTERVAL;
 import static java.util.Objects.requireNonNull;
@@ -27,29 +28,32 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.eureka.DataCenterName;
+import com.linecorp.armeria.internal.common.eureka.DataCenterInfo;
+import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
+import com.linecorp.armeria.internal.common.eureka.LeaseInfo;
 
 import io.netty.util.NetUtil;
 
 /**
  * Builds an {@link InstanceInfo}.
  */
-public final class InstanceInfoBuilder {
+final class InstanceInfoBuilder {
 
     /**
      * The {@link PortWrapper} which represents the port which is disabled.
      */
-    public static final PortWrapper disabledPort = new PortWrapper(false, 0);
+    static final PortWrapper disabledPort = new PortWrapper(false, 0);
 
     private int renewalIntervalSeconds = DEFAULT_LEASE_RENEWAL_INTERVAL;
     private int leaseDurationSeconds = DEFAULT_LEASE_DURATION;
 
-    private final String instanceId;
-
     @Nullable
     private String hostname;
+
+    @Nullable
+    private String instanceId;
 
     @Nullable
     private String appName;
@@ -76,20 +80,13 @@ public final class InstanceInfoBuilder {
     private String secureHealthCheckUrl;
     private Map<String, String> metadata = ImmutableMap.of();
 
-    private DataCenterName dataCenterName = DataCenterName.MyOwn;
+    private String dataCenterName = DEFAULT_DATA_CENTER_NAME;
     private Map<String, String> dataCenterMetadata = ImmutableMap.of();
-
-    /**
-     * Creates a new instance.
-     */
-    public InstanceInfoBuilder(String instanceId) {
-        this.instanceId = requireNonNull(instanceId, "instanceId");
-    }
 
     /**
      * Sets the interval between renewal in seconds.
      */
-    public InstanceInfoBuilder renewalIntervalSeconds(int renewalIntervalSeconds) {
+    InstanceInfoBuilder renewalIntervalSeconds(int renewalIntervalSeconds) {
         checkArgument(renewalIntervalSeconds > 0,
                       "renewalIntervalInSecs: %s (expected: > 0)", renewalIntervalSeconds);
         this.renewalIntervalSeconds = renewalIntervalSeconds;
@@ -99,7 +96,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the lease duration in seconds.
      */
-    public InstanceInfoBuilder leaseDurationSeconds(int leaseDurationSeconds) {
+    InstanceInfoBuilder leaseDurationSeconds(int leaseDurationSeconds) {
         checkArgument(leaseDurationSeconds > 0,
                       "durationInSecs: %s (expected: > 0)", leaseDurationSeconds);
         this.leaseDurationSeconds = leaseDurationSeconds;
@@ -109,7 +106,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the hostname.
      */
-    public InstanceInfoBuilder hostname(String hostname) {
+    InstanceInfoBuilder hostname(String hostname) {
         this.hostname = requireNonNull(hostname, "hostname");
         return this;
     }
@@ -117,7 +114,15 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the name of the application.
      */
-    public InstanceInfoBuilder appName(String appName) {
+    InstanceInfoBuilder instanceId(String instanceId) {
+        this.instanceId = requireNonNull(instanceId, "instanceId");
+        return this;
+    }
+
+    /**
+     * Sets the name of the application.
+     */
+    InstanceInfoBuilder appName(String appName) {
         this.appName = requireNonNull(appName, "appName");
         return this;
     }
@@ -125,7 +130,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the group name of the application.
      */
-    public InstanceInfoBuilder appGroupName(String appGroupName) {
+    InstanceInfoBuilder appGroupName(String appGroupName) {
         this.appGroupName = requireNonNull(appGroupName, "appGroupName");
         return this;
     }
@@ -133,7 +138,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the IP address.
      */
-    public InstanceInfoBuilder ipAddr(String ipAddr) {
+    InstanceInfoBuilder ipAddr(String ipAddr) {
         requireNonNull(ipAddr, "ipAddr");
         validateIpAddr(ipAddr, "ipAddr");
         this.ipAddr = ipAddr;
@@ -143,7 +148,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the port used for {@link SessionProtocol#HTTP}.
      */
-    public InstanceInfoBuilder port(int port) {
+    InstanceInfoBuilder port(int port) {
         checkArgument(port > 0, "port: %s (expected: > 0)", port);
         this.port = new PortWrapper(true, port);
         return this;
@@ -152,7 +157,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the port used for {@link SessionProtocol#HTTPS}.
      */
-    public InstanceInfoBuilder securePort(int securePort) {
+    InstanceInfoBuilder securePort(int securePort) {
         checkArgument(securePort > 0, "securePort: %s (expected: > 0)", securePort);
         this.securePort = new PortWrapper(true, securePort);
         return this;
@@ -161,7 +166,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the VIP address.
      */
-    public InstanceInfoBuilder vipAddress(String vipAddress) {
+    InstanceInfoBuilder vipAddress(String vipAddress) {
         this.vipAddress = requireNonNull(vipAddress, "vipAddress");
         return this;
     }
@@ -169,7 +174,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the secure VIP address.
      */
-    public InstanceInfoBuilder secureVipAddress(String secureVipAddress) {
+    InstanceInfoBuilder secureVipAddress(String secureVipAddress) {
         this.secureVipAddress = requireNonNull(secureVipAddress, "secureVipAddress");
         return this;
     }
@@ -177,7 +182,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the home page URL.
      */
-    public InstanceInfoBuilder homePageUrl(String homePageUrl) {
+    InstanceInfoBuilder homePageUrl(String homePageUrl) {
         this.homePageUrl = requireNonNull(homePageUrl, "homePageUrl");
         return this;
     }
@@ -185,7 +190,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the status page URL.
      */
-    public InstanceInfoBuilder statusPageUrl(String statusPageUrl) {
+    InstanceInfoBuilder statusPageUrl(String statusPageUrl) {
         this.statusPageUrl = requireNonNull(statusPageUrl, "statusPageUrl");
         return this;
     }
@@ -193,7 +198,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the health check URL.
      */
-    public InstanceInfoBuilder healthCheckUrl(String healthCheckUrl) {
+    InstanceInfoBuilder healthCheckUrl(String healthCheckUrl) {
         this.healthCheckUrl = requireNonNull(healthCheckUrl, "healthCheckUrl");
         return this;
     }
@@ -201,7 +206,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the secure health check URL.
      */
-    public InstanceInfoBuilder secureHealthCheckUrl(String secureHealthCheckUrl) {
+    InstanceInfoBuilder secureHealthCheckUrl(String secureHealthCheckUrl) {
         this.secureHealthCheckUrl = requireNonNull(secureHealthCheckUrl, "secureHealthCheckUrl");
         return this;
     }
@@ -209,7 +214,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the metadata.
      */
-    public InstanceInfoBuilder metadata(Map<String, String> metadata) {
+    InstanceInfoBuilder metadata(Map<String, String> metadata) {
         this.metadata = requireNonNull(metadata, "metadata");
         return this;
     }
@@ -217,7 +222,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the name of the data center.
      */
-    public InstanceInfoBuilder dataCenterName(DataCenterName dataCenterName) {
+    InstanceInfoBuilder dataCenterName(String dataCenterName) {
         this.dataCenterName = requireNonNull(dataCenterName, "dataCenterName");
         return this;
     }
@@ -225,7 +230,7 @@ public final class InstanceInfoBuilder {
     /**
      * Sets the metadata of the data center.
      */
-    public InstanceInfoBuilder dataCenterMetadata(Map<String, String> dataCenterMetadata) {
+    InstanceInfoBuilder dataCenterMetadata(Map<String, String> dataCenterMetadata) {
         this.dataCenterMetadata = requireNonNull(dataCenterMetadata, "dataCenterMetadata");
         return this;
     }
@@ -233,7 +238,7 @@ public final class InstanceInfoBuilder {
     /**
      * Returns a newly-created {@link InstanceInfo} based on the properties of this builder.
      */
-    public InstanceInfo build() {
+    InstanceInfo build() {
         final LeaseInfo leaseInfo = new LeaseInfo(renewalIntervalSeconds, leaseDurationSeconds);
         return new InstanceInfo(instanceId, appName, appGroupName, hostname, ipAddr, vipAddress,
                                 secureVipAddress, port, securePort, InstanceStatus.UP,

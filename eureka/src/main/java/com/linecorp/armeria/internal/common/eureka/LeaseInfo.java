@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -44,7 +45,7 @@ public final class LeaseInfo {
     /**
      * Creates a new instance.
      */
-    LeaseInfo(int renewalIntervalInSecs, int durationInSecs) {
+    public LeaseInfo(int renewalIntervalInSecs, int durationInSecs) {
         this(renewalIntervalInSecs, durationInSecs, 0, 0, 0, 0);
     }
 
@@ -57,6 +58,17 @@ public final class LeaseInfo {
                      @JsonProperty("lastRenewalTimestamp") long lastRenewalTimestamp,
                      @JsonProperty("evictionTimestamp") long evictionTimestamp,
                      @JsonProperty("serviceUpTimestamp") long serviceUpTimestamp) {
+        checkArgument(renewalIntervalInSecs > 0,
+                      "renewalIntervalInSecs: %s (expected: > 0)", renewalIntervalInSecs);
+        checkArgument(durationInSecs > 0, "durationInSecs: %s (expected: > 0)", durationInSecs);
+        checkArgument(registrationTimestamp >= 0,
+                      "registrationTimestamp: %s (expected: >= 0)", registrationTimestamp);
+        checkArgument(lastRenewalTimestamp >= 0,
+                      "lastRenewalTimestamp: %s (expected: >= 0)", lastRenewalTimestamp);
+        checkArgument(evictionTimestamp >= 0,
+                      "evictionTimestamp: %s (expected: >= 0)", evictionTimestamp);
+        checkArgument(serviceUpTimestamp >= 0,
+                      "serviceUpTimestamp: %s (expected: >= 0)", serviceUpTimestamp);
         this.renewalIntervalInSecs = renewalIntervalInSecs;
         this.durationInSecs = durationInSecs;
         this.registrationTimestamp = registrationTimestamp;

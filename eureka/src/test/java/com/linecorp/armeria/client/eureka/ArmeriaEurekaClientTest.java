@@ -56,7 +56,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.auth.BasicToken;
-import com.linecorp.armeria.common.eureka.DataCenterName;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 
@@ -308,8 +307,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
                 metadata = ImmutableMap.of();
             }
             return new com.linecorp.armeria.internal.common.eureka.DataCenterInfo(
-                    DataCenterName.toEnum(dataCenterInfo.getName().name()),
-                    metadata);
+                    dataCenterInfo.getName().name(), metadata);
         }
 
         private static void setRegions(EurekaEndpointGroupBuilder builder, String... regions) {

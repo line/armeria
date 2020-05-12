@@ -79,7 +79,7 @@ public final class InstanceInfo {
     /**
      * Creates a new instance.
      */
-    public InstanceInfo(@JsonProperty("instanceId") String instanceId,
+    public InstanceInfo(@Nullable@JsonProperty("instanceId") String instanceId,
                         @Nullable @JsonProperty("app") String appName,
                         @Nullable @JsonProperty("appGroupName") String appGroupName,
                         @Nullable @JsonProperty("hostName") String hostName,
@@ -96,7 +96,7 @@ public final class InstanceInfo {
                         @JsonProperty("dataCenterInfo") DataCenterInfo dataCenterInfo,
                         @JsonProperty("leaseInfo") LeaseInfo leaseInfo,
                         @Nullable @JsonProperty("metadata") Map<String, String> metadata) {
-        this.instanceId = requireNonNull(instanceId, "instanceId");
+        this.instanceId = instanceId;
         this.hostName = hostName;
         this.appName = appName;
         this.appGroupName = appGroupName;
@@ -125,6 +125,7 @@ public final class InstanceInfo {
     /**
      * Returns the ID of this instance.
      */
+    @Nullable
     public String getInstanceId() {
         return instanceId;
     }
