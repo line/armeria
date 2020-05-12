@@ -681,7 +681,7 @@ final class HttpChannelPool implements AsyncCloseable {
                        ChannelAcquisitionFuture childPromise,
                        ClientConnectionTimingsBuilder timingsBuilder) {
 
-            // Add to the notification list if not complete yet.
+            // Add to the pending handler list if not complete yet.
             if (!isDone()) {
                 final Consumer<PooledChannel> handler =
                         pch -> handlePiggyback(desiredProtocol, key, childPromise, timingsBuilder, pch);
@@ -712,7 +712,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 return;
             }
 
-            // Invoke the notification task immediately if complete already.
+            // Handle immediately if complete already.
             handlePiggyback(desiredProtocol, key, childPromise, timingsBuilder,
                             isCompletedExceptionally() ? null : getNow(null));
         }
