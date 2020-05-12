@@ -51,8 +51,8 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     /**
      * Creates a new builder with the specified {@link RetryRuleWithContent}.
      */
-    RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithHttpContent) {
-        super(retryRuleWithHttpContent);
+    RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
+        super(retryRuleWithContent);
         needsContentInStrategy = true;
     }
 

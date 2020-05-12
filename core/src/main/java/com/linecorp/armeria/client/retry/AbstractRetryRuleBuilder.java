@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 /**
  * An abstract builder class which creates a {@link RetryRule} or a {@link RetryRuleWithContent}.
  */
-public abstract class AbstractRetryRuleBuilder {
+abstract class AbstractRetryRuleBuilder {
 
     static final CompletableFuture<RetryRuleDecision> NEXT_DECISION =
             CompletableFuture.completedFuture(RetryRuleDecision.next());

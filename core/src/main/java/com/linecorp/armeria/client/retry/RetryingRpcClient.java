@@ -65,12 +65,12 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
      * RPC requests.
      *
-     * @param retryRuleWithRpcResponse the retry rule
+     * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum number of total attempts
      */
     public static Function<? super RpcClient, RetryingRpcClient>
-    newDecorator(RetryRuleWithContent<RpcResponse> retryRuleWithRpcResponse, int maxTotalAttempts) {
-        return builder(retryRuleWithRpcResponse).maxTotalAttempts(maxTotalAttempts).newDecorator();
+    newDecorator(RetryRuleWithContent<RpcResponse> retryRuleWithContent, int maxTotalAttempts) {
+        return builder(retryRuleWithContent).maxTotalAttempts(maxTotalAttempts).newDecorator();
     }
 
     /**

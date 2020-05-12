@@ -142,7 +142,7 @@ public enum HttpMethod {
 
     /**
      * Returns the <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
-     * HTTP methods.
+     * HTTP methods - {@link #GET}, {@link #HEAD}, {@link #PUT} and {@link #DELETE}.
      */
     public static Set<HttpMethod> idempotentMethods() {
         return idempotentMethods;

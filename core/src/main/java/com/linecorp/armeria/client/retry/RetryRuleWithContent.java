@@ -72,6 +72,7 @@ public interface RetryRuleWithContent<T extends Response> {
      */
     static <T extends Response> RetryRuleWithContentBuilder<T> builder(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
+        checkArgument(!Iterables.isEmpty(methods), "methods can't be empty");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
         return builder(headers -> httpMethods.contains(headers.method()));
     }
@@ -91,19 +92,13 @@ public interface RetryRuleWithContent<T extends Response> {
      * {@code otherRules}.
      */
     @SafeVarargs
-    static <T extends Response> RetryRuleWithContent<T> of(RetryRuleWithContent<T> retryRule,
-                                                           RetryRuleWithContent<T>... otherRules) {
-        requireNonNull(retryRule, "retryRule");
-        requireNonNull(otherRules, "otherRules");
-        if (otherRules.length == 0) {
-            return retryRule;
+    static <T extends Response> RetryRuleWithContent<T> of(RetryRuleWithContent<T>... retryRules) {
+        requireNonNull(retryRules, "retryRules");
+        checkArgument(retryRules.length > 0, "retryRules can't be empty");
+        if (retryRules.length == 1) {
+            return retryRules[0];
         }
-        final ImmutableList<RetryRuleWithContent<T>> retryRules =
-                ImmutableList.<RetryRuleWithContent<T>>builderWithExpectedSize(otherRules.length + 1)
-                        .add(retryRule)
-                        .add(otherRules)
-                        .build();
-        return of(retryRules);
+        return of(ImmutableList.copyOf(retryRules));
     }
 
     /**

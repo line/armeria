@@ -52,12 +52,12 @@ public interface RetryRule {
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
      * and an {@link Exception} is raised or the class of the response status is
      * {@link HttpStatusClass#SERVER_ERROR}.
-     * Or an {@link UnprocessedRequestException} is raised regardless of the request HTTP method.
+     * Otherwise an {@link UnprocessedRequestException} is raised regardless of the request HTTP method.
      *
      * <p>Note that a client can safely retry a failed request with this rule if an endpoint service produces
      * the same result (no side effects) on idempotent HTTP methods or {@link UnprocessedRequestException}.
      *
-     * <p>This method is shortcut for:
+     * <p>This method is a shortcut for:
      * <pre>{@code
      * RetryRule.of(RetryRule.builder(HttpMethods.idempotentMethods())
      *                       .onIdempotentMethods()
@@ -186,6 +186,7 @@ public interface RetryRule {
      */
     static RetryRuleBuilder builder(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
+        checkArgument(!Iterables.isEmpty(methods), "method can't be empty");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
         return builder(headers -> httpMethods.contains(headers.method()));
     }
@@ -200,18 +201,13 @@ public interface RetryRule {
     /**
      * Returns a {@link RetryRule} that combines the specified {@code retryRule} and {@code otherRules}.
      */
-    static RetryRule of(RetryRule retryRule, RetryRule... otherRules) {
-        requireNonNull(retryRule, "retryRule");
-        requireNonNull(otherRules, "otherRules");
-        if (otherRules.length == 0) {
-            return retryRule;
+    static RetryRule of(RetryRule... retryRules) {
+        requireNonNull(retryRules, "retryRules");
+        checkArgument(retryRules.length > 0, "retryRules can't be empty");
+        if (retryRules.length == 1) {
+            return retryRules[0];
         }
-        final ImmutableList<RetryRule> retryRules =
-                ImmutableList.<RetryRule>builderWithExpectedSize(otherRules.length + 1)
-                        .add(retryRule)
-                        .addAll(ImmutableList.copyOf(otherRules))
-                        .build();
-        return of(retryRules);
+        return of(ImmutableList.copyOf(retryRules));
     }
 
     /**
@@ -221,7 +217,7 @@ public interface RetryRule {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     static RetryRule of(Iterable<? extends RetryRule> retryRules) {
         requireNonNull(retryRules, "retryRules");
-        checkArgument(!Iterables.isEmpty(retryRules), "retryRules should not be empty");
+        checkArgument(!Iterables.isEmpty(retryRules), "retryRules can't be empty");
         if (Iterables.size(retryRules) == 1) {
             return Iterables.get(retryRules, 0);
         }
