@@ -24,7 +24,9 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
@@ -34,7 +36,6 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -52,7 +53,8 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
  * <h2>Examples</h2>
  * <pre>{@code
  * EurekaUpdatingListener listener =
- *     EurekaUpdatingListener.builder("eureka.com:8001/eureka/v2", "i-00000000")
+ *     EurekaUpdatingListener.builder("eureka.com:8001/eureka/v2")
+ *                           .instanceId("i-00000000")
  *                           .setHostname("armeria.service.1")
  *                           .ipAddr("192.168.10.10")
  *                           .vipAddress("armeria.service.com:8080");
@@ -61,20 +63,28 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
  * sb.addListener(listener);
  * }</pre>
  */
-public final class EurekaUpdatingListenerBuilder extends AbstractClientOptionsBuilder {
+public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilder {
 
     static final int DEFAULT_LEASE_RENEWAL_INTERVAL = 30;
     static final int DEFAULT_LEASE_DURATION = 90;
     static final String DEFAULT_DATA_CENTER_NAME = "MyOwn";
 
-    private final URI eurekaUri;
     private final InstanceInfoBuilder instanceInfoBuilder;
 
     /**
      * Creates a new instance.
      */
     EurekaUpdatingListenerBuilder(URI eurekaUri) {
-        this.eurekaUri = requireNonNull(eurekaUri, "eurekaUri");
+        super(requireNonNull(eurekaUri, "eurekaUri"));
+        instanceInfoBuilder = new InstanceInfoBuilder();
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    EurekaUpdatingListenerBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
+                                  @Nullable String path) {
+        super(sessionProtocol, endpointGroup, path);
         instanceInfoBuilder = new InstanceInfoBuilder();
     }
 
@@ -238,8 +248,7 @@ public final class EurekaUpdatingListenerBuilder extends AbstractClientOptionsBu
      * Returns a newly-created {@link EurekaUpdatingListener} based on the properties of this builder.
      */
     public EurekaUpdatingListener build() {
-        final WebClient webClient = WebClient.builder(eurekaUri).options(buildOptions()).build();
-        return new EurekaUpdatingListener(new EurekaWebClient(webClient), instanceInfoBuilder.build());
+        return new EurekaUpdatingListener(new EurekaWebClient(buildWebClient()), instanceInfoBuilder.build());
     }
 
     // Override the return type of the chaining methods in the superclass.

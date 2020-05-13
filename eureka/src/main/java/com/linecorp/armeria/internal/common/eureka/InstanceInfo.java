@@ -79,7 +79,7 @@ public final class InstanceInfo {
     /**
      * Creates a new instance.
      */
-    public InstanceInfo(@Nullable@JsonProperty("instanceId") String instanceId,
+    public InstanceInfo(@Nullable @JsonProperty("instanceId") String instanceId,
                         @Nullable @JsonProperty("app") String appName,
                         @Nullable @JsonProperty("appGroupName") String appGroupName,
                         @Nullable @JsonProperty("hostName") String hostName,

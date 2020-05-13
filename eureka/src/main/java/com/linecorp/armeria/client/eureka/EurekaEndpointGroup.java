@@ -54,12 +54,14 @@ import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.eureka.Application;
 import com.linecorp.armeria.internal.common.eureka.Applications;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
+import com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -114,6 +116,15 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
      */
     public static EurekaEndpointGroupBuilder builder(URI eurekaUri) {
         return new EurekaEndpointGroupBuilder(eurekaUri);
+    }
+
+    /**
+     * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@link SessionProtocol},
+     * {@link EndpointGroup} and path.
+     */
+    public static EurekaEndpointGroupBuilder builder(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
+        return new EurekaEndpointGroupBuilder(sessionProtocol, endpointGroup, path);
     }
 
     private final long registryFetchIntervalSeconds;

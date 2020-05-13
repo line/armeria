@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -64,19 +65,26 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(EurekaUpdatingListener.class);
 
     /**
-     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri} and
-     * {@code instanceId}.
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri}.
      */
     public static EurekaUpdatingListenerBuilder builder(String eurekaUri) {
         return builder(URI.create(requireNonNull(eurekaUri, "eurekaUri")));
     }
 
     /**
-     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri} and
-     * {@code instanceId}.
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri}.
      */
     public static EurekaUpdatingListenerBuilder builder(URI eurekaUri) {
         return new EurekaUpdatingListenerBuilder(eurekaUri);
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link SessionProtocol},
+     * {@link EndpointGroup} and path.
+     */
+    public static EurekaUpdatingListenerBuilder builder(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
+        return new EurekaUpdatingListenerBuilder(sessionProtocol, endpointGroup, path);
     }
 
     private final EurekaWebClient client;

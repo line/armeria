@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.eureka;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.StringJoiner;
 
 import javax.annotation.Nullable;
 
@@ -126,9 +125,7 @@ public final class EurekaWebClient {
 
     private HttpResponse getApplications(String path, Iterable<String> regions) {
         if (!Iterables.isEmpty(regions)) {
-            final StringJoiner joiner = new StringJoiner(",");
-            regions.forEach(joiner::add);
-            final QueryParams queryParams = QueryParams.of("regions", joiner.toString());
+            final QueryParams queryParams = QueryParams.of("regions", String.join(",", regions));
             path = path + '?' + queryParams.toQueryString();
         }
         return sendGetRequest(path);

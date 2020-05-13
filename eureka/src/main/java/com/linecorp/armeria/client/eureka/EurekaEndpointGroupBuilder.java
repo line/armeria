@@ -23,7 +23,6 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -31,7 +30,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
+import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
@@ -41,10 +40,9 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -52,11 +50,9 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
 /**
  * Builds a {@link EurekaEndpointGroup}.
  */
-public final class EurekaEndpointGroupBuilder extends AbstractClientOptionsBuilder {
+public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
 
     private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS = 30;
-
-    private final URI eurekaUri;
 
     @Nullable
     private String appName;
@@ -74,11 +70,20 @@ public final class EurekaEndpointGroupBuilder extends AbstractClientOptionsBuild
 
     @Nullable
     private List<String> regions;
-    @Nullable
-    private Consumer<WebClientBuilder> customizer;
 
+    /**
+     * Creates a new instance.
+     */
     EurekaEndpointGroupBuilder(URI eurekaUri) {
-        this.eurekaUri = requireNonNull(eurekaUri, "eurekaUri");
+        super(requireNonNull(eurekaUri, "eurekaUri"));
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    EurekaEndpointGroupBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
+                               @Nullable String path) {
+        super(sessionProtocol, endpointGroup, path);
     }
 
     /**
@@ -192,11 +197,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractClientOptionsBuild
      * Returns a newly-created {@link EurekaEndpointGroup} based on the properties set so far.
      */
     public EurekaEndpointGroup build() {
-        final WebClient webClient = WebClient.builder(eurekaUri)
-                                             .options(buildOptions())
-                                             .build();
-        return new EurekaEndpointGroup(webClient, registryFetchIntervalSeconds, appName, instanceId, vipAddress,
-                                       secureVipAddress, regions);
+        return new EurekaEndpointGroup(buildWebClient(), registryFetchIntervalSeconds, appName, instanceId,
+                                       vipAddress, secureVipAddress, regions);
     }
 
     // Override the return type of the chaining methods in the superclass.
