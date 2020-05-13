@@ -69,6 +69,7 @@ import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
 public class TTextProtocolTest {
 
     private String testData;
+    private String testDataNamedEnum;
     private String testDataNamedEnumSerialized;
     private Base64 base64Encoder;
 
@@ -78,7 +79,8 @@ public class TTextProtocolTest {
     @Before
     public void setUp() throws IOException {
         testData = readFile("TTextProtocol_TestData.txt");
-        testDataNamedEnumSerialized = readFile("TTextProtocol_TestData_NamedEnum_Serialized.txt");
+        testDataNamedEnum = readFile("TTextNamedEnumProtocol_TestData.txt");
+        testDataNamedEnumSerialized = readFile("TTextNamedEnumProtocol_TestData_Serialized.txt");
         base64Encoder = new Base64();
     }
 
@@ -114,17 +116,11 @@ public class TTextProtocolTest {
     @Test
     public void tTextNamedEnumProtocolReadWriteTest() throws Exception {
         // Deserialize the file contents into a thrift message.
-        final ByteArrayInputStream bais1 = new ByteArrayInputStream(testData.getBytes());
+        final ByteArrayInputStream bais1 = new ByteArrayInputStream(testDataNamedEnum.getBytes());
 
-        final TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
+        final TTextNamedEnumProtocolTestMsg msg1 = new TTextNamedEnumProtocolTestMsg();
         msg1.read(new TTextProtocol(new TIOStreamTransport(bais1), true));
-        msg1.unsetR();
-        msg1.unsetS();
-
-        final TTextProtocolTestMsg testMsg = testMsg();
-        testMsg.unsetR();
-        testMsg.unsetS();
-        assertThat(msg1).isEqualTo(testMsg);
+        assertThat(msg1).isEqualTo(namedEnumTestMsg());
 
         // Serialize that thrift message out to a byte array
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -135,7 +131,7 @@ public class TTextProtocolTest {
 
         // Deserialize that string back to a thrift message.
         final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
-        final TTextProtocolTestMsg msg2 = new TTextProtocolTestMsg();
+        final TTextNamedEnumProtocolTestMsg msg2 = new TTextNamedEnumProtocolTestMsg();
         msg2.read(new TTextProtocol(new TIOStreamTransport(bais2), true));
 
         assertThat(msg2).isEqualTo(msg1);
@@ -183,6 +179,14 @@ public class TTextProtocolTest {
                 .setW(TestUnion.f2(4))
                 .setX(ImmutableList.of(TestUnion.f2(5), TestUnion.f1(base64Encoder.decode("SGVsbG8gV29ybGQ="))))
                 .setY(Letter.ALPHA);
+    }
+
+    private static TTextNamedEnumProtocolTestMsg namedEnumTestMsg() {
+        return new TTextNamedEnumProtocolTestMsg()
+                .setA(1)
+                .setB(Letter.ALPHA)
+                .setC(ImmutableList.of(1, 2, 3))
+                .setD(ImmutableList.of(Letter.ALPHA, Letter.BETA, Letter.CHARLIE));
     }
 
     private static Sub sub(int s, int x) {

@@ -78,9 +78,9 @@ struct TTextProtocolTestMsg {
 
   15: required set<Letter> q;
 
-  16: map<Sub, i64> r;
+  16: required map<Sub, i64> r;
 
-  17: map<map<map<i64, i64>, i64>, i64> s;
+  17: required map<map<map<i64, i64>, i64>, i64> s;
 
   18: required list<Letter> t;
 
@@ -97,4 +97,14 @@ struct TTextProtocolTestMsg {
 
 struct TTextProtocolTestMsgUnion {
   1: required TestUnion u;
+}
+
+struct TTextNamedEnumProtocolTestMsg {
+  1: required i32 a;
+
+  2: required Letter b;
+
+  3: required list<i32> c;
+
+  4: required list<Letter> d;
 }
