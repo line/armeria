@@ -73,7 +73,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
 
-    private SocketAddress proxyRemoteAddress = null;
+    private SocketAddress proxyDestinationAddress;
 
     /**
      * Whether the current channel is active or not.
@@ -332,7 +332,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
 
         if (evt instanceof ProxyConnectionEvent) {
-            proxyRemoteAddress = ((ProxyConnectionEvent) evt).destinationAddress();
+            proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
             return;
         }
 
@@ -347,8 +347,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            if (proxyRemoteAddress != null) {
-                channelPool.connect(proxyRemoteAddress, H1C, sessionPromise);
+            if (proxyDestinationAddress != null) {
+                channelPool.connect(proxyDestinationAddress, H1C, sessionPromise);
             } else {
                 channelPool.connect(remoteAddress, H1C, sessionPromise);
             }
