@@ -1,151 +1,219 @@
-import net.davidecavestro.gradle.jxr.JxrLog
-import org.apache.maven.jxr.JXR
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
 
+import java.nio.file.Files
+import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
 import java.util.stream.Collectors
 
 buildscript {
     repositories {
-        mavenCentral()
         gradlePluginPortal()
+        mavenCentral()
     }
-
     dependencies {
-        classpath "kr.motd.gradle:sphinx-gradle-plugin:${managedVersions['kr.motd.gradle:sphinx-gradle-plugin']}"
-        classpath "gradle.plugin.net.davidecavestro:gradle-jxr-plugin:${managedVersions['gradle.plugin.net.davidecavestro:gradle-jxr-plugin']}"
+        classpath "com.github.node-gradle:gradle-node-plugin:${managedVersions['com.github.node-gradle:gradle-node-plugin']}"
     }
 }
 
 apply plugin: 'base'
-apply plugin: 'kr.motd.sphinx'
+apply plugin: 'com.github.node-gradle.node'
 
-def aggregatedProjects = projectsWithFlags('java', 'publish') - projectsWithFlags('no_aggregation')
-
-sphinx {
-    group = 'Documentation'
-    description = 'Generates the Sphinx web site.'
-    sourceDirectory "${project.projectDir}/src/sphinx"
+node {
+    version = '12.16.2'
+    yarnVersion = '1.22.4'
+    download = true
 }
 
-task javadoc(type: Javadoc,
-             group: 'Documentation',
-             description: 'Generates Javadoc API documentation for the main source code.') {
+tasks.yarn {
+    args += ['--frozen-lockfile']
 
-    destinationDir = project.file("${project.buildDir}/site/apidocs")
-
-    aggregatedProjects.each {
-        source it.sourceSets.main.java.srcDirs
-        dependsOn it.tasks.compileJava
-    }
-    classpath = aggregatedProjects.inject(project.files()) { ConfigurableFileCollection result, project ->
-        result.from(project.sourceSets.main.compileClasspath)
-        result.from(project.sourceSets.main.runtimeClasspath)
+    // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
+    // This makes sense in principal but Gradle often handles up-to-date checking much more
+    // slowly than yarn itself for a large node_modules, so we go ahead and remove it all
+    // from up-to-date checking.
+    nodeModulesOutputFilter = {
+        it.exclude("**/*")
     }
 }
 
-task xref(group: 'Documentation',
-          description: 'Generates the source cross-reference.') {
+task yarnClean(type: YarnTask) {
+    dependsOn 'yarn'
+    args = ['run', 'clean']
+}
+tasks.clean.dependsOn tasks.yarnClean
+tasks.clean.delete(project.file("${project.projectDir}/gen-src"))
 
-    def outputDir = "${project.buildDir}/site/xref"
-    def sourceDirs = aggregatedProjects.inject([]) { srcDirs, project ->
-        project.sourceSets.main.java.srcDirs.each { srcDirs << it.path }
-        return srcDirs
-    }
+task versionIndex(type: VersionIndexTask)
+task apiIndex(type: ApiIndexTask) {
+    dependsOn ':javadoc:javadoc'
+}
+task contributorList(type: ContributorListTask)
+task prepare {
+    dependsOn tasks.yarn_install
+    dependsOn tasks.versionIndex
+    dependsOn tasks.apiIndex
+    dependsOn tasks.contributorList
+}
 
-    inputs.files sourceDirs
-    outputs.dir outputDir
+task develop(type: YarnTask) {
+    dependsOn tasks.prepare
+    dependsOn 'yarn'
 
-    doLast {
-        JXR jxr = new JXR()
-        jxr.dest = outputDir
-        jxr.inputEncoding = 'UTF-8'
-        jxr.outputEncoding = 'UTF-8'
-        jxr.log = new JxrLog(logger: logger)
+    args = ['run', 'develop']
+}
 
-        def title = "Armeria ${project.version} cross-reference"
-        def bottom = rootProject.ext.copyrightFooter
-        jxr.xref(sourceDirs.findAll { new File(it).isDirectory() }, 'templates', title, title, bottom)
-        ant.copy(file: "${project.projectDir}/src/xref/stylesheet.css", todir: jxr.dest)
+final def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle')
+if (checkstyleEnabled) {
+    task lint(type: YarnTask) {
+        dependsOn tasks.prepare
+        args = ['run', 'lint']
+        inputs.dir('src')
+        inputs.file('.eslintrc.js')
+        inputs.file('package.json')
+        inputs.file('yarn.lock')
     }
 }
 
-task test(group: 'Verification',
-          description: 'Ensures the public API does not expose the shaded classes.',
-          dependsOn: tasks.javadoc) {
+// Note that this task is not triggered by the 'build' task
+// because it takes long to build a site.
+task site(type: YarnTask) {
+    dependsOn tasks.prepare
+    dependsOn 'yarn'
 
-    def javadocDir = file("${tasks.javadoc.destinationDir}/com/linecorp/armeria")
-    def reportFile = file("${project.buildDir}/test-results/referenced-classes.txt")
-    inputs.dir javadocDir
-    outputs.file reportFile
+    if (checkstyleEnabled) {
+        dependsOn 'lint'
+    }
+    args = ['run', 'build']
+    inputs.dir('src')
+    inputs.file('gatsby-config.js')
+    inputs.file('package.json')
+    inputs.file('tsconfig.json')
+    inputs.file('yarn.lock')
+    outputs.dir('.cache')
+    outputs.dir('public')
+}
 
-    doLast {
-        def inheritancePrefixes = [
-                'methods.inherited.from.class.',
-                'fields.inherited.from.class.',
-                'nested.classes.inherited.from.class.'
-        ]
-        def whitelistedPrefixes = ['java.', 'javax.']
-        def blacklistedPrefixes = [ 'com.linecorp.armeria.internal.' ] +
-                                  rootProject.ext.relocations.collect { it[1] + '.' }
-        def errors = []
+class VersionIndexTask extends DefaultTask {
 
-        reportFile.parentFile.mkdirs()
-        reportFile.withPrintWriter('UTF-8') { reportOut ->
-            fileTree(javadocDir).sort().each { File f ->
-                if (!f.name.endsWith('.html') || f.name == 'package-tree.html') {
-                    return
+    @Input
+    final def version = project.property('version')
+    @Input
+    final def managedVersions = project.property('managedVersions') as Map
+    @OutputFile
+    final def versionIndexFile = project.file("${project.projectDir}/gen-src/versions.json")
+
+    @TaskAction
+    def run() {
+        def info = new TreeMap(this.managedVersions)
+        info["${project.group}:armeria-bom"] = version
+
+        versionIndexFile.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(info).toPrettyString())
+        }
+    }
+}
+
+class ApiIndexTask extends DefaultTask {
+
+    @InputDirectory
+    final def javadocDir = project.file("${project.rootProject.projectDir}/javadoc/build/docs/javadoc")
+    @OutputFile
+    final def nameToHrefFile = project.file("${project.projectDir}/gen-src/api-index.json")
+
+    @TaskAction
+    def run() {
+        def javadocPath = javadocDir.toPath()
+        def nameToHref = Files.walk(javadocPath).filter({ path ->
+            if (Files.isDirectory(path)) {
+                return false
+            }
+
+            return path.getName(path.nameCount - 1).toString().matches(/[A-Z][a-zA-Z0-9._$]+\.html/)
+        }).sorted().flatMap({ path ->
+            def relativePath = "${javadocPath.relativize(path)}".replace(File.separator, '/')
+            def fqcn = relativePath[0..-6].replace('/', '.')
+            def href = "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/${relativePath}"
+
+            def result = []
+            def name = fqcn
+            for (;;) {
+                result.add([name, href])
+                def dotIndex = name.indexOf('.')
+                if (dotIndex < 0) {
+                    break
                 }
+                name = name.substring(dotIndex + 1)
+            }
 
-                if (f.path.replace(File.separator, '/').endsWith(
-                        'com/linecorp/armeria/common/thrift/ThriftListenableFuture.html')) {
-                    // ThriftListenableFuture exposes Guava's ListenableFuture by contract.
-                    return
-                }
+            return result.stream()
+        }).collect(Collectors.toMap({ e -> e[0] }, { e -> e[1] }, { a, b -> a }, { new TreeMap()}))
 
-                // Look for all the class names in the Javadoc.
-                def matcher = f.text =~ /([a-z]+\.(?:[a-z]+\.)+[A-Z][._A-Za-z0-9$]*[_A-Za-z0-9])/
-                def classNames = matcher.findAll().stream().flatMap({ it.stream() }).map({ name ->
-                    for (prefix in inheritancePrefixes) {
-                        if (name.startsWith(prefix)) {
-                            return name.substring(prefix.length())
-                        }
-                    }
-                    return name
-                }).filter({ name ->
-                    whitelistedPrefixes.find { name.startsWith(it) } == null
-                }).collect(Collectors.toSet())
 
-                // .. and make sure none of them are blacklisted.
-                classNames.sort().each { className ->
-                    def reportLine = "${f.name.replaceFirst(/\.html$/, '')} -> ${className}"
-                    reportOut.println reportLine
+        nameToHrefFile.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(nameToHref).toPrettyString())
+        }
+    }
+}
 
-                    blacklistedPrefixes.each { prefix ->
-                        if (className.startsWith(prefix)) {
-                            errors += reportLine
-                        }
-                    }
+class ContributorListTask extends DefaultTask {
+    // Rebuild up to once an hour, unless cleaned.
+    @Input
+    final def hourOfDay = System.currentTimeMillis() / TimeUnit.HOURS.toMillis(1)
+    @OutputFile
+    final def contributorsFile = project.file("${project.projectDir}/gen-src/contributors.json")
+
+    @TaskAction
+    def run() {
+        def contributors = new TreeMap<String, String>()
+        def accessToken = project.findProperty('githubToken')
+        def url = 'https://api.github.com/repos/line/armeria/contributors'
+        def nextPattern = Pattern.compile(/<(https:\/\/api\.github\.com\/[^>]+)>; rel="next"/)
+        for (def i = 0; i < 10; i++) {
+            def req = new URL(url).openConnection()
+            if (accessToken != null) {
+                req.setRequestProperty('Authorization', "token ${accessToken}")
+            }
+            def resText = req.getInputStream().getText()
+            if (req.getResponseCode() != 200) {
+                if (req.getHeaderFieldInt('X-RateLimit-Remaining', Integer.MAX_VALUE) <= 0) {
+                    throw new Exception('Exceeded Github API rate limit. ' +
+                            'Specify "-PgithubToken=<personalAccessToken>" option: ' +
+                            "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
+                } else {
+                    throw new Exception('Received a non-200 response from Github: ' +
+                            "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
                 }
             }
+            def res = new JsonSlurper().parseText(resText)
+            res.each({
+                def username = it['login']
+                def avatarUrl = it['avatar_url']
+                if (!(username instanceof CharSequence) || !(avatarUrl instanceof CharSequence)) {
+                    throw new Exception("Received an invalid response from Github: ${resText}")
+                }
+                contributors.put("${username}".toString(), "${avatarUrl}".toString())
+            })
+
+            // Handle pagination
+            def link = req.getHeaderField('Link')
+            if (link == null) {
+                // Last page or no link header
+                break
+            }
+
+            def nextLinkMatcher = nextPattern.matcher(link)
+            if (!nextLinkMatcher.find()) {
+                // No next link
+                break
+            }
+
+            // Jump to the next page
+            url = nextLinkMatcher.group(1)
         }
 
-        if (!errors.empty) {
-            throw new Exception("Blacklisted class(es) in the public API:${System.lineSeparator()}- " +
-                                errors.join("${System.lineSeparator()}- "))
+        contributorsFile.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(contributors).toPrettyString())
         }
     }
-}
-
-tasks.sphinx.dependsOn tasks.javadoc
-tasks.site {
-    group = 'Documentation'
-    description = 'Generates the project web site.'
-    dependsOn xref
-    dependsOn javadoc
-}
-
-tasks.assemble.dependsOn tasks.site
-tasks.check.dependsOn tasks.test
-tasks.build {
-  dependsOn tasks.assemble
-  dependsOn tasks.check
 }

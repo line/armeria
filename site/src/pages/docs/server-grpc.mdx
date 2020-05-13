@@ -1,0 +1,289 @@
+# Running a gRPC service
+
+<Tip>
+
+Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
+
+</Tip>
+
+Let's assume we have the following [gRPC][gRPC] service definition:
+
+```protobuf
+syntax = "proto3";
+
+package grpc.hello;
+
+option java_package = "com.example.grpc.hello";
+
+service HelloService {
+  rpc Hello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+```
+
+The Protobuf compiler will produce some Java code under the `com.example.grpc.hello` package.
+The most noteworthy one is `HelloServiceGrpc.java` which defines the base service class we will implement:
+
+```java
+public class HelloServiceGrpc {
+    ...
+    public static abstract class HelloServiceImplBase implements BindableService {
+        public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
+            asyncUnimplementedUnaryCall(METHOD_HELLO, responseObserver);
+        }
+        ...
+    }
+    ...
+}
+```
+
+Our implementation would look like the following:
+
+```java
+public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
+    @Override
+    public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
+        HelloReply reply = HelloReply.newBuilder()
+                                     .setMessage("Hello, " + req.getName() + '!')
+                                     .build();
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+    }
+}
+```
+<Tip>
+
+It is recommended to use the build plugin as explained in
+[the gRPC-Java README](https://github.com/grpc/grpc-java/blob/master/README.md#download) rather than
+running `protoc` manually.
+
+</Tip>
+
+## `GrpcService`
+Once you've finished the implementation of the service, you need to build a <type://GrpcService> using
+a <type://GrpcServiceBuilder> and add it to the <type://ServerBuilder>:
+
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+ServerBuilder sb = Server.builder();
+...
+sb.service(GrpcService.builder()
+                      .addService(new MyHelloService())
+                      .build());
+...
+Server server = sb.build();
+server.start();
+```
+
+<Tip>
+
+We bound the <type://GrpcService> without specifying any path. It is because <type://GrpcService>
+implements <type://HttpServiceWithRoutes>, which dynamically provides <typeplural://Route> by itself.
+
+</Tip>
+
+## Decorating a `GrpcService`
+
+Unlike a usual Armeria service, <type://GrpcService> implements a special interface called
+<type://HttpServiceWithRoutes>. Therefore, it is recommended to decorate a <type://GrpcService> by specifying
+decorator functions as extra parameters rather than using `Service.decorate()`:
+
+```java
+import com.linecorp.armeria.server.logging.LoggingService;
+
+ServerBuilder sb = Server.builder();
+...
+sb.service(GrpcService.builder()
+                      .addService(new MyHelloService())
+                      .build(),
+           LoggingService.newDecorator());
+...
+Server server = sb.build();
+server.start();
+```
+See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information about <type://HttpServiceWithRoutes>.
+
+## `gRPC-Web`
+
+<type://GrpcService> supports the [gRPC-Web][gRPC-Web] protocol,
+a small modification to the [gRPC][gRPC] wire format that can be used from a browser.
+To enable it for a <type://GrpcService>, add the web formats from
+<type://GrpcSerializationFormats> to the <type://GrpcServiceBuilder>. It is usually convenient
+to just pass `GrpcSerializationFormats.values()`.
+
+```java
+import com.linecorp.armeria.server.grpc.GrpcSerializationFormats;
+
+ServerBuilder sb = Server.builder();
+...
+sb.service(GrpcService.builder()
+                      .addService(new MyHelloService())
+                      .supportedSerializationFormats(GrpcSerializationFormats.values())
+                      .build());
+...
+Server server = sb.build();
+server.start();
+```
+The server will support both native [gRPC][gRPC] and [gRPC-Web][gRPC-Web] from the same endpoint. Use the unofficial
+[gRPC-Web-Client][gRPC-Web-Client] to access the service from a browser. [gRPC-Web][gRPC-Web] does not support RPC methods with streaming
+requests.
+
+If the origin of the Javascript and API server are different, [gRPC-Web-Client][gRPC-Web-Client] first sends `preflight`
+requests by the HTTP `OPTIONS` method, in order to determine whether the actual request is safe to send
+in terms of CORS. Armeria provides <type://CorsService> to handle this requests, so you need to decorate it when
+you build a <type://GrpcService>:
+
+```java
+import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.server.cors.CorsService;
+import com.linecorp.armeria.server.cors.CorsServiceBuilder;
+
+ServerBuilder sb = Server.builder();
+...
+final CorsServiceBuilder corsBuilder =
+        CorsService.builder("http://foo.com")
+                   .allowRequestMethods(HttpMethod.POST) // Allow POST method.
+                   // Allow Content-type and X-GRPC-WEB headers.
+                   .allowRequestHeaders(HttpHeaderNames.CONTENT_TYPE,
+                                        HttpHeaderNames.of("X-GRPC-WEB"))
+                   // Expose trailers of the HTTP response to the client.
+                   .exposeHeaders(GrpcHeaderNames.GRPC_STATUS,
+                                  GrpcHeaderNames.GRPC_MESSAGE,
+                                  GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
+
+sb.service(GrpcService.builder()
+                      .addService(new MyHelloService())
+                      .supportedSerializationFormats(GrpcSerializationFormats.values())
+                      .build(),
+           corsBuilder.newDecorator(),
+           LoggingService.newDecorator());
+...
+Server server = sb.build();
+server.start();
+```
+Please refer to [Configuring CORS](/docs/server-cors) for more information.
+
+## Unframed requests
+
+<type://GrpcService> supports serving unary RPC methods (no streaming request or response) without [gRPC][gRPC]
+wire format framing. This can be useful for gradually migrating an existing HTTP POST based API to [gRPC][gRPC].
+As <type://GrpcService> supports both binary protobuf and [Protobuf-JSON][Protobuf-JSON], either legacy protobuf
+or JSON APIs can be used.
+
+```java
+ServerBuilder sb = Server.builder();
+...
+sb.service(GrpcService.builder()
+                      .addService(new MyHelloService())
+                      .enableUnframedRequests(true)
+                      // Needed to support JSON in addition to binary
+                      .supportedSerializationFormats(GrpcSerializationFormats.PROTO,
+                                                     GrpcSerializationFormats.JSON)
+                      .build());
+...
+Server server = sb.build();
+server.start();
+```
+
+This service's unary methods can be accessed from any HTTP client at e.g., URL `/grpc.hello.HelloService/Hello`
+with Content-Type `application/protobuf` for binary protobuf POST body or `application/json; charset=utf-8`
+for JSON POST body.
+
+## Blocking service implementation
+
+Unlike upstream gRPC-Java, Armeria does not run service logic in a separate thread pool by default. If your
+service implementation requires blocking, either run the individual blocking logic in a thread pool, wrap the
+entire service implementation in `RequestContext.current().blockingTaskExecutor().submit`, or set
+`GrpcServiceBuilder.useBlockingTaskExecutor()` so the above happens automatically for all service methods
+and lifecycle callbacks.
+
+```java
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
+    @Override
+    public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
+        ServiceRequestContext.current().blockingTaskExecutor().submit(() -> {
+            // Perform a long-running task.
+
+            HelloReply reply = HelloReply.newBuilder()
+                                         .setMessage("Hello, " + req.getName() + '!')
+                                         .build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
+        });
+    }
+}
+```
+
+```java
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
+    @Override
+    public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
+        // Perform a long-running task.
+
+        HelloReply reply = HelloReply.newBuilder()
+                                     .setMessage("Hello, " + req.getName() + '!')
+                                     .build();
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+    }
+}
+
+ServerBuilder sb = Server.builder();
+sb.service(GrpcService.builder()
+                      .addService(new MyHelloService())
+                      // All service methods will be run within
+                      // the blocking executor.
+                      .useBlockingTaskExecutor(true)
+                      .build());
+```
+## Exception propagation
+It can be very useful to enable `Flags.verboseResponses()` in your server by specifying the
+`-Dcom.linecorp.armeria.verboseResponses=true` system property, which will automatically return
+information about an exception thrown in the server to gRPC clients. Armeria clients will automatically
+convert it back into an exception for structured logging, etc. This response will include information about
+the actual source code in the server - make sure it is safe to send such potentially sensitive information
+to all your clients before enabling this flag!
+
+See more details at [Client gRPC](/docs/client-grpc).
+
+## Server Reflection
+Armeria supports gRPC server reflection - just add an instance of `ProtoReflectionService` to your server.
+
+```java
+import io.grpc.protobuf.services.ProtoReflectionService;
+
+ServerBuilder sb = Server.builder();
+...
+sb.service(GrpcService.builder()
+                      .addService(new MyHelloService())
+                      .addService(ProtoReflectionService.newInstance())
+                      .build());
+...
+Server server = sb.build();
+server.start();
+```
+For more information, see the official [gRPC Server Reflection tutorial](https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md).
+
+## See also
+- [Client gRPC](/docs/client-grpc)
+
+[gRPC]: https://grpc.io/
+[gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
+[gRPC-Web-Client]: https://github.com/improbable-eng/grpc-web
+[Protobuf-JSON]: https://developers.google.com/protocol-buffers/docs/proto3#json
+[the gRPC-Java README]: https://github.com/grpc/grpc-java/blob/master/README.md#download

@@ -1,0 +1,173 @@
+# Calling a gRPC service
+
+<Tip>
+
+Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
+
+</Tip>
+  
+
+Let's assume we have the following [gRPC] service definition, served at `http://127.0.0.1:8080/`, just like
+what we used in [Running a gRPC service](/docs/server-grpc):
+
+```protobuf
+syntax = "proto3";
+
+package grpc.hello;
+
+option java_package = "com.example.grpc.hello";
+
+service HelloService {
+  rpc Hello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+```
+
+Making a call starts from creating a client:
+
+```java
+import com.linecorp.armeria.client.Clients;
+
+HelloServiceBlockingStub helloService = Clients.newClient(
+        "gproto+http://127.0.0.1:8080/",
+        HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class or HelloServiceStub.class
+
+HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();
+HelloReply reply = helloService.hello(request);
+assert reply.getMessage().equals("Hello, Armerian World!");
+```
+
+Note that we added the serialization format of the call using the `+` operator in the scheme part of the URI.
+Because we are calling a [gRPC] server, we can choose: `gproto` or `gjson`. If you are using [gRPC-web], 
+you can use `gproto-web` or `gjson-web`.
+
+Since we specified `HelloServiceBlockingStub.class` as the client type, `Clients.newClient()` will return a
+synchronous client implementation.  If we specified `HelloServiceFutureStub`, the calling code would have
+looked like the following:
+
+```java
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.linecorp.armeria.client.Clients;
+import java.util.concurrent.ForkJoinPool;
+
+HelloServiceFutureStub helloService = Clients.newClient(
+        "gproto+http://127.0.0.1:8080/",
+        HelloServiceFutureStub.class);
+
+HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();
+ListenableFuture<HelloReply> future = helloService.hello(request);
+
+Futures.addCallback(future, new FutureCallback<HelloReply>() {
+    @Override
+    public void onSuccess(HelloReply result) {
+        assert result.getMessage().equals("Hello, Armerian World!");
+    }
+
+    @Override
+    public void onFailure(Throwable t) {
+        t.printStackTrace();
+    }
+}, MoreExecutors.directExecutor());
+
+// You can also wait until the call is finished.
+HelloReply reply = future.get();
+```
+
+The asynchronous stub uses Guava's [ListenableFuture] and can be operated on using methods on [Futures]. The
+[futures-extra] library is very convenient for working with [ListenableFuture] in Java 8, including the ability
+to convert it to [CompletableFuture].
+
+[gRPC] also natively supports streaming RPC. If our service definition included this method:
+
+```protobuf
+service HelloService {
+  rpc ManyHellos (stream HelloRequest) returns (stream HelloReply) {}
+}
+```
+
+You can also use the builder pattern for client construction:
+
+```java
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+
+HelloServiceBlockingStub helloService =
+    Clients.builder("gproto+http://127.0.0.1:8080/")
+           .responseTimeoutMillis(10000)
+           .decorator(LoggingClient.newDecorator())
+           .build(HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class
+                                                   // or HelloServiceStub.class
+
+HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();
+HelloReply reply = helloService.hello(request);
+assert reply.getMessage().equals("Hello, Armerian World!");
+```
+
+As you might have noticed already, we decorated the client using <type://LoggingClient>, which logs all
+requests and responses. You might be interested in decorating a client using other decorators, for example
+to gather metrics. Please also refer to <type://ClientBuilder> for more configuration options.
+
+## Exception propagation
+
+If you have enabled `Flags.verboseResponses()` in the server being accessed by specifying
+`-Dcom.linecorp.armeria.verboseResponses=true` system property, then any exception during processing
+in the server will be returned to the client as a <type://StatusCauseException> attached to the normal gRPC
+`Status`. This can be used for programmatic access to the exception that happened in the server. In this
+example, the server always fails with `throw new IllegalStateException("Failed!");`
+
+```java
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.grpc.StatusCauseException;
+
+import io.grpc.StatusRuntimeException;
+
+HelloServiceBlockingStub helloService = Clients.newClient(
+        "gproto+http://127.0.0.1:8080/",
+        HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class or HelloServiceStub.class
+
+HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();
+try {
+    HelloReply reply = helloService.hello(request);
+} catch (StatusRuntimeException e) {
+    if (e.getCause() instanceof StatusCauseException) {
+        StatusCauseException cause = (StatusCauseException) e.getCause();
+        // The name of the class of the exception and its message in the server can be accessed.
+        assert cause.getOriginalClassName().equals("java.lang.IllegalStateException");
+        assert cause.getOriginalMessage().equals("Failed!");
+
+        // The exception's message is a combination of both the class name and original message.
+        assert cause.getMessage().equals("java.lang.IllegalStateException: Failed!");
+
+        // The exception's stack trace is that which occurred when the server threw the exception.
+        cause.printStackTrace();
+
+        // Logging frameworks, as used by e.g., LoggingClient, will print the stack trace if configured
+        // to do so.
+
+        // Now you know exactly where to look in the server to figure out what may have gone wrong.
+    }
+}
+```
+
+## See also
+
+- [Running a gRPC service](/docs/server-grpc)
+- [Decorating a client](/docs/client-decorator)
+- [Sending custom HTTP headers](/docs/client-custom-http-headers)
+
+[CompletableFuture]: https://docs.oracle.com/javase/10/docs/api/java/util/concurrent/CompletableFuture.html
+[Futures]: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/Futures.html
+[ListenableFuture]: https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/ListenableFuture.html
+[gRPC]: https://grpc.io/
+[futures-extra]: https://github.com/spotify/futures-extra
+[gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
+
