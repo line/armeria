@@ -118,12 +118,21 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     /**
+     * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@link SessionProtocol} and
+     * {@link EndpointGroup}.
+     */
+    public static EurekaEndpointGroupBuilder builder(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+        return new EurekaEndpointGroupBuilder(sessionProtocol, endpointGroup, null);
+    }
+
+    /**
      * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@link SessionProtocol},
      * {@link EndpointGroup} and path.
      */
     public static EurekaEndpointGroupBuilder builder(
-            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
-        return new EurekaEndpointGroupBuilder(sessionProtocol, endpointGroup, path);
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, String path) {
+        return new EurekaEndpointGroupBuilder(sessionProtocol, endpointGroup, requireNonNull(path, "path"));
     }
 
     private final long registryFetchIntervalSeconds;

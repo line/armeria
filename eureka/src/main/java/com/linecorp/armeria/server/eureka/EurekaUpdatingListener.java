@@ -51,6 +51,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -79,12 +80,21 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     /**
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link SessionProtocol}
+     * and {@link EndpointGroup}.
+     */
+    public static EurekaUpdatingListenerBuilder builder(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+        return new EurekaUpdatingListenerBuilder(sessionProtocol, endpointGroup, null);
+    }
+
+    /**
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link SessionProtocol},
      * {@link EndpointGroup} and path.
      */
     public static EurekaUpdatingListenerBuilder builder(
-            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
-        return new EurekaUpdatingListenerBuilder(sessionProtocol, endpointGroup, path);
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, String path) {
+        return new EurekaUpdatingListenerBuilder(sessionProtocol, endpointGroup, requireNonNull(path, "path"));
     }
 
     private final EurekaWebClient client;
@@ -229,8 +239,15 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
             return null;
         }
 
-        return sessionProtocol.uriText() + "://" + hostnameOrIpAddr + ':' + portWrapper.getPort() +
-               route.paths().get(0);
+        return sessionProtocol.uriText() + "://" + hostnameOrIpAddr(hostnameOrIpAddr) +
+               ':' + portWrapper.getPort() + route.paths().get(0);
+    }
+
+    private static String hostnameOrIpAddr(String hostnameOrIpAddr) {
+        if (NetUtil.isValidIpV6Address(hostnameOrIpAddr) && hostnameOrIpAddr.charAt(0) != '[') {
+            return '[' + hostnameOrIpAddr + ']';
+        }
+        return hostnameOrIpAddr;
     }
 
     @Override
