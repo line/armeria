@@ -41,18 +41,18 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     private final boolean needsContentInStrategy;
 
     /**
-     * Creates a new builder with the specified {@link RetryStrategy}.
+     * Creates a new builder with the specified {@link RetryRule}.
      */
-    RetryingClientBuilder(RetryStrategy retryStrategy) {
-        super(retryStrategy);
+    RetryingClientBuilder(RetryRule retryRule) {
+        super(retryRule);
         needsContentInStrategy = false;
     }
 
     /**
-     * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     * Creates a new builder with the specified {@link RetryRuleWithContent}.
      */
-    RetryingClientBuilder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
-        super(retryStrategyWithContent);
+    RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
+        super(retryRuleWithContent);
         needsContentInStrategy = true;
     }
 
@@ -74,7 +74,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     /**
      * Sets the length of content required to determine whether to retry or not. If the total length of content
      * exceeds this length and there's no retry condition matched, it will hand over the stream to the client.
-     * Note that this property is useful only if you specified {@link RetryStrategyWithContent} when calling
+     * Note that this property is useful only if you specified {@link RetryRuleWithContent} when calling
      * this builder's constructor. The default value of this property is
      * {@value #DEFAULT_CONTENT_PREVIEW_LENGTH}.
      *
@@ -82,14 +82,14 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      *
      * @return {@link RetryingClientBuilder} to support method chaining
      *
-     * @throws IllegalStateException if this builder is created with a {@link RetryStrategy} rather than
-     *                               {@link RetryStrategyWithContent}
+     * @throws IllegalStateException if this builder is created with a {@link RetryRule} rather than
+     *                               {@link RetryRuleWithContent}
      * @throws IllegalArgumentException if the specified {@code contentPreviewLength} is equal to or
      *                                  less than {@code 0}
      */
     public RetryingClientBuilder contentPreviewLength(int contentPreviewLength) {
-        checkState(needsContentInStrategy, "cannot set contentPreviewLength when RetryStrategy is used; " +
-                                           "Use RetryStrategyWithContent to enable this feature.");
+        checkState(needsContentInStrategy, "cannot set contentPreviewLength when RetryRule is used; " +
+                                           "Use RetryRuleWithContent to enable this feature.");
         checkArgument(contentPreviewLength > 0,
                       "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
         this.contentPreviewLength = contentPreviewLength;
@@ -101,12 +101,12 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      */
     public RetryingClient build(HttpClient delegate) {
         if (needsContentInStrategy) {
-            return new RetryingClient(delegate, retryStrategyWithContent(), maxTotalAttempts(),
+            return new RetryingClient(delegate, retryRuleWithContent(), maxTotalAttempts(),
                                       responseTimeoutMillisForEachAttempt(), useRetryAfter,
                                       contentPreviewLength);
         }
 
-        return new RetryingClient(delegate, retryStrategy(), maxTotalAttempts(),
+        return new RetryingClient(delegate, retryRule(), maxTotalAttempts(),
                                   responseTimeoutMillisForEachAttempt(), useRetryAfter);
     }
 

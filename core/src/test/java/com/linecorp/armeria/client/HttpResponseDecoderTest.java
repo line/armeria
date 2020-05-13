@@ -33,7 +33,8 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.client.retry.RetryStrategy;
+import com.linecorp.armeria.client.retry.RetryDecision;
+import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -63,8 +64,8 @@ class HttpResponseDecoderTest {
     void confirmResponseStartAndEndInTheSameThread(SessionProtocol protocol)
             throws InterruptedException {
         final AtomicBoolean failed = new AtomicBoolean();
-        final RetryStrategy strategy =
-                (ctx, cause) -> CompletableFuture.completedFuture(Backoff.withoutDelay());
+        final RetryRule strategy = (ctx, cause) ->
+                CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
 
         final WebClientBuilder builder = WebClient.builder(server.uri(protocol));
         // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,

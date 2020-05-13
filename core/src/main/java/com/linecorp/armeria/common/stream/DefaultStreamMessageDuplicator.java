@@ -1026,7 +1026,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
             final int length = elements.length;
             final int convertedIndex = offset & length - 1;
-            checkState(size > 0, "queue is empty");
+            checkState(size > 0, "queue is empty.");
             checkArgument(head < tail ? head <= convertedIndex && convertedIndex < tail
                                       : head <= convertedIndex && convertedIndex < length ||
                                         0 <= convertedIndex && convertedIndex < tail,
