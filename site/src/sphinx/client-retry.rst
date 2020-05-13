@@ -127,7 +127,7 @@ You can return a different :api:`Backoff` according to the response status.
              .orElse(RetryRule.onStatus(HttpStatus.CONFLICT).thenBackoff(backoffOnConflict));
 
 If you need to determine whether you need to retry by looking into the response content, you can build
-:api:`RetryRuleWithContent` and specify it when you create an :api:`WebClient`
+:api:`RetryRuleWithContent` and specify it when you create a :api:`WebClient`
 using :api:`RetryingClientBuilder`:
 
 .. code-block:: java
