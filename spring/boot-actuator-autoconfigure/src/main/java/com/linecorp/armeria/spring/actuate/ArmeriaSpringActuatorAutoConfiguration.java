@@ -232,6 +232,18 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         };
     }
 
+    @Nullable
+    private static Integer obtainManagementServerPort(@Nullable Integer port) {
+        Integer managementPort = port;
+        if (managementPort != null) {
+            if (managementPort.equals(0)) {
+                managementPort = SocketUtils.findAvailableTcpPort();
+            }
+            return managementPort;
+        }
+        return null;
+    }
+
     private static void addLocalManagementPortPropertyAlias(ConfigurableEnvironment environment, Integer port) {
         environment.getPropertySources().addLast(new PropertySource<Object>("Management Server") {
 
@@ -243,18 +255,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 return null;
             }
         });
-    }
-
-    @Nullable
-    private static Integer obtainManagementServerPort(@Nullable Integer port) {
-        Integer managementPort = port;
-        if (managementPort != null) {
-            if (managementPort.equals(0)) {
-                managementPort = SocketUtils.findAvailableTcpPort();
-            }
-            return managementPort;
-        }
-        return null;
     }
 
     private static void configureSecureDecorator(ServerBuilder sb, Integer port,
