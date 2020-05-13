@@ -73,9 +73,9 @@ public final class ThriftProtocolFactories {
     public static final TProtocolFactory TEXT = TTextProtocolFactory.get(false);
 
     /**
-     * {@link TProtocolFactory} for the Thrift TText protocol that serializes enums as strings.
+     * {@link TProtocolFactory} for the Thrift TText protocol with named enums.
      */
-    public static final TProtocolFactory TEXT_ENUM = TTextProtocolFactory.get(true);
+    public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
 
     /**
      * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
@@ -83,15 +83,6 @@ public final class ThriftProtocolFactories {
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
      */
     public static TProtocolFactory get(SerializationFormat serializationFormat) {
-        return get(serializationFormat, false);
-    }
-
-    /**
-     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
-     *
-     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
-     */
-    public static TProtocolFactory get(SerializationFormat serializationFormat, boolean writeEnumsAsString) {
         requireNonNull(serializationFormat, "serializationFormat");
 
         if (serializationFormat == ThriftSerializationFormats.BINARY) {
@@ -107,7 +98,11 @@ public final class ThriftProtocolFactories {
         }
 
         if (serializationFormat == ThriftSerializationFormats.TEXT) {
-            return writeEnumsAsString ? TEXT_ENUM : TEXT;
+            return TEXT;
+        }
+
+        if (serializationFormat == ThriftSerializationFormats.TEXT_NAMED_ENUM) {
+            return TEXT_NAMED_ENUM;
         }
 
         throw new IllegalArgumentException("non-Thrift serializationFormat: " + serializationFormat);
@@ -128,7 +123,9 @@ public final class ThriftProtocolFactories {
         } else if (protoFactory instanceof TJSONProtocol.Factory) {
             return ThriftSerializationFormats.JSON;
         } else if (protoFactory instanceof TTextProtocolFactory) {
-            return ThriftSerializationFormats.TEXT;
+            final TTextProtocolFactory factory = (TTextProtocolFactory) protoFactory;
+            return factory.usesNamedEnums() ? ThriftSerializationFormats.TEXT_NAMED_ENUM
+                                            : ThriftSerializationFormats.TEXT;
         } else {
             throw new IllegalArgumentException(
                     "unsupported TProtocolFactory: " + protoFactory.getClass().getName());

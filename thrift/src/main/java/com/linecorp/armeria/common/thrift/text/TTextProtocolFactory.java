@@ -26,29 +26,36 @@ public final class TTextProtocolFactory implements TProtocolFactory {
 
     private static final long serialVersionUID = -7323272088544581160L;
 
-    private static final TTextProtocolFactory INSTANCE_ORDINAL = new TTextProtocolFactory(false);
-    private static final TTextProtocolFactory INSTANCE_STRING = new TTextProtocolFactory(true);
+    private static final TTextProtocolFactory INSTANCE = new TTextProtocolFactory(false);
+    private static final TTextProtocolFactory INSTANCE_NAMED_ENUMS = new TTextProtocolFactory(true);
 
-    private final boolean writeEnumsAsString;
+    private final boolean useNamedEnums;
 
     /**
      * Returns the singleton {@link TTextProtocolFactory} instance.
      */
-    public static TTextProtocolFactory get(boolean writeEnumsAsString) {
-        return writeEnumsAsString ? INSTANCE_STRING : INSTANCE_ORDINAL;
+    public static TTextProtocolFactory get(boolean useNamedEnums) {
+        return useNamedEnums ? INSTANCE_NAMED_ENUMS : INSTANCE;
     }
 
-    private TTextProtocolFactory(boolean writeEnumsAsString) {
-        this.writeEnumsAsString = writeEnumsAsString;
+    private TTextProtocolFactory(boolean useNamedEnums) {
+        this.useNamedEnums = useNamedEnums;
+    }
+
+    /**
+     * Returns whether the serialization of named enums is enabled.
+     */
+    public boolean usesNamedEnums() {
+        return useNamedEnums;
     }
 
     @Override
     public TProtocol getProtocol(TTransport trans) {
-        return new TTextProtocol(trans, writeEnumsAsString);
+        return new TTextProtocol(trans, useNamedEnums);
     }
 
     @Override
     public String toString() {
-        return "TProtocolFactory(TTEXT)";
+        return useNamedEnums ? "TProtocolFactory(TTEXT_NAMED_ENUM)" : "TProtocolFactory(TTEXT)";
     }
 }

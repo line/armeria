@@ -131,7 +131,7 @@ public final class TTextProtocol extends TProtocol {
     private final Stack<WriterByteArrayOutputStream> writers;
     private final Stack<BaseContext> contextStack;
     private final Stack<Class<?>> currentFieldClass;
-    private final boolean writeEnumsAsString;
+    private final boolean useNamedEnums;
     @Nullable
     private JsonNode root;
 
@@ -139,13 +139,13 @@ public final class TTextProtocol extends TProtocol {
      * Create a parser which can read from trans, and create the output writer
      * that can write to a TTransport.
      */
-    public TTextProtocol(TTransport trans, boolean writeEnumsAsString) {
+    public TTextProtocol(TTransport trans, boolean useNamedEnums) {
         super(trans);
 
         writers = new Stack<>();
         contextStack = new Stack<>();
         currentFieldClass = new Stack<>();
-        this.writeEnumsAsString = writeEnumsAsString;
+        this.useNamedEnums = useNamedEnums;
         reset();
     }
 
@@ -344,7 +344,7 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeI32(int i32) throws TException {
-        if (!writeEnumsAsString) {
+        if (!useNamedEnums) {
             writeNameOrValue(TypedParser.INTEGER, i32);
             return;
         }

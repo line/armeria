@@ -38,7 +38,7 @@ public final class ThriftJacksonModule extends Module {
     private static final Version VERSION =
             new Version(0, 0, 0, null, "com.linecorp.armeria", "armeria-thrift");
 
-    private final boolean writeEnumsAsString;
+    private final boolean useNamedEnums;
 
     /**
      * Initialize {@code ThriftJacksonModule} with default settings.
@@ -48,10 +48,12 @@ public final class ThriftJacksonModule extends Module {
     }
 
     /**
-     * Initialize {@code ThriftJacksonModule} to serialize enums as strings.
+     * Initialize {@code ThriftJacksonModule}.
+     *
+     * @param useNamedEnums enable serialization of named enums
      */
-    public ThriftJacksonModule(boolean writeEnumsAsString) {
-        this.writeEnumsAsString = writeEnumsAsString;
+    public ThriftJacksonModule(boolean useNamedEnums) {
+        this.useNamedEnums = useNamedEnums;
     }
 
     @Override
@@ -66,6 +68,6 @@ public final class ThriftJacksonModule extends Module {
 
     @Override
     public void setupModule(SetupContext context) {
-        context.addSerializers(new ThriftJacksonSerializers(writeEnumsAsString));
+        context.addSerializers(new ThriftJacksonSerializers(useNamedEnums));
     }
 }
