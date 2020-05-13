@@ -131,14 +131,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public int unfinishedResponses() {
+    public boolean hasUnfinishedResponses() {
         assert responseDecoder != null;
-        return responseDecoder.unfinishedResponses();
+        return responseDecoder.hasUnfinishedResponses();
     }
 
     @Override
-    public int maxUnfinishedResponses() {
-        return maxUnfinishedResponses;
+    public boolean incrementNumUnfinishedResponses() {
+        assert responseDecoder != null;
+        return responseDecoder.reserveUnfinishedResponse(maxUnfinishedResponses);
     }
 
     @Override
@@ -286,7 +287,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             if (protocol == H1 || protocol == H1C) {
                 final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
-                if (idleTimeoutMillis > 0) {
+                if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
                     final Http1ClientKeepAliveHandler keepAliveHandler =
                             new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
                                                             idleTimeoutMillis, pingIntervalMillis);

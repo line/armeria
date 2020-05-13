@@ -77,7 +77,7 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/server-annotated-service.html#annotated-http-service">
+ * <a href="https://line.github.io/armeria/docs/server-annotated-service">
  * Annotated HTTP Service</a> to use this.
  */
 public class AnnotatedService implements HttpService {

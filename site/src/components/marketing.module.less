@@ -1,0 +1,114 @@
+@import '../../node_modules/antd/es/style/themes/default.less';
+
+@screen-two-column-min: @marketing-block-width * 2 + @marketing-margin * 2;
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: @marketing-margin 0 0;
+  max-width: 100%;
+
+  &:first-child {
+    padding-top: @marketing-margin - @layout-header-height / 4;
+  }
+
+  &:last-child {
+    padding-bottom: @marketing-margin;
+  }
+
+  @media (max-width: @screen-sm-max) {
+    padding: @marketing-margin-sm;
+    padding-bottom: 0;
+
+    &:first-child {
+      padding-top: @marketing-margin-sm - @layout-header-height / 4;
+    }
+
+    &:last-child {
+      padding-bottom: @marketing-margin-sm;
+    }
+  }
+
+  .blockList {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-content: flex-start;
+    align-items: center;
+    overflow: visible;
+
+    .block {
+      flex-grow: 1;
+      flex-basis: 0;
+    }
+
+    // Small display, single column
+    @media (max-width: @screen-sm-max) {
+      .block {
+        width: @marketing-block-width;
+        max-width: 100%;
+        margin: 0 auto;
+      }
+    }
+
+    // Medium display, single column
+    @media (min-width: @screen-md-min) {
+      min-width: 0;
+      max-width: 100%;
+      margin: 0 auto;
+
+      .block {
+        width: @marketing-block-width;
+        max-width: @marketing-block-width;
+      }
+    }
+
+    // Use 2-column layout for a large display.
+    @media (min-width: @screen-two-column-min) {
+      flex-direction: row;
+
+      .block {
+        min-width: @marketing-block-width;
+        width: @marketing-block-width;
+        max-width: @marketing-block-width;
+
+        &:nth-child(odd) {
+          margin: 0 (@marketing-block-margin / 2) 0 0;
+        }
+
+        &:nth-child(even) {
+          margin: 0 0 0 (@marketing-block-margin / 2);
+        }
+      }
+    }
+  }
+
+  .blockListReverse {
+    .blockList;
+
+    // Allow reversing only on 2-column layout.
+    @media (min-width: @screen-two-column-min) {
+      flex-direction: row-reverse;
+
+      .block {
+        &:nth-child(odd) {
+          margin: 0 auto 0 (@marketing-block-margin / 2);
+        }
+
+        &:nth-child(even) {
+          margin: 0 (@marketing-block-margin / 2) 0 auto;
+        }
+      }
+    }
+  }
+}
+
+.highlight {
+  color: @armeria-magenta;
+}
+
+.highlightNoWrap {
+  .highlight;
+  white-space: nowrap;
+}

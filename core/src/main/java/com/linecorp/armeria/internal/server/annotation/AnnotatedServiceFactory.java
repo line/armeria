@@ -112,7 +112,7 @@ import com.linecorp.armeria.server.annotation.Trace;
 /**
  * Builds a list of {@link AnnotatedService}s from an {@link Object}.
  * This class is not supposed to be used by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/server-annotated-service.html#annotated-http-service">
+ * <a href="https://line.github.io/armeria/docs/server-annotated-service">
  * Annotated HTTP Service</a> to use {@link AnnotatedService}.
  */
 public final class AnnotatedServiceFactory {
@@ -734,7 +734,7 @@ public final class AnnotatedServiceFactory {
         if (description != null) {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
-                checkArgument(!value.isEmpty(), "value is empty");
+                checkArgument(!value.isEmpty(), "value is empty.");
                 return value;
             }
         }

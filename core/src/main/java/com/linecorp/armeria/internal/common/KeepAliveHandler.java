@@ -172,6 +172,10 @@ public abstract class KeepAliveHandler {
         cancelFutures();
     }
 
+    public final boolean isClosing() {
+        return pingState == PingState.SHUTDOWN;
+    }
+
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);
 
     protected abstract boolean pingResetsPreviousPing();

@@ -1,0 +1,50 @@
+@import '../../node_modules/antd/es/style/themes/default.less';
+
+.wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: @armeria-darkgray;
+}
+
+.main {
+  font-size: ~"min(25vw, 30vh)";
+  line-height: ~"min(25vw, 30vh)";
+  white-space: nowrap;
+  color: @text-color-dark;
+}
+
+.zero {
+  position: relative;
+  top: ~"max(-3vw, -3vh)";
+  width: ~"min(25vw, 30vh)";
+  height: ~"min(24vw, 30vh)";
+  margin-right: ~"min(2.5vw, 2.5vh)";
+
+  opacity: 0;
+  transition-property: opacity;
+  
+  animation-name: pulse;
+  animation-duration: 2.5s;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}

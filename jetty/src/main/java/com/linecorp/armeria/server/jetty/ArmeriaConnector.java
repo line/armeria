@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -29,6 +29,8 @@ import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.util.concurrent.GlobalEventExecutor;
 
@@ -61,6 +63,13 @@ final class ArmeriaConnector extends ServerConnector {
 
     @Override
     public String getHost() {
+        //noinspection ConstantConditions
+        if (armeriaServer == null) {
+            // This method could be called during ServerConnector construction (for diagnostic purposes)
+            // BEFORE {@code armeriaServer} gets assigned. In such case case,
+            // return some reasonable mockup value in order to prevent NPE.
+            return SystemInfo.hostname();
+        }
         return armeriaServer.defaultHostname();
     }
 
@@ -71,6 +80,13 @@ final class ArmeriaConnector extends ServerConnector {
 
     @Override
     public int getLocalPort() {
+        //noinspection ConstantConditions
+        if (armeriaServer == null) {
+            // This method could be called during ServerConnector construction (for diagnostic purposes),
+            // BEFORE {@code armeriaServer} gets assigned. In such case case,
+            // return some reasonable mockup value in order to prevent NPE.
+            return -1;
+        }
         try {
             return armeriaServer.activeLocalPort();
         } catch (IllegalStateException e) {

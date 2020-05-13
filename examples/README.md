@@ -2,7 +2,7 @@
 
 - `annotated-http-service`
   - Learn how to write an HTTP service using annotations.
-  - See [Annotated services](https://line.github.io/armeria/server-annotated-service.html).
+  - See [Annotated services](https://line.github.io/armeria/docs/server-annotated-service).
 
 - `context-propagation`
   - Learn how to propagate Armeria's `RequestContext` for use in scenarios like tracing.
@@ -14,33 +14,33 @@
 
 - `grpc`
   - Learn how to write a gRPC service with Armeria gRPC module.
-  - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html) and
-    [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
+  - See [Running a gRPC service](https://line.github.io/armeria/docs/server-grpc) and
+    [Calling a gRPC service](https://line.github.io/armeria/docs/client-grpc).
     
 - `grpc-kotlin`
   - Learn how to write a gRPC service with Armeria gRPC module (Kotlin).
-  - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html) and
-    [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
+  - See [Running a gRPC service](https://line.github.io/armeria/docs/server-grpc) and
+    [Calling a gRPC service](https://line.github.io/armeria/docs/client-grpc).
 
 - `grpc-reactor`
   - Learn how to write a gRPC service with Armeria gRPC module,
     [`reactive-grpc`](https://github.com/salesforce/reactive-grpc) and
     [Project Reactor](https://projectreactor.io/) libraries for asynchronous processing
     with non-blocking back pressure.
-  - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html) and
-    [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
+  - See [Running a gRPC service](https://line.github.io/armeria/docs/server-grpc) and
+    [Calling a gRPC service](https://line.github.io/armeria/docs/client-grpc).
 
 - `proxy-server`
   - Learn how to make a proxy server which leverages client side load balancing.
-  - See [Client-side load balancing](https://line.github.io/armeria/client-service-discovery.html)
+  - See [Client-side load balancing](https://line.github.io/armeria/docs/client-service-discovery)
 
 - `saml-service-provider`
   - Learn how to authenticate users using SAML.
-  - See [SAML Single Sign-on](https://line.github.io/armeria/advanced-saml.html).
+  - See [SAML Single Sign-on](https://line.github.io/armeria/docs/advanced-saml).
 
 - `server-sent-events`
   - Learn how to serve Server-Sent Events.
-  - See [Serving Server-Sent Events](https://line.github.io/armeria/server-sse.html).
+  - See [Serving Server-Sent Events](https://line.github.io/armeria/docs/server-sse).
   
 - `spring-boot-minimal`
   - Learn how to use Armeria with the minimal Spring Boot dependencies.
@@ -53,15 +53,15 @@
 
 - `spring-boot-webflux`
   - Learn how to make Armeria serve your Spring Boot reactive web application.
-  - See [Using Armeria with Spring WebFlux](https://line.github.io/armeria/advanced-spring-webflux-integration.html).
+  - See [Using Armeria with Spring WebFlux](https://line.github.io/armeria/docs/advanced-spring-webflux-integration).
 
 - `dropwizard`
   - Learn how to make Armeria serve your Dropwizard web application.
-  - See [Using Armeria with Dropwizard](https://line.github.io/armeria/advanced-dropwizard-integration.html).
+  - See [Using Armeria with Dropwizard](https://line.github.io/armeria/docs/advanced-dropwizard-integration).
 
 - `static-files`
   - Learn how to serve static files.
-  - See [Serving static files](https://line.github.io/armeria/server-http-file.html).
+  - See [Serving static files](https://line.github.io/armeria/docs/server-http-file).
 
 ## Configure `-parameters` javac option 
 

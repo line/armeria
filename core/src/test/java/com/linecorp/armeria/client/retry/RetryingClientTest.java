@@ -36,12 +36,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -82,14 +89,21 @@ class RetryingClientTest {
     private static final ClientFactory clientFactory =
             ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
-    private static final RetryStrategy retryAlways =
-            (ctx, cause) -> CompletableFuture.completedFuture(Backoff.fixed(500));
+    private static final RetryRule retryAlways =
+            (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
 
     private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
 
     private final AtomicInteger requestAbortServiceCallCounter = new AtomicInteger();
 
     private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
+
+    private AtomicInteger reqCount;
+
+    @BeforeEach
+    void setUp() {
+        reqCount = new AtomicInteger();
+    }
 
     @AfterAll
     static void destroy() {
@@ -106,8 +120,6 @@ class RetryingClientTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/retry-content", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -124,8 +136,6 @@ class RetryingClientTest {
             });
 
             sb.service("/500-then-success", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -138,8 +148,6 @@ class RetryingClientTest {
             });
 
             sb.service("/503-then-success", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -152,8 +160,6 @@ class RetryingClientTest {
             });
 
             sb.service("/retry-after-1-second", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -168,8 +174,6 @@ class RetryingClientTest {
             });
 
             sb.service("/retry-after-with-http-date", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -211,8 +215,6 @@ class RetryingClientTest {
             });
 
             sb.service("/1sleep-then-success", new AbstractHttpService() {
-                final AtomicInteger reqCount = new AtomicInteger();
-
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -294,14 +296,14 @@ class RetryingClientTest {
 
     @Test
     void retryWhenStatusMatched() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus());
+        final WebClient client = client(RetryRule.builder().onServerErrorStatus().onException().thenBackoff());
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
     @Test
     void disableResponseTimeout() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus(), 0, 0, 100);
+        final WebClient client = client(RetryRule.failsafe(), 0, 0, 100);
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         // response timeout did not happen.
@@ -309,7 +311,7 @@ class RetryingClientTest {
 
     @Test
     void respectRetryAfter() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus());
+        final WebClient client = client(RetryRule.failsafe());
         final Stopwatch sw = Stopwatch.createStarted();
 
         final AggregatedHttpResponse res = client.get("/retry-after-1-second").aggregate().join();
@@ -320,7 +322,7 @@ class RetryingClientTest {
 
     @Test
     void respectRetryAfterWithHttpDate() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus());
+        final WebClient client = client(RetryRule.failsafe());
 
         final Stopwatch sw = Stopwatch.createStarted();
         final AggregatedHttpResponse res = client.get("/retry-after-with-http-date").aggregate().join();
@@ -333,21 +335,25 @@ class RetryingClientTest {
 
     @Test
     void propagateLastResponseWhenNextRetryIsAfterTimeout() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(10000000)));
+        final WebClient client = client(RetryRule.builder()
+                                                 .onServerErrorStatus()
+                                                 .onException()
+                                                 .thenBackoff(Backoff.fixed(10000000)));
         final AggregatedHttpResponse res = client.get("/service-unavailable").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
     void propagateLastResponseWhenExceedMaxAttempts() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(1)), 0, 0, 3);
+        final WebClient client = client(
+                RetryRule.builder().onServerErrorStatus().onException().thenBackoff(Backoff.fixed(1)), 0, 0, 3);
         final AggregatedHttpResponse res = client.get("/service-unavailable").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
     void retryAfterOneYear() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus());
+        final WebClient client = client(RetryRule.failsafe());
 
         // The response will be the last response whose headers contains HttpHeaderNames.RETRY_AFTER
         // because next retry is after timeout
@@ -359,12 +365,12 @@ class RetryingClientTest {
     @Test
     void retryOnResponseTimeout() {
         final Backoff backoff = Backoff.fixed(100);
-        final RetryStrategy strategy =
+        final RetryRule strategy =
                 (ctx, cause) -> {
                     if (cause instanceof ResponseTimeoutException) {
-                        return CompletableFuture.completedFuture(backoff);
+                        return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
                     }
-                    return CompletableFuture.completedFuture(null);
+                    return CompletableFuture.completedFuture(RetryDecision.noRetry());
                 };
 
         final WebClient client = client(strategy, 0, 500, 100);
@@ -372,16 +378,19 @@ class RetryingClientTest {
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
-    @Test
-    void differentBackoffBasedOnStatus() {
-        final WebClient client = client(RetryStrategy.onStatus(statusBasedBackoff()));
+    @ArgumentsSource(RetryStrategiesProvider.class)
+    @ParameterizedTest
+    void differentBackoffBasedOnStatus(RetryRule retryRule) {
+        final WebClient client = client(retryRule);
 
         final Stopwatch sw = Stopwatch.createStarted();
         AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isBetween((long) (10 * 0.9), (long) (1000 * 1.1));
 
+        reqCount.set(0);
         sw.reset().start();
+
         res = client.get("/500-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo((long) (1000 * 0.9));
@@ -408,7 +417,10 @@ class RetryingClientTest {
 
     @Test
     void retryWithRequestBody() {
-        final WebClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(10)));
+        final WebClient client = client(RetryRule.builder()
+                                                 .onServerErrorStatus()
+                                                 .onException()
+                                                 .thenBackoff(Backoff.fixed(10)));
         final AggregatedHttpResponse res = client.post("/post-ping-pong", "bar").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("bar");
     }
@@ -420,7 +432,10 @@ class RetryingClientTest {
 
         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(RetryStrategy.onServerErrorStatus(Backoff.fixed(8000)))
+                RetryingClient.builder(RetryRule.builder()
+                                                .onServerErrorStatus()
+                                                .onException()
+                                                .thenBackoff(Backoff.fixed(8000)))
                               .newDecorator();
 
         final WebClient client = WebClient.builder(server.httpUri())
@@ -557,9 +572,9 @@ class RetryingClientTest {
     @Test
     void exceptionInDecorator() {
         final AtomicInteger retryCounter = new AtomicInteger();
-        final RetryStrategy strategy = (ctx, cause) -> {
+        final RetryRule strategy = (ctx, cause) -> {
             retryCounter.incrementAndGet();
-            return CompletableFuture.completedFuture(Backoff.withoutDelay());
+            return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
         };
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator((delegate, ctx, req) -> {
@@ -576,7 +591,7 @@ class RetryingClientTest {
     @Test
     void exceptionInStrategy() {
         final IllegalStateException exception = new IllegalStateException("foo");
-        final RetryStrategy strategy = (ctx, cause) -> {
+        final RetryRule strategy = (ctx, cause) -> {
             throw exception;
         };
 
@@ -590,14 +605,14 @@ class RetryingClientTest {
     void useSameEventLoopWhenAggregate() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<EventLoop> eventLoop = new AtomicReference<>();
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator((delegate, ctx, req) -> {
-                                              eventLoop.set(ctx.eventLoop());
-                                              return delegate.execute(ctx, req);
-                                          })
-                                          .decorator(RetryingClient.newDecorator(
-                                                  RetryStrategy.onServerErrorStatus(), 2))
-                                          .build();
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator((delegate, ctx, req) -> {
+                             eventLoop.set(ctx.eventLoop());
+                             return delegate.execute(ctx, req);
+                         })
+                         .decorator(RetryingClient.newDecorator(RetryRule.failsafe(), 2))
+                         .build();
         client.get("/503-then-success").aggregate().whenComplete((unused, cause) -> {
             assertThat(eventLoop.get().inEventLoop()).isTrue();
             latch.countDown();
@@ -605,14 +620,14 @@ class RetryingClientTest {
         latch.await();
     }
 
-    private WebClient client(RetryStrategy strategy) {
-        return client(strategy, 10000, 0, 100);
+    private WebClient client(RetryRule retryRule) {
+        return client(retryRule, 10000, 0, 100);
     }
 
-    private WebClient client(RetryStrategy strategy, long responseTimeoutMillis,
+    private WebClient client(RetryRule retryRule, long responseTimeoutMillis,
                              long responseTimeoutForEach, int maxTotalAttempts) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(strategy)
+                RetryingClient.builder(retryRule)
                               .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
                               .useRetryAfter(true)
                               .maxTotalAttempts(maxTotalAttempts)
@@ -625,24 +640,54 @@ class RetryingClientTest {
                         .build();
     }
 
-    private static class RetryIfContentMatch implements RetryStrategyWithContent<HttpResponse> {
+    private static class RetryIfContentMatch implements RetryRuleWithContent<HttpResponse> {
         private final String retryContent;
-        private final Backoff backoffOnContent = Backoff.fixed(100);
+        private final RetryDecision decision = RetryDecision.retry(Backoff.fixed(100));
 
         RetryIfContentMatch(String retryContent) {
             this.retryContent = retryContent;
         }
 
         @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
+        public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
             final CompletableFuture<AggregatedHttpResponse> future = response.aggregate();
             return future.handle((aggregatedResponse, unused) -> {
                 if (aggregatedResponse != null &&
                     aggregatedResponse.contentUtf8().equalsIgnoreCase(retryContent)) {
-                    return backoffOnContent;
+                    return decision;
                 }
                 return null;
             });
+        }
+    }
+
+    private static final class RetryStrategiesProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            final Backoff backoffOn503 = Backoff.fixed(10).withMaxAttempts(2);
+            final Backoff backoffOn500 = Backoff.fixed(1000).withMaxAttempts(2);
+
+            final RetryStrategy retryStrategy = RetryStrategy.onStatus((status, unused) -> {
+                if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+                    return backoffOn503;
+                }
+                if (status == HttpStatus.INTERNAL_SERVER_ERROR) {
+                    return backoffOn500;
+                }
+                return null;
+            });
+
+            final RetryRule retryRule =
+                    RetryRule.of(RetryRule.builder()
+                                          .onStatus(HttpStatus.SERVICE_UNAVAILABLE)
+                                          .thenBackoff(backoffOn503),
+                                 RetryRule.builder()
+                                          .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                                          .thenBackoff(backoffOn500));
+
+            return Stream.of(RetryRuleUtil.fromRetryStrategy(retryStrategy), retryRule)
+                         .map(Arguments::of);
         }
     }
 }

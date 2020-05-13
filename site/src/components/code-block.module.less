@@ -1,0 +1,60 @@
+@import '../../node_modules/antd/es/style/themes/default.less';
+
+.wrapper {
+  position: relative;
+
+  > pre {
+    background-color: @armeria-darkgray;
+    border-radius: @border-radius-base !important;
+    line-height: 1.15;
+    padding: @padding-md;
+
+    > code {
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: transparent;
+      white-space: pre;
+      word-break: keep-all;
+
+      &::before,
+      &::after {
+        content: '';
+      }
+    }
+  }
+
+  &.hasFilename > pre {
+    padding-top: @padding-md * 2;
+  }
+}
+
+.filename {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  background: @tabs-card-head-background;
+  padding: 0 @padding-sm;
+  border-radius: @border-radius-base;
+  border: solid 1px @armeria-darkgray;
+  color: @text-color;
+  font-family: @code-family;
+  font-size: @font-size-sm;
+  white-space: pre;
+}
+
+.clipboardButton {
+  @clipboard-button-bg: fade(@armeria-darkgray, 80%);
+
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  color: @text-color-secondary-dark;
+  background-color: @clipboard-button-bg;
+
+  &:active,
+  &:hover {
+    background-color: @clipboard-button-bg;
+  }
+}

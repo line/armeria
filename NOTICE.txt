@@ -88,11 +88,6 @@ This product contains a modified part of json-minify, distributed by Kyle Simpso
   * License: licenses/LICENSE.json-minify.mit.txt (MIT License)
   * Homepage: https://github.com/getify/JSON.minify
 
-This product contains a modified part of Micrometer, distributed by Pivotal Software, Inc:
-
-  * License: licenses/LICENSE.micrometer.al20.txt (Apache License v2.0)
-  * Homepage: https://micrometer.io/
-
 This product contains a modified part of Netty, distributed by Netty.io:
 
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
