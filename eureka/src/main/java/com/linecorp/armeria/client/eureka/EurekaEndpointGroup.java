@@ -61,7 +61,6 @@ import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
-import com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
