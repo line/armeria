@@ -45,7 +45,7 @@ Use <type://ZooKeeperUpdatingListenerBuilder> to register your server to a ZooKe
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
 
-ZookeeperUpdatingListener listener =
+ZooKeeperUpdatingListener listener =
         ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints")
                                  .sessionTimeout(10000)
                                  .build();
@@ -64,7 +64,7 @@ import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
 import org.apache.curator.framework.CuratorFramework;
 
 CuratorFramework client = ...
-ZookeeperUpdatingListener listener =
+ZooKeeperUpdatingListener listener =
         ZooKeeperUpdatingListener.builder(client, "/myProductionEndpoints")
                                  .code(NodeValueCodec.ofDefault())
                                  .build();

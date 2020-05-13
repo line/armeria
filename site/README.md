@@ -65,6 +65,7 @@ module.exports = {
    $ git add -A .
    $ git commit --amend -m 'Deploy the web site'
    $ git push --force
+   ```
 
 ### Checking what's taking space in `.js` bundles
 
