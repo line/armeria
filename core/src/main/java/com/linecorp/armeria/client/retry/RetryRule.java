@@ -60,7 +60,6 @@ public interface RetryRule {
      * <p>This method is a shortcut for:
      * <pre>{@code
      * RetryRule.of(RetryRule.builder(HttpMethods.idempotentMethods())
-     *                       .onIdempotentMethods()
      *                       .onServerErrorStatus()
      *                       .onUnprocessed()
      *                       .thenBackoff(),
@@ -83,7 +82,7 @@ public interface RetryRule {
 
     /**
      * Returns a newly created {@link RetryRule} that will retry with
-     * the {@linkplain Backoff#ofDefault() defalut backoff} if the class of the response status is
+     * the {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is
      * one of the specified {@link HttpStatusClass}es.
      */
     static RetryRule onStatusClass(Iterable<HttpStatusClass> statusClasses) {
