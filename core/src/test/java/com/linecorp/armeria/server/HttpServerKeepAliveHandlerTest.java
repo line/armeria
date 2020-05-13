@@ -97,6 +97,7 @@ class HttpServerKeepAliveHandlerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.idleTimeoutMillis(0);
             sb.pingIntervalMillis(0);
+            sb.service("/", (ctx, req) -> HttpResponse.of("OK"));
             sb.service("/streaming", (ctx, req) -> HttpResponse.streaming());
         }
     };
@@ -107,9 +108,9 @@ class HttpServerKeepAliveHandlerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.idleTimeoutMillis(0);
             sb.pingIntervalMillis(serverPingInterval);
-            sb.decorator(LoggingService.newDecorator())
-              .service("/", (ctx, req) -> HttpResponse.of("OK"))
-              .service("/streaming", (ctx, req) -> HttpResponse.streaming());
+            sb.decorator(LoggingService.newDecorator());
+            sb.service("/", (ctx, req) -> HttpResponse.of("OK"));
+            sb.service("/streaming", (ctx, req) -> HttpResponse.streaming());
         }
     };
 
@@ -187,8 +188,10 @@ class HttpServerKeepAliveHandlerTest {
     void serverShouldSendPingWithNoIdleTimeout() throws InterruptedException {
         final long clientIdleTimeout = 0;
         final long clientPingInterval = 0;
+        final long responseTimeout = 0;
         final WebClient client = newWebClient(clientIdleTimeout,
                                               clientPingInterval,
+                                              responseTimeout,
                                               serverWithNoIdleTimeout.uri(SessionProtocol.H2C));
 
         client.get("/").aggregate().join();
@@ -201,15 +204,16 @@ class HttpServerKeepAliveHandlerTest {
     void clientShouldSendPingWithNoIdleTimeout(SessionProtocol protocol) throws InterruptedException {
         final long clientIdleTimeout = 0;
         final long clientPingInterval = 10000;
+        final long responseTimeout = 0;
         final WebClient client = newWebClient(clientIdleTimeout, clientPingInterval,
-                                              serverWithNoKeepAlive.uri(protocol));
+                                              responseTimeout, serverWithNoKeepAlive.uri(protocol));
 
         client.get("/").aggregate().join();
-        assertThat(counter).hasValue(1);
         await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
     }
 
-    private WebClient newWebClient(long clientIdleTimeout, long pingIntervalMillis, URI uri) {
+    private WebClient newWebClient(long clientIdleTimeout, long pingIntervalMillis, long responseTimeout,
+                                   URI uri) {
         final ClientFactory factory = ClientFactory.builder()
                                                    .idleTimeoutMillis(clientIdleTimeout)
                                                    .pingIntervalMillis(pingIntervalMillis)
@@ -217,11 +221,15 @@ class HttpServerKeepAliveHandlerTest {
                                                    .build();
         return WebClient.builder(uri)
                         .factory(factory)
+                        .responseTimeoutMillis(responseTimeout)
                         .build();
     }
 
     private WebClient newWebClient(long clientIdleTimeout, URI uri) {
-        return newWebClient(clientIdleTimeout, Flags.defaultPingIntervalMillis(), uri);
+        return newWebClient(clientIdleTimeout,
+                            Flags.defaultPingIntervalMillis(),
+                            Flags.defaultResponseTimeoutMillis(),
+                            uri);
     }
 
     private void assertPing() {
