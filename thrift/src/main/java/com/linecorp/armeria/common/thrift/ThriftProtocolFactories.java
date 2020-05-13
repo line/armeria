@@ -70,7 +70,12 @@ public final class ThriftProtocolFactories {
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol.
      */
-    public static final TProtocolFactory TEXT = TTextProtocolFactory.get();
+    public static final TProtocolFactory TEXT = TTextProtocolFactory.get(false);
+
+    /**
+     * {@link TProtocolFactory} for the Thrift TText protocol that serializes enums as strings.
+     */
+    public static final TProtocolFactory TEXT_ENUM = TTextProtocolFactory.get(true);
 
     /**
      * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
@@ -78,6 +83,15 @@ public final class ThriftProtocolFactories {
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
      */
     public static TProtocolFactory get(SerializationFormat serializationFormat) {
+        return get(serializationFormat, false);
+    }
+
+    /**
+     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
+     *
+     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
+     */
+    public static TProtocolFactory get(SerializationFormat serializationFormat, boolean writeEnumsAsString) {
         requireNonNull(serializationFormat, "serializationFormat");
 
         if (serializationFormat == ThriftSerializationFormats.BINARY) {
@@ -93,7 +107,7 @@ public final class ThriftProtocolFactories {
         }
 
         if (serializationFormat == ThriftSerializationFormats.TEXT) {
-            return TEXT;
+            return writeEnumsAsString ? TEXT_ENUM : TEXT;
         }
 
         throw new IllegalArgumentException("non-Thrift serializationFormat: " + serializationFormat);

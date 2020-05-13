@@ -32,6 +32,8 @@ package com.linecorp.armeria.common.thrift.text;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Stack;
 
@@ -129,6 +131,7 @@ public final class TTextProtocol extends TProtocol {
     private final Stack<WriterByteArrayOutputStream> writers;
     private final Stack<BaseContext> contextStack;
     private final Stack<Class<?>> currentFieldClass;
+    private final boolean writeEnumsAsString;
     @Nullable
     private JsonNode root;
 
@@ -136,12 +139,13 @@ public final class TTextProtocol extends TProtocol {
      * Create a parser which can read from trans, and create the output writer
      * that can write to a TTransport.
      */
-    public TTextProtocol(TTransport trans) {
+    public TTextProtocol(TTransport trans, boolean writeEnumsAsString) {
         super(trans);
 
         writers = new Stack<>();
         contextStack = new Stack<>();
         currentFieldClass = new Stack<>();
+        this.writeEnumsAsString = writeEnumsAsString;
         reset();
     }
 
@@ -211,10 +215,13 @@ public final class TTextProtocol extends TProtocol {
         } catch (IOException ex) {
             throw new TException(ex);
         }
+
+        currentFieldClass.push(getCurrentContext().getClassByFieldName(field.name));
     }
 
     @Override
     public void writeFieldEnd() throws TException {
+        currentFieldClass.pop();
     }
 
     @Override
@@ -337,7 +344,25 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeI32(int i32) throws TException {
-        writeNameOrValue(TypedParser.INTEGER, i32);
+        if (!writeEnumsAsString) {
+            writeNameOrValue(TypedParser.INTEGER, i32);
+            return;
+        }
+
+        final Class<?> fieldClass = getCurrentFieldClassIfIs(TEnum.class);
+        if (fieldClass == null) {
+            writeNameOrValue(TypedParser.INTEGER, i32);
+            return;
+        }
+
+        try {
+            final Method method = fieldClass.getMethod("findByValue", int.class);
+            final String str = method.invoke(null, i32).toString();
+            writeNameOrValue(TypedParser.STRING, str);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new TTransportException("invalid value for enum field " +
+                                          fieldClass.getSimpleName() + ':' + i32);
+        }
     }
 
     @Override

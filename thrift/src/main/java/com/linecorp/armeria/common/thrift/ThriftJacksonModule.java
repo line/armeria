@@ -35,7 +35,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public final class ThriftJacksonModule extends Module {
 
-    private static final Version VERSION = new Version(0, 0, 0, null, "com.linecorp.armeria", "armeria-thrift");
+    private static final Version VERSION =
+            new Version(0, 0, 0, null, "com.linecorp.armeria", "armeria-thrift");
+
+    private final boolean writeEnumsAsString;
+
+    /**
+     * Initialize {@code ThriftJacksonModule} with default settings.
+     */
+    public ThriftJacksonModule() {
+        this(false);
+    }
+
+    /**
+     * Initialize {@code ThriftJacksonModule} to serialize enums as strings.
+     */
+    public ThriftJacksonModule(boolean writeEnumsAsString) {
+        this.writeEnumsAsString = writeEnumsAsString;
+    }
 
     @Override
     public String getModuleName() {
@@ -49,6 +66,6 @@ public final class ThriftJacksonModule extends Module {
 
     @Override
     public void setupModule(SetupContext context) {
-        context.addSerializers(new ThriftJacksonSerializers());
+        context.addSerializers(new ThriftJacksonSerializers(writeEnumsAsString));
     }
 }

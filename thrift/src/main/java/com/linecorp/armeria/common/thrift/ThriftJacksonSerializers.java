@@ -26,6 +26,7 @@ import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TMemoryBuffer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -41,6 +42,12 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
 
     private static final long serialVersionUID = -285900387635271875L;
 
+    private final boolean writeEnumsAsString;
+
+    ThriftJacksonSerializers(boolean writeEnumsAsString) {
+        this.writeEnumsAsString = writeEnumsAsString;
+    }
+
     @Override
     public JsonSerializer<?> findSerializer(SerializationConfig config, JavaType type,
                                             BeanDescription beanDesc) {
@@ -50,16 +57,16 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             return new TMessageJsonSerializer();
         }
         if (TBase.class.isAssignableFrom(rawType)) {
-            return new TBaseJsonSerializer();
+            return new TBaseJsonSerializer(writeEnumsAsString);
         }
         if (TApplicationException.class.isAssignableFrom(rawType)) {
-            return new TApplicationExceptionJsonSerializer();
+            return new TApplicationExceptionJsonSerializer(writeEnumsAsString);
         }
         if (ThriftCall.class.isAssignableFrom(rawType)) {
-            return new ThriftCallJsonSerializer();
+            return new ThriftCallJsonSerializer(writeEnumsAsString);
         }
         if (ThriftReply.class.isAssignableFrom(rawType)) {
-            return new ThriftReplyJsonSerializer();
+            return new ThriftReplyJsonSerializer(writeEnumsAsString);
         }
         return super.findSerializer(config, type, beanDesc);
     }
@@ -75,7 +82,8 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
     }
 
     @SuppressWarnings("rawtypes")
-    static void serializeTBase(@Nullable TBase value, JsonGenerator gen) throws IOException {
+    static void serializeTBase(@Nullable TBase value, JsonGenerator gen,
+                               boolean writeEnumsAsString) throws IOException {
         if (value == null) {
             gen.writeNull();
             return;
@@ -87,11 +95,11 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             } catch (TException ex) {
                 throw new IllegalArgumentException(ex);
             }
-        }));
+        }, writeEnumsAsString));
     }
 
-    static void serializeTApplicationException(@Nullable TApplicationException value, JsonGenerator gen)
-            throws IOException {
+    static void serializeTApplicationException(@Nullable TApplicationException value, JsonGenerator gen,
+                                               boolean writeEnumsAsString) throws IOException {
         if (value == null) {
             gen.writeNull();
             return;
@@ -103,12 +111,14 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             } catch (TException ex) {
                 throw new IllegalArgumentException(ex);
             }
-        }));
+        }, writeEnumsAsString));
     }
 
-    private static String serializeTBaseLike(Consumer<TProtocol> writer) {
+    private static String serializeTBaseLike(Consumer<TProtocol> writer, boolean writeEnumsAsString) {
         final TMemoryBuffer buffer = new TMemoryBuffer(1024);
-        final TProtocol protocol = ThriftProtocolFactories.TEXT.getProtocol(buffer);
+        final TProtocolFactory factory = writeEnumsAsString ? ThriftProtocolFactories.TEXT_ENUM
+                                                            : ThriftProtocolFactories.TEXT;
+        final TProtocol protocol = factory.getProtocol(buffer);
         writer.accept(protocol);
         return new String(buffer.getArray(), 0, buffer.length());
     }
@@ -119,8 +129,15 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
     static final class ThriftCallJsonSerializer extends StdSerializer<ThriftCall> {
         private static final long serialVersionUID = -4873295256482417316L;
 
+        private final boolean writeEnumsAsString;
+
         ThriftCallJsonSerializer() {
+            this(false);
+        }
+
+        ThriftCallJsonSerializer(boolean writeEnumsAsString) {
             super(ThriftCall.class);
+            this.writeEnumsAsString = writeEnumsAsString;
         }
 
         @Override
@@ -130,7 +147,7 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             gen.writeFieldName("header");
             serializeTMessage(value.header(), gen);
             gen.writeFieldName("args");
-            serializeTBase(value.args(), gen);
+            serializeTBase(value.args(), gen, writeEnumsAsString);
             gen.writeEndObject();
         }
     }
@@ -141,8 +158,15 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
     static final class ThriftReplyJsonSerializer extends StdSerializer<ThriftReply> {
         private static final long serialVersionUID = -783551224966265113L;
 
+        private final boolean writeEnumsAsString;
+
         ThriftReplyJsonSerializer() {
+            this(false);
+        }
+
+        ThriftReplyJsonSerializer(boolean writeEnumsAsString) {
             super(ThriftReply.class);
+            this.writeEnumsAsString = writeEnumsAsString;
         }
 
         @Override
@@ -169,9 +193,9 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             }
 
             gen.writeFieldName("result");
-            serializeTBase(result, gen);
+            serializeTBase(result, gen, writeEnumsAsString);
             gen.writeFieldName("exception");
-            serializeTApplicationException(exception, gen);
+            serializeTApplicationException(exception, gen, writeEnumsAsString);
             gen.writeEndObject();
         }
     }
@@ -201,13 +225,20 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
 
         private static final long serialVersionUID = -7954242119098597530L;
 
+        private final boolean writeEnumsAsString;
+
         TBaseJsonSerializer() {
+            this(false);
+        }
+
+        TBaseJsonSerializer(boolean writeEnumsAsString) {
             super(TBase.class);
+            this.writeEnumsAsString = writeEnumsAsString;
         }
 
         @Override
         public void serialize(TBase value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            serializeTBase(value, gen);
+            serializeTBase(value, gen, writeEnumsAsString);
         }
     }
 
@@ -218,14 +249,21 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             extends StdSerializer<TApplicationException> {
         private static final long serialVersionUID = -7552338111791933510L;
 
+        private final boolean writeEnumsAsString;
+
         TApplicationExceptionJsonSerializer() {
+            this(false);
+        }
+
+        TApplicationExceptionJsonSerializer(boolean writeEnumsAsString) {
             super(TApplicationException.class);
+            this.writeEnumsAsString = writeEnumsAsString;
         }
 
         @Override
         public void serialize(TApplicationException value, JsonGenerator gen, SerializerProvider provider)
                 throws IOException {
-            serializeTApplicationException(value, gen);
+            serializeTApplicationException(value, gen, writeEnumsAsString);
         }
     }
 }
