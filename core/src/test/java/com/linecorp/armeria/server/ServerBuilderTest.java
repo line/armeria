@@ -538,18 +538,15 @@ class ServerBuilderTest {
     }
 
     @CsvSource({
-            "0,     10000",
-            "15000, 20000",
-            "20000, 15000",
+            "0,     10000, 10000",
+            "15000, 20000, 0",
+            "20000, 15000, 15000",
     })
     @ParameterizedTest
-    void pingIntervalShouldBeLessThanIdleTimeout(long idleTimeoutMillis, long pingIntervalMillis) {
+    void pingIntervalShouldBeLessThanIdleTimeout(long idleTimeoutMillis, long pingIntervalMillis,
+                                                 long expectedPingIntervalMillis) {
         final ServerConfig config = newServerWithKeepAlive(idleTimeoutMillis, pingIntervalMillis).config();
         assertThat(config.idleTimeoutMillis()).isEqualTo(idleTimeoutMillis);
-        if (idleTimeoutMillis == 0 || pingIntervalMillis >= idleTimeoutMillis) {
-            assertThat(config.pingIntervalMillis()).isEqualTo(0);
-        } else {
-            assertThat(config.pingIntervalMillis()).isEqualTo(pingIntervalMillis);
-        }
+        assertThat(config.pingIntervalMillis()).isEqualTo(expectedPingIntervalMillis);
     }
 }

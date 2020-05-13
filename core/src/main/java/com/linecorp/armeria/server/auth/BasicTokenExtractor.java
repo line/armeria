@@ -34,6 +34,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.BasicToken;
 
 import io.netty.util.AsciiString;
 
