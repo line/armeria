@@ -202,31 +202,34 @@ You might want to use the following build file as a starting point when you set 
 
 You can configure your build tool to add `-parameters` javac option as follows.
 
-```groovy
-// Gradle:
-tasks.withType(JavaCompile) {
-    options.compilerArgs += '-parameters'
-}
-```
-
-```xml
-<!-- Maven -->
-<project>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <compilerArgs>
-            <arg>-parameters</arg>
-          </compilerArgs>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-</project>
-```
+<Tabs>
+  <TabPane tab="Gradle" key="gradle">
+    <CodeBlock language="groovy" filename="build.gradle">{`
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += '-parameters'
+    }
+    `}</CodeBlock>
+  </TabPane>
+  <TabPane tab="Maven" key="maven">
+    <CodeBlock language="xml" filename="pom.xml">{`
+    <project>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <compilerArgs>
+                <arg>-parameters</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </project>
+    `}</CodeBlock>
+  </TabPane>
+</Tabs>
 
 ### IntelliJ IDEA
 
