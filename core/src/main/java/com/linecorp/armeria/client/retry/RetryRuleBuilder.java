@@ -16,24 +16,28 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.client.retry.RetryRuleUtil.DEFAULT_DECISION;
+import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.client.AbstractRuleBuilder;
+import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
  * A builder which creates a {@link RetryRule}.
  */
-public final class RetryRuleBuilder extends AbstractRetryRuleBuilder {
+public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     RetryRuleBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
@@ -61,7 +65,7 @@ public final class RetryRuleBuilder extends AbstractRetryRuleBuilder {
         return build(RetryDecision.noRetry());
     }
 
-    RetryRule build(RetryDecision decision) {
+    private RetryRule build(RetryDecision decision) {
         if (decision != RetryDecision.noRetry() &&
             exceptionFilter() == null && responseHeadersFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
@@ -69,10 +73,9 @@ public final class RetryRuleBuilder extends AbstractRetryRuleBuilder {
         return build(this, decision);
     }
 
-    static RetryRule build(AbstractRetryRuleBuilder builder, RetryDecision decision) {
-        final Predicate<RequestHeaders> requestHeadersFilter = builder.requestHeadersFilter();
-        final Predicate<ResponseHeaders> responseHeaderFilter = builder.responseHeadersFilter();
-        final Predicate<Throwable> exceptionFilter = builder.exceptionFilter();
+    static RetryRule build(AbstractRuleBuilder builder, RetryDecision decision) {
+        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> filter =
+                AbstractRuleBuilderUtil.buildFilter(builder);
 
         final CompletableFuture<RetryDecision> decisionFuture;
         if (decision == RetryDecision.DEFAULT) {
@@ -80,28 +83,7 @@ public final class RetryRuleBuilder extends AbstractRetryRuleBuilder {
         } else {
             decisionFuture = CompletableFuture.completedFuture(decision);
         }
-
-        return (ctx, cause) -> {
-            if (ctx.log().isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
-                final RequestHeaders requestHeaders = ctx.log().partial().requestHeaders();
-                if (!requestHeadersFilter.test(requestHeaders)) {
-                    return NEXT_DECISION;
-                }
-            }
-
-            if (cause != null && exceptionFilter != null && exceptionFilter.test(Exceptions.peel(cause))) {
-                return decisionFuture;
-            }
-
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                final ResponseHeaders responseHeaders = ctx.log().partial().responseHeaders();
-                if (responseHeaderFilter != null && responseHeaderFilter.test(responseHeaders)) {
-                    return decisionFuture;
-                }
-            }
-
-            return NEXT_DECISION;
-        };
+        return filter.andThen(matched -> matched ? decisionFuture : NEXT_DECISION)::apply;
     }
 
     @Override

@@ -26,34 +26,33 @@ import com.linecorp.armeria.common.HttpResponse;
  */
 public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
 
-    private final boolean needsContentInStrategy;
+    private final boolean needsContentInRule;
 
     /**
-     * Creates a new builder with the specified {@link CircuitBreakerStrategy}.
+     * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerStrategy strategy) {
-        super(strategy);
-        needsContentInStrategy = false;
+    CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
+        super(rule);
+        needsContentInRule = false;
     }
 
     /**
-     * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
+     * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent}.
      */
-    CircuitBreakerClientBuilder(
-            CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
-        super(strategyWithContent);
-        needsContentInStrategy = true;
+    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        super(ruleWithContent);
+        needsContentInRule = true;
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
      */
     public CircuitBreakerClient build(HttpClient delegate) {
-        if (needsContentInStrategy) {
-            return new CircuitBreakerClient(delegate, mapping(), strategyWithContent());
+        if (needsContentInRule) {
+            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent());
         }
 
-        return new CircuitBreakerClient(delegate, mapping(), strategy());
+        return new CircuitBreakerClient(delegate, mapping(), rule());
     }
 
     /**

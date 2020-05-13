@@ -35,42 +35,42 @@ import com.linecorp.armeria.common.Response;
 public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
 
     @Nullable
-    private final CircuitBreakerStrategy strategy;
+    private final CircuitBreakerRule rule;
 
     @Nullable
-    private final CircuitBreakerStrategyWithContent<O> strategyWithContent;
+    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
 
     private CircuitBreakerMapping mapping = CircuitBreakerMapping.ofDefault();
 
     /**
-     * Creates a new builder with the specified {@link CircuitBreakerStrategy}.
+     * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
-    AbstractCircuitBreakerClientBuilder(CircuitBreakerStrategy strategy) {
-        this(requireNonNull(strategy, "strategy"), null);
+    AbstractCircuitBreakerClientBuilder(CircuitBreakerRule rule) {
+        this(requireNonNull(rule, "rule"), null);
     }
 
     /**
-     * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
+     * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent}.
      */
-    AbstractCircuitBreakerClientBuilder(CircuitBreakerStrategyWithContent<O> strategyWithContent) {
-        this(null, requireNonNull(strategyWithContent, "strategyWithContent"));
+    AbstractCircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<O> ruleWithContent) {
+        this(null, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     private AbstractCircuitBreakerClientBuilder(
-            @Nullable CircuitBreakerStrategy strategy,
-            @Nullable CircuitBreakerStrategyWithContent<O> strategyWithContent) {
-        this.strategy = strategy;
-        this.strategyWithContent = strategyWithContent;
+            @Nullable CircuitBreakerRule rule,
+            @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
+        this.rule = rule;
+        this.ruleWithContent = ruleWithContent;
     }
 
-    CircuitBreakerStrategy strategy() {
-        checkState(strategy != null, "strategy is not set.");
-        return strategy;
+    CircuitBreakerRule rule() {
+        checkState(rule != null, "rule is not set.");
+        return rule;
     }
 
-    CircuitBreakerStrategyWithContent<O> strategyWithContent() {
-        checkState(strategyWithContent != null, "strategyWithContent is not set.");
-        return strategyWithContent;
+    CircuitBreakerRuleWithContent<O> ruleWithContent() {
+        checkState(ruleWithContent != null, "ruleWithContent is not set.");
+        return ruleWithContent;
     }
 
     /**
@@ -91,8 +91,8 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("strategy", strategy)
-                          .add("strategyWithContent", strategyWithContent)
+                          .add("rule", rule)
+                          .add("ruleWithContent", ruleWithContent)
                           .add("mapping", mapping)
                           .toString();
     }

@@ -17,6 +17,10 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerStrategy;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerStrategyWithContent;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.toCircuitBreakerStrategy;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.toCircuitBreakerStrategyWithContent;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
@@ -45,59 +49,108 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     private static final Logger logger = LoggerFactory.getLogger(AbstractCircuitBreakerClient.class);
 
     @Nullable
-    private final CircuitBreakerStrategy strategy;
+    private final CircuitBreakerRule rule;
 
     @Nullable
-    private final CircuitBreakerStrategyWithContent<O> strategyWithContent;
+    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
 
     private final CircuitBreakerMapping mapping;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+                                 CircuitBreakerRule rule) {
+        this(delegate, mapping, requireNonNull(rule, "rule"), null);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     *
+     * @deprecated Use {@link CircuitBreakerClient#builder(CircuitBreakerRule)} or
+     *             {@link CircuitBreakerRpcClient#builder(CircuitBreakerStrategyWithContent)}.
+     */
+    @Deprecated
     protected AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
                                            CircuitBreakerStrategy strategy) {
-        this(delegate, mapping, requireNonNull(strategy, "strategy"), null);
+        this(delegate, mapping, fromCircuitBreakerStrategy(requireNonNull(strategy, "strategy")), null);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+                                 CircuitBreakerRuleWithContent<O> ruleWithContent) {
+        this(delegate, mapping, null, requireNonNull(ruleWithContent, "strategyWithContent"));
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     *
+     * @deprecated Use {@link CircuitBreakerClient#builder(CircuitBreakerRuleWithContent)} or
+     *             {@link CircuitBreakerRpcClient#builder(CircuitBreakerStrategyWithContent)}.
+     */
+    @Deprecated
     protected AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                           CircuitBreakerStrategyWithContent<O> strategyWithContent) {
-        this(delegate, mapping, null, requireNonNull(strategyWithContent, "strategyWithContent"));
+                                           CircuitBreakerStrategyWithContent<O> ruleWithContent) {
+        this(delegate, mapping, null,
+             fromCircuitBreakerStrategyWithContent(requireNonNull(ruleWithContent, "ruleWithContent")));
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                         @Nullable CircuitBreakerStrategy strategy,
-                                         @Nullable CircuitBreakerStrategyWithContent<O> strategyWithContent) {
+                                         @Nullable CircuitBreakerRule rule,
+                                         @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
         super(delegate);
         this.mapping = requireNonNull(mapping, "mapping");
-        this.strategy = strategy;
-        this.strategyWithContent = strategyWithContent;
+        this.rule = rule;
+        this.ruleWithContent = ruleWithContent;
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerRule}.
+     *
+     * @throws IllegalStateException if the {@link CircuitBreakerRule} is not set
+     */
+    final CircuitBreakerRule rule() {
+        checkState(rule != null, "rule is not set.");
+        return rule;
     }
 
     /**
      * Returns the {@link CircuitBreakerStrategy}.
      *
      * @throws IllegalStateException if the {@link CircuitBreakerStrategy} is not set
+     *
+     * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     protected final CircuitBreakerStrategy strategy() {
-        checkState(strategy != null, "strategy is not set.");
-        return strategy;
+        return toCircuitBreakerStrategy(rule());
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerRuleWithContent}.
+     *
+     * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
+     */
+    final CircuitBreakerRuleWithContent<O> ruleWithContent() {
+        checkState(ruleWithContent != null, "ruleWithContent is not set.");
+        return ruleWithContent;
     }
 
     /**
      * Returns the {@link CircuitBreakerStrategyWithContent}.
      *
      * @throws IllegalStateException if the {@link CircuitBreakerStrategyWithContent} is not set
+     *
+     * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     protected final CircuitBreakerStrategyWithContent<O> strategyWithContent() {
-        checkState(strategyWithContent != null, "strategyWithContent is not set.");
-        return strategyWithContent;
+        return toCircuitBreakerStrategyWithContent(ruleWithContent());
     }
 
     @Override
@@ -129,16 +182,16 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      * of the specified {@code future}. If the completed value is {@code null}, this doesn't do anything.
      */
     protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
-                                                 CompletionStage<Boolean> future) {
-        future.handle((success, unused) -> {
-            if (success != null) {
-                if (success) {
+                                                 CompletionStage<CircuitBreakerDecision> future) {
+        future.handle((decision, unused) -> {
+            if (decision != null) {
+                if (decision == CircuitBreakerDecision.success() || decision == CircuitBreakerDecision.next()) {
                     circuitBreaker.onSuccess();
-                } else {
+                } else if (decision == CircuitBreakerDecision.failure()) {
                     circuitBreaker.onFailure();
+                } else {
+                    // Ignore, does not count as a success nor failure.
                 }
-            } else {
-                // Ignore, because 'null' means the user does not want to count as a success nor failure.
             }
             return null;
         }).exceptionally(CompletionActions::log);

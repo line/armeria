@@ -66,7 +66,7 @@ class CircuitBreakerRpcClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         final int COUNT = 1;
-        failFastInvocation(CircuitBreakerRpcClient.newDecorator(circuitBreaker, strategy()), COUNT);
+        failFastInvocation(CircuitBreakerRpcClient.newDecorator(circuitBreaker, rule()), COUNT);
         verify(circuitBreaker, times(COUNT)).canRequest();
     }
 
@@ -80,7 +80,7 @@ class CircuitBreakerRpcClientTest {
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
-        failFastInvocation(CircuitBreakerRpcClient.newPerMethodDecorator(factory, strategy()), COUNT);
+        failFastInvocation(CircuitBreakerRpcClient.newPerMethodDecorator(factory, rule()), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("methodA");
@@ -96,7 +96,7 @@ class CircuitBreakerRpcClientTest {
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
-        failFastInvocation(CircuitBreakerRpcClient.newPerHostDecorator(factory, strategy()), COUNT);
+        failFastInvocation(CircuitBreakerRpcClient.newPerHostDecorator(factory, rule()), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("dummyhost:8080");
@@ -112,7 +112,7 @@ class CircuitBreakerRpcClientTest {
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
-        failFastInvocation(CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, strategy()), COUNT);
+        failFastInvocation(CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rule()), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("dummyhost:8080#methodA");
@@ -127,7 +127,7 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, strategy());
+                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule());
 
         stub.execute(ctxA, reqA);
 
@@ -142,7 +142,7 @@ class CircuitBreakerRpcClientTest {
         final CircuitBreakerMapping mapping = (ctx, req) -> {
             throw Exceptions.clearTrace(new AnticipatedException("bug!"));
         };
-        final CircuitBreakerRpcClient stub = new CircuitBreakerRpcClient(delegate, mapping, strategy());
+        final CircuitBreakerRpcClient stub = new CircuitBreakerRpcClient(delegate, mapping, rule());
 
         stub.execute(ctxA, reqA);
 
@@ -160,7 +160,7 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, strategy());
+                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule());
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -195,7 +195,7 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, strategy());
+                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule());
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -228,7 +228,7 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(ctxB, reqB)).thenReturn(successRes);
 
         final CircuitBreakerRpcClient stub =
-                CircuitBreakerRpcClient.newPerMethodDecorator(factory, strategy()).apply(delegate);
+                CircuitBreakerRpcClient.newPerMethodDecorator(factory, rule()).apply(delegate);
 
         // CLOSED (methodA)
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -272,10 +272,12 @@ class CircuitBreakerRpcClientTest {
     }
 
     /**
-     * Returns a {@link CircuitBreakerStrategy} which returns {@code true} when there's
+     * Returns a {@link CircuitBreakerRuleWithContent} which returns {@code true} when there's
      * no {@link Exception} raised.
      */
-    private static CircuitBreakerStrategyWithContent<RpcResponse> strategy() {
-        return (ctx, response) -> response.handle((unused, cause) -> cause == null);
+    private static CircuitBreakerRuleWithContent<RpcResponse> rule() {
+        return CircuitBreakerRuleWithContent.<RpcResponse>builder()
+                                            .onException()
+                                            .thenFailure();
     }
 }

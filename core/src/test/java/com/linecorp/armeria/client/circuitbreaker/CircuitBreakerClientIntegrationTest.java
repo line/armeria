@@ -21,7 +21,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.ConnectException;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,7 +50,7 @@ class CircuitBreakerClientIntegrationTest {
                 WebClient.builder()
                          .decorator(CircuitBreakerClient.newDecorator(
                                  circuitBreaker,
-                                 (ctx, cause) -> CompletableFuture.completedFuture(false)))
+                                 CircuitBreakerRule.onException()))
                          .build();
 
         for (int i = 0; i < 3; i++) {

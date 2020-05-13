@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.RetryStrategyBuilderTest.assertBackoff;
+import static com.linecorp.armeria.client.retry.RetryRuleBuilderTest.assertBackoff;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
@@ -116,9 +116,17 @@ class RetryRuleWithContentBuilderTest {
     void multipleHttpResponseSubscribeWithCause() {
         final RetryRuleWithContent<HttpResponse> rule =
                 RetryRuleWithContent.of(
-                        RetryRuleWithContent.onResponse(response -> {
-                            return response.aggregate().thenApply(content -> false);
-                        }),
+                        RetryRuleWithContent
+                                .<HttpResponse>builder()
+                                .onResponse(response -> {
+                                    return response.aggregate().thenApply(content -> false);
+                                })
+                                .onResponse(response -> {
+                                    return response.aggregate().thenApply(content -> false);
+                                })
+                                .onResponse(response -> {
+                                    return response.aggregate().thenApply(content -> false);
+                                }).thenBackoff(),
                         RetryRuleWithContent.<HttpResponse>onResponse(response -> {
                             return response.aggregate().thenApply(content -> false);
                         }).orElse(RetryRule.builder()

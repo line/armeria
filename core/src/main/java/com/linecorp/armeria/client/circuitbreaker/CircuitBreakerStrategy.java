@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -31,7 +32,10 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * Determines whether a {@link Response} should be reported as a success or a failure to a
  * {@link CircuitBreaker}. If you need to determine whether the request was successful by looking into the
  * {@link Response} content, use {@link CircuitBreakerStrategyWithContent}.
+ *
+ * @deprecated Use {@link CircuitBreakerRule}.
  */
+@Deprecated
 @FunctionalInterface
 public interface CircuitBreakerStrategy {
 
@@ -39,7 +43,20 @@ public interface CircuitBreakerStrategy {
      * Returns the {@link CircuitBreakerStrategy} that determines a {@link Response} as successful
      * when its {@link HttpStatus} is not {@link HttpStatusClass#SERVER_ERROR} and there was no
      * {@link Exception} raised.
+     *
+     * @deprecated Use {@link CircuitBreakerRule#builder()},
+     *             {@link CircuitBreakerRuleBuilder#onServerErrorStatus()}
+     *             and {@link CircuitBreakerRuleBuilder#onException()}
+     *             with {@link CircuitBreakerRuleBuilder#thenFailure()}.
+     *             For example:
+     *             <pre>{@code
+     *             CircuitBreakerRule.builder()
+     *                               .onServerErrorStatus()
+     *                               .onException()
+     *                               .thenFailure();
+     *             }</pre>
      */
+    @Deprecated
     static CircuitBreakerStrategy onServerErrorStatus() {
         return onStatus((status, thrown) -> status != null && !status.isServerError());
     }
@@ -54,7 +71,12 @@ public interface CircuitBreakerStrategy {
      *                 {@link CircuitBreaker} increases its success count and uses it to make a decision to
      *                 close or open the circuit. If {@code false} is returned, it works the other way around.
      *                 If {@code null} is returned, the {@link CircuitBreaker} ignores it.
+     *
+     * @deprecated Use {@link CircuitBreakerRule#builder()},
+     *             {@link CircuitBreakerRuleBuilder#onStatus(Predicate)}
+     *             and {@link CircuitBreakerRuleBuilder#onException(Predicate)}.
      */
+    @Deprecated
     static CircuitBreakerStrategy onStatus(BiFunction<HttpStatus, Throwable, Boolean> function) {
         return new HttpStatusBasedCircuitBreakerStrategy(function);
     }
@@ -68,7 +90,7 @@ public interface CircuitBreakerStrategy {
      * To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      *
      * <pre>{@code
-     * CompletionStage<Backoff> shouldReportAsSuccess(ClientRequestContext ctx, @Nullable Throwable cause) {
+     * CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx, @Nullable Throwable cause) {
      *     if (cause != null) {
      *         return CompletableFuture.completedFuture(false);
      *     }
@@ -84,6 +106,9 @@ public interface CircuitBreakerStrategy {
      * @param ctx the {@link ClientRequestContext} of this request
      * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no
      *              exception.
+     *
+     * @deprecated Use {@link CircuitBreakerRule#shouldReportAsSuccess(ClientRequestContext, Throwable)}.
      */
+    @Deprecated
     CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx, @Nullable Throwable cause);
 }

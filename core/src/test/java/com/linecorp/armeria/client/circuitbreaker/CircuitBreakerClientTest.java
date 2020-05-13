@@ -26,12 +26,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -42,9 +41,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class CircuitBreakerClientTest {
+class CircuitBreakerClientTest {
 
     private static final String remoteServiceName = "testService";
 
@@ -53,8 +52,8 @@ public class CircuitBreakerClientTest {
                                 .endpoint(Endpoint.of("dummyhost", 8080))
                                 .build();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/unavailable", (ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE));
@@ -62,7 +61,7 @@ public class CircuitBreakerClientTest {
     };
 
     @Test
-    public void testPerMethodDecorator() {
+    void testPerMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
@@ -71,7 +70,7 @@ public class CircuitBreakerClientTest {
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
-        failFastInvocation(CircuitBreakerClient.newPerMethodDecorator(factory, strategy()),
+        failFastInvocation(CircuitBreakerClient.newPerMethodDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
@@ -79,7 +78,7 @@ public class CircuitBreakerClientTest {
     }
 
     @Test
-    public void testPerHostDecorator() {
+    void testPerHostDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
@@ -88,7 +87,7 @@ public class CircuitBreakerClientTest {
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
-        failFastInvocation(CircuitBreakerClient.newPerHostDecorator(factory, strategy()),
+        failFastInvocation(CircuitBreakerClient.newPerHostDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
@@ -96,7 +95,7 @@ public class CircuitBreakerClientTest {
     }
 
     @Test
-    public void testPerHostAndMethodDecorator() {
+    void testPerHostAndMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
@@ -105,7 +104,7 @@ public class CircuitBreakerClientTest {
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
-        failFastInvocation(CircuitBreakerClient.newPerHostAndMethodDecorator(factory, strategy()),
+        failFastInvocation(CircuitBreakerClient.newPerHostAndMethodDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
@@ -113,16 +112,16 @@ public class CircuitBreakerClientTest {
     }
 
     @Test
-    public void strategyWithoutContent() {
-        final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-        circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(strategy));
+    void ruleWithoutContent() {
+        final CircuitBreakerRule rule = CircuitBreakerRule.onServerErrorStatus();
+        circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(rule));
     }
 
     @Test
-    public void strategyWithContent() {
-        final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
-                (ctx, response) -> response.aggregate().handle((msg, unused1) -> !msg.status().isServerError());
-        circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(strategy));
+    void ruleWithContent() {
+        final CircuitBreakerRuleWithContent<HttpResponse> rule =
+                CircuitBreakerRuleWithContent.<HttpResponse>builder().onServerErrorStatus().thenFailure();
+        circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(rule));
     }
 
     private static void circuitBreakerIsOpenOnServerError(CircuitBreakerClientBuilder builder) {
@@ -187,10 +186,12 @@ public class CircuitBreakerClientTest {
     }
 
     /**
-     * Returns a {@link CircuitBreakerStrategy} which returns {@code true} when there's
-     * no {@link Exception} raised.
+     * Returns a {@link CircuitBreakerRule} which returns {@link CircuitBreakerDecision#success()}
+     * when there's no {@link Exception} raised.
      */
-    private static CircuitBreakerStrategy strategy() {
-        return (ctx, cause) -> CompletableFuture.completedFuture(cause == null);
+    private static CircuitBreakerRule rule() {
+        return CircuitBreakerRule.builder()
+                                 .onException().thenFailure()
+                                 .orElse(CircuitBreakerRule.builder().thenSuccess());
     }
 }

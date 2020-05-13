@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.DEFAULT_DECISION;
-import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.NEXT_DECISION;
-
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
@@ -29,6 +27,11 @@ import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 
 final class RetryRuleUtil {
+
+    public static final CompletableFuture<RetryDecision> NEXT_DECISION =
+            CompletableFuture.completedFuture(RetryDecision.next());
+    public static final CompletableFuture<RetryDecision> DEFAULT_DECISION =
+            CompletableFuture.completedFuture(RetryDecision.retry(Backoff.ofDefault()));
 
     static RetryStrategy toRetryStrategy(RetryRule rule) {
         return (ctx, cause) -> rule.shouldRetry(ctx, cause).thenApply(RetryDecision::backoff);

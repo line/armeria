@@ -16,13 +16,12 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
-import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
@@ -31,43 +30,25 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.client.AbstractRuleWithContentBuilder;
 
 /**
  * A builder which creates a {@link RetryRuleWithContent}.
  */
-public final class RetryRuleWithContentBuilder<T extends Response> extends AbstractRetryRuleBuilder {
-
-    @Nullable
-    private Function<? super T, ? extends CompletionStage<Boolean>> retryFunction;
+public final class RetryRuleWithContentBuilder<T extends Response> extends AbstractRuleWithContentBuilder<T> {
 
     RetryRuleWithContentBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
     /**
-     * Adds the specified {@code retryFunction} for a {@link RetryRuleWithContent} which will retry
-     * if the specified {@code retryFunction} completes with {@code true}.
+     * Adds the specified {@code responseFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the specified {@code responseFilter} completes with {@code true}.
      */
+    @Override
     public RetryRuleWithContentBuilder<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> retryFunction) {
-        requireNonNull(retryFunction, "retryFunction");
-
-        if (this.retryFunction == null) {
-            this.retryFunction = retryFunction;
-        } else {
-            final Function<? super T, ? extends CompletionStage<Boolean>> first = this.retryFunction;
-            this.retryFunction = content -> {
-                final CompletionStage<Boolean> result = first.apply(content);
-                return result.thenCompose(matched -> {
-                    if (matched) {
-                        return result;
-                    } else {
-                        return retryFunction.apply(content);
-                    }
-                });
-            };
-        }
-        return this;
+            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onResponse(responseFilter);
     }
 
     /**
@@ -94,13 +75,14 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     }
 
     RetryRuleWithContent<T> build(RetryDecision decision) {
+        final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
-            responseHeadersFilter() == null && retryFunction == null) {
+            responseHeadersFilter() == null && responseFilter == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
 
         final RetryRule first = RetryRuleBuilder.build(this, decision);
-        if (retryFunction == null) {
+        if (responseFilter == null) {
             return RetryRuleUtil.fromRetryRule(first);
         }
 
@@ -108,13 +90,13 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
             if (content == null) {
                 return NEXT_DECISION;
             }
-            return retryFunction.apply(content)
-                                .handle((matched, cause0) -> {
-                                    if (cause0 != null) {
-                                        return RetryDecision.next();
-                                    }
-                                    return matched ? decision : RetryDecision.next();
-                                });
+            return responseFilter.apply(content)
+                                 .handle((matched, cause0) -> {
+                                     if (cause0 != null) {
+                                         return RetryDecision.next();
+                                     }
+                                     return matched ? decision : RetryDecision.next();
+                                 });
         };
         return RetryRuleUtil.orElse(first, second);
     }
@@ -126,7 +108,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
                           .add("exceptionFilter", exceptionFilter())
                           .add("requestHeadersFilter", requestHeadersFilter())
                           .add("responseHeadersFilter", responseHeadersFilter())
-                          .add("retryFunction", retryFunction)
+                          .add("responseFilter", responseFilter())
                           .toString();
     }
 

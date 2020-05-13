@@ -27,7 +27,10 @@ import com.linecorp.armeria.common.Response;
  * to make a decision, use {@link CircuitBreakerStrategy} for efficiency.
  *
  * @param <T> the response type
+ *
+ * @deprecated Use {@link CircuitBreakerRuleWithContent}.
  */
+@Deprecated
 @FunctionalInterface
 public interface CircuitBreakerStrategyWithContent<T extends Response> {
 
@@ -41,6 +44,10 @@ public interface CircuitBreakerStrategyWithContent<T extends Response> {
      *
      * @param ctx the {@link ClientRequestContext} of this request
      * @param response the {@link Response} from the server
+     *
+     * @deprecated Use {@link CircuitBreakerRuleWithContent#shouldReportAsSuccess(
+     *             ClientRequestContext, Response, Throwable)}.
      */
+    @Deprecated
     CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx, T response);
 }
