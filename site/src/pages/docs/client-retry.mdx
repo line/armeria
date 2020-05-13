@@ -1,7 +1,8 @@
 # Automatic retry
 
 When a client gets an error response, it might want to retry the request depending on the response.
-This can be accomplished using a decorator_, and Armeria provides the following implementations out-of-the box.
+This can be accomplished using a [decorator](/docs/client-decorator), and Armeria provides the following
+implementations out-of-the box.
 - <type://RetryingClient>
 - <type://RetryingRpcClient>
 
@@ -14,70 +15,81 @@ You can just use the `decorator()` method in <type://ClientBuilder> or <type://W
 <type://RetryingClient>. For example:
 
 ```java
-    import com.linecorp.armeria.client.WebClient;
-    import com.linecorp.armeria.client.retry.RetryingClient;
-    import com.linecorp.armeria.client.retry.RetryStrategy;
-    import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 
-    RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    WebClient client = WebClient.builder("http://example.com/hello")
-                                .decorator(RetryingClient.newDecorator(strategy))
-                                .build();
+RetryRule rule = RetryRule.failsafe();
+WebClient client = WebClient.builder("http://example.com/hello")
+                            .decorator(RetryingClient.newDecorator(rule))
+                            .build();
 
-    AggregatedHttpResponse res = client.execute(...).aggregate().join();
+AggregatedHttpResponse res = client.execute(...).aggregate().join();
 ```
 
 That's it. The client will keep attempting until it succeeds or the number of attempts exceeds the maximum
 number of total attempts. You can configure the `maxTotalAttempts` when making the decorator using
-`RetryingClient.newDecorator(strategy, maxTotalAttempts)`. Meanwhile, the `strategy` will decide to
+`RetryingClient.newDecorator(rule, maxTotalAttempts)`. Meanwhile, the `rule` will decide to
 retry depending on the response. In this case, the client retries when it receives `5xx` response error or
 an exception is raised.
 
-## `RetryStrategy`
+## `RetryRule`
 
-You can customize the `strategy` by implementing <type://RetryStrategy>.
+You can fluently build your own :api:`RetryRule`.
 
 ```java
-    import com.linecorp.armeria.client.ClientRequestContext;
-    import com.linecorp.armeria.client.ResponseTimeoutException;
-    import com.linecorp.armeria.client.UnprocessedRequestException;
-    import com.linecorp.armeria.client.retry.Backoff;
-    import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.HttpStatus;
 
-    new RetryStrategy() {
-        Backoff backoff = Backoff.ofDefault();
-
-        @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
-                                                    @Nullable Throwable cause) {
-            if (cause != null) {
-                if (cause instanceof ResponseTimeoutException ||
-                    cause instanceof UnprocessedRequestException) {
-                    // The response timed out or the request has not been handled
-                    // by the server.
-                    return CompletableFuture.completedFuture(backoff);
-                }
-            }
-
-            if (ctx.log().responseHeaders().status() == HttpStatus.CONFLICT) {
-                return CompletableFuture.completedFuture(backoff);
-            }
-
-            // Return null to stop retrying.
-            return CompletableFuture.completedFuture(null);
-        }
-    };
+Backoff myBackoff = ...;
+RetryRule.of(RetryRule.builder().onUnProcessed().thenBackoff(myBackoff),
+             RetryRule.builder().onException(ResponseTimeoutException.class).thenBackoff(),
+             RetryRule.builder().onStatus(HttpStatus.TOO_MANY_REQUESTS).thenNoRetry())
 ```
 
-This will retry when one of <type://ResponseTimeoutException> and <type://UnprocessedRequestException> is raised or
-the response's status is `409 Conflict`.
+Or you can customize the **rule** by implementing :api:`RetryRule`.
+
+```java
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryDecision;
+
+new RetryRule() {
+    Backoff backoff = Backoff.ofDefault();
+
+    @Override
+    public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
+                                                      @Nullable Throwable cause) {
+        if (cause != null) {
+            if (cause instanceof ResponseTimeoutException ||
+                cause instanceof UnprocessedRequestException) {
+                // The response timed out or the request has not been handled
+                // by the server.
+                return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
+            }
+        }
+
+        if (ctx.log().responseHeaders().status() == HttpStatus.TOO_MANY_REQUESTS) {
+            return CompletableFuture.completedFuture(RetryDecision.stop());
+        }
+
+        // Return 'next()' to lookup other rules.
+        return CompletableFuture.completedFuture(RetryDecision.next());
+    }
+};
+```
+
+This will retry when one of <type://ResponseTimeoutException> and <type://UnprocessedRequestException> is raised
+or the response's status is `429 Too Many Requests`.
 
 <Warning>
 
-We declare a <type://Backoff> as a member and reuse it when a `strategy` returns it, so that we do not
+We declare a <type://Backoff> as a member and reuse it when a `rule` returns it, so that we do not
 return a different <type://Backoff> instance for each `shouldRetry()`. <type://RetryingClient>
 internally tracks the reference of the returned <type://Backoff> and increases the counter that keeps
-the number of attempts made so far, and resets it to 0 when the <type://Backoff> returned by the strategy
+the number of attempts made so far, and resets it to 0 when the <type://Backoff> returned by the retry rule
 is not the same as before. Therefore, it is important to return the same <type://Backoff> instance unless
 you decided to change your <type://Backoff> strategy. If you do not return the same one, when the
 <type://Backoff> yields a different delay based on the number of retries, such as an exponential backoff,
@@ -99,70 +111,42 @@ You can return a different <type://Backoff> according to the response status.
 ```java
 import com.linecorp.armeria.common.HttpStatusClass;
 
-new RetryStrategy() {
-    Backoff backoffOnServerErrorOrTimeout = Backoff.ofDefault();
-    Backoff backoffOnConflict = Backoff.fixed(100);
-
-    @Override
-    public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
-                                                @Nullable Throwable cause) {
-        if (cause != null) {
-            if (cause instanceof ResponseTimeoutException ||
-                cause instanceof UnprocessedRequestException) {
-                // The response timed out or the request has not been handled
-                // by the server.
-                return CompletableFuture.completedFuture(backoffOnServerErrorOrTimeout);
-            }
-        }
-
-        HttpStatus status = ctx.log().responseHeaders().status();
-        if (status.codeClass() == HttpStatusClass.SERVER_ERROR) {
-            return CompletableFuture.completedFuture(backoffOnServerErrorOrTimeout);
-        } else if (status == HttpStatus.CONFLICT) {
-            return CompletableFuture.completedFuture(backoffOnConflict);
-        }
-
-        // Return null to stop retrying.
-        return CompletableFuture.completedFuture(null);
-    }
-};
+Backoff backoffOnServerErrorOrTimeout = Backoff.ofDefault();
+Backoff backoffOnConflict = Backoff.fixed(100);
+RetryRule.builder()
+         .onException(ex -> ex instanceof ResponseTimeoutException ||
+                            ex instanceof UnprocessedRequestException)
+         .thenBackoff(backoffOnServerErrorOrTimeout)
+         .orElse(RetryRule.builder()
+                          .onStatusClass(HttpStatusClass.SERVER_ERROR)
+                          .thenBackoff(backoffOnServerErrorOrTimeout))
+         .orElse(RetryRule.builder()
+                          .onStatus(HttpStatus.CONFLICT)
+                          .thenBackoff(backoffOnConflict));
 ```
 
 If you need to determine whether you need to retry by looking into the response content, you should implement
-<type://RetryStrategyWithContent> and specify it when you create an <type://WebClient>
+<type://RetryRuleWithContent> and specify it when you create a <type://WebClient>
 using <type://RetryingClientBuilder>:
 
 ```java
-import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
+import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 
-RetryStrategyWithContent<HttpResponse> strategy =
-    new RetryStrategyWithContent<HttpResponse>() {
+RetryRuleWithContent<HttpResponse> retryRule =
+        RetryRuleWithContent
+                .<HttpResponse>builder()
+                .onException(ex -> ex instanceof ResponseTimeoutException ||
+                                   ex instanceof UnprocessedRequestException)
+                .onResponse(response -> {
+                    return response.aggregate()
+                                   .thenApply(content -> "Should I retry?".equals(content.contentUtf8()));
+                })
+                .thenBackoff(backoff);
 
-        Backoff backoff = Backoff.ofDefault();
-
-        @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
-                                                    HttpResponse response) {
-            return response.aggregate().handle((result, thrown) -> {
-                if (thrown != null) {
-                    if (thrown instanceof ResponseTimeoutException ||
-                        thrown instanceof UnprocessedRequestException) {
-                        // The response timed out or the request has not been handled
-                        // by the server.
-                        return backoff;
-                    }
-                } else if ("Should I retry?".equals(result.contentUtf8())) {
-                    return backoff;
-                }
-                return null; // Return null to stop retrying.
-            });
-        }
-    };
-
-// Create an WebClient with a custom strategy.
+// Create a WebClient with a retry rule.
 WebClient client = WebClient
         .builder(...)
-        .decorator(RetryingClient.builder(strategy)
+        .decorator(RetryingClient.builder(retryRule)
                                  .newDecorator())
         .build();
 
@@ -178,8 +162,8 @@ handle is wrapped by exceptions like `CompletionException` and `ExecutionExcepti
 import com.linecorp.armeria.common.Exceptions;
 
 @Override
-public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
-                                            @Nullable Throwable cause) {
+public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
+                                                  @Nullable Throwable cause) {
     if (cause != null) {
         if (cause instanceof ResponseTimeoutException ||
             cause instanceof UnprocessedRequestException) {
@@ -222,8 +206,8 @@ For more information, please refer to the API documentation of the
 
 ## `maxTotalAttempts` vs per-Backoff `maxAttempts`
 
-If you create a <type://Backoff> using `.withMaxAttempts(maxAttempts)` in a <type://RetryStrategy>,
-the <type://RetryingClient> which uses the <type://RetryStrategy> will stop retrying when the number of
+If you create a <type://Backoff> using `.withMaxAttempts(maxAttempts)` in a <type://RetryRule>,
+the <type://RetryingClient> which uses the <type://RetryRule> will stop retrying when the number of
 attempts passed `maxAttempts`. However, if you have more than one <type://Backoff> and return one after
 the other continuously, it will keep retrying over and over again because the counter that
 <type://RetryingClient> internally tracks is initialized every time the different <type://Backoff> is
@@ -232,7 +216,7 @@ the maximum number of total attempts to 10 by default. You can change this value
 `maxTotalAttempts` when you build a <type://RetryingClient>:
 
 ```java
-RetryingClient.newDecorator(strategy, maxTotalAttempts);
+RetryingClient.newDecorator(rule, maxTotalAttempts);
 ```
 
 Or, you can override the default value of 10 using the JVM system property
@@ -257,7 +241,7 @@ Second, it occurs when the time of individual attempt in retry has passed the ti
 You can configure it when you create the decorator:
 
 ```java
-RetryingClient.newDecorator(strategy, maxTotalAttempts,
+RetryingClient.newDecorator(rule, maxTotalAttempts,
                             responseTimeoutMillisForEachAttempt);
 ```
 
@@ -309,10 +293,10 @@ You can use <type://RetryingClient> with <type://LoggingClient> to log. If you w
 requests and responses, decorate <type://LoggingClient> with <type://RetryingClient>. That is:
 
 ```java
-RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
+RetryRule rule = RetryRule.failsafe();
 WebClient client = WebClient.builder(...)
                             .decorator(LoggingClient.newDecorator())
-                            .decorator(RetryingClient.newDecorator(strategy))
+                            .decorator(RetryingClient.newDecorator(rule))
                             .build();
 ```
 
@@ -341,10 +325,10 @@ do the reverse:
 ```java
 import com.linecorp.armeria.client.logging.LoggingClient;
 
-RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
+RetryRule rule = RetryRule.failsafe();
 // Note the order of decoration.
 WebClient client = WebClient.builder(...)
-                            .decorator(RetryingClient.newDecorator(strategy))
+                            .decorator(RetryingClient.newDecorator(rule))
                             .decorator(LoggingClient.newDecorator())
                             .build();
 ```
@@ -374,12 +358,14 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientBuilder;
 
 CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
-RetryStrategy myRetryStrategy = new RetryStrategy() { ... };
+RetryRule myRetryRule = RetryRule.builder()
+                                 ...
+                                 .build();
 
 WebClient client = WebClient.builder(...)
                             .decorator(CircuitBreakerClient.builder(cbStrategy)
                                                            .newDecorator())
-                            .decorator(RetryingClient.builder(myRetryStrategy)
+                            .decorator(RetryingClient.builder(myRetryRule)
                                                      .newDecorator())
                             .build();
 
@@ -388,35 +374,23 @@ AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 This decorates <type://CircuitBreakerClient> with <type://RetryingClient> so that the <type://CircuitBreaker>
 judges every request and retried request as successful or failed. If the failure rate exceeds a certain
-threshold, it raises a <type://FailFastException>. When using both clients, you need to write a custom
-<type://RetryStrategy> to handle this exception so that the <type://RetryingClient> does not attempt
+threshold, it raises a <type://FailFastException>. When using both clients, you need to build a custom
+<type://RetryRule> to handle this exception so that the <type://RetryingClient> does not attempt
 a retry unnecessarily when the circuit is open, e.g.
 
 ```java
 import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 
-new RetryStrategy() {
-    Backoff backoff = Backoff.ofDefault();
-
-    @Override
-    public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
-                                                @Nullable Throwable cause) {
-        if (cause != null) {
-            if (cause instanceof FailFastException) {
-                // The circuit is already open so returns null to stop retrying.
-                return CompletableFuture.completedFuture(null);
-            }
-
-            if (cause instanceof ResponseTimeoutException ||
-                cause instanceof UnprocessedRequestException) {
-                // The response timed out or the request has not been handled
-                // by the server.
-                return CompletableFuture.completedFuture(backoff);
-            }
-        }
-        ... // Implement the rest of your own strategy.
-    }
-};
+RetryRule.of(RetryRule.builder()
+                      // The circuit is already open so stops retrying.
+                      .onException(FailFastException.class)
+                      .thenNoRetry(),
+             RetryRule.builder()
+                      .onException(ex -> ex instanceof ResponseTimeoutException ||
+                                         ex instanceof UnprocessedRequestException)
+                      .thenBackoff(),
+             // Implement the rest of your own rule.
+             ...);
 ```
 
 <Tip>
