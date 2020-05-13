@@ -135,18 +135,27 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      */
     protected WebClient buildWebClient() {
         final ClientOptions options = buildOptions();
+        final ClientBuilderParams params = clientBuilderParams(options);
         final ClientFactory factory = options.factory();
-        final ClientBuilderParams params;
+        return (WebClient) factory.newClient(params);
+    }
 
+    /**
+     * Returns a newly-created {@link ClientBuilderParams} with the specified {@link ClientOptions}.
+     *
+     * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
+     *                                  {@link WebClient#builder(String)} or
+     *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
+     */
+    protected ClientBuilderParams clientBuilderParams(ClientOptions options) {
+        requireNonNull(options, "options");
         if (uri != null) {
-            params = ClientBuilderParams.of(uri, WebClient.class, options);
-        } else {
-            assert scheme != null;
-            assert endpointGroup != null;
-            params = ClientBuilderParams.of(scheme, endpointGroup, path, WebClient.class, options);
+            return ClientBuilderParams.of(uri, WebClient.class, options);
         }
 
-        return (WebClient) factory.newClient(params);
+        assert scheme != null;
+        assert endpointGroup != null;
+        return ClientBuilderParams.of(scheme, endpointGroup, path, WebClient.class, options);
     }
 
     @Override

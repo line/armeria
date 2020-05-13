@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -46,7 +47,14 @@ class EurekaEndpointGroupTest {
     static final ServerExtension eurekaServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            final AtomicInteger requestCounter = new AtomicInteger();
             sb.service("/apps", (ctx, req) -> {
+                final int count = requestCounter.getAndIncrement();
+                if (count == 0) {
+                    // This is for the test that EurekaUpdatingListener automatically retries when
+                    // RetryingClient is not used.
+                    return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                }
                 final Applications apps = InstanceInfoGenerator.newBuilder(6, 2).build().toApplications();
                 apps.getRegisteredApplications().get(0).getInstances().get(0).setStatus(InstanceStatus.DOWN);
                 final ByteArrayOutputStream bos = new ByteArrayOutputStream();

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.eureka;
 
+import static com.linecorp.armeria.internal.common.eureka.EurekaClientUtil.retryingClientOptions;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -27,6 +28,8 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
+import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
@@ -36,7 +39,10 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -246,9 +252,23 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
 
     /**
      * Returns a newly-created {@link EurekaUpdatingListener} based on the properties of this builder.
+     * Note that if {@link RetryingClient} was not set using {@link #decorator(DecoratingHttpClientFunction)},
+     * {@link RetryingClient} is applied automatically using
+     * {@linkplain RetryingClient#newDecorator(RetryRule, int)
+     * RetryingClient.newDecorator(RetryRule.failsafe(), 3)}.
      */
     public EurekaUpdatingListener build() {
-        return new EurekaUpdatingListener(new EurekaWebClient(buildWebClient()), instanceInfoBuilder.build());
+        final WebClient webClient = buildWebClient();
+        final WebClient client;
+        if (webClient.as(RetryingClient.class) != null) {
+            client = webClient;
+        } else {
+            final ClientOptions options = buildOptions(retryingClientOptions());
+            final ClientBuilderParams params = clientBuilderParams(options);
+            final ClientFactory factory = options.factory();
+            client = (WebClient) factory.newClient(params);
+        }
+        return new EurekaUpdatingListener(new EurekaWebClient(client), instanceInfoBuilder.build());
     }
 
     // Override the return type of the chaining methods in the superclass.

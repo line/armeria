@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -76,9 +77,16 @@ class EurekaUpdatingListenerTest {
                 });
                 return HttpResponse.from(future);
             });
+            final AtomicInteger heartBeatRequestCounter = new AtomicInteger();
             sb.service("/apps/" + APP_NAME + '/' + INSTANCE_ID, (ctx, req) -> {
                 req.aggregate();
                 if (req.method() == HttpMethod.PUT) {
+                    final int count = heartBeatRequestCounter.getAndIncrement();
+                    if (count == 0) {
+                        // This is for the test that EurekaUpdatingListener automatically retries when
+                        // RetryingClient is not used.
+                        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
                     heartBeatHeadersCaptor.complete(req.headers());
                 } else if (req.method() == HttpMethod.DELETE) {
                     deregisterHeadersCaptor.complete(req.headers());
