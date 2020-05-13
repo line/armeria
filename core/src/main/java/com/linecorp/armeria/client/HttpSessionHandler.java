@@ -73,6 +73,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
 
+    @Nullable
     private SocketAddress proxyDestinationAddress;
 
     /**

@@ -247,7 +247,7 @@ public class ProxyClientIntegrationTest {
             if (!(msg instanceof FullHttpRequest)) {
                 ctx.close();
             }
-            final FullHttpRequest request = (FullHttpRequest) msg;
+            final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
             if ("h2c".equals(request.headers().get(HttpHeaderNames.UPGRADE))) {
                 // reject http2 upgrade requests
@@ -289,7 +289,6 @@ public class ProxyClientIntegrationTest {
                 final HttpHeaders headers = new DefaultHttpHeaders().add(CONNECTION, "close");
                 response = new DefaultFullHttpResponse(
                         HTTP_1_1, NOT_IMPLEMENTED, EMPTY_BUFFER, headers, EmptyHttpHeaders.INSTANCE);
-
             } else {
                 response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
                                                        copiedBuffer("success", US_ASCII));
