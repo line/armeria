@@ -1,0 +1,547 @@
+@import '../../node_modules/antd/es/style/themes/default.less';
+
+@separator-text: '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯';
+
+.outerWrapper {
+  display: flex;
+  justify-content: stretch;
+}
+
+.wrapper {
+  flex-grow: 1;
+  background: white;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  position: relative;
+  margin: @margin-md auto;
+  width: 100%;
+
+  // No sidebar, shrinking
+  @media (max-width: @layout-width-shrink-max) {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  // No sidebar
+  @media (min-width: @layout-width-0-min) {
+    max-width: @layout-width-0;
+  }
+
+  // Single sidebar
+  @media (min-width: @layout-width-1-min) {
+    max-width: @layout-width-1;
+  }
+
+  // Double sidebar
+  @media (min-width: @layout-width-2-min) {
+    max-width: @layout-width-2;
+  }
+}
+
+.globalTocWrapper {
+  padding: @padding-lg @padding-xl;
+
+  // No or single sidebar
+  @media (max-width: @layout-width-1-max) {
+    display: none;
+  }
+
+  // Double sidebar
+  @media (min-width: @layout-width-2-min) {
+    flex-basis: @layout-sidebar-width;
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+
+  a {
+    color: @text-color;
+    &:active {
+      color: @link-active-color;
+    }
+    &:hover {
+      color: @link-hover-color;
+    }
+  }
+
+  nav ol {
+    margin: 0;
+    padding-left: 0;
+
+    li {
+      list-style: none;
+      display: block;
+      white-space: nowrap;
+
+      width: @layout-sidebar-width - @padding-xl * 2;
+      li {
+        width: @layout-sidebar-width - @padding-xl * 2;
+        li {
+          width: @layout-sidebar-width - @padding-xl * 2 - @padding-md;
+          li {
+            width: @layout-sidebar-width - @padding-xl * 2 - @padding-md * 2;
+          }
+        }
+      }
+    }
+  }
+
+  .tocGroup {
+    margin-top: @margin-lg;
+
+    .tocGroupLabel {
+      display: block;
+      width: @layout-sidebar-width - @padding-xl * 2;
+      overflow: hidden;
+      font-weight: bold;
+      margin-bottom: @margin-xs;
+      text-transform: uppercase;
+
+      &::after {
+        content: @separator-text;
+        position: relative;
+        margin-left: @margin-xs;
+        top: 1px;
+        color: @border-color-base;
+      }
+    }
+  }
+
+  .tocLeaf {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    
+    &.tocLeafActive {
+      background-color: @primary-2;
+      border-radius: @border-radius-base;
+      margin-left: -0.35rem;
+  
+      &::before, &::after {
+        letter-spacing: 0.1rem;
+        content: '\00a0';
+      }
+    }
+  }
+}
+
+.tocButton {
+  // Show a floating ToC show/hide button on no sidebar.
+  @media (max-width: @layout-width-0-max) {
+    position: absolute;
+    z-index: @zindex-back-top - 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    margin: @margin-lg @margin-xl;
+    text-align: right;
+    pointer-events: none;
+
+    > * {
+      pointer-events: all;
+      :global(.ant-btn) {
+        background-color: rgba(255, 255, 255, 0.7);
+      }
+    }
+  }
+
+  // Do not show a ToC show/hide button on single or double sidebar.
+  @media (min-width: @layout-width-1-min) {
+    display: none;
+  }
+}
+
+.pageTocShadow {
+  // Drop shadow onto a ToC on no sidebar.
+  @media (max-width: @layout-width-0-max) {
+    box-shadow: @box-shadow-base;
+  }
+}
+
+.pageTocWrapper {
+  padding: @padding-lg @padding-md @padding-lg 0;
+
+  // No sidebar
+  @media (max-width: @layout-width-0-max) {
+    position: absolute;
+    top: 0;
+    left: @margin-xl;
+    right: @margin-xl;
+    bottom: 0;
+
+    width: calc(100% - @margin-xl * 2);
+    max-width: calc(100% - @margin-xl * 2);
+    padding-right: 0;
+
+    transition-property: opacity;
+    transition-duration: 0.3s;
+
+    // These two properties are overridden dynamically.
+    display: none;
+    opacity: 0;
+
+    nav {
+      background: white;
+      padding-top: 1rem;
+    }
+  }
+
+  // Single or double sidebar
+  @media (min-width: @layout-width-1-min) {
+    flex-basis: @layout-sidebar-width;
+    flex-grow: 0;
+    flex-shrink: 0;
+    background: white;
+  }
+
+  .pageToc {
+    > :global(.toc-list) {
+      overflow: hidden;
+      position: relative;
+      font-weight: bold;
+      font-size: @font-size-base;
+
+      // No sidebar
+      @media (max-width: @layout-width-0-max) {
+        padding-left: @padding-md;
+      }
+
+      // Single or double sidebar
+      @media (min-width: @layout-width-1-min) {
+        padding-left: @padding-xl;
+      }
+
+      :global(.toc-list) {
+        margin: 0;
+        padding-left: 0;
+        font-weight: normal;
+
+        :global(.toc-list) {
+          padding-left: @padding-md;
+          font-size: @font-size-sm;
+        }
+      }
+    }
+  }
+
+  li {
+    list-style: none;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    // No sidebar, shrinking
+    @media (max-width: @layout-width-shrink-max) {
+      width: calc(100vw - @padding-xl * 2 - @padding-md * 2);
+      li {
+        width: calc(100vw - @padding-xl * 2 - @padding-md * 2);
+        li {
+          width: calc(100vw - @padding-xl * 2 - @padding-md * 3);
+          li {
+            width: calc(100vw - @padding-xl * 2 - @padding-md * 4);
+          }
+        }
+      }
+    }
+
+    // No sidebar
+    @media (min-width: @layout-width-0-min) {
+      width: calc(@layout-width-0 - @padding-xl * 2 - @padding-md * 2);
+      li {
+        width: calc(@layout-width-0 - @padding-xl * 2 - @padding-md * 2);
+        li {
+          width: calc(@layout-width-0 - @padding-xl * 2 - @padding-md * 3);
+          li {
+            width: calc(@layout-width-0 - @padding-xl * 2 - @padding-md * 4);
+          }
+        }
+      }
+    }
+
+    // Single or double sidebar
+    @media (min-width: @layout-width-1-min) {
+      width: @layout-sidebar-width - @padding-xl * 2;
+      li {
+        width: @layout-sidebar-width - @padding-xl * 2;
+        li {
+          width: @layout-sidebar-width - @padding-xl * 2 - @padding-md;
+          li {
+            width: @layout-sidebar-width - @padding-xl * 2 - @padding-md * 2;
+          }
+        }
+      }
+    }
+  }
+
+  :global(.toc-link) {
+    color: @text-color;
+    height: 100%;
+
+    &:hover {
+      color: @link-hover-color;
+    }
+  }
+
+  :global(.toc-link::before) {
+    background-color: @border-color-base;
+    content: ' ';
+    display: inline-block;
+    height: inherit;
+    left: 0;
+    position: absolute;
+    width: 2px;
+  }
+
+  :global(.is-active-link::before) {
+    background-color: @armeria-magenta;
+  }
+
+  :global(.is-collapsible) {
+    max-height: 1000px;
+    overflow: hidden;
+    transition: all 0.5s ease-in-out;
+  }
+
+  :global(.is-collapsed) {
+    max-height: 0;
+  }
+
+  :global(.is-active-link) {
+    font-weight: bold;
+  }
+
+  :global(.ant-select) {
+    @media (max-width: @layout-width-0-max) {
+      margin: 0 @margin-md @margin-md;
+      width: calc(100% - @margin-md * 2);
+    }
+
+    @media (min-width: @layout-width-1-min) {
+      margin: 0 0 0 @margin-xl;
+      width: @layout-sidebar-width - @margin-xl * 2;
+    }
+  }
+}
+
+.content {
+  padding: @padding-lg @padding-xl;
+  background: white;
+  overflow-x: auto;
+
+  // No sidebar, shrinking
+  @media (max-width: @layout-width-shrink-max) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  // No sidebar
+  @media (min-width: @layout-width-0-min) {
+    width: @layout-width-0;
+    max-width: @layout-width-0;
+  }
+
+  // Single sidebar
+  @media (min-width: @layout-width-1-min) {
+    width: @layout-width-1;
+    max-width: @layout-width-1;
+  }
+
+  // Double sidebar
+  @media (min-width: @layout-width-2-min) {
+    width: @layout-width-2;
+    max-width: @layout-width-2;
+  }
+
+  :global(.inlinePageToc) {
+    font-size: @font-size-base;
+    white-space: nowrap;
+    display: block;
+    width: 100%;
+    overflow: hidden;
+
+    &::after {
+      content: @separator-text;
+      position: relative;
+      margin-left: @margin-xs;
+      top: 0;
+      color: @border-color-base;
+    }
+
+    // Make the inline page ToC compact.
+    + ul {
+      margin-bottom: 0;
+      padding-bottom: @margin-md;
+      border-bottom: solid 1px @border-color-base;
+      margin-bottom: @margin-md;
+
+      ul {
+        margin-bottom: 0;
+      }
+
+      li p {
+        margin: 0;
+      }
+    }
+
+    // Do not show the inline page ToC if sidebar is visible.
+    @media (min-width: @layout-width-1-min) {
+      display: none;
+      + ul {
+        display: none;
+      }
+    }
+  }
+
+  :global(.anchor) {
+    margin-left: -16px - @margin-xs;
+    margin-right: @margin-xs;
+    opacity: 0.3;
+
+    transition-property: opacity;
+    transition-duration: 0.3s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  :global(.ant-alert),
+  :global(.ant-table) {
+    margin-bottom: 1rem;
+  }
+
+  :global(.ant-table) {
+    overflow: auto;
+    max-width: 100%;
+    table {
+      table-layout: auto;
+    }
+  }
+
+  :global(.ant-alert) {
+    padding-top: @padding-sm;
+    padding-bottom: @padding-sm;
+
+    > :global(.ant-alert-icon) {
+      padding-top: @padding-xss;
+    }
+  }
+
+  :global(.ant-alert-message),
+  :global(.ant-table) th,
+  :global(.ant-table) td {
+    > :last-child {
+      margin-bottom: 0;
+
+      > :last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  :global(.ant-table) thead th {
+    font-weight: bold;
+  }
+  :global(.ant-table) th,
+  :global(.ant-table) td {
+    vertical-align: top;
+  }
+
+  :global(.ant-tabs-content) {
+    @media (max-width: @layout-width-shrink-max) {
+      max-width: 100%;
+    }
+    @media (min-width: @layout-width-1-min) {
+      max-width: @layout-content-max-width - @margin-xl * 2;
+    }
+  }
+
+  // Prevent the flicker when switching tabs.
+  :global(.ant-tabs-tabpane) {
+    transition: none !important;
+    opacity: 1 !important;
+  }
+
+  .footer {
+    &::after {
+      content: '';
+      display: block;
+      clear: both;
+    }
+
+    .footerElement {
+      max-width: 100%;
+      margin: 1rem 0 0;
+    }
+
+    .editOnGitHub {
+      .footerElement;
+      text-align: right;
+      margin-right: @margin-md;
+      a {
+        color: @text-color-secondary;
+        &:hover {
+          color: @link-hover-color;
+        }
+        &:active {
+          color: @link-active-color;
+        }
+      }
+    }
+
+    .button {
+      .footerElement;
+
+      :global(.ant-btn) {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      :global(.anticon) {
+        padding-top: 2.4px;
+
+        // Mute the button icons a little bit.
+        &::after {
+          content: ' ';
+          position: relative;
+          display: inline-block;
+          width: 1em;
+          height: 1em;
+          margin-left: -1em;
+          background-color: rgba(255, 255, 255, 0.7);
+        }
+      }
+
+      .buttonLabel {
+        display: block;
+        max-width: 50vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .prevButton {
+      .button;
+      float: left;
+    }
+
+    .nextButton {
+      .button;
+      float: right;
+    }
+  }
+
+  :global(.remark-draw) {
+    display: block;
+    text-align: center;
+    margin: 1rem 0;
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  img {
+    max-width: 100%;
+    overflow: auto;
+  }
+}

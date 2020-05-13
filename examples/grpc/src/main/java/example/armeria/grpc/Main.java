@@ -51,7 +51,7 @@ public final class Main {
                      .tlsSelfSigned()
                      .service(grpcService)
                      // You can access the documentation service at http://127.0.0.1:8080/docs.
-                     // See https://line.github.io/armeria/server-docservice.html for more information.
+                     // See https://line.github.io/armeria/docs/server-docservice for more information.
                      .serviceUnder("/docs",
                              DocService.builder()
                                        .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,

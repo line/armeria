@@ -30,8 +30,8 @@ public final class ProxyService extends AbstractHttpService {
     /**
      * We used hardcoded backend addresses. But you can use other service discovery mechanisms to configure
      * backends dynamically using {@link DnsServiceEndpointGroup}, ZooKeeper or Central Dogma.
-     * See <a href="https://line.github.io/armeria/client-service-discovery.html">service discovery</a>,
-     * <a href="https://line.github.io/armeria/advanced-zookeeper.html#advanced-zookeeper">Service discovery
+     * See <a href="https://line.github.io/armeria/docs/client-service-discovery">service discovery</a>,
+     * <a href="https://line.github.io/armeria/docs/advanced-zookeeper">Service discovery
      * with ZooKeeper</a> and <a href="https://line.github.io/centraldogma/">centraldogma</a>.
      */
     private static final EndpointGroup animationGroup = EndpointGroup.of(

@@ -101,7 +101,7 @@ public final class CompositeException extends RuntimeException {
             }
         }
         if (deDupedExceptions.isEmpty()) {
-            throw new IllegalArgumentException("errors is empty");
+            throw new IllegalArgumentException("errors is empty.");
         }
         exceptions = ImmutableList.copyOf(deDupedExceptions);
         message = exceptions.size() + " exceptions occurred. ";

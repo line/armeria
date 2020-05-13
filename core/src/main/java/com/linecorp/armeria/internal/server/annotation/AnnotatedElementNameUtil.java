@@ -40,7 +40,7 @@ final class AnnotatedElementNameUtil {
 
         final String value = param.value();
         if (DefaultValues.isSpecified(value)) {
-            checkArgument(!value.isEmpty(), "value is empty");
+            checkArgument(!value.isEmpty(), "value is empty.");
             return value;
         }
         return getName(nameRetrievalTarget);
@@ -61,7 +61,7 @@ final class AnnotatedElementNameUtil {
 
         final String value = header.value();
         if (DefaultValues.isSpecified(value)) {
-            checkArgument(!value.isEmpty(), "value is empty");
+            checkArgument(!value.isEmpty(), "value is empty.");
             return value;
         }
         return toHeaderName(getName(nameRetrievalTarget));
@@ -88,7 +88,7 @@ final class AnnotatedElementNameUtil {
     @VisibleForTesting
     static String toHeaderName(String name) {
         requireNonNull(name, "name");
-        checkArgument(!name.isEmpty(), "name is empty");
+        checkArgument(!name.isEmpty(), "name is empty.");
 
         final String upperCased = Ascii.toUpperCase(name);
         if (name.equals(upperCased)) {

@@ -26,7 +26,10 @@ import com.linecorp.armeria.common.Response;
  * If you just need the headers to make a decision, use {@link RetryStrategy} for efficiency.
  *
  * @param <T> the response type
+ *
+ * @deprecated Use {@link RetryRuleWithContent}.
  */
+@Deprecated
 @FunctionalInterface
 public interface RetryStrategyWithContent<T extends Response> {
 
@@ -37,6 +40,9 @@ public interface RetryStrategyWithContent<T extends Response> {
      *
      * @param ctx the {@link ClientRequestContext} of this request
      * @param response the {@link Response} from the server
+     *
+     * @deprecated Use {@link RetryRuleWithContent#shouldRetry(ClientRequestContext, Response)}
      */
+    @Deprecated
     CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, T response);
 }

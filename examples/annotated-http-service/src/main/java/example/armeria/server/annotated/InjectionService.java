@@ -21,7 +21,7 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 /**
  * Examples how to use {@link Param}, {@link Header} and {@link Cookies}.
  *
- * @see <a href="https://line.github.io/armeria/server-annotated-service.html#parameter-injection">
+ * @see <a href="https://line.github.io/armeria/docs/server-annotated-service#parameter-injection">
  *      Parameter injection</a>
  */
 @LoggingDecorator(
