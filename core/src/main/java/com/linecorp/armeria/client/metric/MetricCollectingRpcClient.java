@@ -33,7 +33,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  * <pre>{@code
  * MyService.Iface client =
  *     Clients.builder(uri)
- *            .decorator(MetricCollectingRpcClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient")))
+ *            .rpcDecorator(MetricCollectingRpcClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient")))
  *            .build(MyService.Iface.class);
  * }</pre>
  *

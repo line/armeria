@@ -202,13 +202,13 @@ io.grpc:
 io.micrometer:
   micrometer-core:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.5.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.4.0/
   micrometer-registry-prometheus:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.5.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.4.0/
   micrometer-spring-legacy:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.5.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.4.0/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
