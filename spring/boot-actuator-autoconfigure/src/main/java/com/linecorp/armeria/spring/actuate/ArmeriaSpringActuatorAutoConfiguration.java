@@ -52,6 +52,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.PropertySource;
 import org.springframework.util.SocketUtils;
 import org.springframework.util.StringUtils;
 
@@ -215,17 +217,32 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     @Bean
     ArmeriaServerConfigurator secureActuatorServerConfigurator(WebEndpointProperties properties,
                                                                ManagementServerProperties serverProperties,
-                                                               ArmeriaSettings settings) {
+                                                               ArmeriaSettings settings,
+                                                               ConfigurableEnvironment environment) {
         return sb -> {
             final Integer port = obtainManagementServerPort(serverProperties.getPort());
             if (port != null) {
                 configurePorts(sb, ImmutableList.of(Port.of(port)));
+                addLocalManagementPortPropertyAlias(environment, port);
             }
             final ArmeriaSettings.Security security = settings.getSecurity();
             if (security != null && security.isEnabled() && port != null) {
                 configureSecureDecorator(sb, port, properties.getBasePath(), settings);
             }
         };
+    }
+
+    private static void addLocalManagementPortPropertyAlias(ConfigurableEnvironment environment, Integer port) {
+        environment.getPropertySources().addLast(new PropertySource<Object>("Management Server") {
+
+            @Override
+            public Object getProperty(String name) {
+                if ("local.management.port".equals(name)) {
+                    return port;
+                }
+                return null;
+            }
+        });
     }
 
     @Nullable

@@ -28,10 +28,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.actuate.autoconfigure.web.server.LocalManagementPort;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -59,6 +58,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
+import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
 import io.prometheus.client.exporter.common.TextFormat;
@@ -301,27 +301,31 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
         @SpringBootApplication
         class TestConfiguration {}
 
-        @ParameterizedTest
-        @CsvSource({
-                "8080, /actuator, 404",
-                "8081, /actuator, 404",
-                "8082, /actuator, 200",
-                "8080, /actuator/health, 404",
-                "8081, /actuator/health, 404",
-                "8082, /actuator/health, 200",
-                "8080, /actuator/loggers/" + TEST_LOGGER_NAME + ", 404",
-                "8081, /actuator/loggers/" + TEST_LOGGER_NAME + ", 404",
-                "8082, /actuator/loggers/" + TEST_LOGGER_NAME + ", 200",
-                "8080, /actuator/prometheus, 404",
-                "8081, /actuator/prometheus, 404",
-                "8082, /actuator/prometheus, 200",
-        })
-        void normal(Integer port, String path, Integer statusCode) throws Exception {
-            assertStatus(port, path, statusCode);
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+
+        @Test
+        void normal() throws Exception {
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final Integer statusCode = actuatorPort.equals(port) ? 200 : 404;
+                      assertStatus(port, "/actuator", statusCode);
+                      assertStatus(port, "/actuator/health", statusCode);
+                      assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, statusCode);
+                      assertStatus(port, "/actuator/prometheus", statusCode);
+                      assertStatus(port, settings.getDocsPath(), statusCode);
+                      assertStatus(port, settings.getHealthCheckPath(), statusCode);
+                      assertStatus(port, settings.getMetricsPath(), statusCode);
+                  });
         }
     }
 
-    private static void assertStatus(Integer port, String url, Integer statusCode) throws Exception {
+    private static void assertStatus(Integer port, String url, Integer statusCode) {
         final WebClient client = WebClient.of(newUrl("http", port));
         final HttpResponse response = client.get(url);
 

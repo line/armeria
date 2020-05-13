@@ -1,13 +1,13 @@
 armeria:
   ports:
-    - port: 8080
-    - port: 8081
+    - port: 0
+    - port: 0
   security:
     enabled: true
 
 management:
   server:
-    port: 8082
+    port: 0
   endpoints:
     web:
       exposure:
