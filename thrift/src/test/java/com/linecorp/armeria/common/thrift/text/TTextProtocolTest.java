@@ -68,7 +68,8 @@ import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
  */
 public class TTextProtocolTest {
 
-    private String fileContents;
+    private String testData;
+    private String testDataNamedEnumSerialized;
     private Base64 base64Encoder;
 
     /**
@@ -76,12 +77,8 @@ public class TTextProtocolTest {
      */
     @Before
     public void setUp() throws IOException {
-        fileContents = Resources.toString(
-                Resources.getResource(
-                        getClass(),
-                        "/com/linecorp/armeria/common/thrift/text/TTextProtocol_TestData.txt"),
-                Charsets.UTF_8);
-
+        testData = readFile("TTextProtocol_TestData.txt");
+        testDataNamedEnumSerialized = readFile("TTextProtocol_TestData_NamedEnum_Serialized.txt");
         base64Encoder = new Base64();
     }
 
@@ -94,8 +91,7 @@ public class TTextProtocolTest {
     @Test
     public void tTextProtocolReadWriteTest() throws Exception {
         // Deserialize the file contents into a thrift message.
-        final ByteArrayInputStream bais1 = new ByteArrayInputStream(
-                fileContents.getBytes());
+        final ByteArrayInputStream bais1 = new ByteArrayInputStream(testData.getBytes());
 
         final TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
         msg1.read(new TTextProtocol(new TIOStreamTransport(bais1), false));
@@ -111,6 +107,36 @@ public class TTextProtocolTest {
         final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
         final TTextProtocolTestMsg msg2 = new TTextProtocolTestMsg();
         msg2.read(new TTextProtocol(new TIOStreamTransport(bais2), false));
+
+        assertThat(msg2).isEqualTo(msg1);
+    }
+
+    @Test
+    public void tTextNamedEnumProtocolReadWriteTest() throws Exception {
+        // Deserialize the file contents into a thrift message.
+        final ByteArrayInputStream bais1 = new ByteArrayInputStream(testData.getBytes());
+
+        final TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
+        msg1.read(new TTextProtocol(new TIOStreamTransport(bais1), true));
+        msg1.unsetR();
+        msg1.unsetS();
+
+        final TTextProtocolTestMsg testMsg = testMsg();
+        testMsg.unsetR();
+        testMsg.unsetS();
+        assertThat(msg1).isEqualTo(testMsg);
+
+        // Serialize that thrift message out to a byte array
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        msg1.write(new TTextProtocol(new TIOStreamTransport(baos), true));
+        final byte[] bytes = baos.toByteArray();
+
+        assertThatJson(baos.toString()).isEqualTo(testDataNamedEnumSerialized);
+
+        // Deserialize that string back to a thrift message.
+        final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
+        final TTextProtocolTestMsg msg2 = new TTextProtocolTestMsg();
+        msg2.read(new TTextProtocol(new TIOStreamTransport(bais2), true));
 
         assertThat(msg2).isEqualTo(msg1);
     }
@@ -442,5 +468,14 @@ public class TTextProtocolTest {
         final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
         prot.readMessageBegin();
+    }
+
+    private static String readFile(String filename) throws IOException {
+        return Resources.toString(
+                Resources.getResource(
+                        TTextProtocolTest.class,
+                        "/com/linecorp/armeria/common/thrift/text/" + filename),
+                Charsets.UTF_8
+        );
     }
 }

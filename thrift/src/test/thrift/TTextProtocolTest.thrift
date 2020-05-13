@@ -74,15 +74,13 @@ struct TTextProtocolTestMsg {
 
   12: required string m;
 
-  // Not fully implemented yet, have to say "p" : 3
-  // instead of "p" : CHARLIE
   14: required Letter p;
 
   15: required set<Letter> q;
 
-  16: required map<Sub, i64> r;
+  16: map<Sub, i64> r;
 
-  17: required map<map<map<i64, i64>, i64>, i64> s;
+  17: map<map<map<i64, i64>, i64>, i64> s;
 
   18: required list<Letter> t;
 
