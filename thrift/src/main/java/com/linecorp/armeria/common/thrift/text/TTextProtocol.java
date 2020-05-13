@@ -139,6 +139,14 @@ public final class TTextProtocol extends TProtocol {
      * Create a parser which can read from trans, and create the output writer
      * that can write to a TTransport.
      */
+    public TTextProtocol(TTransport trans) {
+        this(trans, false);
+    }
+
+    /**
+     * Create a parser which can read from trans, and create the output writer
+     * that can write to a TTransport. Optionally enable serialization of named enums.
+     */
     public TTextProtocol(TTransport trans, boolean useNamedEnums) {
         super(trans);
 

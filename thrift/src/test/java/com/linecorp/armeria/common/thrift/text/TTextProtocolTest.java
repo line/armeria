@@ -96,7 +96,7 @@ public class TTextProtocolTest {
         final ByteArrayInputStream bais1 = new ByteArrayInputStream(testData.getBytes());
 
         final TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
-        msg1.read(new TTextProtocol(new TIOStreamTransport(bais1), false));
+        msg1.read(new TTextProtocol(new TIOStreamTransport(bais1)));
 
         assertThat(msg1).isEqualTo(testMsg());
 
@@ -108,7 +108,7 @@ public class TTextProtocolTest {
         // Deserialize that string back to a thrift message.
         final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
         final TTextProtocolTestMsg msg2 = new TTextProtocolTestMsg();
-        msg2.read(new TTextProtocol(new TIOStreamTransport(bais2), false));
+        msg2.read(new TTextProtocol(new TIOStreamTransport(bais2)));
 
         assertThat(msg2).isEqualTo(msg1);
     }
@@ -211,7 +211,7 @@ public class TTextProtocolTest {
                 '}';
 
         TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         final TMessage header = prot.readMessageBegin();
         final doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
         args.read(prot);
@@ -227,7 +227,7 @@ public class TTextProtocolTest {
         assertThat(args.getDetails().getDetailsArg2()).isEqualTo(100);
 
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        prot = new TTextProtocol(new TIOStreamTransport(outputStream), true);
+        prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         args.write(prot);
         prot.writeMessageEnd();
@@ -252,7 +252,7 @@ public class TTextProtocolTest {
                 '}';
 
         final TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         final TMessage header = prot.readMessageBegin();
         final doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
         args.read(prot);
@@ -281,7 +281,7 @@ public class TTextProtocolTest {
                 '}';
 
         TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         final TMessage header = prot.readMessageBegin();
         final doDebug_args args = new RpcDebugService.Processor.doDebug().getEmptyArgsInstance();
         args.read(prot);
@@ -297,7 +297,7 @@ public class TTextProtocolTest {
         assertThat(args.getDetails().getDetailsArg2()).isEqualTo(100);
 
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        prot = new TTextProtocol(new TIOStreamTransport(outputStream), true);
+        prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         args.write(prot);
         prot.writeMessageEnd();
@@ -320,7 +320,7 @@ public class TTextProtocolTest {
                 '}';
 
         TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         final TMessage header = prot.readMessageBegin();
         final doDebug_result result = new doDebug_result();
         result.read(prot);
@@ -333,7 +333,7 @@ public class TTextProtocolTest {
         assertThat(result.getSuccess().getResponse()).isEqualTo("Nice response");
 
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        prot = new TTextProtocol(new TIOStreamTransport(outputStream), true);
+        prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         result.write(prot);
         prot.writeMessageEnd();
@@ -356,7 +356,7 @@ public class TTextProtocolTest {
                 '}';
 
         TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         final TMessage header = prot.readMessageBegin();
         final doDebug_result result = new doDebug_result();
         result.read(prot);
@@ -369,7 +369,7 @@ public class TTextProtocolTest {
         assertThat(result.getE().getReason()).isEqualTo("Bad rpc");
 
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        prot = new TTextProtocol(new TIOStreamTransport(outputStream), true);
+        prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         result.write(prot);
         prot.writeMessageEnd();
@@ -392,7 +392,7 @@ public class TTextProtocolTest {
                 '}';
 
         TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         final TMessage header = prot.readMessageBegin();
         final TApplicationException result = TApplicationExceptions.read(prot);
         prot.readMessageEnd();
@@ -404,7 +404,7 @@ public class TTextProtocolTest {
         assertThat(result.getType()).isEqualTo(TApplicationException.BAD_SEQUENCE_ID);
 
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        prot = new TTextProtocol(new TIOStreamTransport(outputStream), true);
+        prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         new TApplicationException(TApplicationException.BAD_SEQUENCE_ID, "bad_seq_id").write(prot);
         prot.writeMessageEnd();
@@ -427,7 +427,7 @@ public class TTextProtocolTest {
                 "  }\n" +
                 '}';
         final TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }
 
@@ -446,7 +446,7 @@ public class TTextProtocolTest {
                 "  }\n" +
                 '}';
         final TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }
 
@@ -458,7 +458,7 @@ public class TTextProtocolTest {
                 "  \"type\" : \"CALL\",\n" +
                 '}';
         final TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }
 
@@ -470,7 +470,7 @@ public class TTextProtocolTest {
                 "  \"args\" : 100\n" +
                 '}';
         final TTextProtocol prot = new TTextProtocol(
-                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())), false);
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
     }
 
