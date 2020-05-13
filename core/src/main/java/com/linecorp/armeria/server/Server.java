@@ -54,7 +54,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
-import com.google.common.collect.Iterables;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
@@ -180,9 +179,7 @@ public final class Server implements ListenableAsyncCloseable {
      */
     @Nullable
     public ServerPort activePort() {
-        synchronized (activePorts) {
-            return Iterables.getFirst(activePorts.values(), null);
-        }
+        return activePort0(null);
     }
 
     /**
@@ -194,9 +191,19 @@ public final class Server implements ListenableAsyncCloseable {
      */
     @Nullable
     public ServerPort activePort(SessionProtocol protocol) {
+        return activePort0(requireNonNull(protocol, "protocol"));
+    }
+
+    @Nullable
+    private ServerPort activePort0(@Nullable SessionProtocol protocol) {
         synchronized (activePorts) {
             for (ServerPort serverPort : activePorts.values()) {
-                if (serverPort.hasProtocol(protocol)) {
+                if (!isLocalPort(serverPort, protocol)) {
+                    return serverPort;
+                }
+            }
+            for (ServerPort serverPort : activePorts.values()) {
+                if (protocol == null || serverPort.hasProtocol(protocol)) {
                     return serverPort;
                 }
             }
