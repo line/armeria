@@ -49,7 +49,7 @@ class RetryingHttpClientWithContextAwareTest {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .responseTimeoutMillis(100)
-                         .decorator(RetryingClient.builder(RetryStrategy.onServerErrorStatus())
+                         .decorator(RetryingClient.builder(RetryRule.failsafe())
                                                   .maxTotalAttempts(2)
                                                   .newDecorator())
                          .build();

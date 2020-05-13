@@ -170,7 +170,7 @@ public interface Cookie extends Comparable<Cookie> {
 
         requireNonNull(cookies, "cookies");
         final Iterator<? extends Cookie> it = cookies.iterator();
-        checkArgument(it.hasNext(), "cookies is empty");
+        checkArgument(it.hasNext(), "cookies is empty.");
         return ClientCookieEncoder.encode(strict, it);
     }
 
@@ -188,7 +188,7 @@ public interface Cookie extends Comparable<Cookie> {
      */
     static String toCookieHeader(boolean strict, Collection<? extends Cookie> cookies) {
         requireNonNull(cookies, "cookies");
-        checkArgument(!cookies.isEmpty(), "cookies is empty");
+        checkArgument(!cookies.isEmpty(), "cookies is empty.");
         return ClientCookieEncoder.encode(strict, cookies.iterator());
     }
 

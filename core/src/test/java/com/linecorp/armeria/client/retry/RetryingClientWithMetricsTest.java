@@ -101,12 +101,12 @@ class RetryingClientWithMetricsTest {
     // In this case, all of the requests and responses are recorded.
     @Test
     void retryingThenMetricCollecting() throws Exception {
-        final RetryStrategyWithContent<HttpResponse> retryStrategy =
+        final RetryRuleWithContent<HttpResponse> retryStrategy =
                 (ctx, response) -> response.aggregate().handle((msg, cause) -> {
                     if ("hello".equals(msg.contentUtf8())) {
-                        return null;
+                        return RetryDecision.noRetry();
                     }
-                    return Backoff.ofDefault();
+                    return RetryDecision.retry(Backoff.ofDefault());
                 });
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
@@ -131,11 +131,12 @@ class RetryingClientWithMetricsTest {
         // the second request will succeed with 200.
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
                                                      server.httpEndpoint());
-        final WebClient client = WebClient.builder(SessionProtocol.HTTP, group)
-                                          .factory(clientFactory)
-                                          .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
-                                          .decorator(RetryingClient.newDecorator(RetryStrategy.onUnprocessed()))
-                                          .build();
+        final WebClient client =
+                WebClient.builder(SessionProtocol.HTTP, group)
+                         .factory(clientFactory)
+                         .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
+                         .decorator(RetryingClient.newDecorator(RetryRule.onUnprocessed()))
+                         .build();
         assertThat(client.get("/ok").aggregate().join().status()).isEqualTo(HttpStatus.OK);
 
         // wait until 2 calls are recorded.
@@ -152,12 +153,13 @@ class RetryingClientWithMetricsTest {
     // In this case, only the first request and the last response are recorded.
     @Test
     public void metricCollectingThenRetrying() throws Exception {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .factory(clientFactory)
-                                          .decorator(RetryingClient.newDecorator(
-                                                  RetryStrategy.onServerErrorStatus()))
-                                          .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
-                                          .build();
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .factory(clientFactory)
+                         .decorator(RetryingClient.newDecorator(
+                                 RetryRule.builder().onServerErrorStatus().onException().thenBackoff()))
+                         .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
+                         .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 1 call is recorded.
@@ -177,7 +179,7 @@ class RetryingClientWithMetricsTest {
         final WebClient client =
                 WebClient.builder(SessionProtocol.HTTP, group)
                          .factory(clientFactory)
-                         .decorator(RetryingClient.newDecorator(RetryStrategy.onUnprocessed()))
+                         .decorator(RetryingClient.newDecorator(RetryRule.onUnprocessed()))
                          .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("foo")))
                          .build();
 

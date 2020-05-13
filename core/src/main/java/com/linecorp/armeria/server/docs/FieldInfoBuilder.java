@@ -57,7 +57,7 @@ public final class FieldInfoBuilder {
         this.name = requireNonNull(name, "name");
         this.typeSignature = typeSignature;
         checkArgument(!Iterables.isEmpty(requireNonNull(childFieldInfos, "childFieldInfos")),
-                      "childFieldInfos can't be empty");
+                      "childFieldInfos can't be empty.");
         this.childFieldInfos = ImmutableList.copyOf(childFieldInfos);
     }
 

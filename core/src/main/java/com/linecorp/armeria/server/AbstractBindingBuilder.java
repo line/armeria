@@ -241,7 +241,7 @@ abstract class AbstractBindingBuilder {
      */
     public AbstractBindingBuilder methods(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
-        checkArgument(!Iterables.isEmpty(methods), "methods can't be empty");
+        checkArgument(!Iterables.isEmpty(methods), "methods can't be empty.");
         this.methods = Sets.immutableEnumSet(methods);
         return this;
     }

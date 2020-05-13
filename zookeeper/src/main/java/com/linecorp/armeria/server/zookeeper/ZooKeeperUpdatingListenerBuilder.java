@@ -73,7 +73,7 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
     ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
         super(client);
         this.zNodePath = zNodePath;
-        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
+        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty.");
     }
 
     /**
@@ -85,7 +85,7 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
     ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath) {
         super(zkConnectionStr);
         this.zNodePath = zNodePath;
-        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
+        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty.");
     }
 
     /**

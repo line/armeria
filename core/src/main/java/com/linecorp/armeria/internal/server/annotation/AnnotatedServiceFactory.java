@@ -734,7 +734,7 @@ public final class AnnotatedServiceFactory {
         if (description != null) {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
-                checkArgument(!value.isEmpty(), "value is empty");
+                checkArgument(!value.isEmpty(), "value is empty.");
                 return value;
             }
         }
