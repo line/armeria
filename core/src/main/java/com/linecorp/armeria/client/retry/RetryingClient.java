@@ -269,7 +269,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             try {
-                if (needsContentInStrategy) {
+                final Throwable responseCause =
+                        log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+                if (needsContentInStrategy && responseCause == null) {
                     try (HttpResponseDuplicator duplicator =
                                  response.toDuplicator(derivedCtx.eventLoop(),
                                                        derivedCtx.maxResponseLength())) {
@@ -282,14 +284,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                                     duplicated, duplicator::abort));
                     }
                 } else {
-                    final Throwable responseCause =
-                            log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+                    final RetryRule retryRule;
+                    if (needsContentInStrategy) {
+                        retryRule = RetryRuleUtil.fromRetryWithContent(retryRuleWithContent());
+                    } else {
+                        retryRule = retryRule();
+                    }
                     final Runnable originalResClosingTask =
                             responseCause == null ? response::abort : () -> response.abort(responseCause);
-                    retryRule().shouldRetry(derivedCtx, responseCause)
-                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                     originalReq, returnedRes, future, response,
-                                                     originalResClosingTask));
+                    retryRule.shouldRetry(derivedCtx, responseCause)
+                             .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                   originalReq, returnedRes, future, response,
+                                                   originalResClosingTask));
                 }
             } catch (Throwable t) {
                 handleException(ctx, rootReqDuplicator, future, t, false);

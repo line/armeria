@@ -34,11 +34,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -378,6 +375,58 @@ class RetryingClientTest {
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
+    @Test
+    void retryWithContentOnResponseTimeout() {
+        final Backoff backoff = Backoff.fixed(100);
+        final RetryRuleWithContent<HttpResponse> strategy =
+                RetryRuleWithContent.<HttpResponse>onResponse(response -> {
+                    return response.aggregate().thenApply(unused -> false);
+                }).orElse(RetryRuleWithContent.onResponse(response -> {
+                    return response.aggregate().thenApply(unused -> false);
+                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse(response -> {
+                    return response.aggregate().thenApply(unused -> false);
+                }).orElse(RetryRule.builder()
+                                   .onException(ResponseTimeoutException.class)
+                                   .thenBackoff(backoff)));
+        final WebClient client = client(strategy, 0, 500, 100);
+        final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
+    void retryWithContentOnUnprocessedException() {
+        final Backoff backoff = Backoff.fixed(2000);
+        final RetryRuleWithContent<HttpResponse> strategy =
+                RetryRuleWithContent.<HttpResponse>onResponse(response -> {
+                    return response.aggregate().thenApply(unused -> false);
+                }).orElse(RetryRuleWithContent.onResponse(response -> {
+                    return response.aggregate().thenApply(unused -> false);
+                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse(response -> {
+                    return response.aggregate().thenApply(unused -> false);
+                }).orElse(RetryRule.builder()
+                                   .onException(UnprocessedRequestException.class)
+                                   .thenBackoff(backoff)));
+        final Function<? super HttpClient, RetryingClient> retryingDecorator =
+                RetryingClient.builder(strategy)
+                              .maxTotalAttempts(5)
+                              .newDecorator();
+
+        final WebClient client = WebClient.builder("http://127.0.0.1:1")
+                                          .factory(ClientFactory.builder()
+                                                                .options(clientFactory.options())
+                                                                .connectTimeoutMillis(Long.MAX_VALUE)
+                                                                .build())
+                                          .responseTimeoutMillis(0)
+                                          .decorator(LoggingClient.newDecorator())
+                                          .decorator(retryingDecorator)
+                                          .build();
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        assertThatThrownBy(() -> client.get("/unprocessed-exception").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class);
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(7), Duration.ofSeconds(20));
+    }
+
     @ArgumentsSource(RetryStrategiesProvider.class)
     @ParameterizedTest
     void differentBackoffBasedOnStatus(RetryRule retryRule) {
@@ -394,25 +443,6 @@ class RetryingClientTest {
         res = client.get("/500-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo((long) (1000 * 0.9));
-    }
-
-    private static BiFunction<HttpStatus, Throwable, Backoff> statusBasedBackoff() {
-        return new BiFunction<HttpStatus, Throwable, Backoff>() {
-            private final Backoff backoffOn503 = Backoff.fixed(10).withMaxAttempts(2);
-            private final Backoff backoffOn500 = Backoff.fixed(1000).withMaxAttempts(2);
-
-            @Nullable
-            @Override
-            public Backoff apply(HttpStatus httpStatus, Throwable unused) {
-                if (httpStatus == HttpStatus.SERVICE_UNAVAILABLE) {
-                    return backoffOn503;
-                }
-                if (httpStatus == HttpStatus.INTERNAL_SERVER_ERROR) {
-                    return backoffOn500;
-                }
-                return null;
-            }
-        };
     }
 
     @Test
@@ -636,6 +666,24 @@ class RetryingClientTest {
         return WebClient.builder(server.httpUri())
                         .factory(clientFactory)
                         .responseTimeoutMillis(responseTimeoutMillis)
+                        .decorator(retryingDecorator)
+                        .build();
+    }
+
+    private WebClient client(RetryRuleWithContent<HttpResponse> retryRuleWithContent,
+                             long responseTimeoutMillis,
+                             long responseTimeoutForEach, int maxTotalAttempts) {
+        final Function<? super HttpClient, RetryingClient> retryingDecorator =
+                RetryingClient.builder(retryRuleWithContent)
+                              .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                              .useRetryAfter(true)
+                              .maxTotalAttempts(maxTotalAttempts)
+                              .newDecorator();
+
+        return WebClient.builder(server.httpUri())
+                        .factory(clientFactory)
+                        .responseTimeoutMillis(responseTimeoutMillis)
+                        .decorator(LoggingClient.newDecorator())
                         .decorator(retryingDecorator)
                         .build();
     }

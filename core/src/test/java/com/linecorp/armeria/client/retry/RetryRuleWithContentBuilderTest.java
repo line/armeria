@@ -129,9 +129,9 @@ class RetryRuleWithContentBuilderTest {
                                                    .thenApply(content -> "hello".equals(content.contentUtf8()));
                                 }).thenBackoff());
 
-        final HttpResponse response = HttpResponse.ofFailure(
-                new UnprocessedRequestException(ClosedSessionException.get()));
-
+        final UnprocessedRequestException cause = new UnprocessedRequestException(ClosedSessionException.get());
+        final HttpResponse response = HttpResponse.ofFailure(cause);
+        ctx1.logBuilder().endResponse(cause);
         try (HttpResponseDuplicator duplicator = response.toDuplicator()) {
             assertBackoff(rule.shouldRetry(ctx1, duplicator.duplicate())).isSameAs(backoff);
         }

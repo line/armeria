@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.DEFAULT_DECISION;
 import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.NEXT_DECISION;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
@@ -27,6 +26,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 final class RetryRuleUtil {
 
@@ -60,18 +60,19 @@ final class RetryRuleUtil {
         });
     }
 
+    static <T extends Response> RetryRule fromRetryWithContent(RetryRuleWithContent<T> retryRule) {
+        return (ctx, content) -> retryRule.shouldRetry(ctx, null);
+    }
+
     static <T extends Response> RetryRuleWithContent<T> fromRetryRule(RetryRule retryRule) {
         return (ctx, content) -> {
-            final CompletableFuture<?> completionFuture = content.whenComplete();
-            if (completionFuture.isCompletedExceptionally()) {
-                final CompletableFuture<RetryDecision> decisionFuture = new CompletableFuture<>();
-                completionFuture.exceptionally(cause -> {
-                    retryRule.shouldRetry(ctx, cause).thenAccept(decisionFuture::complete);
-                    return null;
-                });
-                return decisionFuture;
+            final Throwable responseCause;
+            if(ctx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                responseCause = ctx.log().partial().responseCause();
+            } else {
+                responseCause = null;
             }
-            return retryRule.shouldRetry(ctx, null);
+            return retryRule.shouldRetry(ctx, responseCause);
         };
     }
 
