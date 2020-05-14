@@ -176,8 +176,11 @@ public class ProxyClientIntegrationTest {
         }
     };
 
+    private static volatile int numSuccessfulProxyRequests;
+
     @BeforeEach
     void beforeEach() {
+        numSuccessfulProxyRequests = 0;
         DYNAMIC_HANDLER.reset();
     }
 
@@ -211,6 +214,7 @@ public class ProxyClientIntegrationTest {
 
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
     }
 
@@ -227,6 +231,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
     }
 
@@ -243,6 +248,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
     }
 
@@ -279,6 +285,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(GET.name());
+        assertThat(numSuccessfulProxyRequests).isEqualTo(2);
         clientFactory.close();
     }
 
@@ -314,6 +321,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(GET.name());
+        assertThat(numSuccessfulProxyRequests).isEqualTo(2);
         clientFactory.close();
     }
 
@@ -331,6 +339,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
     }
 
@@ -351,6 +360,7 @@ public class ProxyClientIntegrationTest {
         await().until(() -> responseFutures.stream().allMatch(CompletableFuture::isDone));
         assertThat(responseFutures.stream().map(CompletableFuture::join))
                 .allMatch(response -> response.contentUtf8().equals(SUCCESS_RESPONSE));
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
     }
 
@@ -378,6 +388,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
     }
 
@@ -550,6 +561,7 @@ public class ProxyClientIntegrationTest {
             if (evt instanceof ProxySuccessEvent) {
                 connectBackend(ctx, ((ProxySuccessEvent) evt).getBackendAddress()).addListener(f -> {
                     if (f.isSuccess()) {
+                        numSuccessfulProxyRequests++;
                         ctx.writeAndFlush(((ProxySuccessEvent) evt).getResponse());
                         if ("http".equals(proxyType)) {
                             ctx.pipeline().remove(HttpObjectAggregator.class);
