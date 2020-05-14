@@ -110,13 +110,14 @@
   .tocLeaf {
     overflow: hidden;
     text-overflow: ellipsis;
-    
+
     &.tocLeafActive {
       background-color: @primary-2;
       border-radius: @border-radius-base;
       margin-left: -0.35rem;
-  
-      &::before, &::after {
+
+      &::before,
+      &::after {
         letter-spacing: 0.1rem;
         content: '\00a0';
       }
@@ -350,6 +351,12 @@
   @media (min-width: @layout-width-2-min) {
     width: @layout-width-2;
     max-width: @layout-width-2;
+  }
+
+  li {
+    > :last-child {
+      margin-bottom: 0;
+    }
   }
 
   :global(.inlinePageToc) {
