@@ -102,7 +102,7 @@
 - You will not get a `NullPointerException` anymore when starting a <type://JettyService> with DEBUG level
   logging enabled. #2688 #2691
 - PING interval now works as expected even if idle timeout is disabled. #2702
-- A server-side connection is now closed immediately when PING fails. #2699
+- A connection is now closed immediately when PING fails, rather than waiting for idle timeout. #2699
 - A request sent to an HTTP/1 server behind an HTTP CONNECT proxy server is now handled properly. #2705 #2698
 - An event loop does not block for too long anymore when:
   - Thrift TEXT protocol loads a class. #2692
