@@ -104,6 +104,25 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     /**
+     * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
+     * {@link EndpointGroup}.
+     */
+    public static EurekaEndpointGroup of(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+        return new EurekaEndpointGroupBuilder(sessionProtocol, endpointGroup, null).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
+     * {@link EndpointGroup} under the specified {@code path}.
+     */
+    public static EurekaEndpointGroup of(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, String path) {
+        return new EurekaEndpointGroupBuilder(
+                sessionProtocol, endpointGroup, requireNonNull(path, "path")).build();
+    }
+
+    /**
      * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@code eurekaUri}.
      */
     public static EurekaEndpointGroupBuilder builder(String eurekaUri) {

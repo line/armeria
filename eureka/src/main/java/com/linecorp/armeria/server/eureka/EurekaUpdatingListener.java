@@ -66,6 +66,41 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(EurekaUpdatingListener.class);
 
     /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} to
+     * the specified {@code eurekaUri}.
+     */
+    public static EurekaUpdatingListener of(String eurekaUri) {
+        return of(URI.create(requireNonNull(eurekaUri, "eurekaUri")));
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} to
+     * the specified {@code eurekaUri}.
+     */
+    public static EurekaUpdatingListener of(URI eurekaUri) {
+        return new EurekaUpdatingListenerBuilder(eurekaUri).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} to
+     * the specified {@link EndpointGroup}.
+     */
+    public static EurekaUpdatingListener of(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+        return new EurekaUpdatingListenerBuilder(sessionProtocol, endpointGroup, null).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} to
+     * the specified {@link EndpointGroup} under the specified {@code path}.
+     */
+    public static EurekaUpdatingListener of(
+            SessionProtocol sessionProtocol, EndpointGroup endpointGroup, String path) {
+        return new EurekaUpdatingListenerBuilder(
+                sessionProtocol, endpointGroup, requireNonNull(path, "path")).build();
+    }
+
+    /**
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri}.
      */
     public static EurekaUpdatingListenerBuilder builder(String eurekaUri) {
