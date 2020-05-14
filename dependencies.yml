@@ -102,13 +102,18 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protoc: { version: '3.11.4' }
   protobuf-java: { version: &PROTOBUF_VERSION '3.11.4' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
   protobuf-gradle-plugin: { version: '0.8.12' }
+  protoc: { version: *PROTOBUF_VERSION }
+
+# Eureka is used only for testing in eureka module.
+com.netflix.eureka:
+  eureka-client: { version: &EUREKA_VERSION '1.9.20' }
+  eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.32' }
@@ -270,6 +275,12 @@ javax.inject:
 
 javax.validation:
   validation-api: { version: '2.0.1.Final' }
+
+# This is used only for testing in Eureka.
+# Ensure that we use the same javax.ws.rs version as what eureka-client depends on.
+# See: https://github.com/Netflix/eureka/blob/master/eureka-client/build.gradle
+javax.ws.rs:
+  jsr311-api: { version: 1.1.1 }
 
 junit:
   junit:
