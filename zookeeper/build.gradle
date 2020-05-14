@@ -1,5 +1,5 @@
-final def DROPWIZARD_VERSION = '3.2.5'
-final def SNAPPY_VERSION = '1.1.7'
+final def DROPWIZARD_VERSION = '3.2.6'
+final def SNAPPY_VERSION = '1.1.7.5'
 
 dependencies {
     // Curator

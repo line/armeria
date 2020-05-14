@@ -23,6 +23,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -145,8 +147,12 @@ public interface RetryRuleWithContent<T extends Response> {
      * Implement this method to return a {@link CompletionStage} and to complete it with a desired
      * {@link Backoff}. To stop trying further, complete it with {@code null}.
      *
-     * @param ctx the {@link ClientRequestContext} of this request
-     * @param response the {@link Response} from the server
+     * @param ctx the {@link ClientRequestContext} of this request.
+     * @param response the {@link Response} from the server. {@code null} if a {@link Throwable} is raised
+     *                 before receiving the content of the {@link Response}.
+     * @param cause the {@link Throwable} which is raised while sending a request and before receiving
+     *              the content of the {@link Response}. {@code null} if there's no exception.
      */
-    CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, T response);
+    CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable T response,
+                                                                         @Nullable Throwable cause);
 }

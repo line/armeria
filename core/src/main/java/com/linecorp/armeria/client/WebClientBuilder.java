@@ -16,25 +16,16 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -45,36 +36,12 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
  * Use the factory methods in {@link WebClient} if you do not have many options to override.
  * Please refer to {@link ClientBuilder} for how decorators and HTTP headers are configured
  */
-public final class WebClientBuilder extends AbstractClientOptionsBuilder {
-
-    /**
-     * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
-     */
-    static final URI UNDEFINED_URI = URI.create("http://undefined");
-
-    private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
-            Sets.immutableEnumSet(
-                    ImmutableList.<SessionProtocol>builder().addAll(SessionProtocol.httpValues())
-                                                            .addAll(SessionProtocol.httpsValues()).build());
-
-    @Nullable
-    private final URI uri;
-    @Nullable
-    private final EndpointGroup endpointGroup;
-    @Nullable
-    private final Scheme scheme;
-    @Nullable
-    private final String path;
+public final class WebClientBuilder extends AbstractWebClientBuilder {
 
     /**
      * Creates a new instance.
      */
-    WebClientBuilder() {
-        uri = UNDEFINED_URI;
-        scheme = null;
-        endpointGroup = null;
-        path = null;
-    }
+    WebClientBuilder() {}
 
     /**
      * Creates a new instance.
@@ -83,24 +50,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
      *                                  in {@link SessionProtocol}
      */
     WebClientBuilder(URI uri) {
-        if (Clients.isUndefinedUri(uri)) {
-            this.uri = uri;
-        } else {
-            final String givenScheme = requireNonNull(uri, "uri").getScheme();
-            final Scheme scheme = validateScheme(givenScheme);
-            if (scheme.uriText().equals(givenScheme)) {
-                // No need to replace the user-specified scheme because it's already in its normalized form.
-                this.uri = uri;
-            } else {
-                // Replace the user-specified scheme with the normalized one.
-                // e.g. http://foo.com/ -> none+http://foo.com/
-                this.uri = URI.create(scheme.uriText() +
-                                      uri.toString().substring(givenScheme.length()));
-            }
-        }
-        scheme = null;
-        endpointGroup = null;
-        path = null;
+        super(uri);
     }
 
     /**
@@ -110,29 +60,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
      *                                  in {@link SessionProtocol}
      */
     WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
-        validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
-        if (path != null) {
-            checkArgument(path.startsWith("/"),
-                          "path: %s (expected: an absolute path starting with '/')", path);
-        }
-
-        uri = null;
-        scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
-        this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
-        this.path = path;
-    }
-
-    private static Scheme validateScheme(String scheme) {
-        final Scheme parsedScheme = Scheme.tryParse(scheme);
-        if (parsedScheme != null) {
-            if (parsedScheme.serializationFormat() == SerializationFormat.NONE &&
-                SUPPORTED_PROTOCOLS.contains(parsedScheme.sessionProtocol())) {
-                return parsedScheme;
-            }
-        }
-
-        throw new IllegalArgumentException("scheme : " + scheme +
-                                           " (expected: one of " + SUPPORTED_PROTOCOLS + ')');
+        super(sessionProtocol, endpointGroup, path);
     }
 
     /**
@@ -143,32 +71,20 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
      *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
     public WebClient build() {
-        final ClientOptions options = buildOptions();
-        final ClientFactory factory = options.factory();
-        final ClientBuilderParams params;
-
-        if (uri != null) {
-            params = ClientBuilderParams.of(uri, WebClient.class, options);
-        } else {
-            assert scheme != null;
-            assert endpointGroup != null;
-            params = ClientBuilderParams.of(scheme, endpointGroup, path, WebClient.class, options);
-        }
-
-        return (WebClient) factory.newClient(params);
+        return buildWebClient();
     }
+
+    // Override the return type of the chaining methods in the superclass.
 
     @Override
     public WebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
-        throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
+        return (WebClientBuilder) super.rpcDecorator(decorator);
     }
 
     @Override
     public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
-        throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
+        return (WebClientBuilder) super.rpcDecorator(decorator);
     }
-
-    // Override the return type of the chaining methods in the superclass.
 
     @Override
     public WebClientBuilder options(ClientOptions options) {

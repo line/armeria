@@ -73,6 +73,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
 
+    @Nullable
+    private SocketAddress proxyDestinationAddress;
+
     /**
      * Whether the current channel is active or not.
      */
@@ -324,9 +327,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
             evt instanceof SslHandshakeCompletionEvent ||
             evt instanceof SslCloseCompletionEvent ||
-            evt instanceof ChannelInputShutdownReadComplete ||
-            evt instanceof ProxyConnectionEvent) {
+            evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
+            return;
+        }
+
+        if (evt instanceof ProxyConnectionEvent) {
+            proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
             return;
         }
 
@@ -341,7 +348,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            channelPool.connect(remoteAddress, H1C, sessionPromise);
+            if (proxyDestinationAddress != null) {
+                channelPool.connect(proxyDestinationAddress, H1C, sessionPromise);
+            } else {
+                channelPool.connect(remoteAddress, H1C, sessionPromise);
+            }
         } else {
             // Fail all pending responses.
             final HttpResponseDecoder responseDecoder = this.responseDecoder;
