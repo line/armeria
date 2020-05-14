@@ -70,7 +70,7 @@ public final class ThriftProtocolFactories {
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol.
      */
-    public static final TProtocolFactory TEXT = TTextProtocolFactory.get(false);
+    public static final TProtocolFactory TEXT = TTextProtocolFactory.get();
 
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol with named enums.

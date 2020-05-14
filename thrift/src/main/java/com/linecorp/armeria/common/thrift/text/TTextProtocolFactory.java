@@ -34,6 +34,14 @@ public final class TTextProtocolFactory implements TProtocolFactory {
     /**
      * Returns the singleton {@link TTextProtocolFactory} instance.
      */
+    public static TTextProtocolFactory get() {
+        return get(false);
+    }
+
+    /**
+     * Returns the singleton {@link TTextProtocolFactory} instance,
+     * with optional serialization of named enums.
+     */
     public static TTextProtocolFactory get(boolean useNamedEnums) {
         return useNamedEnums ? INSTANCE_NAMED_ENUMS : INSTANCE;
     }
