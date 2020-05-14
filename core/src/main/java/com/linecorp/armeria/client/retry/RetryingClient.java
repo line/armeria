@@ -121,6 +121,17 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
+     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
+     * handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
+        return builder(retryRuleWithContent).newDecorator();
+    }
+
+    /**
      * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
      * requests.
      *
@@ -146,6 +157,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
         requireNonNull(retryStrategy, "retryStrategy");
         return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy), maxTotalAttempts);
+    }
+
+    /**
+     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
+     * handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     * @param maxTotalAttempts the maximum allowed number of total attempts
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxTotalAttempts) {
+        return builder(retryRuleWithContent).maxTotalAttempts(maxTotalAttempts).newDecorator();
     }
 
     /**
@@ -181,6 +204,24 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         requireNonNull(retryStrategy, "retryStrategy");
         return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy),
                             maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+    }
+
+    /**
+     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
+     * handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     * @param maxTotalAttempts the maximum number of total attempts
+     * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
+     *                                            the timeout
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxTotalAttempts,
+                 long responseTimeoutMillisForEachAttempt) {
+        return builder(retryRuleWithContent)
+                       .maxTotalAttempts(maxTotalAttempts)
+                       .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                       .newDecorator();
     }
 
     private final boolean useRetryAfter;

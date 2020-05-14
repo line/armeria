@@ -33,7 +33,7 @@ public class WithDuplicator extends RetryingClientBase {
                 (ctx, response, cause) -> response.aggregate().handle((unused1, unused2) -> null);
 
         return WebClient.builder(baseUrl())
-                        .decorator(RetryingClient.builder(rule).newDecorator())
+                        .decorator(RetryingClient.newDecorator(rule))
                         .build();
     }
 }

@@ -111,7 +111,7 @@ class RetryingClientWithMetricsTest {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
-                                          .decorator(RetryingClient.builder(rule).newDecorator())
+                                          .decorator(RetryingClient.newDecorator(rule))
                                           .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
