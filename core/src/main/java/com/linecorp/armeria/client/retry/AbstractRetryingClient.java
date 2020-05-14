@@ -73,6 +73,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     private final RetryRule retryRule;
 
     @Nullable
+    private final RetryRule fromRetryRuleWithContent;
+
+    @Nullable
     private final RetryRuleWithContent<O> retryRuleWithContent;
 
     private final int maxTotalAttempts;
@@ -135,6 +138,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         super(delegate);
         this.retryRule = retryRule;
         this.retryRuleWithContent = retryRuleWithContent;
+        if (retryRuleWithContent != null) {
+            fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
+        } else {
+            fromRetryRuleWithContent = null;
+        }
 
         checkArgument(maxTotalAttempts > 0, "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
         this.maxTotalAttempts = maxTotalAttempts;
@@ -195,6 +203,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected final RetryRuleWithContent<O> retryRuleWithContent() {
         checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
         return retryRuleWithContent;
+    }
+
+    RetryRule fromRetryRuleWithContent() {
+        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+        return fromRetryRuleWithContent;
     }
 
     /**

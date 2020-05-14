@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -697,7 +699,9 @@ class RetryingClientTest {
         }
 
         @Override
-        public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
+        public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
+                                                          @Nullable HttpResponse response,
+                                                          @Nullable Throwable cause) {
             final CompletableFuture<AggregatedHttpResponse> future = response.aggregate();
             return future.handle((aggregatedResponse, unused) -> {
                 if (aggregatedResponse != null &&

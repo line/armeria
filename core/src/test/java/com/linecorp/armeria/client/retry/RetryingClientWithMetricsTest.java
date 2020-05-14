@@ -101,8 +101,8 @@ class RetryingClientWithMetricsTest {
     // In this case, all of the requests and responses are recorded.
     @Test
     void retryingThenMetricCollecting() throws Exception {
-        final RetryRuleWithContent<HttpResponse> retryStrategy =
-                (ctx, response) -> response.aggregate().handle((msg, cause) -> {
+        final RetryRuleWithContent<HttpResponse> rule =
+                (ctx, response, cause) -> response.aggregate().handle((msg, unused) -> {
                     if ("hello".equals(msg.contentUtf8())) {
                         return RetryDecision.noRetry();
                     }
@@ -111,7 +111,7 @@ class RetryingClientWithMetricsTest {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
-                                          .decorator(RetryingClient.builder(retryStrategy).newDecorator())
+                                          .decorator(RetryingClient.builder(rule).newDecorator())
                                           .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 

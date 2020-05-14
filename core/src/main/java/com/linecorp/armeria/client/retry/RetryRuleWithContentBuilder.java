@@ -104,13 +104,13 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
             return RetryRuleUtil.fromRetryRule(first);
         }
 
-        final RetryRuleWithContent<T> second = (ctx, content) -> {
+        final RetryRuleWithContent<T> second = (ctx, content, cause) -> {
             if (content == null) {
                 return NEXT_DECISION;
             }
             return retryFunction.apply(content)
-                                .handle((matched, cause) -> {
-                                    if (cause != null) {
+                                .handle((matched, cause0) -> {
+                                    if (cause0 != null) {
                                         return RetryDecision.next();
                                     }
                                     return matched ? decision : RetryDecision.next();

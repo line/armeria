@@ -278,7 +278,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                         final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
                                 duplicator.duplicate(), contentPreviewLength);
                         final HttpResponse duplicated = duplicator.duplicate();
-                        retryRuleWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
+                        retryRuleWithContent().shouldRetry(derivedCtx, contentPreviewResponse, null)
                                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                     originalReq, returnedRes, future,
                                                                     duplicated, duplicator::abort));
@@ -286,7 +286,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 } else {
                     final RetryRule retryRule;
                     if (needsContentInRule) {
-                        retryRule = RetryRuleUtil.fromRetryWithContent(retryRuleWithContent());
+                        retryRule = fromRetryRuleWithContent();
                     } else {
                         retryRule = retryRule();
                     }

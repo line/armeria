@@ -330,8 +330,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 logBuilder.endResponse(cause);
             }
         } else {
-            originalRes.close(cause);
             logBuilder.endResponse(cause);
+            originalRes.close(cause);
         }
     }
 
