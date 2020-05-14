@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.HttpStatus.OK;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_IMPLEMENTED;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -193,6 +194,7 @@ public class ProxyClientIntegrationTest {
 
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        clientFactory.close();
     }
 
     @Test
@@ -209,6 +211,7 @@ public class ProxyClientIntegrationTest {
 
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        clientFactory.close();
     }
 
     @Test
@@ -224,6 +227,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        clientFactory.close();
     }
 
     @Test
@@ -239,6 +243,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        clientFactory.close();
     }
 
     @Test
@@ -256,7 +261,7 @@ public class ProxyClientIntegrationTest {
                                                        headers, EmptyHttpHeaders.INSTANCE);
             } else {
                 response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                                                       copiedBuffer("success", US_ASCII));
+                                                       copiedBuffer(request.method().name(), US_ASCII));
             }
             ctx.writeAndFlush(response);
             ctx.close();
@@ -273,7 +278,8 @@ public class ProxyClientIntegrationTest {
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(response.contentUtf8()).isEqualTo(GET.name());
+        clientFactory.close();
     }
 
     @Test
@@ -291,7 +297,7 @@ public class ProxyClientIntegrationTest {
                         HTTP_1_1, NOT_IMPLEMENTED, EMPTY_BUFFER, headers, EmptyHttpHeaders.INSTANCE);
             } else {
                 response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                                                       copiedBuffer("success", US_ASCII));
+                                                       copiedBuffer(request.method().name(), US_ASCII));
             }
             ctx.writeAndFlush(response);
             ctx.close();
@@ -307,7 +313,8 @@ public class ProxyClientIntegrationTest {
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(response.contentUtf8()).isEqualTo(GET.name());
+        clientFactory.close();
     }
 
     @Test
@@ -324,6 +331,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        clientFactory.close();
     }
 
     @Test
@@ -343,6 +351,7 @@ public class ProxyClientIntegrationTest {
         await().until(() -> responseFutures.stream().allMatch(CompletableFuture::isDone));
         assertThat(responseFutures.stream().map(CompletableFuture::join))
                 .allMatch(response -> response.contentUtf8().equals(SUCCESS_RESPONSE));
+        clientFactory.close();
     }
 
     @Test
@@ -369,6 +378,7 @@ public class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualByComparingTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        clientFactory.close();
     }
 
     @Test
@@ -387,6 +397,7 @@ public class ProxyClientIntegrationTest {
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                 .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                 .hasRootCauseInstanceOf(ProxyConnectException.class);
+        clientFactory.close();
     }
 
     @Test
@@ -409,6 +420,7 @@ public class ProxyClientIntegrationTest {
                                                 .hasMessageContaining("Connection refused")
                                                 .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                 .hasRootCauseInstanceOf(ConnectException.class);
+        clientFactory.close();
     }
 
     @Test
@@ -434,6 +446,7 @@ public class ProxyClientIntegrationTest {
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                 .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                 .hasRootCauseInstanceOf(ProxyConnectException.class);
+        clientFactory.close();
     }
 
     @Test
@@ -453,6 +466,7 @@ public class ProxyClientIntegrationTest {
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                 .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                 .hasRootCauseInstanceOf(ProxyConnectException.class);
+        clientFactory.close();
     }
 
     static class ProxySuccessEvent {
