@@ -195,7 +195,7 @@ public class ProxyClientIntegrationTest {
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
 
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         clientFactory.close();
     }
@@ -212,7 +212,7 @@ public class ProxyClientIntegrationTest {
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
 
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
@@ -229,7 +229,7 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
@@ -246,7 +246,7 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
@@ -283,7 +283,7 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(GET.name());
         assertThat(numSuccessfulProxyRequests).isEqualTo(2);
         clientFactory.close();
@@ -319,7 +319,7 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(GET.name());
         assertThat(numSuccessfulProxyRequests).isEqualTo(2);
         clientFactory.close();
@@ -337,7 +337,7 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
@@ -386,7 +386,7 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.status()).isEqualTo(OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
