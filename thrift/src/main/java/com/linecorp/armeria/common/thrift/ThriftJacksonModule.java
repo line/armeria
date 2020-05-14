@@ -41,16 +41,16 @@ public final class ThriftJacksonModule extends Module {
     private final boolean useNamedEnums;
 
     /**
-     * Initialize {@code ThriftJacksonModule} with default settings.
+     * Creates a new instance with the default settings.
      */
     public ThriftJacksonModule() {
         this(false);
     }
 
     /**
-     * Initialize {@code ThriftJacksonModule}.
+     * Creates a new instance.
      *
-     * @param useNamedEnums enable serialization of named enums
+     * @param useNamedEnums whether to serialize an enum as a string or an integer
      */
     public ThriftJacksonModule(boolean useNamedEnums) {
         this.useNamedEnums = useNamedEnums;
