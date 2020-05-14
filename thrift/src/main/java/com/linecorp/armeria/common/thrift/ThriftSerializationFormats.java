@@ -49,8 +49,14 @@ public final class ThriftSerializationFormats {
      */
     public static final SerializationFormat TEXT = SerializationFormat.of("ttext");
 
+    /**
+     * Thrift TText serialization format with named enums. This format is not optimized for performance
+     * or backwards compatibility and should only be used in non-production use cases like debugging.
+     */
+    public static final SerializationFormat TEXT_NAMED_ENUM = SerializationFormat.of("ttext-named-enum");
+
     private static final Set<SerializationFormat> THRIFT_FORMATS =
-            ImmutableSet.of(BINARY, COMPACT, JSON, TEXT);
+            ImmutableSet.of(BINARY, COMPACT, JSON, TEXT, TEXT_NAMED_ENUM);
 
     /**
      * Returns the set of all known Thrift serialization formats.

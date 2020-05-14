@@ -73,6 +73,11 @@ public final class ThriftProtocolFactories {
     public static final TProtocolFactory TEXT = TTextProtocolFactory.get();
 
     /**
+     * {@link TProtocolFactory} for the Thrift TText protocol with named enums.
+     */
+    public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
+
+    /**
      * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
      *
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
@@ -96,6 +101,10 @@ public final class ThriftProtocolFactories {
             return TEXT;
         }
 
+        if (serializationFormat == ThriftSerializationFormats.TEXT_NAMED_ENUM) {
+            return TEXT_NAMED_ENUM;
+        }
+
         throw new IllegalArgumentException("non-Thrift serializationFormat: " + serializationFormat);
     }
 
@@ -114,7 +123,9 @@ public final class ThriftProtocolFactories {
         } else if (protoFactory instanceof TJSONProtocol.Factory) {
             return ThriftSerializationFormats.JSON;
         } else if (protoFactory instanceof TTextProtocolFactory) {
-            return ThriftSerializationFormats.TEXT;
+            final TTextProtocolFactory factory = (TTextProtocolFactory) protoFactory;
+            return factory.usesNamedEnums() ? ThriftSerializationFormats.TEXT_NAMED_ENUM
+                                            : ThriftSerializationFormats.TEXT;
         } else {
             throw new IllegalArgumentException(
                     "unsupported TProtocolFactory: " + protoFactory.getClass().getName());

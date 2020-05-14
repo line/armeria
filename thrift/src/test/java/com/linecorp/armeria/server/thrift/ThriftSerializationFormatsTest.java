@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINA
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT_NAMED_ENUM;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -75,12 +76,18 @@ public class ThriftSerializationFormatsTest {
         assertThat(find(parse("application/vnd.apache.thrift.json; charset=utf-8"))).isSameAs(JSON);
         assertThat(find(parse("application/x-thrift; protocol=ttext; charset=utf-8"))).isSameAs(TEXT);
         assertThat(find(parse("application/vnd.apache.thrift.text; charset=utf-8"))).isSameAs(TEXT);
+        assertThat(find(parse("application/x-thrift; protocol=ttext_named_enum; charset=utf-8")))
+                .isSameAs(TEXT_NAMED_ENUM);
+        assertThat(find(parse("application/vnd.apache.thrift.text_named_enum; charset=utf-8")))
+                .isSameAs(TEXT_NAMED_ENUM);
 
         // .. but neither non-UTF-8 charsets:
         assertThat(find(parse("application/x-thrift; protocol=tjson; charset=us-ascii"))).isNull();
         assertThat(find(parse("application/vnd.apache.thrift.json; charset=us-ascii"))).isNull();
         assertThat(find(parse("application/x-thrift; protocol=ttext; charset=us-ascii"))).isNull();
         assertThat(find(parse("application/vnd.apache.thrift.text; charset=us-ascii"))).isNull();
+        assertThat(find(parse("application/x-thrift; protocol=ttext_named_enum; charset=us-ascii"))).isNull();
+        assertThat(find(parse("application/vnd.apache.thrift.text_named_enum; charset=us-ascii"))).isNull();
 
         // .. nor binary/compact formats:
         assertThat(find(parse("application/x-thrift; protocol=tbinary; charset=utf-8"))).isNull();

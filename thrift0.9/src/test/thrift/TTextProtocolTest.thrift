@@ -74,8 +74,6 @@ struct TTextProtocolTestMsg {
 
   12: required string m;
 
-  // Not fully implemented yet, have to say "p" : 3
-  // instead of "p" : CHARLIE
   14: required Letter p;
 
   15: required set<Letter> q;
@@ -99,4 +97,14 @@ struct TTextProtocolTestMsg {
 
 struct TTextProtocolTestMsgUnion {
   1: required TestUnion u;
+}
+
+struct TTextNamedEnumProtocolTestMsg {
+  1: required i32 a;
+
+  2: required Letter b;
+
+  3: required list<i32> c;
+
+  4: required list<Letter> d;
 }
