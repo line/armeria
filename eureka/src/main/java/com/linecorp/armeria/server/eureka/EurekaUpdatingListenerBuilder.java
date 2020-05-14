@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
-import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;

@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
-import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
