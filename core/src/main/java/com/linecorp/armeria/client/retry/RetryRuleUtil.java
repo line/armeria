@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.DEFAULT_DECISION;
 import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.NEXT_DECISION;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
@@ -66,13 +67,26 @@ final class RetryRuleUtil {
 
     static <T extends Response> RetryRuleWithContent<T> fromRetryRule(RetryRule retryRule) {
         return (ctx, content) -> {
-            final Throwable responseCause;
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-                responseCause = ctx.log().partial().responseCause();
+            if (content instanceof HttpResponse) {
+                final Throwable responseCause;
+                if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                    responseCause = ctx.log().partial().responseCause();
+                } else {
+                    responseCause = null;
+                }
+                return retryRule.shouldRetry(ctx, responseCause);
             } else {
-                responseCause = null;
+                final CompletableFuture<?> completionFuture = content.whenComplete();
+                if (completionFuture.isCompletedExceptionally()) {
+                    final CompletableFuture<RetryDecision> decisionFuture = new CompletableFuture<>();
+                    completionFuture.exceptionally(cause -> {
+                        retryRule.shouldRetry(ctx, cause).thenAccept(decisionFuture::complete);
+                        return null;
+                    });
+                    return decisionFuture;
+                }
+                return retryRule.shouldRetry(ctx, null);
             }
-            return retryRule.shouldRetry(ctx, responseCause);
         };
     }
 

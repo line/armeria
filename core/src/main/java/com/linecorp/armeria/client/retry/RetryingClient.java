@@ -187,7 +187,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private final int contentPreviewLength;
 
-    private final boolean needsContentInStrategy;
+    private final boolean needsContentInRule;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
@@ -195,7 +195,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     RetryingClient(HttpClient delegate, RetryRule retryRule, int totalMaxAttempts,
                    long responseTimeoutMillisForEachAttempt, boolean useRetryAfter) {
         super(delegate, retryRule, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
-        needsContentInStrategy = false;
+        needsContentInRule = false;
         this.useRetryAfter = useRetryAfter;
         contentPreviewLength = 0;
     }
@@ -207,7 +207,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                    RetryRuleWithContent<HttpResponse> retryRuleWithContent, int totalMaxAttempts,
                    long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int contentPreviewLength) {
         super(delegate, retryRuleWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
-        needsContentInStrategy = true;
+        needsContentInRule = true;
         this.useRetryAfter = useRetryAfter;
         checkArgument(contentPreviewLength > 0,
                       "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
@@ -271,7 +271,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             try {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-                if (needsContentInStrategy && responseCause == null) {
+                if (needsContentInRule && responseCause == null) {
                     try (HttpResponseDuplicator duplicator =
                                  response.toDuplicator(derivedCtx.eventLoop(),
                                                        derivedCtx.maxResponseLength())) {
@@ -285,7 +285,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     }
                 } else {
                     final RetryRule retryRule;
-                    if (needsContentInStrategy) {
+                    if (needsContentInRule) {
                         retryRule = RetryRuleUtil.fromRetryWithContent(retryRuleWithContent());
                     } else {
                         retryRule = retryRule();
