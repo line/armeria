@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.annotation.processor;
 
+import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -70,12 +71,12 @@ public class DocumentationProcessorTest {
                 loadFile("NoJavaDoc.java.txt"),
                 new CompileOptions().processors(target)
         );
-        final String fileName = DocumentationProcessor.getFileName("com.linecorp.armeria.NoJavaDoc");
+        final String fileName = getFileName("com.linecorp.armeria.NoJavaDoc");
         assertThat(Files.notExists(Paths.get(fileName))).isTrue();
     }
 
     private static void testFile(String fileName) throws IOException {
-        final Path path = Paths.get(DocumentationProcessor.getFileName(fileName));
+        final Path path = Paths.get(getFileName(fileName));
         assertThat(Files.exists(path)).isTrue();
         final Properties properties = new Properties();
         properties.load(Files.newInputStream(path));

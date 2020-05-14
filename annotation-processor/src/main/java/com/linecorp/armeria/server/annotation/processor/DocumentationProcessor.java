@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.annotation.processor;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.server.annotation.helper.ProcessedDocumentationHelper.getFileName;
+import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 
 import java.io.IOException;
 import java.io.Reader;

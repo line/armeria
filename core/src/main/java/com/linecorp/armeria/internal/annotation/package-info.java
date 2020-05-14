@@ -18,6 +18,6 @@
  * Helpers for annotations for building a RESTful service.
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.annotation.helper;
+package com.linecorp.armeria.internal.annotation;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

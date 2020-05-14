@@ -21,7 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.server.annotation.helper.ProcessedDocumentationHelper.getFileName;
+import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.getConstructors;
@@ -51,6 +51,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -62,6 +63,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
@@ -123,6 +126,12 @@ import com.linecorp.armeria.server.annotation.Trace;
  */
 public final class AnnotatedServiceFactory {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedServiceFactory.class);
+
+    private static final Cache<String, Properties> DOCUMENTATION_PROPERTIES_CACHE =
+            CacheBuilder.newBuilder()
+                        .maximumSize(100)
+                        .expireAfterWrite(30, TimeUnit.SECONDS)
+                        .build();
 
     /**
      * An instance map for reusing converters, exception handlers and decorators.
@@ -750,6 +759,10 @@ public final class AnnotatedServiceFactory {
             final Class<?> clazz = executable.getDeclaringClass();
             final String fileName = getFileName(clazz.getCanonicalName());
             final String propertyName = executable.getName() + '.' + parameter.getName();
+            final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
+            if (cachedProperties != null) {
+                return cachedProperties.getProperty(propertyName);
+            }
             try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
                                                                    .getResourceAsStream(fileName)) {
                 if (stream == null) {
@@ -757,11 +770,10 @@ public final class AnnotatedServiceFactory {
                 }
                 final Properties properties = new Properties();
                 properties.load(stream);
-                if (properties.containsKey(propertyName)) {
-                    return properties.getProperty(propertyName);
-                }
+                DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
+                return properties.getProperty(propertyName);
             } catch (IOException exception) {
-                exception.printStackTrace();
+                logger.warn("Error loading API description file from FS. File: " + fileName, exception);
             }
         }
         return null;

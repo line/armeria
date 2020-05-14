@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation.helper;
+package com.linecorp.armeria.internal.server.annotation;
 
 /**
  * Helper class for Documentation processing.
