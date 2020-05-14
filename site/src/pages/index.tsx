@@ -105,7 +105,7 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
             Reactive Streams, Spring Boot and Dropwizard.
           </Paragraph>
           <Paragraph className={styles.indented}>
-            &ldquo; Brought to you by the creater of{' '}
+            &ldquo; Brought to you by the creator of{' '}
             <Tooltip title="The most popular non-blocking I/O client-server framework in Java ecosystem">
               <OutboundLink href="https://netty.io/">Netty</OutboundLink>
             </Tooltip>{' '}
