@@ -83,7 +83,7 @@ class RetryingRpcClientTest {
             final AtomicInteger retryCount = new AtomicInteger();
             sb.service("/thrift", THttpService.of(serviceHandler).decorate(
                     (delegate, ctx, req) -> {
-                        final int count = retryCount.getAndIncrement()RetryingRpcClientTest.java;
+                        final int count = retryCount.getAndIncrement();
                         if (count != 0) {
                             assertThat(count).isEqualTo(req.headers().getInt(ARMERIA_RETRY_COUNT));
                         }
