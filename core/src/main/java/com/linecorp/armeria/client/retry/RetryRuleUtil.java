@@ -19,9 +19,9 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.DEFAULT_DECISION;
 import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.NEXT_DECISION;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.BiFunction;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
@@ -46,12 +46,12 @@ final class RetryRuleUtil {
 
     static <T extends Response> RetryStrategyWithContent<T> toRetryStrategyWithContent(
             RetryRuleWithContent<T> rule) {
-        return (ctx, content) -> rule.shouldRetry(ctx, content).thenApply(RetryDecision::backoff);
+        return (ctx, content) -> rule.shouldRetry(ctx, content, null).thenApply(RetryDecision::backoff);
     }
 
     static <T extends Response> RetryRuleWithContent<T> fromRetryStrategyWithContent(
             RetryStrategyWithContent<T> strategy) {
-        return (ctx, content) -> strategy.shouldRetry(ctx, content).thenApply(backoff -> {
+        return (ctx, content, cause) -> strategy.shouldRetry(ctx, content).thenApply(backoff -> {
             if (backoff == null) {
                 return RetryDecision.noRetry();
             } else {
@@ -60,38 +60,46 @@ final class RetryRuleUtil {
         });
     }
 
+    static <T extends Response> RetryRule fromRetryRuleWithContent(RetryRuleWithContent<T> retryRule) {
+        return (ctx, cause) -> retryRule.shouldRetry(ctx, null, cause);
+    }
+
     static <T extends Response> RetryRuleWithContent<T> fromRetryRule(RetryRule retryRule) {
-        return (ctx, content) -> {
-            final CompletableFuture<?> completionFuture = content.whenComplete();
-            if (completionFuture.isCompletedExceptionally()) {
-                final CompletableFuture<RetryDecision> decisionFuture = new CompletableFuture<>();
-                completionFuture.exceptionally(cause -> {
-                    retryRule.shouldRetry(ctx, cause).thenAccept(decisionFuture::complete);
-                    return null;
-                });
-                return decisionFuture;
-            }
-            return retryRule.shouldRetry(ctx, null);
-        };
+        return (ctx, content, cause) -> retryRule.shouldRetry(ctx, cause);
     }
 
     static RetryRule orElse(RetryRule first, RetryRule second) {
-        return (ctx, cause) -> orElse0(ctx, cause, first::shouldRetry, second::shouldRetry);
+        return (ctx, cause) -> {
+            final CompletionStage<RetryDecision> decisionFuture = first.shouldRetry(ctx, cause);
+            if (decisionFuture == DEFAULT_DECISION) {
+                return decisionFuture;
+            }
+            if (decisionFuture == NEXT_DECISION) {
+                return second.shouldRetry(ctx, cause);
+            }
+            return decisionFuture.thenCompose(decision -> {
+                if (decision != RetryDecision.next()) {
+                    return decisionFuture;
+                } else {
+                    return second.shouldRetry(ctx, cause);
+                }
+            });
+        };
     }
 
     @SuppressWarnings("unchecked")
     static <T extends Response> RetryRuleWithContent<T> orElse(RetryRule first,
                                                                RetryRuleWithContent<T> second) {
-        return (ctx, response) -> {
+        return (ctx, response, cause) -> {
             if (response instanceof HttpResponse) {
                 try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
                     final RetryRuleWithContent<T> duplicatedSecond =
                             (RetryRuleWithContent<T>) withDuplicator(
                                     (RetryRuleWithContent<HttpResponse>) second, duplicator);
-                    return orElse(ctx, response, fromRetryRule(first), duplicatedSecond);
+                    return orElse(ctx, response, cause, fromRetryRule(first), duplicatedSecond);
                 }
             } else {
-                return orElse(ctx, response, fromRetryRule(first), second);
+                return orElse(ctx, response, cause, fromRetryRule(first), second);
             }
         };
     }
@@ -99,16 +107,16 @@ final class RetryRuleUtil {
     @SuppressWarnings("unchecked")
     static <T extends Response> RetryRuleWithContent<T> orElse(RetryRuleWithContent<T> first,
                                                                RetryRule second) {
-        return (ctx, response) -> {
+        return (ctx, response, cause) -> {
             if (response instanceof HttpResponse) {
                 try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
                     final RetryRuleWithContent<T> duplicatedFirst =
                             (RetryRuleWithContent<T>) withDuplicator(
                                     (RetryRuleWithContent<HttpResponse>) first, duplicator);
-                    return orElse(ctx, response, duplicatedFirst, fromRetryRule(second));
+                    return orElse(ctx, response, cause, duplicatedFirst, fromRetryRule(second));
                 }
             } else {
-                return orElse(ctx, response, first, fromRetryRule(second));
+                return orElse(ctx, response, cause, first, fromRetryRule(second));
             }
         };
     }
@@ -116,7 +124,7 @@ final class RetryRuleUtil {
     @SuppressWarnings("unchecked")
     static <T extends Response> RetryRuleWithContent<T> orElse(RetryRuleWithContent<T> first,
                                                                RetryRuleWithContent<T> second) {
-        return (ctx, response) -> {
+        return (ctx, response, cause) -> {
             if (response instanceof HttpResponse) {
                 try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
                     final RetryRuleWithContent<T> duplicatedFirst =
@@ -125,45 +133,36 @@ final class RetryRuleUtil {
                     final RetryRuleWithContent<T> duplicatedSecond =
                             (RetryRuleWithContent<T>) withDuplicator(
                                     (RetryRuleWithContent<HttpResponse>) second, duplicator);
-                    return orElse(ctx, response, duplicatedFirst, duplicatedSecond);
+                    return orElse(ctx, response, cause, duplicatedFirst, duplicatedSecond);
                 }
             } else {
-                return orElse(ctx, response, first, second);
+                return orElse(ctx, response, cause, first, second);
             }
         };
     }
 
     private static <T extends Response> CompletionStage<RetryDecision> orElse(
-            ClientRequestContext ctx, T response,
+            ClientRequestContext ctx, @Nullable T response, @Nullable Throwable cause,
             RetryRuleWithContent<T> first, RetryRuleWithContent<T> second) {
-        return orElse0(ctx, response, first::shouldRetry, second::shouldRetry);
-    }
-
-    private static <T> CompletionStage<RetryDecision> orElse0(
-            ClientRequestContext ctx, T causeOrResponse,
-            BiFunction<? super ClientRequestContext, ? super T,
-                    ? extends CompletionStage<RetryDecision>> first,
-            BiFunction<? super ClientRequestContext, ? super T,
-                    ? extends CompletionStage<RetryDecision>> second) {
-        final CompletionStage<RetryDecision> decisionFuture = first.apply(ctx, causeOrResponse);
+        final CompletionStage<RetryDecision> decisionFuture = first.shouldRetry(ctx, response, cause);
         if (decisionFuture == DEFAULT_DECISION) {
             return decisionFuture;
         }
         if (decisionFuture == NEXT_DECISION) {
-            return second.apply(ctx, causeOrResponse);
+            return second.shouldRetry(ctx, response, cause);
         }
         return decisionFuture.thenCompose(decision -> {
             if (decision != RetryDecision.next()) {
                 return decisionFuture;
             } else {
-                return second.apply(ctx, causeOrResponse);
+                return second.shouldRetry(ctx, response, cause);
             }
         });
     }
 
     private static RetryRuleWithContent<HttpResponse>
     withDuplicator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, HttpResponseDuplicator duplicator) {
-        return (ctx, unused) -> retryRuleWithContent.shouldRetry(ctx, duplicator.duplicate());
+        return (ctx, unused, cause) -> retryRuleWithContent.shouldRetry(ctx, duplicator.duplicate(), cause);
     }
 
     private RetryRuleUtil() {}

@@ -188,9 +188,9 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         final RpcResponse res = executeWithFallback(delegate(), derivedCtx,
                                                     (context, cause) -> RpcResponse.ofFailure(cause));
 
-        res.handle((unused1, unused2) -> {
+        res.handle((unused1, cause) -> {
             try {
-                retryRuleWithContent().shouldRetry(derivedCtx, res).handle((decision, unused3) -> {
+                retryRuleWithContent().shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
                     final Backoff backoff = decision != null ? decision.backoff() : null;
                     if (backoff != null) {
                         final long nextDelay = getNextDelay(derivedCtx, backoff);
@@ -199,7 +199,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                             return null;
                         }
 
-                        scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause, false),
+                        scheduleNextRetry(ctx, cause0 -> handleException(ctx, future, cause0, false),
                                           () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
                     } else {
                         onRetryComplete(ctx, derivedCtx, res, future);

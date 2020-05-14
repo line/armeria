@@ -29,12 +29,11 @@ public class WithDuplicator extends RetryingClientBase {
 
     @Override
     protected WebClient newClient() {
-        final RetryRuleWithContent<HttpResponse> retryStrategy =
-                (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
+        final RetryRuleWithContent<HttpResponse> rule =
+                (ctx, response, cause) -> response.aggregate().handle((unused1, unused2) -> null);
 
         return WebClient.builder(baseUrl())
-                        .decorator(RetryingClient.builder(retryStrategy)
-                                                 .newDecorator())
+                        .decorator(RetryingClient.newDecorator(rule))
                         .build();
     }
 }
