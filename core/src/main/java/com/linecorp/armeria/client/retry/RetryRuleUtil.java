@@ -67,7 +67,7 @@ final class RetryRuleUtil {
     static <T extends Response> RetryRuleWithContent<T> fromRetryRule(RetryRule retryRule) {
         return (ctx, content) -> {
             final Throwable responseCause;
-            if(ctx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 responseCause = ctx.log().partial().responseCause();
             } else {
                 responseCause = null;
