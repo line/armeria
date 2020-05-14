@@ -20,7 +20,7 @@ dependencies {
     // Preprocessor that enables you to use JavaDoc to add description to REST API parameters.
     // If you don't want to use it, you can use the annotation
     // com.linecorp.armeria.server.annotation.Description otherwise.
-    implementation project(':annotation-processor')
+    compileOnly project(':annotation-processor')
     annotationProcessor project(':annotation-processor')
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
