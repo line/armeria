@@ -42,7 +42,7 @@ import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping;
 import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.HealthStatusHttpMapper;
+import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.core.io.Resource;
 
@@ -111,12 +111,12 @@ final class WebOperationService implements HttpService {
     }
 
     private final WebOperation operation;
-    private final HealthStatusHttpMapper healthMapper;
+    private final HttpCodeStatusMapper statusMapper;
 
     WebOperationService(WebOperation operation,
-                        HealthStatusHttpMapper healthMapper) {
+                        HttpCodeStatusMapper statusMapper) {
         this.operation = operation;
-        this.healthMapper = healthMapper;
+        this.statusMapper = statusMapper;
     }
 
     @Override
@@ -186,11 +186,11 @@ final class WebOperationService implements HttpService {
             body = webResult.getBody();
         } else {
             if (result instanceof Health) {
-                status = HttpStatus.valueOf(healthMapper.mapStatus(((Health) result).getStatus()));
+                status = HttpStatus.valueOf(statusMapper.getStatusCode(((Health) result).getStatus()));
             } else if (healthComponentClass != null && healthComponentClass.isInstance(result)) {
                 assert getStatusMethodHandle != null; // Always non-null if healthComponentClass is not null.
                 final Status actuatorStatus = (Status) getStatusMethodHandle.invoke(result);
-                status = HttpStatus.valueOf(healthMapper.mapStatus(actuatorStatus));
+                status = HttpStatus.valueOf(statusMapper.getStatusCode(actuatorStatus));
             } else {
                 status = HttpStatus.OK;
             }
