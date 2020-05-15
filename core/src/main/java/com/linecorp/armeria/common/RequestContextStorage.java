@@ -16,9 +16,15 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.function.Function;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 /**
  * The storage for storing {@link RequestContext}.
@@ -57,7 +63,17 @@ import com.linecorp.armeria.common.util.UnstableApi;
  * }</pre>
  */
 @UnstableApi
-public interface RequestContextStorage {
+public interface RequestContextStorage extends Unwrappable {
+
+    /**
+     * Customizes the current {@link RequestContextStorage} by applying the specified {@link Function} to it.
+     * This method is useful when you need to perform an additional operation when a {@link RequestContext}
+     * is pushed or popped. However, keep in mind that all {@link RequestContextStorage} operations are
+     * highly performance-sensitive operation and thus it's not a good idea to run a time-consuming task.
+     */
+    static void hook(Function<? super RequestContextStorage, ? extends RequestContextStorage> function) {
+        RequestContextUtil.hook(requireNonNull(function, "function"));
+    }
 
     /**
      * Returns the default {@link RequestContextStorage} which stores the {@link RequestContext}

@@ -19,10 +19,14 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.CustomRequestContextStorageProvider.CustomRequestContextStorage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
@@ -73,8 +77,60 @@ class RequestContextStorageCustomizingTest {
         latch3.await();
     }
 
+    @Test
+    void hook() {
+        final AtomicBoolean pushed = new AtomicBoolean();
+        final AtomicBoolean popped = new AtomicBoolean();
+        final AtomicBoolean got = new AtomicBoolean();
+
+        RequestContextStorage.hook(delegate -> new RequestContextStorageWrapper(delegate) {
+            @Nullable
+            @Override
+            public <T extends RequestContext> T push(RequestContext toPush) {
+                pushed.set(true);
+                return super.push(toPush);
+            }
+
+            @Override
+            public void pop(RequestContext current, @Nullable RequestContext toRestore) {
+                popped.set(true);
+                super.pop(current, toRestore);
+            }
+
+            @Nullable
+            @Override
+            public <T extends RequestContext> T currentOrNull() {
+                got.set(true);
+                return super.currentOrNull();
+            }
+        });
+
+        try {
+            final ServiceRequestContext ctx = newCtx();
+
+            assertThat(pushed).isFalse();
+            assertThat(popped).isFalse();
+            assertThat(got).isFalse();
+
+            try (SafeCloseable ignored = ctx.push()) {
+                assertThat(pushed).isTrue();
+                assertThat(popped).isFalse();
+                assertThat(got).isFalse();
+
+                assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+                assertThat(popped).isFalse();
+                assertThat(got).isTrue();
+            }
+
+            assertThat(popped).isTrue();
+        } finally {
+            RequestContextStorage.hook(storage -> storage.as(CustomRequestContextStorage.class));
+        }
+    }
+
     private static ServiceRequestContext newCtx() {
         return ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                     .build();
     }
+
 }
