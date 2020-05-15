@@ -357,6 +357,11 @@
     > :last-child {
       margin-bottom: 0;
     }
+
+    > p + ul,
+    > p + ol {
+      margin-top: -1em;
+    }
   }
 
   :global(.inlinePageToc) {
@@ -376,7 +381,6 @@
 
     // Make the inline page ToC compact.
     + ul {
-      margin-bottom: 0;
       padding-bottom: @margin-md;
       border-bottom: solid 1px @border-color-base;
       margin-bottom: @margin-md;
