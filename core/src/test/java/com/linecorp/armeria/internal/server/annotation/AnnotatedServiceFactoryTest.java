@@ -73,7 +73,7 @@ import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFac
 class AnnotatedServiceFactoryTest {
 
     private static final String HOME_PATH_PREFIX = "/home";
-    private static final String ANNOTATED_DESCIRPTION = "This is a description from the annotation";
+    private static final String ANNOTATED_DESCRIPTION = "This is a description from the annotation";
 
     @Test
     void ofNoOrdering() throws NoSuchMethodException {
@@ -285,7 +285,7 @@ class AnnotatedServiceFactoryTest {
     void testDescriptionLoadingPriority() throws NoSuchMethodException {
         final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod1", String.class)
                                                                        .getParameters()[0];
-        assertThat(AnnotatedServiceFactory.findDescription(parameter)).isEqualTo(ANNOTATED_DESCIRPTION);
+        assertThat(AnnotatedServiceFactory.findDescription(parameter)).isEqualTo(ANNOTATED_DESCRIPTION);
     }
 
     @Test
@@ -299,7 +299,7 @@ class AnnotatedServiceFactoryTest {
     private static class DescriptionAnnotatedTestClass {
         // Resource file from JavaDoc was already created
         @Get("/some/path")
-        public void testMethod1(@Description(ANNOTATED_DESCIRPTION) @Param("param") String param) { }
+        public void testMethod1(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param) { }
 
         // Resource file from JavaDoc was already created
         @Get("/some/path")
