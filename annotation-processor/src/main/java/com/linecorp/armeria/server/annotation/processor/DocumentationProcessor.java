@@ -20,7 +20,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -75,10 +77,12 @@ public class DocumentationProcessor extends AbstractProcessor {
             try {
                 writeProperties(className, properties);
             } catch (IOException e) {
+                final StringWriter writer = new StringWriter();
+                e.printStackTrace(new PrintWriter(writer));
                 processingEnv.getMessager().printMessage(Kind.WARNING,
-                                                         String.format("Could not write properties for `%s`",
+                                                         String.format("Could not write properties for `%s`\n"
+                                                                       + writer.toString(),
                                                                        className));
-                e.printStackTrace();
             }
         });
         return false;
@@ -127,10 +131,12 @@ public class DocumentationProcessor extends AbstractProcessor {
                     try {
                         processMethod((ExecutableElement) element);
                     } catch (IOException e) {
+                        final StringWriter writer = new StringWriter();
+                        e.printStackTrace(new PrintWriter(writer));
                         processingEnv.getMessager().printMessage(Kind.ERROR,
-                                                                 "Could not process all elements",
+                                                                 "Could not process all elements\n"
+                                                                 + writer.toString(),
                                                                  element);
-                        e.printStackTrace();
                     }
                 });
     }
