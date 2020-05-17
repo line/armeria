@@ -42,7 +42,6 @@ import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping;
 import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.core.io.Resource;
 
@@ -111,10 +110,10 @@ final class WebOperationService implements HttpService {
     }
 
     private final WebOperation operation;
-    private final HttpCodeStatusMapper statusMapper;
+    private final SimpleHttpCodeStatusMapper statusMapper;
 
     WebOperationService(WebOperation operation,
-                        HttpCodeStatusMapper statusMapper) {
+                        SimpleHttpCodeStatusMapper statusMapper) {
         this.operation = operation;
         this.statusMapper = statusMapper;
     }

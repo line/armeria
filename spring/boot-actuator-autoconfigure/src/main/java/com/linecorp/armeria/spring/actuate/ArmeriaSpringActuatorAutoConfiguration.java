@@ -40,7 +40,6 @@ import org.springframework.boot.actuate.endpoint.web.PathMapper;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicate;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpointDiscoverer;
-import org.springframework.boot.actuate.health.SimpleHttpCodeStatusMapper;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
