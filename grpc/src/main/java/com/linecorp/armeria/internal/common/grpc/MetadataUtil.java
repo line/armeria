@@ -20,15 +20,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.CharMatcher;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.BaseEncoding;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
 import io.grpc.InternalMetadata;
 import io.grpc.Metadata;
@@ -45,6 +49,13 @@ public final class MetadataUtil {
 
     private static final BaseEncoding BASE64_ENCODING_OMIT_PADDING = BaseEncoding.base64().omitPadding();
 
+    private static final Set<AsciiString> STRIPPED_HEADERS = ImmutableSet.of(
+            HttpHeaderNames.STATUS,
+            GrpcHeaderNames.GRPC_MESSAGE,
+            GrpcHeaderNames.GRPC_STATUS,
+            GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN
+    );
+
     /**
      * Copies the headers in the gRPC {@link Metadata} to the Armeria {@link HttpHeadersBuilder}. Headers will
      * be added, without replacing any currently present in the {@link HttpHeaders}.
@@ -53,12 +64,15 @@ public final class MetadataUtil {
         if (InternalMetadata.headerCount(metadata) == 0) {
             return;
         }
-
         final byte[][] serializedMetadata = InternalMetadata.serialize(metadata);
         assert serializedMetadata.length % 2 == 0;
 
         for (int i = 0; i < serializedMetadata.length; i += 2) {
             final AsciiString name = new AsciiString(serializedMetadata[i], false);
+
+            if (STRIPPED_HEADERS.contains(name)) {
+                continue;
+            }
 
             final byte[] valueBytes = serializedMetadata[i + 1];
 
@@ -77,7 +91,8 @@ public final class MetadataUtil {
     }
 
     /**
-     * Copies the headers in the Armeria {@link HttpHeaders} into a gRPC {@link Metadata}.
+     * Copies the headers in the Armeria {@link HttpHeaders} into a gRPC {@link Metadata}
+     * except for specified keys.
      */
     public static Metadata copyFromHeaders(HttpHeaders headers) {
         if (headers.isEmpty()) {
@@ -88,6 +103,10 @@ public final class MetadataUtil {
         for (Entry<AsciiString, String> entry : headers) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
+            if (STRIPPED_HEADERS.contains(name)) {
+                continue;
+            }
+
             if (isBinary(name)) {
                 numHeaders += COMMA_MATCHER.countIn(value) + 1;
             } else {
@@ -101,6 +120,10 @@ public final class MetadataUtil {
         for (Entry<AsciiString, String> entry : headers) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
+            if (STRIPPED_HEADERS.contains(name)) {
+                continue;
+            }
+
             final byte[] nameBytes = name.isEntireArrayUsed() ? name.array() : name.toByteArray();
             if (isBinary(name)) {
                 int commaIndex = COMMA_MATCHER.indexIn(value);
