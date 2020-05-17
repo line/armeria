@@ -105,7 +105,7 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
             Reactive Streams, Spring Boot and Dropwizard.
           </Paragraph>
           <Paragraph className={styles.indented}>
-            &ldquo; Brought to you by the creater of{' '}
+            &ldquo; Brought to you by the creator of{' '}
             <Tooltip title="The most popular non-blocking I/O client-server framework in Java ecosystem">
               <OutboundLink href="https://netty.io/">Netty</OutboundLink>
             </Tooltip>{' '}
@@ -377,6 +377,8 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
               src={data.logoVideo.publicURL}
               title="Armeria"
               width="160"
+              height="64"
+              preload="none"
               autoPlay
               muted
               loop
@@ -386,7 +388,13 @@ const IndexPage: React.FC<RouteComponentProps> = props => {
                 margin: '0 0.6rem',
               }}
             >
-              <img src={data.logoVideo.publicURL} width="160" alt="Armeria" />
+              <img
+                src={data.logoGif.publicURL}
+                loading="lazy"
+                width="160"
+                height="64"
+                alt="Armeria"
+              />
             </video>
             <Logo
               className="showOnReducedMotion"

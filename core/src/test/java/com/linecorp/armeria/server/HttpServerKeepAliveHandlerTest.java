@@ -170,18 +170,20 @@ class HttpServerKeepAliveHandlerTest {
     @ParameterizedTest
     @CsvSource({ "H1C", "H2C" })
     void shouldCloseConnectionWheNoActiveRequests(SessionProtocol protocol) throws InterruptedException {
-        final long clientIdleTimeout = 2000;
-        final WebClient client = newWebClient(clientIdleTimeout, serverWithNoKeepAlive.uri(protocol));
+        final long clientIdleTimeout = 10000;
+        final long tolerance = 3000;
+        final WebClient client = newWebClient(clientIdleTimeout, 0, 0, serverWithNoKeepAlive.uri(protocol));
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/streaming").aggregate().join();
         assertThat(counter).hasValue(1);
 
-        // After the request is closed by RequestTimeoutException,
+        // After the request is closed by server side RequestTimeoutException,
         // if no requests is in progress, the connection should be closed by client idle timeout scheduler
-        await().untilAtomic(counter, Matchers.is(0));
+        await().timeout(Duration.ofMillis(clientIdleTimeout + tolerance))
+               .untilAtomic(counter, Matchers.is(0));
         final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
-        assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
+        assertThat(elapsed).isBetween(clientIdleTimeout - tolerance, clientIdleTimeout * 2 + tolerance);
     }
 
     @Test

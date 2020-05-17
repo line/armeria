@@ -54,7 +54,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
-import com.google.common.collect.Iterables;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
@@ -173,16 +172,44 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     /**
-     * Returns the primary {@link ServerPort} that this {@link Server} is listening to. This method is useful
-     * when a {@link Server} listens to only one {@link ServerPort}.
+     * Returns the primary {@link ServerPort} that this {@link Server} is listening to. If this {@link Server}
+     * has both a local port and a non-local port, the non-local port is returned.
      *
      * @return the primary {@link ServerPort}, or {@code null} if this {@link Server} did not start.
      */
     @Nullable
     public ServerPort activePort() {
+        return activePort0(null);
+    }
+
+    /**
+     * Returns the primary {@link ServerPort} which serves the given {@link SessionProtocol}
+     * that this {@link Server} is listening to. If this {@link Server} has both a local port and
+     * a non-local port, the non-local port is returned.
+     *
+     * @return the primary {@link ServerPort}, or {@code null} if there is no active port available for
+     *         the given {@link SessionProtocol}.
+     */
+    @Nullable
+    public ServerPort activePort(SessionProtocol protocol) {
+        return activePort0(requireNonNull(protocol, "protocol"));
+    }
+
+    @Nullable
+    private ServerPort activePort0(@Nullable SessionProtocol protocol) {
         synchronized (activePorts) {
-            return Iterables.getFirst(activePorts.values(), null);
+            for (ServerPort serverPort : activePorts.values()) {
+                if (!isLocalPort(serverPort, protocol)) {
+                    return serverPort;
+                }
+            }
+            for (ServerPort serverPort : activePorts.values()) {
+                if (protocol == null || serverPort.hasProtocol(protocol)) {
+                    return serverPort;
+                }
+            }
         }
+        return null;
     }
 
     /**

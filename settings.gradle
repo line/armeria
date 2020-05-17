@@ -8,6 +8,7 @@ includeWithFlags ':bom',                       'bom', 'publish'
 // Published Java projects
 includeWithFlags ':brave',                              'java', 'publish', 'relocate'
 includeWithFlags ':core',                               'java', 'publish', 'shade', 'trim'
+includeWithFlags ':eureka',                             'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                               'java', 'publish', 'relocate'
 includeWithFlags ':grpc-protocol',                      'java', 'publish', 'relocate'
 includeWithFlags ':jetty',                              'java', 'publish', 'relocate'

@@ -35,9 +35,9 @@ class RetryingClientBuilderTest {
 
     @Test
     void contentPreviewLengthCannotBeZero() {
-        final RetryRuleWithContent<HttpResponse> strategy =
-                (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
-        assertThatThrownBy(() -> RetryingClient.builder(strategy).contentPreviewLength(0))
+        final RetryRuleWithContent<HttpResponse> rule =
+                (ctx, response, cause) -> response.aggregate().handle((unused1, unused2) -> null);
+        assertThatThrownBy(() -> RetryingClient.builder(rule).contentPreviewLength(0))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
     }
 }

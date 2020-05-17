@@ -62,7 +62,8 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 class RetryingRpcClientTest {
 
     private static final RetryRuleWithContent<RpcResponse> retryAlways =
-            (ctx, response) -> CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
+            (ctx, response, cause) ->
+                    CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
 
     private static final RetryRuleWithContent<RpcResponse> retryOnException =
             RetryRuleWithContent.<RpcResponse>builder().onException().thenBackoff(Backoff.withoutDelay());
@@ -127,10 +128,10 @@ class RetryingRpcClientTest {
     @Test
     void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
         final BlockingQueue<RequestLog> logQueue = new LinkedTransferQueue<>();
-        final RetryRuleWithContent<RpcResponse> strategy =
-                (ctx, response) -> CompletableFuture.completedFuture(
+        final RetryRuleWithContent<RpcResponse> rule =
+                (ctx, response, cause) -> CompletableFuture.completedFuture(
                         RetryDecision.retry(Backoff.fixed(10000000)));
-        final HelloService.Iface client = helloClient(strategy, 100, logQueue);
+        final HelloService.Iface client = helloClient(rule, 100, logQueue);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
         final Throwable thrown = catchThrowable(() -> client.hello("hello"));
         assertThat(thrown).isInstanceOf(TApplicationException.class);
@@ -148,7 +149,7 @@ class RetryingRpcClientTest {
     @Test
     void exceptionInStrategy() {
         final IllegalStateException exception = new IllegalStateException("foo");
-        final HelloService.Iface client = helloClient((ctx, response) -> {
+        final HelloService.Iface client = helloClient((ctx, response, cause) -> {
             throw exception;
         }, Integer.MAX_VALUE);
 
@@ -196,8 +197,8 @@ class RetryingRpcClientTest {
         final ClientFactory factory =
                 ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
-        final RetryRuleWithContent<RpcResponse> strategy =
-                (ctx, response) -> {
+        final RetryRuleWithContent<RpcResponse> ruleWithContent =
+                (ctx, response, cause) -> {
                     // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
                     return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(8000)));
                 };
@@ -206,7 +207,7 @@ class RetryingRpcClientTest {
                 Clients.builder(server.httpUri(BINARY) + "/thrift")
                        .responseTimeoutMillis(10000)
                        .factory(factory)
-                       .rpcDecorator(RetryingRpcClient.builder(strategy)
+                       .rpcDecorator(RetryingRpcClient.builder(ruleWithContent)
                                                       .newDecorator())
                        .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());

@@ -121,6 +121,17 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
+     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
+     * handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
+        return builder(retryRuleWithContent).newDecorator();
+    }
+
+    /**
      * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
      * requests.
      *
@@ -146,6 +157,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
         requireNonNull(retryStrategy, "retryStrategy");
         return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy), maxTotalAttempts);
+    }
+
+    /**
+     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
+     * handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     * @param maxTotalAttempts the maximum allowed number of total attempts
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxTotalAttempts) {
+        return builder(retryRuleWithContent).maxTotalAttempts(maxTotalAttempts).newDecorator();
     }
 
     /**
@@ -183,11 +206,29 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                             maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
+    /**
+     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
+     * handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     * @param maxTotalAttempts the maximum number of total attempts
+     * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
+     *                                            the timeout
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxTotalAttempts,
+                 long responseTimeoutMillisForEachAttempt) {
+        return builder(retryRuleWithContent)
+                       .maxTotalAttempts(maxTotalAttempts)
+                       .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                       .newDecorator();
+    }
+
     private final boolean useRetryAfter;
 
     private final int contentPreviewLength;
 
-    private final boolean needsContentInStrategy;
+    private final boolean needsContentInRule;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
@@ -195,7 +236,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     RetryingClient(HttpClient delegate, RetryRule retryRule, int totalMaxAttempts,
                    long responseTimeoutMillisForEachAttempt, boolean useRetryAfter) {
         super(delegate, retryRule, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
-        needsContentInStrategy = false;
+        needsContentInRule = false;
         this.useRetryAfter = useRetryAfter;
         contentPreviewLength = 0;
     }
@@ -207,7 +248,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                    RetryRuleWithContent<HttpResponse> retryRuleWithContent, int totalMaxAttempts,
                    long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int contentPreviewLength) {
         super(delegate, retryRuleWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
-        needsContentInStrategy = true;
+        needsContentInRule = true;
         this.useRetryAfter = useRetryAfter;
         checkArgument(contentPreviewLength > 0,
                       "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
@@ -269,27 +310,33 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             try {
-                if (needsContentInStrategy) {
+                final Throwable responseCause =
+                        log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+                if (needsContentInRule && responseCause == null) {
                     try (HttpResponseDuplicator duplicator =
                                  response.toDuplicator(derivedCtx.eventLoop(),
                                                        derivedCtx.maxResponseLength())) {
                         final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
                                 duplicator.duplicate(), contentPreviewLength);
                         final HttpResponse duplicated = duplicator.duplicate();
-                        retryRuleWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
+                        retryRuleWithContent().shouldRetry(derivedCtx, contentPreviewResponse, null)
                                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                     originalReq, returnedRes, future,
                                                                     duplicated, duplicator::abort));
                     }
                 } else {
-                    final Throwable responseCause =
-                            log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+                    final RetryRule retryRule;
+                    if (needsContentInRule) {
+                        retryRule = fromRetryRuleWithContent();
+                    } else {
+                        retryRule = retryRule();
+                    }
                     final Runnable originalResClosingTask =
                             responseCause == null ? response::abort : () -> response.abort(responseCause);
-                    retryRule().shouldRetry(derivedCtx, responseCause)
-                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                     originalReq, returnedRes, future, response,
-                                                     originalResClosingTask));
+                    retryRule.shouldRetry(derivedCtx, responseCause)
+                             .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                   originalReq, returnedRes, future, response,
+                                                   originalResClosingTask));
                 }
             } catch (Throwable t) {
                 handleException(ctx, rootReqDuplicator, future, t, false);

@@ -110,13 +110,14 @@
   .tocLeaf {
     overflow: hidden;
     text-overflow: ellipsis;
-    
+
     &.tocLeafActive {
       background-color: @primary-2;
       border-radius: @border-radius-base;
       margin-left: -0.35rem;
-  
-      &::before, &::after {
+
+      &::before,
+      &::after {
         letter-spacing: 0.1rem;
         content: '\00a0';
       }
@@ -352,6 +353,17 @@
     max-width: @layout-width-2;
   }
 
+  li {
+    > :last-child {
+      margin-bottom: 0;
+    }
+
+    > p + ul,
+    > p + ol {
+      margin-top: -1em;
+    }
+  }
+
   :global(.inlinePageToc) {
     font-size: @font-size-base;
     white-space: nowrap;
@@ -369,7 +381,6 @@
 
     // Make the inline page ToC compact.
     + ul {
-      margin-bottom: 0;
       padding-bottom: @margin-md;
       border-bottom: solid 1px @border-color-base;
       margin-bottom: @margin-md;

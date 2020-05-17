@@ -279,15 +279,15 @@ abstract class HttpResponseDecoder {
 
         private void closeAction(@Nullable Throwable cause) {
             if (cause != null) {
-                delegate.close(cause);
                 if (ctx != null) {
                     ctx.logBuilder().endResponse(cause);
                 }
+                delegate.close(cause);
             } else {
-                delegate.close();
                 if (ctx != null) {
                     ctx.logBuilder().endResponse();
                 }
+                delegate.close();
             }
         }
 
@@ -358,9 +358,11 @@ abstract class HttpResponseDecoder {
                         responseTimeoutHandler.run();
                     } else {
                         final ResponseTimeoutException cause = ResponseTimeoutException.get();
-                        delegate.close(cause);
                         if (ctx != null) {
                             ctx.logBuilder().endResponse(cause);
+                        }
+                        delegate.close(cause);
+                        if (ctx != null) {
                             ctx.request().abort(cause);
                         }
                     }
