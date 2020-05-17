@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -70,6 +71,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.DecoratingServiceBindingBuilder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -99,6 +101,9 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             ImmutableList.of(ActuatorMediaType.V3_JSON, MediaTypeNames.JSON);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private static final Port DEFAULT_INTERNAL_PORT = new Port().setPort(8001)
+                                                                .setProtocol(SessionProtocol.HTTP);
 
     @Bean
     @ConditionalOnMissingBean
@@ -220,44 +225,43 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                                ArmeriaSettings settings,
                                                                ConfigurableEnvironment environment) {
         return sb -> {
-            final Integer port = obtainManagementServerPort(serverProperties.getPort());
+            Port port = obtainManagementServerPort(serverProperties.getPort());
             if (port != null) {
-                configurePorts(sb, ImmutableList.of(Port.of(port)));
+                configurePorts(sb, ImmutableList.of(port));
                 addLocalManagementPortPropertyAlias(environment, port);
+            } else {
+                port = DEFAULT_INTERNAL_PORT;
             }
             final ArmeriaSettings.Security security = settings.getSecurity();
-            if (security != null && security.isEnabled() && port != null) {
+            if (security != null && security.isEnabled()) {
                 configureSecureDecorator(sb, port, properties.getBasePath(), settings);
             }
         };
     }
 
     @Nullable
-    private static Integer obtainManagementServerPort(@Nullable Integer port) {
-        Integer managementPort = port;
-        if (managementPort != null) {
-            if (managementPort.equals(0)) {
-                managementPort = SocketUtils.findAvailableTcpPort();
-            }
-            return managementPort;
-        }
-        return null;
+    private static Port obtainManagementServerPort(@Nullable Integer port) {
+        return Optional.ofNullable(port)
+                       .filter(it -> it.equals(0))
+                       .map(it -> SocketUtils.findAvailableTcpPort())
+                       .map(it -> new Port().setPort(port).setProtocol(SessionProtocol.HTTP))
+                       .orElse(null);
     }
 
-    private static void addLocalManagementPortPropertyAlias(ConfigurableEnvironment environment, Integer port) {
+    private static void addLocalManagementPortPropertyAlias(ConfigurableEnvironment environment, Port port) {
         environment.getPropertySources().addLast(new PropertySource<Object>("Management Server") {
 
             @Override
             public Object getProperty(String name) {
                 if ("local.management.port".equals(name)) {
-                    return port;
+                    return port.getPort();
                 }
                 return null;
             }
         });
     }
 
-    private static void configureSecureDecorator(ServerBuilder sb, Integer port,
+    private static void configureSecureDecorator(ServerBuilder sb, Port port,
                                                  @Nullable String basePath, ArmeriaSettings settings) {
         final DecoratingServiceBindingBuilder builder = sb.routeDecorator();
         if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
@@ -269,13 +273,13 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         if (!Strings.isNullOrEmpty(settings.getDocsPath())) {
             builder.path(settings.getDocsPath());
         }
-        if (!StringUtils.isEmpty(basePath)) {
+        if (!Strings.isNullOrEmpty(basePath)) {
             builder.path(basePath)
                    .pathPrefix(basePath);
         }
         builder.build((delegate, ctx, req) -> {
             final InetSocketAddress laddr = ctx.localAddress();
-            if (port.equals(laddr.getPort())) {
+            if (port.getPort() == laddr.getPort()) {
                 return delegate.serve(ctx, req);
             } else {
                 return HttpResponse.of(404);

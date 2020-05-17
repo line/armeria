@@ -168,15 +168,6 @@ public class ArmeriaSettings {
             protocols = ImmutableList.of(protocol);
             return this;
         }
-
-        /**
-         * Creates a new {@link Port} with the specified port without ip and iface.
-         */
-        public static Port of(int port) {
-            final Port p = new Port();
-            p.port = port;
-            return p;
-        }
     }
 
     /**
