@@ -3,18 +3,25 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-dependencies']}"
+        classpath "io.spring.gradle:dependency-management-plugin:${managedVersions['io.spring.gradle:dependency-management-plugin']}"
     }
 }
 
 apply plugin: 'org.springframework.boot'
-
-springBoot {
-    mainClassName = 'example.springframework.boot.webflux.Main'
-}
+apply plugin: 'io.spring.dependency-management'
 
 dependencies {
     implementation project(':spring:boot-webflux-starter')
+
+    implementation "com.spotify:completable-futures:${managedVersions['com.spotify:completable-futures']}"
+    implementation "it.unimi.dsi:fastutil:${managedVersions['it.unimi.dsi:fastutil']}"
+    implementation "com.google.guava:guava:${managedVersions['com.google.guava:guava']}"
+    implementation "com.google.code.findbugs:jsr305:${managedVersions['com.google.code.findbugs:jsr305']}"
+    implementation "org.jctools:jctools-core:${managedVersions['org.jctools:jctools-core']}"
+    implementation "org.reflections:reflections:${managedVersions['org.reflections:reflections']}"
+    implementation "org.bouncycastle:bcprov-jdk15on:${managedVersions['org.bouncycastle:bcprov-jdk15on']}"
+    implementation "javax.inject:javax.inject:${managedVersions['javax.inject:javax.inject']}"
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 

@@ -1,4 +1,5 @@
 dependencies {
+    api 'org.springframework.boot:spring-boot-autoconfigure'
     api 'org.springframework.boot:spring-boot-actuator-autoconfigure'
     api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'

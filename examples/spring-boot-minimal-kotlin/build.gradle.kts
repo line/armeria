@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+val managedVersions = extra["managedVersions"] as Map<*, *>
 
 buildscript {
     val managedVersions = extra["managedVersions"] as Map<*, *>
@@ -8,7 +9,8 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-allopen:${managedVersions["org.jetbrains.kotlin:kotlin-allopen"]}")
         classpath("org.jlleitschuh.gradle:ktlint-gradle:${managedVersions["org.jlleitschuh.gradle:ktlint-gradle"]}")
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${managedVersions["org.springframework.boot:spring-boot-gradle-plugin"]}")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${managedVersions["org.springframework.boot:spring-boot-dependencies"]}")
+        classpath("io.spring.gradle:dependency-management-plugin:${managedVersions["io.spring.gradle:dependency-management-plugin"]}")
     }
 }
 
@@ -22,6 +24,7 @@ plugins {
 apply(plugin = "org.jetbrains.kotlin.plugin.spring")
 apply(plugin = "org.jlleitschuh.gradle.ktlint")
 apply(plugin = "org.springframework.boot")
+apply(plugin = "io.spring.dependency-management")
 
 dependencies {
     implementation(project(":spring:boot-starter"))
@@ -32,6 +35,15 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+
+    implementation("com.spotify:completable-futures:${managedVersions["com.spotify:completable-futures"]}")
+    implementation("it.unimi.dsi:fastutil:${managedVersions["it.unimi.dsi:fastutil"]}")
+    implementation("com.google.guava:guava:${managedVersions["com.google.guava:guava"]}")
+    implementation("com.google.code.findbugs:jsr305:${managedVersions["com.google.code.findbugs:jsr305"]}")
+    implementation("org.jctools:jctools-core:${managedVersions["org.jctools:jctools-core"]}")
+    implementation("org.reflections:reflections:${managedVersions["org.reflections:reflections"]}")
+    implementation("org.bouncycastle:bcprov-jdk15on:${managedVersions["org.bouncycastle:bcprov-jdk15on"]}")
+    implementation("javax.inject:javax.inject:${managedVersions["javax.inject:javax.inject"]}")
 
     testImplementation("net.javacrumbs.json-unit:json-unit-fluent")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
