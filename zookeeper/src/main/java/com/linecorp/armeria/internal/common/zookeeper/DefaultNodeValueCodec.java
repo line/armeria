@@ -13,26 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.zookeeper;
+package com.linecorp.armeria.internal.common.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
-final class DefaultNodeValueCodec implements NodeValueCodec {
-    static final DefaultNodeValueCodec INSTANCE = new DefaultNodeValueCodec();
-    private static final String segmentDelimiter = ",";
-    private static final String fieldDelimiter = ":";
-    private static final Pattern SEGMENT_DELIMITER = Pattern.compile("\\s*" + segmentDelimiter + "\\s*");
+/**
+ * The default codec.
+ */
+public enum DefaultNodeValueCodec {
+    INSTANCE;
 
-    @Override
-    public Endpoint decode(String segment) {
+    private static final String fieldDelimiter = ":";
+
+    /**
+     * Decodes a zNode value to an {@link Endpoint}.
+     */
+    public Endpoint decode(byte[] zNodeValue) {
+        requireNonNull(zNodeValue, "zNodeValue");
+        final String segment = new String(zNodeValue, StandardCharsets.UTF_8);
         final String[] tokens = segment.split(fieldDelimiter);
         final Endpoint endpoint;
         switch (tokens.length) {
@@ -61,44 +64,22 @@ final class DefaultNodeValueCodec implements NodeValueCodec {
                 break;
             }
             default: //unknown
-                throw new EndpointGroupException(
-                        "invalid endpoint list: " + segment);
+                throw new EndpointGroupException("invalid endpoint segment: " + segment);
         }
         return endpoint;
     }
 
-    @Override
-    public Set<Endpoint> decodeAll(String valueString) {
-        final Set<Endpoint> endpoints = new HashSet<>();
-        try {
-            for (String segment : SEGMENT_DELIMITER.split(valueString)) {
-                endpoints.add(decode(segment));
-            }
-        } catch (Exception e) {
-            throw new EndpointGroupException("invalid endpoint list: " + valueString, e);
-        }
-        if (endpoints.isEmpty()) {
-            throw new EndpointGroupException("ZNode does not contain any endpoints.");
-        }
-        return endpoints;
-    }
-
-    @Override
-    public byte[] encodeAll(Iterable<Endpoint> endpoints) {
-        requireNonNull(endpoints, "endpoints");
-        final StringBuilder nodeValue = new StringBuilder();
-        endpoints.forEach(endpoint -> nodeValue.append(endpoint.host()).append(fieldDelimiter).append(
-                endpoint.port()).append(fieldDelimiter).append(endpoint.weight()).append(segmentDelimiter));
-        //delete the last unused segment delimiter
-        if (nodeValue.length() > 0) {
-            nodeValue.deleteCharAt(nodeValue.length() - 1);
-        }
-        return nodeValue.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
-    @Override
+    /**
+     * Encodes a single {@link Endpoint} into a byte array representation.
+     */
     public byte[] encode(Endpoint endpoint) {
-        return (endpoint.host() + fieldDelimiter + endpoint.port() + fieldDelimiter + endpoint.weight())
-                .getBytes(StandardCharsets.UTF_8);
+        final String endpointStr;
+        if (endpoint.hasPort()) {
+            endpointStr = endpoint.host() + fieldDelimiter + endpoint.port() +
+                          fieldDelimiter + endpoint.weight();
+        } else {
+            endpointStr = endpoint.host();
+        }
+        return endpointStr.getBytes(StandardCharsets.UTF_8);
     }
 }

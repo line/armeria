@@ -325,6 +325,10 @@ org.apache.curator:
     - https://static.javadoc.io/org.apache.curator/curator-recipes/4.3.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
+  curator-x-discovery:
+    version: '4.3.0'
+    javadocs:
+     - https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/4.3.0/
 
 org.apache.hbase:
   hbase-shaded-client:

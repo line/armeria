@@ -48,6 +48,7 @@ public class AbstractCuratorFrameworkBuilder {
 
     @Nullable
     private final CuratorFramework client;
+    private final String zNodePath;
     @Nullable
     private final CuratorFrameworkFactory.Builder clientBuilder;
     @Nullable
@@ -56,9 +57,12 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Creates a new instance with the specified {@code zkConnectionStr}.
      */
-    protected AbstractCuratorFrameworkBuilder(String zkConnectionStr) {
+    protected AbstractCuratorFrameworkBuilder(String zkConnectionStr, String zNodePath) {
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
         checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty.");
+        validateZNodePath(zNodePath);
         client = null;
+        this.zNodePath = zNodePath;
         clientBuilder = CuratorFrameworkFactory.builder()
                                                .connectString(zkConnectionStr)
                                                .connectionTimeoutMs(DEFAULT_CONNECT_TIMEOUT_MILLIS)
@@ -70,10 +74,25 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Creates a new instance with the specified {@link CuratorFramework}.
      */
-    protected AbstractCuratorFrameworkBuilder(CuratorFramework client) {
-        this.client = client;
+    protected AbstractCuratorFrameworkBuilder(CuratorFramework client, String zNodePath) {
+        this.client = requireNonNull(client, "client");
+        validateZNodePath(zNodePath);
+        this.zNodePath = zNodePath;
         clientBuilder = null;
         customizers = null;
+    }
+
+    private static void validateZNodePath(String zNodePath) {
+        checkArgument(!requireNonNull(zNodePath, "zNodePath").isEmpty(), "zNodePath can't be empty.");
+        checkArgument(zNodePath.charAt(zNodePath.length() - 1) != '/',
+                      "zNodePath must not end with /. zNodePath: %s", zNodePath);
+    }
+
+    /**
+     * Returns the zNode Path.
+     */
+    protected String zNodePath() {
+        return zNodePath;
     }
 
     /**
