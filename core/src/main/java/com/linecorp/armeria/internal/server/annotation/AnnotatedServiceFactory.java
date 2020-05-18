@@ -773,7 +773,7 @@ public final class AnnotatedServiceFactory {
                 DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
                 return properties.getProperty(propertyName);
             } catch (IOException exception) {
-                logger.warn("Error loading an API description file: " + fileName, exception);
+                logger.warn("Failed to load an API description file: {}", fileName, exception);
             }
         }
         return null;
