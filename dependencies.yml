@@ -255,9 +255,6 @@ io.reactivex.rxjava3:
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
-io.spring.gradle:
-  dependency-management-plugin: { version: '1.0.9.RELEASE' }
-
 io.zipkin.brave:
   brave:
     # ':site:javadoc' fails when we use a newer version of Javadoc.

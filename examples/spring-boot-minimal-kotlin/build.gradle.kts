@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 val managedVersions = extra["managedVersions"] as Map<*, *>
 
 buildscript {
@@ -10,7 +11,6 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-allopen:${managedVersions["org.jetbrains.kotlin:kotlin-allopen"]}")
         classpath("org.jlleitschuh.gradle:ktlint-gradle:${managedVersions["org.jlleitschuh.gradle:ktlint-gradle"]}")
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${managedVersions["org.springframework.boot:spring-boot-dependencies"]}")
-        classpath("io.spring.gradle:dependency-management-plugin:${managedVersions["io.spring.gradle:dependency-management-plugin"]}")
     }
 }
 
@@ -24,9 +24,9 @@ plugins {
 apply(plugin = "org.jetbrains.kotlin.plugin.spring")
 apply(plugin = "org.jlleitschuh.gradle.ktlint")
 apply(plugin = "org.springframework.boot")
-apply(plugin = "io.spring.dependency-management")
 
 dependencies {
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:${managedVersions["org.springframework.boot:spring-boot-dependencies"]}"))
     implementation(project(":spring:boot-starter"))
     implementation("org.hibernate.validator:hibernate-validator")
 

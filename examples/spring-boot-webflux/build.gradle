@@ -4,14 +4,13 @@ buildscript {
     }
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-dependencies']}"
-        classpath "io.spring.gradle:dependency-management-plugin:${managedVersions['io.spring.gradle:dependency-management-plugin']}"
     }
 }
 
 apply plugin: 'org.springframework.boot'
-apply plugin: 'io.spring.dependency-management'
 
 dependencies {
+    implementation platform("org.springframework.boot:spring-boot-dependencies:${managedVersions['org.springframework.boot:spring-boot-dependencies']}")
     implementation project(':spring:boot-webflux-starter')
 
     implementation "com.spotify:completable-futures:${managedVersions['com.spotify:completable-futures']}"
