@@ -79,10 +79,10 @@ public class DocumentationProcessor extends AbstractProcessor {
             } catch (IOException e) {
                 final StringWriter writer = new StringWriter();
                 e.printStackTrace(new PrintWriter(writer));
-                processingEnv.getMessager().printMessage(Kind.WARNING,
-                                                         String.format("Could not write properties for `%s`\n"
-                                                                       + writer.toString(),
-                                                                       className));
+                processingEnv.getMessager().printMessage(
+                        Kind.WARNING,
+                        String.format("Could not write properties for: %s\n%s",
+                                      className, writer));
             }
         });
         return false;
@@ -133,10 +133,10 @@ public class DocumentationProcessor extends AbstractProcessor {
                     } catch (IOException e) {
                         final StringWriter writer = new StringWriter();
                         e.printStackTrace(new PrintWriter(writer));
-                        processingEnv.getMessager().printMessage(Kind.ERROR,
-                                                                 "Could not process all elements\n"
-                                                                 + writer.toString(),
-                                                                 element);
+                        processingEnv.getMessager().printMessage(
+                                Kind.ERROR,
+                                "Could not process all elements\n" + writer.toString(),
+                                element);
                     }
                 });
     }
