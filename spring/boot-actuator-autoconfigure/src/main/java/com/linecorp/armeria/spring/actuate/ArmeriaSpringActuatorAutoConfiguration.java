@@ -107,7 +107,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean // In case HealthEndpointAutoConfiguration is excluded
     SimpleHttpCodeStatusMapper simpleHttpCodeStatusMapper() {
         return new SimpleHttpCodeStatusMapper();
     }
