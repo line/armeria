@@ -81,7 +81,7 @@ public class DocumentationProcessor extends AbstractProcessor {
                 e.printStackTrace(new PrintWriter(writer));
                 processingEnv.getMessager().printMessage(
                         Kind.WARNING,
-                        String.format("Could not write properties for: %s\n%s",
+                        String.format("Could not write properties for: %s" + System.lineSeparator() + "%s",
                                       className, writer));
             }
         });
@@ -135,7 +135,7 @@ public class DocumentationProcessor extends AbstractProcessor {
                         e.printStackTrace(new PrintWriter(writer));
                         processingEnv.getMessager().printMessage(
                                 Kind.ERROR,
-                                "Could not process all elements\n" + writer.toString(),
+                                "Could not process all elements" + System.lineSeparator() + writer,
                                 element);
                     }
                 });
