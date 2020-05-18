@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collections;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
@@ -100,7 +99,6 @@ class RequestScopedMdcTest {
             // The case where thread-local and request-scoped maps are both empty.
             RequestScopedMdc.clear(ctx);
             assertThat(MDC.getCopyOfContextMap()).isIn(Collections.emptyMap(), null);
-
 
             // The case where only thread-local map is available.
             MDC.put("qux", "5");

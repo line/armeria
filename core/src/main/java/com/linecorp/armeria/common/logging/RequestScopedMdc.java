@@ -42,36 +42,35 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  *
  * <h3>Updating the request-scoped context map</h3>
  *
- * Update the request-scoped context map using {@link #put(RequestContext, String, String)},
+ * <p>Update the request-scoped context map using {@link #put(RequestContext, String, String)},
  * {@link #putAll(RequestContext, Map)}, {@link #remove(RequestContext, String)} and
  * {@link #clear(RequestContext)}:
  * <pre>{@code
  * RequestContext ctx = ...;
  * RequestScopedMdc.put(ctx, "transactionId", "1234");
  * RequestScopedMdc.putAll(ctx, Map.of("foo", "1", "bar", "2"));
- * }</pre>
+ * }</pre></p>
  *
  * <h3>Transferring thread-local properties</h3>
  *
- * Use {@link #copy(RequestContext, String)} or {@link #copyAll(RequestContext)} to copy some or all of
+ * <p>Use {@link #copy(RequestContext, String)} or {@link #copyAll(RequestContext)} to copy some or all of
  * thread-local {@link MDC} properties to the request-scoped context map:
- *
  * <pre>{@code
  * RequestContext ctx = ...;
  * MDC.put("transactionId", "1234");
  * RequestScopedMdc.copy(ctx, "transactionId");
- * }</pre>
+ * }</pre></p>
  *
  * <h3>Retrieving a value from the request-scoped context map</h3>
  *
- * You can explicitly retrieve request-scoped properties using {@link #get(RequestContext, String)} or
+ * <p>You can explicitly retrieve request-scoped properties using {@link #get(RequestContext, String)} or
  * {@link #getAll(RequestContext)}:
  * <pre>{@code
  * RequestContext ctx = ...;
  * String transactionId = RequestScopedMdc.get(ctx, "transactionId");
- * }</pre>
+ * }</pre></p>
  *
- * {@link RequestScopedMdc} replaces SLF4J's underlying {@link MDCAdapter} implementation so that
+ * <p>{@link RequestScopedMdc} replaces SLF4J's underlying {@link MDCAdapter} implementation so that
  * {@link MDC#get(String)} and {@link MDC#getCopyOfContextMap()} look into the request-scoped context map
  * before the thread-local context map:
  * <pre>{@code
@@ -88,7 +87,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * // Now using the thread-local property
  * // because not in a request scope anymore
  * assert MDC.get("transactionId").equals("5678");
- * }</pre>
+ * }</pre></p>
  */
 public final class RequestScopedMdc {
 
@@ -121,6 +120,15 @@ public final class RequestScopedMdc {
         delegate = oldAdapter;
     }
 
+    /**
+     * Returns the value of the specified request-scoped {@link MDC} property bound to the specified
+     * {@link RequestContext}..
+     *
+     * @param ctx the {@link RequestContext}
+     * @param key the key of the request-scoped {@link MDC} property
+     *
+     * @return the request-scoped {@link MDC} property. {@code null} if not found.
+     */
     @Nullable
     public static String get(RequestContext ctx, String key) {
         requireNonNull(ctx, "ctx");
@@ -128,6 +136,15 @@ public final class RequestScopedMdc {
         return getMap(ctx).get(key);
     }
 
+    /**
+     * Returns the {@link Map} of all request-scoped {@link MDC} properties bound to the specified
+     * {@link RequestContext}..
+     *
+     * @param ctx the {@link RequestContext}
+     *
+     * @return the {@link Map} that contains all request-scoped {@link MDC} properties.
+     *         An empty {@link Map} if there are no request-scoped {@link MDC} properties.
+     */
     public static Map<String, String> getAll(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         final Map<String, String> map = getMap(ctx);
@@ -135,6 +152,13 @@ public final class RequestScopedMdc {
         return map.isEmpty() ? map : Collections.unmodifiableMap(map);
     }
 
+    /**
+     * Binds the specified request-scoped {@link MDC} property to the specified {@link RequestContext}.
+     *
+     * @param ctx   the {@link RequestContext}
+     * @param key   the key of the request-scoped {@link MDC} property
+     * @param value the value of the request-scoped {@link MDC} property
+     */
     public static void put(RequestContext ctx, String key, @Nullable String value) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
@@ -153,6 +177,12 @@ public final class RequestScopedMdc {
         }
     }
 
+    /**
+     * Binds the specified request-scoped {@link MDC} properties to the specified {@link RequestContext}.
+     *
+     * @param ctx the {@link RequestContext}
+     * @param map the {@link Map} that contains the request-scoped {@link MDC} properties
+     */
     public static void putAll(RequestContext ctx, Map<String, String> map) {
         requireNonNull(ctx, "ctx");
         requireNonNull(map, "map");
@@ -174,16 +204,33 @@ public final class RequestScopedMdc {
         }
     }
 
+    /**
+     * Copies the specified thread-local {@link MDC} property to the specified {@link RequestContext}.
+     *
+     * @param ctx the {@link RequestContext}
+     * @param key the key of the thread-local {@link MDC} property to copy
+     */
     public static void copy(RequestContext ctx, String key) {
         checkState(delegate != null, ERROR_MESSAGE);
         put(ctx, key, delegate.get(key));
     }
 
+    /**
+     * Copies all thread-local {@link MDC} properties to the specified {@link RequestContext}.
+     *
+     * @param ctx the {@link RequestContext}
+     */
     public static void copyAll(RequestContext ctx) {
         checkState(delegate != null, ERROR_MESSAGE);
         putAll(ctx, firstNonNull(delegate.getCopyOfContextMap(), Collections.emptyMap()));
     }
 
+    /**
+     * Unbinds the specified request-scoped {@link MDC} property from the specified {@link RequestContext}.
+     *
+     * @param ctx the {@link RequestContext}
+     * @param key the key of the request-scoped {@link MDC} property to unbind
+     */
     public static void remove(RequestContext ctx, String key) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
@@ -205,6 +252,11 @@ public final class RequestScopedMdc {
         }
     }
 
+    /**
+     * Unbinds all request-scoped {@link MDC} properties from the specified {@link RequestContext}.
+     *
+     * @param ctx the {@link RequestContext}
+     */
     public static void clear(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
 
