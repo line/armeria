@@ -120,6 +120,20 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
                 "Armeria yields 'get /*' as a span name for a non-existent mapping.");
     }
 
+    @Test
+    @Override
+    public void httpStatusCodeSettable_onUncaughtException() {
+        throw new AssumptionViolatedException(
+            "Can't currently control the HTTP status code on uncaught exception. #2656");
+    }
+
+    @Test
+    @Override
+    public void httpStatusCodeSettable_onUncaughtException_async() {
+        throw new AssumptionViolatedException(
+            "Can't currently control the HTTP status code on uncaught exception. #2656");
+    }
+
     @After
     public void stopServer() {
         if (server != null) {

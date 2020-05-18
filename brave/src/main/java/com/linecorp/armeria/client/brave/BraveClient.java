@@ -160,7 +160,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             }
 
             final HttpClientResponse braveRes = ClientRequestContextAdapter.asHttpClientResponse(log, braveReq);
-            handler.handleReceive(braveRes, braveRes.error(), span);
+            handler.handleReceive(braveRes, span);
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
