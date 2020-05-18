@@ -68,8 +68,13 @@ public interface RequestContextStorage extends Unwrappable {
     /**
      * Customizes the current {@link RequestContextStorage} by applying the specified {@link Function} to it.
      * This method is useful when you need to perform an additional operation when a {@link RequestContext}
-     * is pushed or popped. However, keep in mind that all {@link RequestContextStorage} operations are
-     * highly performance-sensitive operation and thus it's not a good idea to run a time-consuming task.
+     * is pushed or popped. Note:
+     * <ul>
+     *   <li>All {@link RequestContextStorage} operations are highly performance-sensitive operation and thus
+     *       it's not a good idea to run a time-consuming task.</li>
+     *   <li>This method must be invoked at the beginning of application startup, e.g.
+     *       Never call this method in the middle of request processing.</li>
+     * </ul>
      */
     static void hook(Function<? super RequestContextStorage, ? extends RequestContextStorage> function) {
         RequestContextUtil.hook(requireNonNull(function, "function"));

@@ -132,5 +132,4 @@ class RequestContextStorageCustomizingTest {
         return ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                     .build();
     }
-
 }
