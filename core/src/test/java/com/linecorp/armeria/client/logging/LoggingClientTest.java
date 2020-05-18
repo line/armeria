@@ -27,16 +27,20 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RegexBasedSanitizer.RegexBasedSanitizerBuilder;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 
 class LoggingClientTest {
@@ -94,5 +98,60 @@ class LoggingClientTest {
 
         defaultLoggerClient.execute(ctx, req);
         verifyNoInteractions(logger);
+    }
+
+    @Test
+    void sanitizeRequestHeaders() throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+
+        // use default logger
+        final LoggingClient defaultLoggerClient =
+                LoggingClient.builder()
+                             .requestLogLevel(LogLevel.INFO)
+                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .requestHeadersSanitizer(new RegexBasedSanitizerBuilder()
+                                                              .pattern("trustin")
+                                                              .pattern("com")
+                                                              .build())
+                             .build(delegate);
+
+        // Pre sanitize step
+        Assertions.assertTrue(ctx.logBuilder().toString().contains("trustin"));
+        Assertions.assertTrue(ctx.logBuilder().toString().contains("test.com"));
+        defaultLoggerClient.execute(ctx, req);
+        // After the sanitize
+        Assertions.assertFalse(ctx.logBuilder().toString().contains("trustin"));
+        Assertions.assertFalse(ctx.logBuilder().toString().contains("com"));
+    }
+
+    @Test
+    void sanitizeRequestContent() throws Exception {
+
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
+
+        // use default logger
+        final LoggingClient defaultLoggerClient =
+                LoggingClient.builder()
+                             .requestLogLevel(LogLevel.INFO)
+                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .requestContentSanitizer((new RegexBasedSanitizerBuilder()
+                                     .pattern("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")
+                                     .build()))
+                             .build(delegate);
+
+        // Before sanitize content
+        Assertions.assertTrue(ctx.logBuilder().toString().contains("333-490-4499"));
+        defaultLoggerClient.execute(ctx, req);
+        // Ensure sanitize the request content of the phone number 333-490-4499
+        Assertions.assertFalse(ctx.logBuilder().toString().contains("333-490-4499"));
     }
 }

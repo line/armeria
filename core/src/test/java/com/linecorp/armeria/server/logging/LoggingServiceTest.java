@@ -31,9 +31,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -41,6 +43,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RegexBasedSanitizer.RegexBasedSanitizerBuilder;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -347,6 +350,64 @@ class LoggingServiceTest {
         verify(logger, times(1)).isWarnEnabled();
         verify(logger).warn(eq(RESPONSE_FORMAT2), same(ctx), anyString(),
                             same(sanitizedResponseCause));
+    }
+
+    @Test
+    void sanitizeRequestHeaders() throws Exception {
+
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        ctx.logBuilder().endResponse(new Exception("not sanitized"));
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+        when(logger.isWarnEnabled()).thenReturn(true);
+
+        final LoggingService service =
+                LoggingService.builder()
+                              .logger(logger)
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .requestHeadersSanitizer(new RegexBasedSanitizerBuilder()
+                                                               .pattern("trustin")
+                                                               .pattern("com")
+                                                               .build())
+                              .newDecorator().apply(delegate);
+
+        Assertions.assertTrue(ctx.logBuilder().toString().contains("trustin"));
+        Assertions.assertTrue(ctx.logBuilder().toString().contains("test.com"));
+        service.serve(ctx, ctx.request());
+        Assertions.assertFalse(ctx.logBuilder().toString().contains("trustin"));
+        Assertions.assertFalse(ctx.logBuilder().toString().contains("com"));
+    }
+
+    @Test
+    void sanitizeRequestContent() throws Exception {
+
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+
+        final LoggingService service =
+                LoggingService.builder()
+                              .logger(logger)
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .requestContentSanitizer((new RegexBasedSanitizerBuilder()
+                                                       .pattern("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")
+                                                       .build()))
+                              .newDecorator().apply(delegate);
+
+        Assertions.assertTrue(ctx.logBuilder().toString().contains("333-490-4499"));
+        service.serve(ctx, ctx.request());
+        Assertions.assertFalse(ctx.logBuilder().toString().contains("333-490-4499"));
     }
 
     @Test
