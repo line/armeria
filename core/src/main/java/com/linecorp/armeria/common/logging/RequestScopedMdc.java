@@ -387,8 +387,12 @@ public final class RequestScopedMdc {
             final RequestContext ctx = RequestContext.currentOrNull();
             if (ctx == null) {
                 // No context available
-                return threadLocalMap != null ? new Object2ObjectOpenHashMap<>(threadLocalMap)
-                                              : Object2ObjectMaps.emptyMap();
+                if (threadLocalMap != null) {
+                    return delegateGetPropertyMap != null ? new Object2ObjectOpenHashMap<>(threadLocalMap)
+                                                          : threadLocalMap;
+                } else {
+                    return Object2ObjectMaps.emptyMap();
+                }
             }
 
             final Map<String, String> requestScopedMap = getAll(ctx);
@@ -400,7 +404,8 @@ public final class RequestScopedMdc {
             // Thread-local map available
             if (requestScopedMap.isEmpty()) {
                 // Only thread-local map available
-                return new Object2ObjectOpenHashMap<>(threadLocalMap);
+                return delegateGetPropertyMap != null ? new Object2ObjectOpenHashMap<>(threadLocalMap)
+                                                      : threadLocalMap;
             }
 
             // Both thread-local and request-scoped map available
