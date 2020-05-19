@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.slf4j.spi.MDCAdapter;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.util.AttributeKey;
@@ -290,12 +289,7 @@ public final class RequestScopedMdc {
     }
 
     private static Map<String, String> getMap(RequestContext ctx) {
-        final Map<String, String> map;
-        if (ctx instanceof ClientRequestContext) {
-            map = ((ClientRequestContext) ctx).ownAttr(MAP);
-        } else {
-            map = ctx.attr(MAP);
-        }
+        final Map<String, String> map = ctx.ownAttr(MAP);
         return firstNonNull(map, Collections.emptyMap());
     }
 
