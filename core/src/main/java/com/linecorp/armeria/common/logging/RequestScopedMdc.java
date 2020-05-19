@@ -132,7 +132,18 @@ public final class RequestScopedMdc {
     public static String get(RequestContext ctx, String key) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
-        return getMap(ctx).get(key);
+
+        final String value = getMap(ctx).get(key);
+        if (value != null) {
+            return value;
+        }
+
+        final RequestContext rootCtx = ctx.root();
+        if (rootCtx != null && rootCtx != ctx) {
+            return getMap(rootCtx).get(key);
+        }
+
+        return null;
     }
 
     /**
@@ -146,7 +157,26 @@ public final class RequestScopedMdc {
      */
     public static Map<String, String> getAll(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        return getMap(ctx);
+
+        final Map<String, String> map = getMap(ctx);
+        final RequestContext rootCtx = ctx.root();
+        if (rootCtx == null || rootCtx == ctx) {
+            return map;
+        }
+
+        final Map<String, String> rootMap = getMap(rootCtx);
+        if (rootMap.isEmpty()) {
+            return map;
+        }
+
+        if (map.isEmpty()) {
+            return rootMap;
+        }
+
+        final Map<String, String> merged = new Object2ObjectOpenHashMap<>(rootMap.size() + map.size());
+        merged.putAll(rootMap);
+        merged.putAll(map);
+        return merged;
     }
 
     /**
@@ -308,7 +338,7 @@ public final class RequestScopedMdc {
         public String get(String key) {
             final RequestContext ctx = RequestContext.currentOrNull();
             if (ctx != null) {
-                final String value = getMap(ctx).get(key);
+                final String value = RequestScopedMdc.get(ctx, key);
                 if (value != null) {
                     return value;
                 }
@@ -327,8 +357,7 @@ public final class RequestScopedMdc {
                 return threadLocalMap;
             }
 
-            final Map<String, String> requestScopedMap =
-                    firstNonNull(getMap(ctx), Collections.emptyMap());
+            final Map<String, String> requestScopedMap = getAll(ctx);
             if (threadLocalMap.isEmpty()) {
                 // No thread-local map available
                 return requestScopedMap;
@@ -341,10 +370,16 @@ public final class RequestScopedMdc {
             }
 
             // Both thread-local and request-scoped map available
-            final Map<String, String> merged =
-                    new Object2ObjectOpenHashMap<>(threadLocalMap.size() + requestScopedMap.size());
-            merged.putAll(threadLocalMap);
-            merged.putAll(requestScopedMap);
+            final Object2ObjectOpenHashMap<String, String> merged;
+            if (requestScopedMap instanceof Object2ObjectOpenHashMap) {
+                // Reuse the mutable copy returned by getAll() for less memory footprint.
+                merged = (Object2ObjectOpenHashMap<String, String>) requestScopedMap;
+                threadLocalMap.forEach(merged::putIfAbsent);
+            } else {
+                merged = new Object2ObjectOpenHashMap<>(threadLocalMap.size() + requestScopedMap.size());
+                merged.putAll(threadLocalMap);
+                merged.putAll(requestScopedMap);
+            }
             return merged;
         }
 

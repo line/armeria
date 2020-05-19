@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Collections;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
@@ -61,13 +62,21 @@ class RequestScopedMdcTest {
             MDC.put("foo", "2");
             assertThat(MDC.get("foo")).isEqualTo("1");
 
-            // A client context must use its own map.
+            // A client context should expose the properties from the root context.
             final ClientRequestContext cctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             assertThat(cctx.root()).isSameAs(ctx);
-            assertThat(RequestScopedMdc.get(cctx, "foo")).isNull();
+            assertThat(RequestScopedMdc.get(cctx, "foo")).isEqualTo("1");
+
+            // A client context can override the property from the root context,
+            // but it shouldn't affect the root context's own property.
+            RequestScopedMdc.put(cctx, "foo", "3");
+            assertThat(RequestScopedMdc.get(ctx, "foo")).isEqualTo("1");
+            assertThat(RequestScopedMdc.get(cctx, "foo")).isEqualTo("3");
 
             try (SafeCloseable ignored2 = cctx.push()) {
-                // cctx does not have 'foo' set, so thread-local property will be retrieved.
+                // If both ctx and cctx do not have 'foo' set, thread-local property should be retrieved.
+                RequestScopedMdc.remove(ctx, "foo");
+                RequestScopedMdc.remove(cctx, "foo");
                 assertThat(MDC.get("foo")).isEqualTo("2");
             }
         }
@@ -111,6 +120,53 @@ class RequestScopedMdcTest {
             MDC.put("qux", "5");
             assertThat(MDC.getCopyOfContextMap()).containsOnly(
                     Maps.immutableEntry("qux", "5"));
+        }
+    }
+
+    @Test
+    void getAllNested() {
+        MDC.put("foo", "1");
+        MDC.put("bar", "2");
+
+        final ServiceRequestContext ctx = newContext();
+        try (SafeCloseable ignored = ctx.push()) {
+            final ClientRequestContext cctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+            // When the root context map exists but it's empty:
+            try (SafeCloseable ignored2 = cctx.push()) {
+                assertThat(RequestScopedMdc.getAll(cctx)).isEmpty();
+                assertThat(MDC.getCopyOfContextMap()).containsOnly(
+                        Maps.immutableEntry("foo", "1"),
+                        Maps.immutableEntry("bar", "2"));
+            }
+
+            // When the root context map is not empty:
+            RequestScopedMdc.put(ctx, "bar", "3");
+            RequestScopedMdc.put(ctx, "baz", "4");
+            try (SafeCloseable ignored2 = cctx.push()) {
+                // root context's properties should be retrieved.
+                assertThat(RequestScopedMdc.getAll(cctx)).containsOnly(
+                        Maps.immutableEntry("bar", "3"),
+                        Maps.immutableEntry("baz", "4"));
+                assertThat(MDC.getCopyOfContextMap()).containsOnly(
+                        Maps.immutableEntry("foo", "1"),
+                        Maps.immutableEntry("bar", "3"),
+                        Maps.immutableEntry("baz", "4"));
+
+                // root context's properties should be overwritten by own properties.
+                RequestScopedMdc.put(cctx, "baz", "5");
+                RequestScopedMdc.put(cctx, "qux", "6");
+
+                assertThat(RequestScopedMdc.getAll(cctx)).containsOnly(
+                        Maps.immutableEntry("bar", "3"),
+                        Maps.immutableEntry("baz", "5"),
+                        Maps.immutableEntry("qux", "6"));
+                assertThat(MDC.getCopyOfContextMap()).containsOnly(
+                        Maps.immutableEntry("foo", "1"),
+                        Maps.immutableEntry("bar", "3"),
+                        Maps.immutableEntry("baz", "5"),
+                        Maps.immutableEntry("qux", "6"));
+            }
         }
     }
 
