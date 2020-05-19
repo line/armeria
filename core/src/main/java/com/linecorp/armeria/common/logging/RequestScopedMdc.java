@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
-import java.util.Collections;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -33,6 +32,8 @@ import org.slf4j.spi.MDCAdapter;
 import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.util.AttributeKey;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
@@ -92,7 +93,7 @@ public final class RequestScopedMdc {
 
     private static final Logger logger = LoggerFactory.getLogger(RequestScopedMdc.class);
 
-    private static final AttributeKey<Map<String, String>> MAP =
+    private static final AttributeKey<Object2ObjectMap<String, String>> MAP =
             AttributeKey.valueOf(RequestScopedMdc.class, "map");
 
     private static final String ERROR_MESSAGE =
@@ -158,13 +159,13 @@ public final class RequestScopedMdc {
     public static Map<String, String> getAll(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
 
-        final Map<String, String> map = getMap(ctx);
+        final Object2ObjectMap<String, String> map = getMap(ctx);
         final RequestContext rootCtx = ctx.root();
         if (rootCtx == null || rootCtx == ctx) {
             return map;
         }
 
-        final Map<String, String> rootMap = getMap(rootCtx);
+        final Object2ObjectMap<String, String> rootMap = getMap(rootCtx);
         if (rootMap.isEmpty()) {
             return map;
         }
@@ -173,7 +174,8 @@ public final class RequestScopedMdc {
             return rootMap;
         }
 
-        final Map<String, String> merged = new Object2ObjectOpenHashMap<>(rootMap.size() + map.size());
+        final Object2ObjectMap<String, String> merged =
+                new Object2ObjectOpenHashMap<>(rootMap.size() + map.size());
         merged.putAll(rootMap);
         merged.putAll(map);
         return merged;
@@ -191,16 +193,16 @@ public final class RequestScopedMdc {
         requireNonNull(key, "key");
 
         synchronized (ctx) {
-            final Map<String, String> oldMap = getMap(ctx);
-            final Map<String, String> newMap;
+            final Object2ObjectMap<String, String> oldMap = getMap(ctx);
+            final Object2ObjectMap<String, String> newMap;
             if (oldMap.isEmpty()) {
-                newMap = Collections.singletonMap(key, value);
+                newMap = Object2ObjectMaps.singleton(key, value);
             } else {
-                final Object2ObjectOpenHashMap<String, String> tmp =
+                final Object2ObjectMap<String, String> tmp =
                         new Object2ObjectOpenHashMap<>(oldMap.size() + 1);
                 tmp.putAll(oldMap);
                 tmp.put(key, value);
-                newMap = Collections.unmodifiableMap(tmp);
+                newMap = Object2ObjectMaps.unmodifiable(tmp);
             }
             ctx.setAttr(MAP, newMap);
         }
@@ -220,8 +222,8 @@ public final class RequestScopedMdc {
         }
 
         synchronized (ctx) {
-            final Map<String, String> oldMap = getMap(ctx);
-            final Map<String, String> newMap;
+            final Object2ObjectMap<String, String> oldMap = getMap(ctx);
+            final Object2ObjectMap<String, String> newMap;
             if (oldMap.isEmpty()) {
                 newMap = new Object2ObjectOpenHashMap<>(map);
             } else {
@@ -229,7 +231,7 @@ public final class RequestScopedMdc {
                 newMap.putAll(oldMap);
                 newMap.putAll(map);
             }
-            ctx.setAttr(MAP, Collections.unmodifiableMap(newMap));
+            ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap));
         }
     }
 
@@ -256,21 +258,8 @@ public final class RequestScopedMdc {
         checkState(delegate != null, ERROR_MESSAGE);
 
         final Map<String, String> map = delegate.getCopyOfContextMap();
-        if (map == null || map.isEmpty()) {
-            return;
-        }
-
-        synchronized (ctx) {
-            final Map<String, String> oldMap = getMap(ctx);
-            final Map<String, String> newMap;
-            if (oldMap.isEmpty()) {
-                newMap = map;
-            } else {
-                newMap = new Object2ObjectOpenHashMap<>(oldMap.size() + map.size());
-                newMap.putAll(oldMap);
-                newMap.putAll(map);
-            }
-            ctx.setAttr(MAP, Collections.unmodifiableMap(newMap));
+        if (map != null) {
+            putAll(ctx, map);
         }
     }
 
@@ -285,18 +274,18 @@ public final class RequestScopedMdc {
         requireNonNull(key, "key");
 
         synchronized (ctx) {
-            final Map<String, String> oldMap = getMap(ctx);
+            final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.containsKey(key)) {
                 return;
             }
 
-            final Map<String, String> newMap;
+            final Object2ObjectMap<String, String> newMap;
             if (oldMap.size() == 1) {
-                newMap = Collections.emptyMap();
+                newMap = Object2ObjectMaps.emptyMap();
             } else {
                 final Object2ObjectOpenHashMap<String, String> tmp = new Object2ObjectOpenHashMap<>(oldMap);
                 tmp.remove(key);
-                newMap = Collections.unmodifiableMap(tmp);
+                newMap = Object2ObjectMaps.unmodifiable(tmp);
             }
             ctx.setAttr(MAP, newMap);
         }
@@ -311,16 +300,16 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
 
         synchronized (ctx) {
-            final Map<String, String> oldMap = getMap(ctx);
+            final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.isEmpty()) {
-                ctx.setAttr(MAP, Collections.emptyMap());
+                ctx.setAttr(MAP, Object2ObjectMaps.emptyMap());
             }
         }
     }
 
-    private static Map<String, String> getMap(RequestContext ctx) {
-        final Map<String, String> map = ctx.ownAttr(MAP);
-        return firstNonNull(map, Collections.emptyMap());
+    private static Object2ObjectMap<String, String> getMap(RequestContext ctx) {
+        final Object2ObjectMap<String, String> map = ctx.ownAttr(MAP);
+        return firstNonNull(map, Object2ObjectMaps.emptyMap());
     }
 
     private RequestScopedMdc() {}
@@ -350,7 +339,7 @@ public final class RequestScopedMdc {
         @Override
         public Map<String, String> getCopyOfContextMap() {
             final Map<String, String> threadLocalMap =
-                    firstNonNull(delegate.getCopyOfContextMap(), Collections.emptyMap());
+                    firstNonNull(delegate.getCopyOfContextMap(), Object2ObjectMaps.emptyMap());
             final RequestContext ctx = RequestContext.currentOrNull();
             if (ctx == null) {
                 // No context available
