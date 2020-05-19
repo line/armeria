@@ -19,7 +19,11 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -30,6 +34,7 @@ import org.slf4j.MDC;
 import org.slf4j.spi.MDCAdapter;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AttributeKey;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
@@ -103,21 +108,44 @@ public final class RequestScopedMdc {
     @Nullable
     private static final MDCAdapter delegate;
 
+    @Nullable
+    private static final MethodHandle delegateGetPropertyMap;
+
     static {
         // Trigger the initialization of the default MDC adapter.
         MDC.get("");
 
         // Replace the default MDC adapter with ours.
-        MDCAdapter oldAdapter = null;
+        MDCAdapter oldAdapter;
         try {
             final Field mdcAdapterField = MDC.class.getDeclaredField("mdcAdapter");
             mdcAdapterField.setAccessible(true);
             oldAdapter = (MDCAdapter) mdcAdapterField.get(null);
             mdcAdapterField.set(null, new Adapter(oldAdapter));
         } catch (Throwable t) {
+            oldAdapter = null;
             logger.warn(ERROR_MESSAGE, t);
         }
         delegate = oldAdapter;
+
+        MethodHandle oldAdapterGetPropertyMap = null;
+        if (delegate != null) {
+            try {
+                oldAdapterGetPropertyMap =
+                        MethodHandles.publicLookup()
+                                     .findVirtual(oldAdapter.getClass(), "getPropertyMap",
+                                                  MethodType.methodType(Map.class))
+                                     .bindTo(delegate);
+                @SuppressWarnings("unchecked")
+                final Map<String, String> map =
+                        (Map<String, String>) oldAdapterGetPropertyMap.invokeExact();
+                logger.trace("Retrieved MDC property map via getPropertyMap(): {}", map);
+            } catch (Throwable t) {
+                oldAdapterGetPropertyMap = null;
+                logger.debug("LogbackMDCAdapter.getPropertyMap() is not available:", t);
+            }
+        }
+        delegateGetPropertyMap = oldAdapterGetPropertyMap;
     }
 
     /**
@@ -257,9 +285,17 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
         checkState(delegate != null, ERROR_MESSAGE);
 
-        final Map<String, String> map = delegate.getCopyOfContextMap();
-        if (map != null) {
-            putAll(ctx, map);
+        try {
+            // Try to use `LogbackMDCAdapter.getPropertyMap()` which does not make a copy.
+            @SuppressWarnings("unchecked")
+            final Map<String, String> map =
+                    delegateGetPropertyMap != null ? (Map<String, String>) delegateGetPropertyMap.invokeExact()
+                                                   : delegate.getCopyOfContextMap();
+            if (map != null) {
+                putAll(ctx, map);
+            }
+        } catch (Throwable t) {
+            Exceptions.throwUnsafely(t);
         }
     }
 
