@@ -388,13 +388,15 @@ public final class RequestScopedMdc {
             if (ctx == null) {
                 // No context available
                 if (threadLocalMap != null) {
-                    return delegateGetPropertyMap != null ? new Object2ObjectOpenHashMap<>(threadLocalMap)
-                                                          : threadLocalMap;
+                    return maybeCloneThreadLocalMap(threadLocalMap);
                 } else {
                     return Object2ObjectMaps.emptyMap();
                 }
             }
 
+            // Retrieve the request-scoped properties.
+            // Note that this map is 1) unmodifiable and shared 2) or modifiable yet unshared,
+            // which means it's OK to return as it is or mutate it.
             final Map<String, String> requestScopedMap = getAll(ctx);
             if (threadLocalMap == null || threadLocalMap.isEmpty()) {
                 // No thread-local map available
@@ -404,8 +406,7 @@ public final class RequestScopedMdc {
             // Thread-local map available
             if (requestScopedMap.isEmpty()) {
                 // Only thread-local map available
-                return delegateGetPropertyMap != null ? new Object2ObjectOpenHashMap<>(threadLocalMap)
-                                                      : threadLocalMap;
+                return maybeCloneThreadLocalMap(threadLocalMap);
             }
 
             // Both thread-local and request-scoped map available
@@ -420,6 +421,12 @@ public final class RequestScopedMdc {
                 merged.putAll(requestScopedMap);
             }
             return merged;
+        }
+
+        private static Map<String, String> maybeCloneThreadLocalMap(Map<String, String> threadLocalMap) {
+            // Copy only when we retrieved the thread local map from `getPropertyMap()`.
+            return delegateGetPropertyMap != null ? new Object2ObjectOpenHashMap<>(threadLocalMap)
+                                                  : threadLocalMap;
         }
 
         @Override
