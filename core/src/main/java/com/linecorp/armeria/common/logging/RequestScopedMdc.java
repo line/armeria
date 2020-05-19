@@ -284,7 +284,15 @@ public final class RequestScopedMdc {
     public static void copyAll(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         checkState(delegate != null, ERROR_MESSAGE);
+        final Map<String, String> map = getDelegateContextMap();
+        if (map != null) {
+            putAll(ctx, map);
+        }
+    }
 
+    @Nullable
+    private static Map<String, String> getDelegateContextMap() {
+        assert delegate != null;
         try {
             // Try to use `LogbackMDCAdapter.getPropertyMap()` which does not make a copy.
             @SuppressWarnings("unchecked")
@@ -292,11 +300,12 @@ public final class RequestScopedMdc {
                     delegateGetPropertyMap != null ? (Map<String, String>) delegateGetPropertyMap.invokeExact()
                                                    : delegate.getCopyOfContextMap();
             if (map != null) {
-                putAll(ctx, map);
+                return map;
             }
         } catch (Throwable t) {
             Exceptions.throwUnsafely(t);
         }
+        return null;
     }
 
     /**
@@ -374,16 +383,16 @@ public final class RequestScopedMdc {
 
         @Override
         public Map<String, String> getCopyOfContextMap() {
-            final Map<String, String> threadLocalMap =
-                    firstNonNull(delegate.getCopyOfContextMap(), Object2ObjectMaps.emptyMap());
+            final Map<String, String> threadLocalMap = getDelegateContextMap();
             final RequestContext ctx = RequestContext.currentOrNull();
             if (ctx == null) {
                 // No context available
-                return threadLocalMap;
+                return threadLocalMap != null ? new Object2ObjectOpenHashMap<>(threadLocalMap)
+                                              : Object2ObjectMaps.emptyMap();
             }
 
             final Map<String, String> requestScopedMap = getAll(ctx);
-            if (threadLocalMap.isEmpty()) {
+            if (threadLocalMap == null || threadLocalMap.isEmpty()) {
                 // No thread-local map available
                 return requestScopedMap;
             }
@@ -391,7 +400,7 @@ public final class RequestScopedMdc {
             // Thread-local map available
             if (requestScopedMap.isEmpty()) {
                 // Only thread-local map available
-                return threadLocalMap;
+                return new Object2ObjectOpenHashMap<>(threadLocalMap);
             }
 
             // Both thread-local and request-scoped map available
