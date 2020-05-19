@@ -23,7 +23,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -140,9 +139,10 @@ public final class RequestScopedMdc {
                 final Map<String, String> map =
                         (Map<String, String>) oldAdapterGetPropertyMap.invokeExact();
                 logger.trace("Retrieved MDC property map via getPropertyMap(): {}", map);
+                logger.debug("Using MDCAdapter.getPropertyMap()");
             } catch (Throwable t) {
                 oldAdapterGetPropertyMap = null;
-                logger.debug("LogbackMDCAdapter.getPropertyMap() is not available:", t);
+                logger.debug("getPropertyMap() is not available:", t);
             }
         }
         delegateGetPropertyMap = oldAdapterGetPropertyMap;
