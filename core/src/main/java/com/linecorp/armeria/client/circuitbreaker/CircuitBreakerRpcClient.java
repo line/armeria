@@ -237,9 +237,9 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
             throw cause;
         }
 
-        response.handle((unused1, unused2) -> {
+        response.handle((unused1, cause) -> {
             reportSuccessOrFailure(circuitBreaker,
-                                   ruleWithContent().shouldReportAsSuccess(ctx, response, null));
+                                   ruleWithContent().shouldReportAsSuccess(ctx, response, cause));
             return null;
         });
         return response;

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletionStage;
 
@@ -44,14 +43,10 @@ class CircuitBreakerRuleBuilderTest {
     }
 
     @Test
-    void emptyRule() {
-        assertThatThrownBy(() -> CircuitBreakerRule.builder().thenFailure())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Should set at least one circuit breaker rule.");
-
-        assertThatThrownBy(() -> CircuitBreakerRule.builder().thenSuccess())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Should set at least one circuit breaker rule.");
+    void shouldAllowEmptyRule() {
+        CircuitBreakerRule.builder().thenFailure();
+        CircuitBreakerRule.builder().thenSuccess();
+        CircuitBreakerRule.builder().thenIgnore();
     }
 
     @Test
