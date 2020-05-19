@@ -38,14 +38,14 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
 
     private int contentPreviewLength = DEFAULT_CONTENT_PREVIEW_LENGTH;
 
-    private final boolean needsContentInStrategy;
+    private final boolean needsContentInRule;
 
     /**
      * Creates a new builder with the specified {@link RetryRule}.
      */
     RetryingClientBuilder(RetryRule retryRule) {
         super(retryRule);
-        needsContentInStrategy = false;
+        needsContentInRule = false;
     }
 
     /**
@@ -53,7 +53,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      */
     RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
         super(retryRuleWithContent);
-        needsContentInStrategy = true;
+        needsContentInRule = true;
     }
 
     /**
@@ -88,8 +88,8 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      *                                  less than {@code 0}
      */
     public RetryingClientBuilder contentPreviewLength(int contentPreviewLength) {
-        checkState(needsContentInStrategy, "cannot set contentPreviewLength when RetryRule is used; " +
-                                           "Use RetryRuleWithContent to enable this feature.");
+        checkState(needsContentInRule, "cannot set contentPreviewLength when RetryRule is used; " +
+                                       "Use RetryRuleWithContent to enable this feature.");
         checkArgument(contentPreviewLength > 0,
                       "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
         this.contentPreviewLength = contentPreviewLength;
@@ -100,7 +100,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      * Returns a newly-created {@link RetryingClient} based on the properties of this builder.
      */
     public RetryingClient build(HttpClient delegate) {
-        if (needsContentInStrategy) {
+        if (needsContentInRule) {
             return new RetryingClient(delegate, retryRuleWithContent(), maxTotalAttempts(),
                                       responseTimeoutMillisForEachAttempt(), useRetryAfter,
                                       contentPreviewLength);
@@ -120,8 +120,8 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
 
     @Override
     public String toString() {
-        final ToStringHelper stringHelper = toStringHelper().add("useRetryAfter", this.useRetryAfter);
-        if (needsContentInStrategy) {
+        final ToStringHelper stringHelper = toStringHelper().add("useRetryAfter", useRetryAfter);
+        if (needsContentInRule) {
             stringHelper.add("contentPreviewLength", contentPreviewLength);
         }
         return stringHelper.toString();

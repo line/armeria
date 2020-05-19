@@ -37,56 +37,14 @@ final class CircuitBreakerRuleUtil {
     public static final CompletableFuture<CircuitBreakerDecision> NEXT_DECISION =
             CompletableFuture.completedFuture(CircuitBreakerDecision.next());
 
-    static CircuitBreakerRule fromCircuitBreakerStrategy(CircuitBreakerStrategy strategy) {
-        return (ctx, cause) -> {
-            return strategy.shouldReportAsSuccess(ctx, cause)
-                           .thenApply(result -> {
-                               if (result == null) {
-                                   return CircuitBreakerDecision.next();
-                               }
-                               return result ? CircuitBreakerDecision.success()
-                                             : CircuitBreakerDecision.failure();
-                           });
-        };
-    }
-
-    static <T extends Response> CircuitBreakerStrategyWithContent<T> toCircuitBreakerStrategyWithContent(
-            CircuitBreakerRuleWithContent<T> rule) {
-        return (ctx, content) -> rule.shouldReportAsSuccess(ctx, content, null).thenApply(result -> {
-            if (result == CircuitBreakerDecision.success()) {
-                return true;
-            } else if (result == CircuitBreakerDecision.failure()) {
-                return false;
-            } else {
-                return null;
-            }
-        });
-    }
-
-    static <T extends Response> CircuitBreakerRuleWithContent<T> fromCircuitBreakerStrategyWithContent(
-            CircuitBreakerStrategyWithContent<T> strategy) {
-        return (ctx, content, cause) -> strategy.shouldReportAsSuccess(ctx, content).thenApply(result -> {
-            if (result == null) {
-                return CircuitBreakerDecision.ignore();
-            }
-            return result ? CircuitBreakerDecision.success() : CircuitBreakerDecision.failure();
-        });
-    }
-
-    static CircuitBreakerStrategy toCircuitBreakerStrategy(CircuitBreakerRule rule) {
-        return (ctx, cause) ->
-                rule.shouldReportAsSuccess(ctx, cause)
-                    .thenApply(result -> {
-                        if (result == null) {
-                            return null;
-                        }
-                        return result == CircuitBreakerDecision.success();
-                    });
-    }
-
     static <T extends Response> CircuitBreakerRuleWithContent<T> fromCircuitBreakerRule(
             CircuitBreakerRule circuitBreakerRule) {
         return (ctx, content, cause) -> circuitBreakerRule.shouldReportAsSuccess(ctx, cause);
+    }
+
+    static <T extends Response> CircuitBreakerRule fromCircuitBreakerRuleWithContent(
+            CircuitBreakerRuleWithContent<T> circuitBreakerRuleWithContent) {
+        return (ctx, cause) -> circuitBreakerRuleWithContent.shouldReportAsSuccess(ctx, null, cause);
     }
 
     static CircuitBreakerRule orElse(CircuitBreakerRule first, CircuitBreakerRule second) {

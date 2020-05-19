@@ -50,7 +50,7 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
     }
 
     /**
-     * Adds the specified {@code responseFilter} for a {@link AbstractRuleWithContentBuilder}.
+     * Adds the specified {@code responseFilter} for an {@link AbstractRuleWithContentBuilder}.
      */
     @SuppressWarnings("unchecked")
     public AbstractRuleWithContentBuilder<T> onResponse(

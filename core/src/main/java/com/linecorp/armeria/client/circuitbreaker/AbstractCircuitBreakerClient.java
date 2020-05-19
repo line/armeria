@@ -17,10 +17,7 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerStrategy;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerStrategyWithContent;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.toCircuitBreakerStrategy;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.toCircuitBreakerStrategyWithContent;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerRuleWithContent;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
@@ -52,6 +49,9 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     private final CircuitBreakerRule rule;
 
     @Nullable
+    private final CircuitBreakerRule fromRuleWithContent;
+
+    @Nullable
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
 
     private final CircuitBreakerMapping mapping;
@@ -66,35 +66,10 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
-     *
-     * @deprecated Use {@link CircuitBreakerClient#builder(CircuitBreakerRule)} or
-     *             {@link CircuitBreakerRpcClient#builder(CircuitBreakerStrategyWithContent)}.
-     */
-    @Deprecated
-    protected AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                           CircuitBreakerStrategy strategy) {
-        this(delegate, mapping, fromCircuitBreakerStrategy(requireNonNull(strategy, "strategy")), null);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
      */
     AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
                                  CircuitBreakerRuleWithContent<O> ruleWithContent) {
         this(delegate, mapping, null, requireNonNull(ruleWithContent, "ruleWithContent"));
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     *
-     * @deprecated Use {@link CircuitBreakerClient#builder(CircuitBreakerRuleWithContent)} or
-     *             {@link CircuitBreakerRpcClient#builder(CircuitBreakerStrategyWithContent)}.
-     */
-    @Deprecated
-    protected AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                           CircuitBreakerStrategyWithContent<O> strategyWithContent) {
-        this(delegate, mapping, null,
-             fromCircuitBreakerStrategyWithContent(requireNonNull(strategyWithContent, "strategyWithContent")));
     }
 
     /**
@@ -107,6 +82,11 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
         this.mapping = requireNonNull(mapping, "mapping");
         this.rule = rule;
         this.ruleWithContent = ruleWithContent;
+        if (ruleWithContent != null) {
+            fromRuleWithContent = fromCircuitBreakerRuleWithContent(ruleWithContent);
+        } else {
+            fromRuleWithContent = null;
+        }
     }
 
     /**
@@ -120,18 +100,6 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     }
 
     /**
-     * Returns the {@link CircuitBreakerStrategy}.
-     *
-     * @throws IllegalStateException if the {@link CircuitBreakerStrategy} is not set
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    protected final CircuitBreakerStrategy strategy() {
-        return toCircuitBreakerStrategy(rule());
-    }
-
-    /**
      * Returns the {@link CircuitBreakerRuleWithContent}.
      *
      * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
@@ -142,15 +110,13 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     }
 
     /**
-     * Returns the {@link CircuitBreakerStrategyWithContent}.
+     * Returns the {@link CircuitBreakerRule} derived from {@link #ruleWithContent()}.
      *
-     * @throws IllegalStateException if the {@link CircuitBreakerStrategyWithContent} is not set
-     *
-     * @deprecated This method will be removed without a replacement.
+     * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
      */
-    @Deprecated
-    protected final CircuitBreakerStrategyWithContent<O> strategyWithContent() {
-        return toCircuitBreakerStrategyWithContent(ruleWithContent());
+    final CircuitBreakerRule fromRuleWithContent() {
+        checkState(ruleWithContent != null, "ruleWithContent is not set.");
+        return fromRuleWithContent;
     }
 
     @Override

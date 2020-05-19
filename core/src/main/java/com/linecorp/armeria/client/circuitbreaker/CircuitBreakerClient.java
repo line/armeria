@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerStrategy;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerStrategyWithContent;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -30,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.client.ContentPreviewResponse;
 
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
@@ -46,23 +45,21 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRule rule) {
+        requireNonNull(circuitBreaker, "circuitBreaker");
         return newDecorator((ctx, req) -> circuitBreaker, rule);
     }
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
-     *
-     * @deprecated Use {@link #newDecorator(CircuitBreaker, CircuitBreakerRule)}.
      */
-    @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerStrategy strategy) {
-        requireNonNull(strategy, "strategy");
-        return newDecorator(circuitBreaker, fromCircuitBreakerStrategy(strategy));
+    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        requireNonNull(circuitBreaker, "circuitBreaker");
+        return newDecorator((ctx, req) -> circuitBreaker, ruleWithContent);
     }
 
     /**
@@ -74,23 +71,23 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
+        requireNonNull(mapping, "mapping");
+        requireNonNull(rule, "rule");
         return delegate -> new CircuitBreakerClient(delegate, mapping, rule);
     }
 
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerMapping} and
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
-     *
-     * @deprecated Use {@link #newDecorator(CircuitBreakerMapping, CircuitBreakerRule)}.
      */
-    @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerStrategy strategy) {
-        requireNonNull(strategy, "strategy");
-        return newDecorator(mapping, fromCircuitBreakerStrategy(strategy));
+    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        requireNonNull(mapping, "mapping");
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return delegate -> new CircuitBreakerClient(delegate, mapping, ruleWithContent);
     }
 
     /**
@@ -109,20 +106,17 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per {@link HttpMethod} with the specified
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
      * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}
-     *
-     * @deprecated Use {@link #newPerMethodDecorator(Function, CircuitBreakerRule)}.
      */
-    @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerMethodDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerStrategy strategy) {
-        requireNonNull(strategy, "strategy");
-        return newPerMethodDecorator(factory, fromCircuitBreakerStrategy(strategy));
+    newPerMethodDecorator(Function<String, CircuitBreaker> factory,
+                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perMethod(factory), ruleWithContent);
     }
 
     /**
@@ -141,21 +135,17 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host with the specified
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
-     *
-     * @deprecated Use {@link #newPerHostDecorator(Function, CircuitBreakerRule)}.
      */
-    @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
-                        CircuitBreakerStrategy strategy) {
-        requireNonNull(strategy, "strategy");
-        return newPerHostDecorator(factory, fromCircuitBreakerStrategy(strategy));
+                        CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHost(factory), ruleWithContent);
     }
 
     /**
@@ -174,21 +164,17 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host and {@link HttpMethod} with
-     * the specified {@link CircuitBreakerStrategy}.
+     * the specified {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
-     *
-     * @deprecated Use {@link #newPerHostAndMethodDecorator(Function, CircuitBreakerRule)}.
      */
-    @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
-                                 CircuitBreakerStrategy strategy) {
-        requireNonNull(strategy, "strategy");
-        return newPerHostAndMethodDecorator(factory, fromCircuitBreakerStrategy(strategy));
+                                 CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
     }
 
     /**
@@ -196,17 +182,6 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      */
     public static CircuitBreakerClientBuilder builder(CircuitBreakerRule rule) {
         return new CircuitBreakerClientBuilder(rule);
-    }
-
-    /**
-     * Returns a new {@link CircuitBreakerClientBuilder} with the specified {@link CircuitBreakerStrategy}.
-     *
-     * @deprecated Use {@link #builder(CircuitBreakerRule)}.
-     */
-    @Deprecated
-    public static CircuitBreakerClientBuilder builder(CircuitBreakerStrategy strategy) {
-        requireNonNull(strategy, "strategy");
-        return builder(fromCircuitBreakerStrategy(strategy));
     }
 
     /**
@@ -218,20 +193,8 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
         return new CircuitBreakerClientBuilder(ruleWithContent);
     }
 
-    /**
-     * Returns a new {@link CircuitBreakerClientBuilder} with
-     * the specified {@link CircuitBreakerStrategyWithContent}.
-     *
-     * @deprecated Use {@link #builder(CircuitBreakerRuleWithContent)}.
-     */
-    @Deprecated
-    public static CircuitBreakerClientBuilder builder(
-            CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
-        requireNonNull(strategyWithContent, "strategyWithContent");
-        return builder(fromCircuitBreakerStrategyWithContent(strategyWithContent));
-    }
-
     private final boolean needsContentInRule;
+    private final int contentPreviewLength;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
@@ -239,6 +202,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
         super(delegate, mapping, rule);
         needsContentInRule = false;
+        contentPreviewLength = 0;
     }
 
     /**
@@ -246,8 +210,18 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        this(delegate, mapping, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_CONTENT_PREVIEW_LENGTH);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link HttpClient}.
+     */
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
+                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                         int contentPreviewLength) {
         super(delegate, mapping, ruleWithContent);
         needsContentInRule = true;
+        this.contentPreviewLength = contentPreviewLength;
     }
 
     @Override
@@ -257,28 +231,28 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
         try {
             response = delegate().execute(ctx, req);
         } catch (Throwable cause) {
-            if (needsContentInRule) {
-                reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
-                        ctx, HttpResponse.ofFailure(cause), cause));
-            } else {
-                reportSuccessOrFailure(circuitBreaker, rule().shouldReportAsSuccess(ctx, cause));
-            }
+            final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
+            reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
             throw cause;
         }
 
         final CompletableFuture<HttpResponse> responseFuture =
                 ctx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenApply(log -> {
-                    if (needsContentInRule) {
+                    final Throwable cause =
+                            log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+
+                    if (needsContentInRule && cause == null) {
                         try (HttpResponseDuplicator duplicator =
                                      response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength())) {
+                            final ContentPreviewResponse contentPreviewResponse =
+                                    new ContentPreviewResponse(duplicator.duplicate(), contentPreviewLength);
                             reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
-                                    ctx, duplicator.duplicate(), null));
+                                    ctx, contentPreviewResponse, null));
                             return duplicator.duplicate();
                         }
                     } else {
-                        final Throwable cause =
-                                log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-                        reportSuccessOrFailure(circuitBreaker, rule().shouldReportAsSuccess(ctx, cause));
+                        final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
+                        reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
                         return response;
                     }
                 });

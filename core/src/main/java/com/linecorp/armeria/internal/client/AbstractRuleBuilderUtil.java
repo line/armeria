@@ -46,7 +46,7 @@ public final class AbstractRuleBuilderUtil {
                 }
             }
 
-            if (requestHeadersFilter == null && responseHeadersFilter == null) {
+            if (exceptionFilter == null && responseHeadersFilter == null) {
                 return true;
             }
 

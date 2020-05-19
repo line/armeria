@@ -239,7 +239,7 @@ public interface CircuitBreakerRule {
      *
      * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      *
-     * <p><pre>{@code
+     * <pre>{@code
      * > CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
      * >                                                               @Nullable Throwable cause) {
      * >     if (cause != null) {
