@@ -32,7 +32,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 
@@ -371,13 +370,7 @@ public final class RequestContextExporter {
     }
 
     private State state(RequestContext ctx) {
-        final State state;
-        if (ctx instanceof ClientRequestContext) {
-            state = ((ClientRequestContext) ctx).ownAttr(STATE);
-        } else {
-            state = ctx.attr(STATE);
-        }
-
+        final State state = ctx.ownAttr(STATE);
         if (state != null) {
             return state;
         }

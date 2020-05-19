@@ -108,12 +108,10 @@ public interface RequestContext {
     }
 
     /**
-     * Returns the root {@link ServiceRequestContext} that created this context.
-     * Note that only a {@link ClientRequestContext} can have a non-{@code null} root,
-     * and thus a {@link ServiceRequestContext} will always return {@code null}.
+     * Returns the root {@link ServiceRequestContext} of this context.
      *
-     * @return the root {@link ServiceRequestContext}, or {@code null} if this context is
-     *         a {@link ServiceRequestContext} or was not made in the context of a server request.
+     * @return the root {@link ServiceRequestContext}, or {@code null} if this context was not created
+     *         in the context of a server request.
      */
     @Nullable
     ServiceRequestContext root();
@@ -126,7 +124,7 @@ public interface RequestContext {
      * <h3>Searching for attributes in a root context</h3>
      *
      * <p>Note: This section applies only to a {@link ClientRequestContext}. A {@link ServiceRequestContext}
-     * does not have a {@link #root()}.</p>
+     * always has itself as a {@link #root()}.</p>
      *
      * <p>If the value does not exist in this context but only in {@link #root()},
      * this method will return the value from the {@link #root()}.
@@ -168,7 +166,7 @@ public interface RequestContext {
      * <h3>Searching for attributes in a root context</h3>
      *
      * <p>Note: This section applies only to a {@link ClientRequestContext}. A {@link ServiceRequestContext}
-     * does not have a {@link #root()}.</p>
+     * always has itself as a {@link #root()}.</p>
      *
      * <p>The {@link Iterator} returned by this method will also yield the {@link Entry}s from the
      * {@link #root()} except those whose {@link AttributeKey} exist already in this context, e.g.

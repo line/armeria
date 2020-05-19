@@ -67,11 +67,7 @@ public interface ServiceRequestContext extends RequestContext {
      */
     static ServiceRequestContext current() {
         final RequestContext ctx = RequestContext.current();
-        if (ctx instanceof ServiceRequestContext) {
-            return (ServiceRequestContext) ctx;
-        }
-
-        final ServiceRequestContext root = ((ClientRequestContext) ctx).root();
+        final ServiceRequestContext root = ctx.root();
         if (root != null) {
             return root;
         }
@@ -95,11 +91,7 @@ public interface ServiceRequestContext extends RequestContext {
             return null;
         }
 
-        if (ctx instanceof ServiceRequestContext) {
-            return (ServiceRequestContext) ctx;
-        }
-
-        final ServiceRequestContext root = ((ClientRequestContext) ctx).root();
+        final ServiceRequestContext root = ctx.root();
         if (root != null) {
             return root;
         }
@@ -153,10 +145,15 @@ public interface ServiceRequestContext extends RequestContext {
         return new ServiceRequestContextBuilder(request);
     }
 
-    @Nullable
+    /**
+     * {@inheritDoc} This method always returns {@code this}.
+     *
+     * @return {@code this}
+     */
+    @Nonnull
     @Override
     default ServiceRequestContext root() {
-        return null;
+        return this;
     }
 
     /**
@@ -224,7 +221,7 @@ public interface ServiceRequestContext extends RequestContext {
             return () -> RequestContextUtil.pop(this, null);
         }
 
-        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
+        if (oldCtx.root() == this) {
             return () -> RequestContextUtil.pop(this, oldCtx);
         }
 

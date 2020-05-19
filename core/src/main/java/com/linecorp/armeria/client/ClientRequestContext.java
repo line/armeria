@@ -220,8 +220,7 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         final ServiceRequestContext root = root();
-        if ((oldCtx instanceof ServiceRequestContext && oldCtx == root) ||
-            oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
+        if (oldCtx.root() == root) {
             return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
