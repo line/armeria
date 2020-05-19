@@ -122,7 +122,7 @@ public final class RequestScopedMdc {
 
     /**
      * Returns the value of the specified request-scoped {@link MDC} property bound to the specified
-     * {@link RequestContext}..
+     * {@link RequestContext}.
      *
      * @param ctx the {@link RequestContext}
      * @param key the key of the request-scoped {@link MDC} property
@@ -138,7 +138,7 @@ public final class RequestScopedMdc {
 
     /**
      * Returns the {@link Map} of all request-scoped {@link MDC} properties bound to the specified
-     * {@link RequestContext}..
+     * {@link RequestContext}.
      *
      * @param ctx the {@link RequestContext}
      *
@@ -147,9 +147,7 @@ public final class RequestScopedMdc {
      */
     public static Map<String, String> getAll(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        final Map<String, String> map = getMap(ctx);
-        // Note: We ensure an empty map is always immutable.
-        return map.isEmpty() ? map : Collections.unmodifiableMap(map);
+        return getMap(ctx);
     }
 
     /**
@@ -169,9 +167,11 @@ public final class RequestScopedMdc {
             if (oldMap.isEmpty()) {
                 newMap = Collections.singletonMap(key, value);
             } else {
-                newMap = new Object2ObjectOpenHashMap<>(oldMap.size() + 1);
-                newMap.putAll(oldMap);
-                newMap.put(key, value);
+                final Object2ObjectOpenHashMap<String, String> tmp =
+                        new Object2ObjectOpenHashMap<>(oldMap.size() + 1);
+                tmp.putAll(oldMap);
+                tmp.put(key, value);
+                newMap = Collections.unmodifiableMap(tmp);
             }
             ctx.setAttr(MAP, newMap);
         }
@@ -200,7 +200,7 @@ public final class RequestScopedMdc {
                 newMap.putAll(oldMap);
                 newMap.putAll(map);
             }
-            ctx.setAttr(MAP, newMap);
+            ctx.setAttr(MAP, Collections.unmodifiableMap(newMap));
         }
     }
 
@@ -211,6 +211,8 @@ public final class RequestScopedMdc {
      * @param key the key of the thread-local {@link MDC} property to copy
      */
     public static void copy(RequestContext ctx, String key) {
+        requireNonNull(ctx, "ctx");
+        requireNonNull(key, "key");
         checkState(delegate != null, ERROR_MESSAGE);
         put(ctx, key, delegate.get(key));
     }
@@ -221,8 +223,26 @@ public final class RequestScopedMdc {
      * @param ctx the {@link RequestContext}
      */
     public static void copyAll(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
         checkState(delegate != null, ERROR_MESSAGE);
-        putAll(ctx, firstNonNull(delegate.getCopyOfContextMap(), Collections.emptyMap()));
+
+        final Map<String, String> map = delegate.getCopyOfContextMap();
+        if (map == null || map.isEmpty()) {
+            return;
+        }
+
+        synchronized (ctx) {
+            final Map<String, String> oldMap = getMap(ctx);
+            final Map<String, String> newMap;
+            if (oldMap.isEmpty()) {
+                newMap = map;
+            } else {
+                newMap = new Object2ObjectOpenHashMap<>(oldMap.size() + map.size());
+                newMap.putAll(oldMap);
+                newMap.putAll(map);
+            }
+            ctx.setAttr(MAP, Collections.unmodifiableMap(newMap));
+        }
     }
 
     /**
@@ -245,8 +265,9 @@ public final class RequestScopedMdc {
             if (oldMap.size() == 1) {
                 newMap = Collections.emptyMap();
             } else {
-                newMap = new Object2ObjectOpenHashMap<>(oldMap);
-                newMap.remove(key);
+                final Object2ObjectOpenHashMap<String, String> tmp = new Object2ObjectOpenHashMap<>(oldMap);
+                tmp.remove(key);
+                newMap = Collections.unmodifiableMap(tmp);
             }
             ctx.setAttr(MAP, newMap);
         }

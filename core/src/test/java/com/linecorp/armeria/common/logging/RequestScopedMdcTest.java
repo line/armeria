@@ -53,6 +53,8 @@ class RequestScopedMdcTest {
         final ServiceRequestContext ctx = newContext();
         RequestScopedMdc.put(ctx, "foo", "1");
         assertThat(RequestScopedMdc.get(ctx, "foo")).isEqualTo("1");
+        assertThat(MDC.get("foo")).isNull();
+
         try (SafeCloseable ignored = ctx.push()) {
             assertThat(MDC.get("foo")).isEqualTo("1");
             // Request-scoped property should have priority over thread-local one.
@@ -63,6 +65,11 @@ class RequestScopedMdcTest {
             final ClientRequestContext cctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             assertThat(cctx.root()).isSameAs(ctx);
             assertThat(RequestScopedMdc.get(cctx, "foo")).isNull();
+
+            try (SafeCloseable ignored2 = cctx.push()) {
+                // cctx does not have 'foo' set, so thread-local property will be retrieved.
+                assertThat(MDC.get("foo")).isEqualTo("2");
+            }
         }
     }
 
@@ -180,12 +187,27 @@ class RequestScopedMdcTest {
     @Test
     void copyAll() {
         final ServiceRequestContext ctx = newContext();
+        // Copy nothing.
+        RequestScopedMdc.copyAll(ctx);
+        assertThat(RequestScopedMdc.getAll(ctx)).isEmpty();
+
+        // Copy into an empty request-scoped context map.
         MDC.put("foo", "1");
         MDC.put("bar", "2");
         RequestScopedMdc.copyAll(ctx);
         assertThat(RequestScopedMdc.getAll(ctx)).containsOnly(
                 Maps.immutableEntry("foo", "1"),
                 Maps.immutableEntry("bar", "2"));
+
+        // Copy into a non-empty request-scoped context map.
+        MDC.remove("foo");
+        MDC.put("bar", "3");
+        MDC.put("baz", "4");
+        RequestScopedMdc.copyAll(ctx);
+        assertThat(RequestScopedMdc.getAll(ctx)).containsOnly(
+                Maps.immutableEntry("foo", "1"),
+                Maps.immutableEntry("bar", "3"),
+                Maps.immutableEntry("baz", "4"));
     }
 
     private static ServiceRequestContext newContext() {
