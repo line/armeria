@@ -184,13 +184,7 @@ public final class DefaultClientRequestContext
     @Nullable
     private static ServiceRequestContext serviceRequestContext() {
         final RequestContext current = RequestContext.currentOrNull();
-        if (current instanceof ServiceRequestContext) {
-            return (ServiceRequestContext) current;
-        }
-        if (current instanceof ClientRequestContext) {
-            return ((ClientRequestContext) current).root();
-        }
-        return null;
+        return current != null ? current.root() : null;
     }
 
     /**
