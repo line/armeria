@@ -47,8 +47,8 @@ import com.linecorp.armeria.common.Response;
 public interface CircuitBreakerRuleWithContent<T extends Response> {
 
     /**
-     * Returns a newly created {@link CircuitBreakerRuleWithContent} that will report a response as a failure
-     * if the specified {@code retryFunction} completes with {@code true}.
+     * Returns a newly created {@link CircuitBreakerRuleWithContent} that will report a {@link Response} as
+     * a failure if the specified {@code responseFilter} completes with {@code true}.
      */
     static <T extends Response> CircuitBreakerRuleWithContent<T> onResponse(
             Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {

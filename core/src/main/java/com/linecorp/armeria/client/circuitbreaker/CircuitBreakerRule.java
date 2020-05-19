@@ -43,8 +43,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * Determines whether a {@link Response} should be reported as a success or a failure to a
  * {@link CircuitBreaker}. If you need to determine whether the request was successful by looking into the
  * {@link Response} content, use {@link CircuitBreakerRuleWithContent}.
- * Note that the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
- * a {@link Response} did not match {@link CircuitBreakerRule}s, the {@link Response} will be reported as
+ *
+ * <p>Note that the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
+ * a {@link Response} is not matched with {@link CircuitBreakerRule}s, the {@link Response} will be reported as
  * a success.
  *
  * <p>For example:
@@ -233,8 +234,8 @@ public interface CircuitBreakerRule {
      * be evaluated.
      *
      * <p>Note that the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
-     * a {@link Response} did not match the given {@link CircuitBreakerRule}s, the {@link Response} will be
-     * reported as a success.
+     * a {@link Response} is not matched with the given {@link CircuitBreakerRule}s, the {@link Response} will
+     * be reported as a success.
      *
      * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      *

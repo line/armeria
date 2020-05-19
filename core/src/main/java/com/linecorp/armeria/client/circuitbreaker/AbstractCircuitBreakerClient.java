@@ -81,7 +81,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      */
     AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
                                  CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this(delegate, mapping, null, requireNonNull(ruleWithContent, "strategyWithContent"));
+        this(delegate, mapping, null, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     /**
@@ -92,9 +92,9 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      */
     @Deprecated
     protected AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                           CircuitBreakerStrategyWithContent<O> ruleWithContent) {
+                                           CircuitBreakerStrategyWithContent<O> strategyWithContent) {
         this(delegate, mapping, null,
-             fromCircuitBreakerStrategyWithContent(requireNonNull(ruleWithContent, "ruleWithContent")));
+             fromCircuitBreakerStrategyWithContent(requireNonNull(strategyWithContent, "strategyWithContent")));
     }
 
     /**
