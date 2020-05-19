@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client;
+package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
@@ -32,11 +32,13 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * A skeletal builder implementation for {@link RetryRuleWithContent} and {@link CircuitBreakerRuleWithContent}.
  * @param <T> the response type
  */
+@UnstableApi
 public abstract class AbstractRuleWithContentBuilder<T extends Response> extends AbstractRuleBuilder {
 
     @Nullable

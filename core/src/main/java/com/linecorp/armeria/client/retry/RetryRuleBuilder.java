@@ -26,12 +26,13 @@ import java.util.function.Predicate;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.client.AbstractRuleBuilder;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -98,57 +99,101 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     // Override the return type of the chaining methods in the superclass.
 
+    /**
+     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRule} which will retry
+     * if the {@code responseHeadersFilter} returns {@code true}.
+     */
     @Override
     public RetryRuleBuilder onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
         return (RetryRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
     }
 
+    /**
+     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
+     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     */
     @Override
     public RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
         return (RetryRuleBuilder) super.onStatusClass(statusClasses);
     }
 
+    /**
+     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
+     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     */
     @Override
     public RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
         return (RetryRuleBuilder) super.onStatusClass(statusClasses);
     }
 
+    /**
+     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRule} which will retry
+     * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     */
     @Override
     public RetryRuleBuilder onServerErrorStatus() {
         return (RetryRuleBuilder) super.onServerErrorStatus();
     }
 
+    /**
+     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
+     * if the response status is one of the specified {@link HttpStatus}es.
+     */
     @Override
     public RetryRuleBuilder onStatus(HttpStatus... statuses) {
         return (RetryRuleBuilder) super.onStatus(statuses);
     }
 
+    /**
+     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
+     * if the response status is one of the specified {@link HttpStatus}es.
+     */
     @Override
     public RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
         return (RetryRuleBuilder) super.onStatus(statuses);
     }
 
+    /**
+     * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
+     * if the response status matches the specified {@code statusFilter}.
+     */
     @Override
     public RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
         return (RetryRuleBuilder) super.onStatus(statusFilter);
     }
 
+    /**
+     * Adds the specified exception type for a {@link RetryRule} which will retry
+     * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
+     */
     @Override
     public RetryRuleBuilder onException(Class<? extends Throwable> exception) {
         return (RetryRuleBuilder) super.onException(exception);
     }
 
+    /**
+     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
+     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     */
     @Override
     public RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
         return (RetryRuleBuilder) super.onException(exceptionFilter);
     }
 
+    /**
+     * Makes a {@link RetryRule} retry on any {@link Exception}.
+     */
     @Override
     public RetryRuleBuilder onException() {
         return (RetryRuleBuilder) super.onException();
     }
 
+    /**
+     * Makes a {@link RetryRule} retry on an {@link UnprocessedRequestException} which means that the request
+     * has not been processed by the server. Therefore, you can safely retry the request without worrying about
+     * the idempotency of the request.
+     */
     @Override
     public RetryRuleBuilder onUnprocessed() {
         return (RetryRuleBuilder) super.onUnprocessed();

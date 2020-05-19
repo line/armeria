@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.client;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
+import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;

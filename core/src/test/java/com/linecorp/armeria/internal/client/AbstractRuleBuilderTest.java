@@ -31,6 +31,7 @@ import org.junit.platform.commons.util.ReflectionUtils;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
