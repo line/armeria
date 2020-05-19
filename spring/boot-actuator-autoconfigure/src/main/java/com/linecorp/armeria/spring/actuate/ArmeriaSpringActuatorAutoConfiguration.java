@@ -40,7 +40,6 @@ import org.springframework.boot.actuate.endpoint.web.PathMapper;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicate;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpointDiscoverer;
-import org.springframework.boot.actuate.health.HealthStatusHttpMapper;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -108,9 +107,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean // In case HealthEndpointAutoConfiguration is excluded
-    HealthStatusHttpMapper healthStatusHttpMapper() {
-        return new HealthStatusHttpMapper();
+    SimpleHttpCodeStatusMapper simpleHttpCodeStatusMapper() {
+        return new SimpleHttpCodeStatusMapper();
     }
 
     @Bean
@@ -118,7 +116,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,
             WebEndpointProperties properties,
-            HealthStatusHttpMapper healthMapper,
+            SimpleHttpCodeStatusMapper statusMapper,
             CorsEndpointProperties corsProperties) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
@@ -165,7 +163,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                    path,
                                                    predicate.getConsumes(),
                                                    predicate.getProduces());
-                         sb.service(route, new WebOperationService(operation, healthMapper));
+                         sb.service(route, new WebOperationService(operation, statusMapper));
                          if (cors != null) {
                              cors.route(path);
                          }
