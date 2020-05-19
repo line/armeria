@@ -68,12 +68,13 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
-        return build(this, decision);
+        return build(this, decision, false);
     }
 
-    static CircuitBreakerRule build(AbstractRuleBuilder builder, CircuitBreakerDecision decision) {
+    static CircuitBreakerRule build(AbstractRuleBuilder builder, CircuitBreakerDecision decision,
+                                    boolean hasResponseFilter) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> filter =
-                AbstractRuleBuilderUtil.buildFilter(builder);
+                AbstractRuleBuilderUtil.buildFilter(builder, hasResponseFilter);
 
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {

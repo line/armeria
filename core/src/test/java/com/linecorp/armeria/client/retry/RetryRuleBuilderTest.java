@@ -275,7 +275,7 @@ class RetryRuleBuilderTest {
         assertBackoff(rule.shouldRetry(ctx1, new RuntimeException())).isSameAs(Backoff.ofDefault());
 
         final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.POST, "/"));
-        assertBackoff(rule.shouldRetry(ctx2, new RuntimeException())).isNotNull();
+        assertBackoff(rule.shouldRetry(ctx2, new RuntimeException())).isNull();
     }
 
     @Test

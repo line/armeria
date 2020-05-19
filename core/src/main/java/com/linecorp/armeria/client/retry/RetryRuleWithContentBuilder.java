@@ -77,13 +77,14 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     RetryRuleWithContent<T> build(RetryDecision decision) {
         final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
+        final boolean hasResponseFilter = responseFilter != null;
         if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
-            responseHeadersFilter() == null && responseFilter == null) {
+            responseHeadersFilter() == null && !hasResponseFilter) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
 
-        final RetryRule first = RetryRuleBuilder.build(this, decision);
-        if (responseFilter == null) {
+        final RetryRule first = RetryRuleBuilder.build(this, decision, hasResponseFilter);
+        if (!hasResponseFilter) {
             return RetryRuleUtil.fromRetryRule(first);
         }
 

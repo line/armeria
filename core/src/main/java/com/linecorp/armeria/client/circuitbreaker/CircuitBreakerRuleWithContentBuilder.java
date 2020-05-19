@@ -66,9 +66,10 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     private CircuitBreakerRuleWithContent<T> build(CircuitBreakerDecision decision) {
-        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(this, decision);
         final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
-        if (responseFilter == null) {
+        final boolean hasResponseFilter = responseFilter != null;
+        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(this, decision, hasResponseFilter);
+        if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }
 

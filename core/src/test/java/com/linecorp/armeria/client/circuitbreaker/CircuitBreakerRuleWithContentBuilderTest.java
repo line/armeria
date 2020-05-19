@@ -68,10 +68,9 @@ class CircuitBreakerRuleWithContentBuilderTest {
                         .thenSuccess()
                         .orElse(CircuitBreakerRuleWithContent
                                         .<HttpResponse>builder()
-                                        .onStatus(HttpStatus.BAD_REQUEST)
                                         .thenFailure());
 
-        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.BAD_REQUEST));
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         assertFuture(rule.shouldReportAsSuccess(ctx1, HttpResponse.of("Hello Armeria!"), null))
                 .isSameAs(decision);
     }

@@ -71,12 +71,12 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
             exceptionFilter() == null && responseHeadersFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
-        return build(this, decision);
+        return build(this, decision, false);
     }
 
-    static RetryRule build(AbstractRuleBuilder builder, RetryDecision decision) {
+    static RetryRule build(AbstractRuleBuilder builder, RetryDecision decision, boolean hasResponseFilter) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> filter =
-                AbstractRuleBuilderUtil.buildFilter(builder);
+                AbstractRuleBuilderUtil.buildFilter(builder, hasResponseFilter);
 
         final CompletableFuture<RetryDecision> decisionFuture;
         if (decision == RetryDecision.DEFAULT) {

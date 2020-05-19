@@ -34,12 +34,8 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleBuilder;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContentBuilder;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryRuleBuilder;
-import com.linecorp.armeria.client.retry.RetryRuleWithContent;
-import com.linecorp.armeria.client.retry.RetryRuleWithContentBuilder;
 
 class AbstractRuleBuilderTest {
 
@@ -48,21 +44,20 @@ class AbstractRuleBuilderTest {
         final Map<Class<?>, Class<? extends AbstractRuleBuilder>> classes =
                 ImmutableMap.of(
                         RetryRule.class, RetryRuleBuilder.class,
-                        RetryRuleWithContent.class, RetryRuleWithContentBuilder.class,
-                        CircuitBreakerRule.class, CircuitBreakerRuleBuilder.class,
-                        CircuitBreakerRuleWithContent.class, CircuitBreakerRuleWithContentBuilder.class);
+                        CircuitBreakerRule.class, CircuitBreakerRuleBuilder.class);
 
         classes.forEach((rule, builder) -> {
             final List<Method> builderMethods =
-                    ReflectionUtils.findMethods(RetryRuleBuilder.class,
+                    ReflectionUtils.findMethods(builder,
                                                 method -> !Modifier.isStatic(method.getModifiers()) &&
                                                           Modifier.isPublic(method.getModifiers()) &&
                                                           method.getName().startsWith("on") &&
                                                           !"onResponseHeaders".equals(method.getName()) &&
+                                                          !"onUnprocessed".equals(method.getName()) &&
                                                           !method.isVarArgs());
 
             final List<Method> ruleMethods =
-                    ReflectionUtils.findMethods(RetryRule.class,
+                    ReflectionUtils.findMethods(rule,
                                                 method -> Modifier.isStatic(method.getModifiers()) &&
                                                           Modifier.isPublic(method.getModifiers()) &&
                                                           method.getName().startsWith("on"));
