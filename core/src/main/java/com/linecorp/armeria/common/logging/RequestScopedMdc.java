@@ -324,7 +324,6 @@ public final class RequestScopedMdc {
         }
 
         @Override
-        @Nullable
         public Map<String, String> getCopyOfContextMap() {
             final Map<String, String> threadLocalMap =
                     firstNonNull(delegate.getCopyOfContextMap(), Collections.emptyMap());
@@ -338,13 +337,7 @@ public final class RequestScopedMdc {
                     firstNonNull(getMap(ctx), Collections.emptyMap());
             if (threadLocalMap.isEmpty()) {
                 // No thread-local map available
-                if (requestScopedMap.isEmpty()) {
-                    // Both thread-local and request-scoped map unavailable
-                    return requestScopedMap;
-                }
-
-                // Only request-scoped map available
-                return Collections.unmodifiableMap(requestScopedMap);
+                return requestScopedMap;
             }
 
             // Thread-local map available
