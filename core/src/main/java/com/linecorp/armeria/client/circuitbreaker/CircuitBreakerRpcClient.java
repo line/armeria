@@ -34,7 +34,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
-     * {@link CircuitBreakerRule}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -42,28 +42,28 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * @param circuitBreaker The {@link CircuitBreaker} instance to be used
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<RpcResponse> rule) {
+    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator((ctx, req) -> circuitBreaker, rule);
+        return newDecorator((ctx, req) -> circuitBreaker, ruleWithContent);
     }
 
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerMapping} and
-     * {@link CircuitBreakerRule}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<RpcResponse> rule) {
+    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
-        requireNonNull(rule, "rule");
-        return delegate -> new CircuitBreakerRpcClient(delegate, mapping, rule);
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return delegate -> new CircuitBreakerRpcClient(delegate, mapping, ruleWithContent);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per RPC method name with the specified
-     * {@link CircuitBreakerRule}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -72,13 +72,13 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,
-                          CircuitBreakerRuleWithContent<RpcResponse> rule) {
-        return newDecorator(CircuitBreakerMapping.perMethod(factory), rule);
+                          CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perMethod(factory), ruleWithContent);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host with the specified
-     * {@link CircuitBreakerRule}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -87,13 +87,13 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
-                        CircuitBreakerRuleWithContent<RpcResponse> rule) {
-        return newDecorator(CircuitBreakerMapping.perHost(factory), rule);
+                        CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHost(factory), ruleWithContent);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host and RPC method name with
-     * the specified {@link CircuitBreakerRule}.
+     * the specified {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -102,8 +102,8 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
-                                 CircuitBreakerRuleWithContent<RpcResponse> rule) {
-        return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), rule);
+                                 CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
     }
 
     /**

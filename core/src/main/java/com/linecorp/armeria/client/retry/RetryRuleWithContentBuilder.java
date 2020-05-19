@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
- * A builder which creates a {@link RetryRuleWithContent}.
+ * A builder for creating a new {@link RetryRuleWithContent}.
  */
 public final class RetryRuleWithContentBuilder<T extends Response> extends AbstractRuleWithContentBuilder<T> {
 
@@ -128,7 +128,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryRuleWithContent} which will retry
-     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -138,7 +138,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryRuleWithContent} which will retry
-     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -148,7 +148,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     /**
      * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRuleWithContent} which will retry
-     * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     * if a class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -158,7 +158,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     /**
      * Adds the specified {@link HttpStatus}es for a {@link RetryRuleWithContent} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * if a response status is one of the specified {@link HttpStatus}es.
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -168,7 +168,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     /**
      * Adds the specified {@link HttpStatus}es for a {@link RetryRuleWithContent} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * if a response status is one of the specified {@link HttpStatus}es.
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -178,7 +178,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     /**
      * Adds the specified {@code statusFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the response status matches the specified {@code statusFilter}.
+     * if a response status matches the specified {@code statusFilter}.
      */
     @SuppressWarnings("unchecked")
     @Override

@@ -28,9 +28,9 @@ import com.linecorp.armeria.common.Response;
 
 final class RetryRuleUtil {
 
-    public static final CompletableFuture<RetryDecision> NEXT_DECISION =
+    static final CompletableFuture<RetryDecision> NEXT_DECISION =
             CompletableFuture.completedFuture(RetryDecision.next());
-    public static final CompletableFuture<RetryDecision> DEFAULT_DECISION =
+    static final CompletableFuture<RetryDecision> DEFAULT_DECISION =
             CompletableFuture.completedFuture(RetryDecision.retry(Backoff.ofDefault()));
 
     static <T extends Response> RetryRule fromRetryRuleWithContent(RetryRuleWithContent<T> retryRule) {

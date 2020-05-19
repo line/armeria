@@ -19,9 +19,10 @@ package com.linecorp.armeria.client.circuitbreaker;
 import com.linecorp.armeria.common.Response;
 
 /**
- * A {@link CircuitBreakerDecision} that determines whether a {@link CircuitBreakerRule} reports a response as
- * a {@link #success()}, {@link #failure()}, {@link #ignore()}s it.
- * {@link #next()} skips a {@link CircuitBreakerRule} and will lookup next {@link CircuitBreakerRule}s.
+ * A {@link CircuitBreakerDecision} that determines a {@link Response} as
+ * a {@link #success()} or {@link #failure()}, or {@link #ignore()}s a {@link Response}.
+ * {@link #next()} skips a {@link CircuitBreakerRule} and will lookup
+ * next {@link CircuitBreakerRule}s.
  */
 public final class CircuitBreakerDecision {
 
@@ -53,8 +54,8 @@ public final class CircuitBreakerDecision {
     }
 
     /**
-     * Returns a {@link CircuitBreakerDecision} that ignores a response and does not count as a success nor
-     * failure.
+     * Returns a {@link CircuitBreakerDecision} that ignores a {@link Response} and does not count as a success
+     * nor failure.
      */
     public static CircuitBreakerDecision ignore() {
         return IGNORE;

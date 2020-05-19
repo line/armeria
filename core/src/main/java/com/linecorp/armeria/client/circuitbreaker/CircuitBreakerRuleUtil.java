@@ -28,13 +28,13 @@ import com.linecorp.armeria.common.Response;
 
 final class CircuitBreakerRuleUtil {
 
-    public static final CompletableFuture<CircuitBreakerDecision> SUCCESS_DECISION =
+    static final CompletableFuture<CircuitBreakerDecision> SUCCESS_DECISION =
             CompletableFuture.completedFuture(CircuitBreakerDecision.success());
-    public static final CompletableFuture<CircuitBreakerDecision> FAILURE_DECISION =
+    static final CompletableFuture<CircuitBreakerDecision> FAILURE_DECISION =
             CompletableFuture.completedFuture(CircuitBreakerDecision.failure());
-    public static final CompletableFuture<CircuitBreakerDecision> IGNORE_DECISION =
+    static final CompletableFuture<CircuitBreakerDecision> IGNORE_DECISION =
             CompletableFuture.completedFuture(CircuitBreakerDecision.ignore());
-    public static final CompletableFuture<CircuitBreakerDecision> NEXT_DECISION =
+    static final CompletableFuture<CircuitBreakerDecision> NEXT_DECISION =
             CompletableFuture.completedFuture(CircuitBreakerDecision.next());
 
     static <T extends Response> CircuitBreakerRuleWithContent<T> fromCircuitBreakerRule(

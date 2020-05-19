@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
- * A builder which creates a {@link RetryRule}.
+ * A builder for creating a new {@link RetryRule}.
  */
 public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
@@ -111,7 +111,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
-     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     @Override
     public RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
@@ -120,7 +120,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
-     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     @Override
     public RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
@@ -129,7 +129,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRule} which will retry
-     * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     * if a class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
      */
     @Override
     public RetryRuleBuilder onServerErrorStatus() {
@@ -138,7 +138,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * if a response status is one of the specified {@link HttpStatus}es.
      */
     @Override
     public RetryRuleBuilder onStatus(HttpStatus... statuses) {
@@ -147,7 +147,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * if a response status is one of the specified {@link HttpStatus}es.
      */
     @Override
     public RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
@@ -156,7 +156,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
-     * if the response status matches the specified {@code statusFilter}.
+     * if a response status matches the specified {@code statusFilter}.
      */
     @Override
     public RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {

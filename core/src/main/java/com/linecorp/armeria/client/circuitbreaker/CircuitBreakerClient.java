@@ -97,7 +97,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
@@ -111,7 +111,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,
@@ -126,7 +126,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
@@ -140,7 +140,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
@@ -155,7 +155,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
@@ -169,7 +169,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,

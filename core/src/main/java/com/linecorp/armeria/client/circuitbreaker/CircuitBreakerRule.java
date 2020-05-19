@@ -31,7 +31,6 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
@@ -40,13 +39,13 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
- * Determines whether a {@link Response} should be reported as a success or a failure to a
+ * Determines whether a {@link Response} should be reported as a success or failure to a
  * {@link CircuitBreaker}. If you need to determine whether the request was successful by looking into the
  * {@link Response} content, use {@link CircuitBreakerRuleWithContent}.
  *
  * <p>Note that the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
- * a {@link Response} is not matched with {@link CircuitBreakerRule}s, the {@link Response} will be reported as
- * a success.
+ * a {@link Response} is not matched with the {@link CircuitBreakerRule}s, the {@link Response} will be
+ * reported as a success.
  *
  * <p>For example:
  * <pre>{@code
@@ -59,20 +58,19 @@ import com.linecorp.armeria.common.ResponseHeaders;
  *
  * // A CircuitBreakerRule that reports a response as a failure except that a response status code is 2xx.
  * CircuitBreakerRule.of(
- *                       // Report as a success if the class of a response status is 2xx
- *                       CircuitBreakerRule.builder()
- *                                         .onStatusClass(HttpStatusClass.SUCCESS)
- *                                         .thenSuccess(),
- *                       // Everything else is reported as a failure
- *                       ClientBreakerRule.builder().thenFailure());
- * }
- * </pre>
+ *         // Report as a success if the class of a response status is 2xx
+ *         CircuitBreakerRule.builder()
+ *                           .onStatusClass(HttpStatusClass.SUCCESS)
+ *                           .thenSuccess(),
+ *         // Everything else is reported as a failure
+ *         ClientBreakerRule.builder().thenFailure());
+ * }</pre></p>
  */
 @FunctionalInterface
 public interface CircuitBreakerRule {
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     static CircuitBreakerRule onStatusClass(HttpStatusClass statusClass) {
@@ -80,7 +78,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if the class of the response status is one of the specified {@link HttpStatusClass}es.
      */
     static CircuitBreakerRule onStatusClass(Iterable<HttpStatusClass> statusClasses) {
@@ -88,7 +86,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
      */
     static CircuitBreakerRule onServerErrorStatus() {
@@ -96,7 +94,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if the response status is one of the specified {@link HttpStatus}es.
      */
     static CircuitBreakerRule onStatus(HttpStatus... statuses) {
@@ -104,7 +102,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if the response status is one of the specified {@link HttpStatus}es.
      */
     static CircuitBreakerRule onStatus(Iterable<HttpStatus> statuses) {
@@ -112,7 +110,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if the specified {@code statusFilter} returns {@code true}.
      */
     static CircuitBreakerRule onStatus(Predicate<? super HttpStatus> statusFilter) {
@@ -120,15 +118,15 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
-     * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * if an {@link Exception} is raised and that is an instance of the specified {@code exception}.
      */
     static CircuitBreakerRule onException(Class<? extends Throwable> exception) {
         return builder().onException(exception).thenFailure();
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
     static CircuitBreakerRule onException(Predicate<? super Throwable> exceptionFilter) {
@@ -136,20 +134,11 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if an {@link Exception} is raised.
      */
     static CircuitBreakerRule onException() {
         return builder().onException().thenFailure();
-    }
-
-    /**
-     * Returns newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
-     * if an {@link UnprocessedRequestException} which means that the request has not been processed by
-     * the server is raised.
-     */
-    static CircuitBreakerRule onUnprocessed() {
-        return builder().onUnprocessed().thenFailure();
     }
 
     /**
@@ -186,7 +175,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns a {@link CircuitBreakerRule} that combines the specified {@code circuitBreakerRules}.
+     * Returns a {@link CircuitBreakerRule} that combines the specified {@link CircuitBreakerRule}s.
      */
     static CircuitBreakerRule of(CircuitBreakerRule... circuitBreakerRules) {
         requireNonNull(circuitBreakerRules, "circuitBreakerRules");
@@ -198,8 +187,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns a {@link CircuitBreakerRule} that combines all the {@link CircuitBreakerRule} of
-     * the {@code circuitBreakerRules}.
+     * Returns a {@link CircuitBreakerRule} that combines the specified {@link CircuitBreakerRule}s.
      */
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     static CircuitBreakerRule of(Iterable<? extends CircuitBreakerRule> circuitBreakerRules) {
@@ -224,7 +212,7 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns a {@link CompletionStage} that contains {@link CircuitBreakerDecision} which indicates
+     * Returns a {@link CompletionStage} that contains a {@link CircuitBreakerDecision} which indicates
      * a {@link Response} is successful or not. If {@link CircuitBreakerDecision#success()} is returned,
      * {@link CircuitBreaker#onSuccess()} is called so that the {@link CircuitBreaker} increases its success
      * count and uses it to make a decision to close or open the circuit.
@@ -234,11 +222,10 @@ public interface CircuitBreakerRule {
      * be evaluated.
      *
      * <p>Note that the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
-     * a {@link Response} is not matched with the given {@link CircuitBreakerRule}s, the {@link Response} will
-     * be reported as a success.
+     * a {@link Response} is not matched with the given {@link CircuitBreakerRule}s,
+     * the {@link Response} is reported as a success.
      *
      * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
-     *
      * <pre>{@code
      * > CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
      * >                                                               @Nullable Throwable cause) {
@@ -253,7 +240,7 @@ public interface CircuitBreakerRule {
      * >     ...
      * >     return CompletableFuture.completedFuture(CircuitBreakerDecision.success())
      * > }
-     * }</pre>
+     * }</pre></p>
      *
      * @param ctx the {@link ClientRequestContext} of this request
      * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no

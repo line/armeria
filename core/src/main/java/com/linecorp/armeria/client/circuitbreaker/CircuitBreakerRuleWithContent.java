@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 
 /**
- * Determines whether a {@link Response} should be reported as a success or a failure to a
+ * Determines whether a {@link Response} should be reported as a success or failure to a
  * {@link CircuitBreaker} using the content of a {@link Response}. If you just need the HTTP headers
  * to make a decision, use {@link CircuitBreakerRule} for efficiency.
  *
@@ -92,7 +92,8 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
     }
 
     /**
-     * Returns a {@link CircuitBreakerRuleWithContent} that combines the specified {@code circuitBreakerRules}.
+     * Returns a {@link CircuitBreakerRuleWithContent} that combines the specified
+     * {@link CircuitBreakerRuleWithContent}s.
      */
     @SafeVarargs
     static <T extends Response> CircuitBreakerRuleWithContent<T> of(
@@ -106,8 +107,8 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
     }
 
     /**
-     * Returns a {@link CircuitBreakerRuleWithContent} that combines all the
-     * {@link CircuitBreakerRuleWithContent} of the {@code circuitBreakerRules}.
+     * Returns a {@link CircuitBreakerRuleWithContent} that combines the specified
+     * {@link CircuitBreakerRuleWithContent}s.
      */
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     static <T extends Response> CircuitBreakerRuleWithContent<T> of(
@@ -147,7 +148,7 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
     }
 
     /**
-     * Returns a {@link CompletionStage} that contains {@link CircuitBreakerDecision}.
+     * Returns a {@link CompletionStage} that contains a {@link CircuitBreakerDecision}.
      * If {@link CircuitBreakerDecision#success()} is returned, {@link CircuitBreaker#onSuccess()} is called
      * so that the {@link CircuitBreaker} increases its success count and uses it to make a decision
      * to close or open the circuit. If {@link CircuitBreakerDecision#failure()} is returned, it works the other

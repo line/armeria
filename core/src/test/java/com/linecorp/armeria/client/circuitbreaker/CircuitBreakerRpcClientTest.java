@@ -273,7 +273,7 @@ class CircuitBreakerRpcClientTest {
 
     /**
      * Returns a {@link CircuitBreakerRuleWithContent} which returns {@link CircuitBreakerDecision#failure()}
-     * when there's a {@link Exception} raised.
+     * when there's an {@link Exception} raised.
      */
     private static CircuitBreakerRuleWithContent<RpcResponse> rule() {
         return CircuitBreakerRuleWithContent.<RpcResponse>builder()

@@ -21,13 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
@@ -38,8 +34,6 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class CircuitBreakerClientRuleTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(CircuitBreakerClientRuleTest.class);
-
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -49,14 +43,6 @@ class CircuitBreakerClientRuleTest {
             sb.service("/slow", (ctx, req) -> HttpResponse.streaming());
         }
     };
-
-    AtomicLong counter;
-    CircuitBreakerListener listener;
-    CircuitBreaker circuitBreaker;
-
-    @BeforeEach
-    void setUp() {
-    }
 
     @Test
     void openCircuitWithContent() {

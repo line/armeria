@@ -17,10 +17,10 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class CircuitBreakerBuilderTest {
@@ -32,15 +32,6 @@ class CircuitBreakerBuilderTest {
     private static final Duration oneSecond = Duration.ofSeconds(1);
 
     private static final Duration twoSeconds = Duration.ofSeconds(2);
-
-    private static void throwsException(Runnable runnable) {
-        try {
-            runnable.run();
-            Assertions.fail();
-        } catch (IllegalArgumentException | IllegalStateException | NullPointerException e) {
-            // Expected
-        }
-    }
 
     private static CircuitBreakerBuilder builder() {
         return CircuitBreaker.builder(remoteServiceName);
@@ -54,8 +45,10 @@ class CircuitBreakerBuilderTest {
 
     @Test
     void testConstructorWithInvalidArgument() {
-        throwsException(() -> CircuitBreaker.builder(null));
-        throwsException(() -> CircuitBreaker.builder(""));
+        assertThatThrownBy(() -> CircuitBreaker.builder(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> CircuitBreaker.builder(""))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     CircuitBreakerConfig confOf(CircuitBreaker circuitBreaker) {
@@ -72,9 +65,12 @@ class CircuitBreakerBuilderTest {
 
     @Test
     void testFailureRateThresholdWithInvalidArgument() {
-        throwsException(() -> builder().failureRateThreshold(0));
-        throwsException(() -> builder().failureRateThreshold(-1));
-        throwsException(() -> builder().failureRateThreshold(1.1));
+        assertThatThrownBy(() -> builder().failureRateThreshold(0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().failureRateThreshold(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().failureRateThreshold(1.1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -88,7 +84,8 @@ class CircuitBreakerBuilderTest {
 
     @Test
     void testMinimumRequestThresholdWithInvalidArgument() {
-        throwsException(() -> builder().minimumRequestThreshold(-1));
+        assertThatThrownBy(() -> builder().minimumRequestThreshold(-1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -106,11 +103,16 @@ class CircuitBreakerBuilderTest {
 
     @Test
     void testTrialRequestIntervalWithInvalidArgument() {
-        throwsException(() -> builder().trialRequestInterval(null));
-        throwsException(() -> builder().trialRequestInterval(Duration.ZERO));
-        throwsException(() -> builder().trialRequestInterval(minusDuration));
-        throwsException(() -> builder().trialRequestIntervalMillis(-1));
-        throwsException(() -> builder().trialRequestIntervalMillis(0));
+        assertThatThrownBy(() -> builder().trialRequestInterval(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().trialRequestInterval(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().trialRequestInterval(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().trialRequestIntervalMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().trialRequestIntervalMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -128,11 +130,16 @@ class CircuitBreakerBuilderTest {
 
     @Test
     void testCircuitOpenWindowWithInvalidArgument() {
-        throwsException(() -> builder().circuitOpenWindow(null));
-        throwsException(() -> builder().circuitOpenWindow(Duration.ZERO));
-        throwsException(() -> builder().circuitOpenWindow(minusDuration));
-        throwsException(() -> builder().circuitOpenWindowMillis(-1));
-        throwsException(() -> builder().circuitOpenWindowMillis(0));
+        assertThatThrownBy(() -> builder().circuitOpenWindow(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindow(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindow(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindowMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindowMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -150,14 +157,20 @@ class CircuitBreakerBuilderTest {
 
     @Test
     void testCounterSlidingWindowWithInvalidArgument() {
-        throwsException(() -> builder().counterSlidingWindow(null));
-        throwsException(() -> builder().counterSlidingWindow(Duration.ZERO));
-        throwsException(() -> builder().counterSlidingWindow(minusDuration));
-        throwsException(() -> builder().counterSlidingWindowMillis(-1));
-        throwsException(() -> builder().counterSlidingWindowMillis(0));
+        assertThatThrownBy(() -> builder().counterSlidingWindow(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindow(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindow(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindowMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindowMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
 
-        throwsException(() -> builder().counterSlidingWindow(oneSecond).counterUpdateInterval(twoSeconds)
-                                       .build());
+        assertThatThrownBy(() -> builder().counterSlidingWindow(oneSecond).counterUpdateInterval(twoSeconds)
+                                          .build())
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -175,10 +188,15 @@ class CircuitBreakerBuilderTest {
 
     @Test
     void testCounterUpdateIntervalWithInvalidArgument() {
-        throwsException(() -> builder().counterUpdateInterval(null));
-        throwsException(() -> builder().counterUpdateInterval(Duration.ZERO));
-        throwsException(() -> builder().counterUpdateInterval(minusDuration));
-        throwsException(() -> builder().counterUpdateIntervalMillis(-1));
-        throwsException(() -> builder().counterUpdateIntervalMillis(0));
+        assertThatThrownBy(() -> builder().counterUpdateInterval(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().counterUpdateInterval(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterUpdateInterval(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterUpdateIntervalMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterUpdateIntervalMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

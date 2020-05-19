@@ -28,8 +28,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.HttpStatus;
@@ -39,8 +37,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
- * An abstract builder class which creates a {@link RetryRule}, a {@link RetryRuleWithContent},
- * {@link CircuitBreakerRule} or {@link CircuitBreakerRuleWithContent}.
+ * A skeletal builder implementation for {@link RetryRule} and {@link RetryRuleWithContent}.
  */
 @UnstableApi
 public abstract class AbstractRuleBuilder {
@@ -61,7 +58,7 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified {@code responseHeadersFilter}.
      */
     public AbstractRuleBuilder onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
@@ -77,14 +74,14 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified {@link HttpStatusClass}es.
      */
     public AbstractRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
         return onStatusClass(ImmutableSet.copyOf(requireNonNull(statusClasses, "statusClasses")));
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified {@link HttpStatusClass}es.
      */
     public AbstractRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
         requireNonNull(statusClasses, "statusClasses");
@@ -96,21 +93,21 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the {@link HttpStatusClass#SERVER_ERROR}.
      */
     public AbstractRuleBuilder onServerErrorStatus() {
         return onStatusClass(HttpStatusClass.SERVER_ERROR);
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified {@link HttpStatus}es.
      */
     public AbstractRuleBuilder onStatus(HttpStatus... statuses) {
         return onStatus(ImmutableSet.copyOf(requireNonNull(statuses, "statuses")));
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified {@link HttpStatus}es.
      */
     public AbstractRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
         requireNonNull(statuses, "statuses");
@@ -122,7 +119,7 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code statusFilter} for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified {@code statusFilter}.
      */
     public AbstractRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
         requireNonNull(statusFilter, "statusFilter");
@@ -131,7 +128,7 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified exception type for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified exception type.
      */
     public AbstractRuleBuilder onException(Class<? extends Throwable> exception) {
         requireNonNull(exception, "exception");
@@ -139,7 +136,7 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} or {@link CircuitBreakerRule}.
+     * Adds the specified {@code exceptionFilter}.
      */
     public AbstractRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
         requireNonNull(exceptionFilter, "exceptionFilter");
@@ -154,15 +151,14 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Makes a {@link RetryRule} or a {@link CircuitBreakerRule} perform on any {@link Exception}.
+     * Adds any {@link Exception}.
      */
     public AbstractRuleBuilder onException() {
         return onException(unused -> true);
     }
 
     /**
-     * Makes a {@link RetryRule} or a {@link CircuitBreakerRule} perform on
-     * an {@link UnprocessedRequestException}.
+     * Adds an {@link UnprocessedRequestException}.
      */
     public AbstractRuleBuilder onUnprocessed() {
         return onException(UnprocessedRequestException.class);

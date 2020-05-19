@@ -26,6 +26,9 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 
+/**
+ * A variant of {@link HttpResponse} that limits the maximum length of the content.
+ */
 public final class ContentPreviewResponse extends FilteredHttpResponse {
 
     private final int contentPreviewLength;

@@ -80,8 +80,6 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      *
      * @param contentPreviewLength the content length to preview. {@code 0} does not disable the length limit.
      *
-     * @return {@link RetryingClientBuilder} to support method chaining
-     *
      * @throws IllegalStateException if this builder is created with a {@link RetryRule} rather than
      *                               {@link RetryRuleWithContent}
      * @throws IllegalArgumentException if the specified {@code contentPreviewLength} is equal to or

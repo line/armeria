@@ -44,13 +44,15 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
     @Nullable
     private Function<? super T, ? extends CompletionStage<Boolean>> responseFilter;
 
-    protected AbstractRuleWithContentBuilder(
-            Predicate<? super RequestHeaders> requestHeadersFilter) {
+    /**
+     * Creates new instance with the specified {@code requestHeadersFilter}.
+     */
+    protected AbstractRuleWithContentBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
     /**
-     * Adds the specified {@code responseFilter} for an {@link AbstractRuleWithContentBuilder}.
+     * Adds the specified {@code responseFilter}.
      */
     @SuppressWarnings("unchecked")
     public AbstractRuleWithContentBuilder<T> onResponse(
@@ -88,6 +90,9 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
         return this;
     }
 
+    /**
+     * Returns the {@code responseFilter}.
+     */
     @Nullable
     protected final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter() {
         return responseFilter;

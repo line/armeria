@@ -88,7 +88,7 @@ Then the <type://WebClient> will immediately get <type://FailFastException> by t
 How does a <type://CircuitBreaker> know whether a <type://Response> is successful or not?
 <type://CircuitBreakerRule> does the job. In the example above, if the status of a <type://Response> is `5xx`
 or an `Exception` is raised during the call, the count of failure is increased.
-Of course, you can have your own `rule` by implementing <type://CircuitBreakerRule>.
+You can have your own `rule` by building <type://CircuitBreakerRule>.
 The following example builds a <type://CircuitBreakerRule> that fails when an `Exception`
 is raised or the status is `5xx`, succeeds when the status is `2xx` and ignores others.
 

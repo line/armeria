@@ -22,8 +22,8 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.retry.RetryingClientBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.Response;
 
 /**
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
@@ -51,15 +51,12 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
     }
 
     /**
-     * Sets the length of content required to determine whether to retry or not. If the total length of content
-     * exceeds this length and there's no retry condition matched, it will hand over the stream to the client.
+     * Sets the length of content required to determine a {@link Response} as a success or failure.
      * Note that this property is useful only if you specified {@link CircuitBreakerRuleWithContent} when
      * calling this builder's constructor. The default value of this property is
      * {@value #DEFAULT_CONTENT_PREVIEW_LENGTH}.
      *
      * @param contentPreviewLength the content length to preview. {@code 0} does not disable the length limit.
-     *
-     * @return {@link RetryingClientBuilder} to support method chaining
      *
      * @throws IllegalStateException if this builder is created with a {@link CircuitBreakerRule} rather than
      *                               {@link CircuitBreakerRuleWithContent}

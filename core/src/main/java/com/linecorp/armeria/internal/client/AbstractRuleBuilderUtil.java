@@ -29,9 +29,9 @@ import com.linecorp.armeria.common.util.Exceptions;
 public final class AbstractRuleBuilderUtil {
 
     /**
-     * Merges the filters of {@link AbstractRuleBuilder} into one that returns whether
-     * if the rules of the specified {@link AbstractRuleBuilder} is matched with
-     * the given {@link ClientRequestContext} and {@link Throwable}.
+     * Merges the filters of {@link AbstractRuleBuilder} that returns {@code true}
+     * if all rules in the {@link AbstractRuleBuilder} match
+     * a given {@link ClientRequestContext} and {@link Throwable}.
      */
     public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
     buildFilter(AbstractRuleBuilder builder) {

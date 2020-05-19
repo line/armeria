@@ -145,7 +145,8 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     /**
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
-     * of the specified {@code future}. If the completed value is {@code null}, this doesn't do anything.
+     * of the specified {@code future}. If the completed value is {@link CircuitBreakerDecision#ignore()},
+     * this doesn't do anything.
      */
     protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
                                                  CompletionStage<CircuitBreakerDecision> future) {
