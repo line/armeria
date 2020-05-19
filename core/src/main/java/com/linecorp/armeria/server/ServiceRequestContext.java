@@ -20,7 +20,6 @@ import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCl
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
@@ -68,11 +67,7 @@ public interface ServiceRequestContext extends RequestContext {
      */
     static ServiceRequestContext current() {
         final RequestContext ctx = RequestContext.current();
-        if (ctx instanceof ServiceRequestContext) {
-            return (ServiceRequestContext) ctx;
-        }
-
-        final ServiceRequestContext root = ((ClientRequestContext) ctx).root();
+        final ServiceRequestContext root = ctx.root();
         if (root != null) {
             return root;
         }
@@ -96,11 +91,7 @@ public interface ServiceRequestContext extends RequestContext {
             return null;
         }
 
-        if (ctx instanceof ServiceRequestContext) {
-            return (ServiceRequestContext) ctx;
-        }
-
-        final ServiceRequestContext root = ((ClientRequestContext) ctx).root();
+        final ServiceRequestContext root = ctx.root();
         if (root != null) {
             return root;
         }
@@ -155,6 +146,17 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
+     * {@inheritDoc} This method always returns {@code this}.
+     *
+     * @return {@code this}
+     */
+    @Nonnull
+    @Override
+    default ServiceRequestContext root() {
+        return this;
+    }
+
+    /**
      * Returns the {@link HttpRequest} associated with this context.
      */
     @Nonnull
@@ -186,10 +188,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the address of the client who initiated this request.
      */
-    default InetAddress clientAddress() {
-        final InetSocketAddress remoteAddress = remoteAddress();
-        return remoteAddress.getAddress();
-    }
+    InetAddress clientAddress();
 
     /**
      * Pushes this context to the thread-local stack. To pop the context from the stack, call
@@ -222,7 +221,7 @@ public interface ServiceRequestContext extends RequestContext {
             return () -> RequestContextUtil.pop(this, null);
         }
 
-        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
+        if (oldCtx.root() == this) {
             return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
