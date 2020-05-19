@@ -191,14 +191,8 @@ public abstract class NonWrappingRequestContext implements RequestContext {
         return attrs.attr(key);
     }
 
-    /**
-     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
-     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
-     * Unlike {@link #attr(AttributeKey)}, this does not search in {@code rootAttributeMap}.
-     *
-     * @see #attr(AttributeKey)
-     */
     @Nullable
+    @Override
     public <V> V ownAttr(AttributeKey<V> key) {
         requireNonNull(key, "key");
         return attrs.ownAttr(key);
@@ -232,12 +226,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
         return attrs.attrs();
     }
 
-    /**
-     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
-     * Unlike {@link #attrs()}, this does not iterate {@code rootAttributeMap}.
-     *
-     * @see #attrs()
-     */
+    @Override
     public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         return attrs.ownAttrs();
     }

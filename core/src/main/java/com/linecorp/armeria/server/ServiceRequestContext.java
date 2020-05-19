@@ -20,7 +20,6 @@ import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCl
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
@@ -154,6 +153,12 @@ public interface ServiceRequestContext extends RequestContext {
         return new ServiceRequestContextBuilder(request);
     }
 
+    @Nullable
+    @Override
+    default ServiceRequestContext root() {
+        return null;
+    }
+
     /**
      * Returns the {@link HttpRequest} associated with this context.
      */
@@ -186,10 +191,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the address of the client who initiated this request.
      */
-    default InetAddress clientAddress() {
-        final InetSocketAddress remoteAddress = remoteAddress();
-        return remoteAddress.getAddress();
-    }
+    InetAddress clientAddress();
 
     /**
      * Pushes this context to the thread-local stack. To pop the context from the stack, call
