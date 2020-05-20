@@ -71,6 +71,6 @@ export default class AnnotatedHttpTransport extends Transport {
       }
       return response;
     }
-    return '&lt;zero-length response&gt;';
+    return '<zero-length response>';
   }
 }
