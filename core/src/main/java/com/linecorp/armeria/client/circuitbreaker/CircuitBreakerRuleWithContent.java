@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or failure to a
- * {@link CircuitBreaker} using the content of a {@link Response}. If you just need the HTTP headers
+ * {@link CircuitBreaker} using the content of the {@link Response}. If you just need the HTTP headers
  * to make a decision, use {@link CircuitBreakerRule} for efficiency.
  *
  * @param <T> the response type

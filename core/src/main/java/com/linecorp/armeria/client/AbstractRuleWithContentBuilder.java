@@ -45,7 +45,7 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
     private Function<? super T, ? extends CompletionStage<Boolean>> responseFilter;
 
     /**
-     * Creates new instance with the specified {@code requestHeadersFilter}.
+     * Creates a new instance with the specified {@code requestHeadersFilter}.
      */
     protected AbstractRuleWithContentBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);

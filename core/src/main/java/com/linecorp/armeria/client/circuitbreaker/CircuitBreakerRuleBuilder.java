@@ -95,7 +95,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRule}.
      * If the specified {@code responseHeadersFilter} returns {@code true},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -107,7 +107,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link CircuitBreakerRule}.
      * If the class of the response status is one of the specified {@link HttpStatusClass}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -118,7 +118,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link CircuitBreakerRule}.
      * If the class of the response status is one of the specified {@link HttpStatusClass}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -129,7 +129,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link CircuitBreakerRule}.
      * If the class of the response status is {@link HttpStatusClass#SERVER_ERROR},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -140,7 +140,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified {@link HttpStatus}es for a {@link CircuitBreakerRule}.
      * If the response status is one of the specified {@link HttpStatus}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -151,7 +151,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified {@link HttpStatus}es for a {@link CircuitBreakerRule}.
      * If the response status is one of the specified {@link HttpStatus}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -162,7 +162,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified {@code statusFilter} for a {@link CircuitBreakerRule}.
      * If the response status matches the specified {@code statusFilter},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -173,7 +173,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified exception type for a {@link CircuitBreakerRule}.
      * If an {@link Exception} is raised and that is instance of the specified {@code exception},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -184,7 +184,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Adds the specified {@code exceptionFilter} for a {@link CircuitBreakerRule}.
      * If an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override

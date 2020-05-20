@@ -93,7 +93,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@code responseFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If the specified {@code responseFilter} completes with {@code true},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
@@ -105,7 +105,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If the specified {@code responseHeadersFilter} returns {@code true},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -118,7 +118,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link CircuitBreakerRuleWithContent}.
      * If the class of the response status is one of the specified {@link HttpStatusClass}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -130,7 +130,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@link HttpStatusClass}es for a {@link CircuitBreakerRuleWithContent}.
      * If the class of the response status is one of the specified {@link HttpStatusClass}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -142,7 +142,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link CircuitBreakerRuleWithContent}.
      * If the class of the response status is {@link HttpStatusClass#SERVER_ERROR},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -154,7 +154,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@link HttpStatus}es for a {@link CircuitBreakerRuleWithContent}.
      * If the response status is one of the specified {@link HttpStatus}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -166,7 +166,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@link HttpStatus}es for a {@link CircuitBreakerRuleWithContent}.
      * If the response status is one of the specified {@link HttpStatus}es,
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -178,7 +178,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@code statusFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If the response status matches the specified {@code statusFilter},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -190,7 +190,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified exception type for a {@link CircuitBreakerRuleWithContent}.
      * If an {@link Exception} is raised and that is instance of the specified {@code exception},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
@@ -202,7 +202,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Adds the specified {@code exceptionFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true},
-     * depending to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")

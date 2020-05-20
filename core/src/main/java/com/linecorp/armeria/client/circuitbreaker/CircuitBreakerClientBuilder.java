@@ -52,7 +52,7 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
 
     /**
      * Sets the length of content required to determine a {@link Response} as a success or failure.
-     * Note that this property is useful only if you specified {@link CircuitBreakerRuleWithContent} when
+     * Note that this property is useful only if you specified a {@link CircuitBreakerRuleWithContent} when
      * calling this builder's constructor. The default value of this property is
      * {@value #DEFAULT_CONTENT_PREVIEW_LENGTH}.
      *
