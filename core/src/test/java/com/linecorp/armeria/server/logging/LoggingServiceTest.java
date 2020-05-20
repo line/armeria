@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.logging;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,9 +30,9 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
@@ -43,7 +44,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RegexBasedSanitizer.RegexBasedSanitizerBuilder;
+import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -370,17 +371,16 @@ class LoggingServiceTest {
                               .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
-                              .requestHeadersSanitizer(new RegexBasedSanitizerBuilder()
-                                                               .pattern("trustin")
-                                                               .pattern("com")
-                                                               .build())
+                              .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                                      Pattern.compile("trustin"),
+                                      Pattern.compile("com")))
                               .newDecorator().apply(delegate);
 
-        Assertions.assertTrue(ctx.logBuilder().toString().contains("trustin"));
-        Assertions.assertTrue(ctx.logBuilder().toString().contains("test.com"));
+        assertThat(ctx.logBuilder().toString().contains("trustin"));
+        assertThat(ctx.logBuilder().toString().contains("test.com"));
         service.serve(ctx, ctx.request());
-        Assertions.assertFalse(ctx.logBuilder().toString().contains("trustin"));
-        Assertions.assertFalse(ctx.logBuilder().toString().contains("com"));
+        assertThat(!ctx.logBuilder().toString().contains("trustin"));
+        assertThat(!ctx.logBuilder().toString().contains("com"));
     }
 
     @Test
@@ -400,14 +400,13 @@ class LoggingServiceTest {
                               .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
-                              .requestContentSanitizer((new RegexBasedSanitizerBuilder()
-                                                       .pattern("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")
-                                                       .build()))
+                              .requestContentSanitizer(RegexBasedSanitizer.of(
+                                                       Pattern.compile("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")))
                               .newDecorator().apply(delegate);
 
-        Assertions.assertTrue(ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(ctx.logBuilder().toString().contains("333-490-4499"));
         service.serve(ctx, ctx.request());
-        Assertions.assertFalse(ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(!ctx.logBuilder().toString().contains("333-490-4499"));
     }
 
     @Test

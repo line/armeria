@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.logging;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
@@ -25,9 +26,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
@@ -40,11 +41,10 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RegexBasedSanitizer.RegexBasedSanitizerBuilder;
+import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 
 class LoggingClientTest {
-
     private static final HttpClient delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
@@ -113,19 +113,18 @@ class LoggingClientTest {
                 LoggingClient.builder()
                              .requestLogLevel(LogLevel.INFO)
                              .successfulResponseLogLevel(LogLevel.INFO)
-                             .requestHeadersSanitizer(new RegexBasedSanitizerBuilder()
-                                                              .pattern("trustin")
-                                                              .pattern("com")
-                                                              .build())
+                             .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                                     Pattern.compile("trustin"),
+                                     Pattern.compile("com")))
                              .build(delegate);
 
         // Pre sanitize step
-        Assertions.assertTrue(ctx.logBuilder().toString().contains("trustin"));
-        Assertions.assertTrue(ctx.logBuilder().toString().contains("test.com"));
+        assertThat(ctx.logBuilder().toString().contains("trustin"));
+        assertThat(ctx.logBuilder().toString().contains("test.com"));
         defaultLoggerClient.execute(ctx, req);
         // After the sanitize
-        Assertions.assertFalse(ctx.logBuilder().toString().contains("trustin"));
-        Assertions.assertFalse(ctx.logBuilder().toString().contains("com"));
+        assertThat(!ctx.logBuilder().toString().contains("trustin"));
+        assertThat(!ctx.logBuilder().toString().contains("com"));
     }
 
     @Test
@@ -143,15 +142,14 @@ class LoggingClientTest {
                 LoggingClient.builder()
                              .requestLogLevel(LogLevel.INFO)
                              .successfulResponseLogLevel(LogLevel.INFO)
-                             .requestContentSanitizer((new RegexBasedSanitizerBuilder()
-                                     .pattern("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")
-                                     .build()))
+                             .requestContentSanitizer(RegexBasedSanitizer.of(
+                                     Pattern.compile("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")))
                              .build(delegate);
 
         // Before sanitize content
-        Assertions.assertTrue(ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(ctx.logBuilder().toString().contains("333-490-4499"));
         defaultLoggerClient.execute(ctx, req);
         // Ensure sanitize the request content of the phone number 333-490-4499
-        Assertions.assertFalse(ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(!ctx.logBuilder().toString().contains("333-490-4499"));
     }
 }

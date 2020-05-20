@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 /**
  * Regex based sanitizer.
  */
-public class RegexBasedSanitizer extends AbstractSanitizerBase implements Function<Object, Object> {
+public final class RegexBasedSanitizer implements Function<Object, String> {
 
     private final List<Pattern> patterns;
 
@@ -37,8 +37,8 @@ public class RegexBasedSanitizer extends AbstractSanitizerBase implements Functi
     }
 
     @Override
-    public Object apply(Object input) {
-        String rawData = (String)super.apply(input);
+    public String apply(Object input) {
+        String rawData = input.toString();
         for (Pattern pattern : patterns) {
             final Matcher m = pattern.matcher(rawData);
             if (m.find()) {
@@ -49,39 +49,11 @@ public class RegexBasedSanitizer extends AbstractSanitizerBase implements Functi
     }
 
     /**
-     * Builder facilitates building regexsanitizer.
+     * Utility method to create RegexBasedSanitizer.
+     * @param p Pattern.
+     * @return
      */
-    public static class RegexBasedSanitizerBuilder {
-
-        private List<String> regexPatterns;
-
-        /**
-         * Constructor.
-         */
-        public RegexBasedSanitizerBuilder() {
-            regexPatterns = new ArrayList<>();
-        }
-
-        /**
-         * Set regex pattern.
-         * @param p string regex pattern.
-         * @return
-         */
-        public RegexBasedSanitizerBuilder pattern(String p) {
-            this.regexPatterns.add(p);
-            return this;
-        }
-
-        /**
-         * Build RegexBasedSanitizer.
-         * @return RegexBasedSanitizer.
-         */
-        public RegexBasedSanitizer build() {
-            final List<Pattern> patterns = new ArrayList<>();
-            if (!regexPatterns.isEmpty()) {
-                regexPatterns.forEach(p -> patterns.add(Pattern.compile(p)));
-            }
-            return new RegexBasedSanitizer(patterns);
-        }
+    public static RegexBasedSanitizer of(Pattern...p) {
+        return new RegexBasedSanitizer(Arrays.asList(p));
     }
 }
