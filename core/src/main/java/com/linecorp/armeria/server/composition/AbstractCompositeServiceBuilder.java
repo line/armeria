@@ -63,7 +63,10 @@ import com.linecorp.armeria.server.Service;
  * }</pre>
  *
  * @see CompositeServiceEntry
+ *
+ * @deprecated This class will be removed without a replacement.
  */
+@Deprecated
 public abstract class AbstractCompositeServiceBuilder<T extends Service<?, ?>> {
 
     private final List<CompositeServiceEntry<T>> services = new ArrayList<>();

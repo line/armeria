@@ -28,9 +28,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -88,6 +90,7 @@ public abstract class AbstractRequestContextBuilder {
     private long requestStartTimeMicros;
     @Nullable
     private Channel channel;
+    private boolean timeout;
 
     /**
      * Creates a new builder with the specified {@link HttpRequest}.
@@ -483,6 +486,24 @@ public abstract class AbstractRequestContextBuilder {
             channel = new FakeChannel(eventLoop(), alloc(), remoteAddress(), localAddress());
         }
         return channel;
+    }
+
+    /**
+     * Returns whether a timeout is set.
+     */
+    protected final boolean isTimedOut() {
+        return timeout;
+    }
+
+    /**
+     * Sets the specified {@code timeout}. If the specified {@code timeout} is {@code true},
+     * {@link RequestContext#isTimedOut()} will always return {@code true}.
+     * This is useful for checking the behavior of a {@link Service} and {@link Client}
+     * when a request exceeds a deadline.
+     */
+    public AbstractRequestContextBuilder isTimedOut(boolean timeout) {
+        this.timeout = timeout;
+        return this;
     }
 
     @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")

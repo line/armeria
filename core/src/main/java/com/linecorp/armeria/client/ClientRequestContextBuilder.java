@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
@@ -31,6 +32,8 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -42,6 +45,26 @@ import io.netty.channel.EventLoop;
  * cases such as unit testing.
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
+
+    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+        @Override
+        public boolean canSchedule() {
+            return true;
+        }
+
+        @Override
+        public void run() { /* no-op */ }
+    };
+
+    /**
+     * A timeout controller that has been timed-out.
+     */
+    private static final DefaultTimeoutController noopTimedOutController =
+            new DefaultTimeoutController(noopTimeoutTask, CommonPools.workerGroup().next());
+
+    static {
+        noopTimedOutController.timeoutNow();
+    }
 
     @Nullable
     private final String fragment;
@@ -119,6 +142,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             ctx.logBuilder().requestContent(rpcRequest(), null);
         }
 
+        final DefaultTimeoutController timeoutController;
+        if (isTimedOut()) {
+            timeoutController = noopTimedOutController;
+        } else {
+            timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
+        }
+        ctx.setResponseTimeoutController(timeoutController);
+
         return ctx;
     }
 
@@ -169,5 +200,10 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
                                                         long requestStartTimeMicros) {
         return (ClientRequestContextBuilder) super.requestStartTime(requestStartTimeNanos,
                                                                     requestStartTimeMicros);
+    }
+
+    @Override
+    public ClientRequestContextBuilder isTimedOut(boolean timeout) {
+        return (ClientRequestContextBuilder) super.isTimedOut(timeout);
     }
 }

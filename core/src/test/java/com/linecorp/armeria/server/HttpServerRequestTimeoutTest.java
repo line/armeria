@@ -106,6 +106,10 @@ class HttpServerRequestTimeoutTest {
                                                                    Duration.ofMillis(150)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
+              .service("/timeout-now", (ctx, req) -> {
+                  ctx.timeoutNow();
+                  return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
+              })
               .serviceUnder("/timeout-by-decorator", (ctx, req) -> HttpResponse.streaming())
               .decorator("/timeout-by-decorator/deadline", (delegate, ctx, req) -> {
                   ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
@@ -185,6 +189,13 @@ class HttpServerRequestTimeoutTest {
     void limitRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =
                 clientWithoutTimeout.get(serverWithoutTimeout.httpUri() + path).aggregate().join();
+        assertThat(response.status().code()).isEqualTo(503);
+    }
+
+    @Test
+    void timeoutNow() {
+        final AggregatedHttpResponse response =
+                clientWithoutTimeout.get(serverWithoutTimeout.httpUri() + "/timeout-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
     }
 }

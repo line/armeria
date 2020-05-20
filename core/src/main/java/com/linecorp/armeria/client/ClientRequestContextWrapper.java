@@ -145,4 +145,14 @@ public class ClientRequestContextWrapper
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         delegate().additionalRequestHeaders();
     }
+
+    @Override
+    public void timeoutNow() {
+        delegate().timeoutNow();
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return delegate().isTimedOut();
+    }
 }

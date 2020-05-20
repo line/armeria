@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -35,6 +36,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -61,6 +64,26 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             throw new UnsupportedOperationException();
         }
     };
+
+    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+        @Override
+        public boolean canSchedule() {
+            return true;
+        }
+
+        @Override
+        public void run() { /* no-op */ }
+    };
+
+    /**
+     * A timeout controller that has been timed-out.
+     */
+    private static final DefaultTimeoutController noopTimedOutController =
+            new DefaultTimeoutController(noopTimeoutTask, CommonPools.workerGroup().next());
+
+    static {
+        noopTimedOutController.timeoutNow();
+    }
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
@@ -188,12 +211,23 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
+        final DefaultTimeoutController timeoutController;
+        if (isTimedOut()) {
+            timeoutController = noopTimedOutController;
+        } else {
+            timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
+        }
+
         // Build the context with the properties set by a user and the fake objects.
-        return new DefaultServiceRequestContext(
+        final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, req, sslSession(), proxiedAddresses, clientAddress,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
+
+        ctx.setRequestTimeoutController(timeoutController);
+
+        return ctx;
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {
@@ -253,5 +287,10 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                                                          long requestStartTimeMicros) {
         return (ServiceRequestContextBuilder) super.requestStartTime(requestStartTimeNanos,
                                                                      requestStartTimeMicros);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder isTimedOut(boolean timeout) {
+        return (ServiceRequestContextBuilder) super.isTimedOut(timeout);
     }
 }
