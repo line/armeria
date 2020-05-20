@@ -299,10 +299,10 @@ public final class RequestScopedMdc {
             final Map<String, String> map =
                     delegateGetPropertyMap != null ? (Map<String, String>) delegateGetPropertyMap.invokeExact()
                                                    : delegate.getCopyOfContextMap();
-            if (map != null) {
-                return map;
-            }
+            return map;
         } catch (Throwable t) {
+            // We should not reach here because we tested `invokeExact()` works
+            // in the class initializer above.
             Exceptions.throwUnsafely(t);
         }
         return null;
