@@ -11,7 +11,6 @@ boms:
   - io.netty:netty-bom:4.1.50.Final
   - io.zipkin.brave:brave-bom:5.12.3
   - org.eclipse.jetty:jetty-bom:9.4.28.v20200408
-  - org.springframework.boot:spring-boot-dependencies:2.3.0.RELEASE
   - org.junit:junit-bom:5.6.2
 
 cglib:
@@ -496,13 +495,25 @@ org.slf4j:
     - https://static.javadoc.io/org.slf4j/slf4j-api/1.7.30/
   slf4j-simple: { version: *SLF4J_VERSION }
 
+org.springframework:
+  spring-web: { version: '5.2.6.RELEASE' }
+
 org.springframework.boot:
   spring-boot-starter:
+    version: &SPRING_BOOT_VERSION '2.3.0.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
+  spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
+  spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-webflux:
+    version: *SPRING_BOOT_VERSION
     exclusions:
     - org.springframework.boot:spring-boot-starter-reactor-netty
+  spring-boot-configuration-processor: { version: *SPRING_BOOT_VERSION }
+  spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
 
 org.testng:
   testng: { version: '7.1.0' }
