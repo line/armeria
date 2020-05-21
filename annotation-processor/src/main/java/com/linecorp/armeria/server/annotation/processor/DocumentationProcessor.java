@@ -80,7 +80,7 @@ public class DocumentationProcessor extends AbstractProcessor {
                 final StringWriter writer = new StringWriter();
                 e.printStackTrace(new PrintWriter(writer));
                 processingEnv.getMessager().printMessage(
-                        Kind.WARNING,
+                        Kind.ERROR,
                         String.format("Could not write properties for: %s" + System.lineSeparator() + "%s",
                                       className, writer));
             }

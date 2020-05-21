@@ -20,8 +20,6 @@ package com.linecorp.armeria.internal.server.annotation;
  * Helper class for Documentation processing.
  */
 public final class ProcessedDocumentationHelper {
-    private ProcessedDocumentationHelper() {}
-
     /**
      * Creates the file name used in the rest api documentation properties files.
      * @param className The class name used for generating the file name.
@@ -30,4 +28,6 @@ public final class ProcessedDocumentationHelper {
     public static String getFileName(String className) {
         return "com.linecorp.armeria.docstrings.annotated." + className + ".properties";
     }
+
+    private ProcessedDocumentationHelper() {}
 }
