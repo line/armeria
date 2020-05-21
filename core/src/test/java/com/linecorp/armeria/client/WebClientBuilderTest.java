@@ -84,7 +84,6 @@ class WebClientBuilderTest {
         final AggregatedHttpRequest request = AggregatedHttpRequest.of(
                 requestHeadersBuilder.method(HttpMethod.GET).build());
         final HttpResponse response = WebClient.of().execute(request);
-        assertThat(response.isOpen()).isTrue();
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo(path);
     }
 
