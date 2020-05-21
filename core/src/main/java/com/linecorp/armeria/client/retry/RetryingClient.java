@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.internal.client.ContentPreviewResponse;
+import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
 
@@ -239,10 +239,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     try (HttpResponseDuplicator duplicator =
                                  response.toDuplicator(derivedCtx.eventLoop(),
                                                        derivedCtx.maxResponseLength())) {
-                        final ContentPreviewResponse contentPreviewResponse =
-                                new ContentPreviewResponse(duplicator.duplicate(), contentPreviewLength);
+                        final TruncatingHttpResponse truncatingHttpResponse =
+                                new TruncatingHttpResponse(duplicator.duplicate(), contentPreviewLength);
                         final HttpResponse duplicated = duplicator.duplicate();
-                        retryRuleWithContent().shouldRetry(derivedCtx, contentPreviewResponse, null)
+                        retryRuleWithContent().shouldRetry(derivedCtx, truncatingHttpResponse, null)
                                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                     originalReq, returnedRes, future,
                                                                     duplicated, duplicator::abort));

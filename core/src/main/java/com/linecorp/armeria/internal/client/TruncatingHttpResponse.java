@@ -29,16 +29,17 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * A variant of {@link HttpResponse} that limits the maximum length of the content.
  */
-public final class ContentPreviewResponse extends FilteredHttpResponse {
+public final class TruncatingHttpResponse extends FilteredHttpResponse {
 
-    private final int contentPreviewLength;
+    private final int maxContentLength;
+
     private int contentLength;
     @Nullable
     private Subscription subscription;
 
-    public ContentPreviewResponse(HttpResponse delegate, int contentPreviewLength) {
+    public TruncatingHttpResponse(HttpResponse delegate, int maxContentLength) {
         super(delegate);
-        this.contentPreviewLength = contentPreviewLength;
+        this.maxContentLength = maxContentLength;
     }
 
     @Override
@@ -51,7 +52,7 @@ public final class ContentPreviewResponse extends FilteredHttpResponse {
         if (obj instanceof HttpData) {
             final int dataLength = ((HttpData) obj).length();
             contentLength += dataLength;
-            if (contentLength >= contentPreviewLength) {
+            if (contentLength >= maxContentLength) {
                 assert subscription != null;
                 subscription.cancel();
             }

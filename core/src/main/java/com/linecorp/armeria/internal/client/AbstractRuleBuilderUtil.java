@@ -34,10 +34,9 @@ public final class AbstractRuleBuilderUtil {
      * a given {@link ClientRequestContext} and {@link Throwable}.
      */
     public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
-    buildFilter(AbstractRuleBuilder builder, boolean hasResponseFilter) {
-        final Predicate<RequestHeaders> requestHeadersFilter = builder.requestHeadersFilter();
-        final Predicate<ResponseHeaders> responseHeadersFilter = builder.responseHeadersFilter();
-        final Predicate<Throwable> exceptionFilter = builder.exceptionFilter();
+    buildFilter(Predicate<RequestHeaders> requestHeadersFilter,
+                Predicate<ResponseHeaders> responseHeadersFilter,
+                Predicate<Throwable> exceptionFilter, boolean hasResponseFilter) {
         return (ctx, cause) -> {
             if (ctx.log().isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
                 final RequestHeaders requestHeaders = ctx.log().partial().requestHeaders();

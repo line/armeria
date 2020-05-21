@@ -28,6 +28,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.HttpStatus;
@@ -37,7 +39,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
- * A skeletal builder implementation for {@link RetryRule} and {@link RetryRuleWithContent}.
+ * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
+ * {@link CircuitBreakerRule} and {@link CircuitBreakerRuleWithContent}.
  */
 @UnstableApi
 public abstract class AbstractRuleBuilder {
@@ -167,7 +170,7 @@ public abstract class AbstractRuleBuilder {
     /**
      * Returns the {@link Predicate} of a {@link RequestHeaders}.
      */
-    public final Predicate<RequestHeaders> requestHeadersFilter() {
+    protected final Predicate<RequestHeaders> requestHeadersFilter() {
         return requestHeadersFilter;
     }
 
@@ -175,7 +178,7 @@ public abstract class AbstractRuleBuilder {
      * Returns the {@link Predicate} of a {@link ResponseHeaders}.
      */
     @Nullable
-    public final Predicate<ResponseHeaders> responseHeadersFilter() {
+    protected final Predicate<ResponseHeaders> responseHeadersFilter() {
         return responseHeadersFilter;
     }
 
@@ -183,7 +186,7 @@ public abstract class AbstractRuleBuilder {
      * Returns the {@link Predicate} of an {@link Exception}.
      */
     @Nullable
-    public final Predicate<Throwable> exceptionFilter() {
+    protected final Predicate<Throwable> exceptionFilter() {
         return exceptionFilter;
     }
 }

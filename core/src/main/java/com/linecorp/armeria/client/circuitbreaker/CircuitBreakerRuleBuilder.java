@@ -68,14 +68,15 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
-        return build(this, decision, false);
+        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
+                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
+                                                    exceptionFilter(), false);
+        return build(ruleFilter, decision);
     }
 
-    static CircuitBreakerRule build(AbstractRuleBuilder builder, CircuitBreakerDecision decision,
-                                    boolean hasResponseFilter) {
-        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> filter =
-                AbstractRuleBuilderUtil.buildFilter(builder, hasResponseFilter);
-
+    static CircuitBreakerRule build(
+            BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
+            CircuitBreakerDecision decision) {
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {
             decisionFuture = SUCCESS_DECISION;
@@ -87,7 +88,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
             decisionFuture = NEXT_DECISION;
         }
 
-        return filter.andThen(matched -> matched ? decisionFuture : NEXT_DECISION)::apply;
+        return ruleFilter.andThen(matched -> matched ? decisionFuture : NEXT_DECISION)::apply;
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
@@ -172,7 +173,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the specified exception type for a {@link CircuitBreakerRule}.
-     * If an {@link Exception} is raised and that is instance of the specified {@code exception},
+     * If an {@link Exception} is raised and it is an instance of the specified {@code exception},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */

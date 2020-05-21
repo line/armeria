@@ -71,20 +71,22 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
             exceptionFilter() == null && responseHeadersFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
-        return build(this, decision, false);
+        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
+                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(),
+                                                    responseHeadersFilter(),
+                                                    exceptionFilter(), false);
+        return build(ruleFilter, decision);
     }
 
-    static RetryRule build(AbstractRuleBuilder builder, RetryDecision decision, boolean hasResponseFilter) {
-        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> filter =
-                AbstractRuleBuilderUtil.buildFilter(builder, hasResponseFilter);
-
+    static RetryRule build(BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
+                           RetryDecision decision) {
         final CompletableFuture<RetryDecision> decisionFuture;
         if (decision == RetryDecision.DEFAULT) {
             decisionFuture = DEFAULT_DECISION;
         } else {
             decisionFuture = CompletableFuture.completedFuture(decision);
         }
-        return filter.andThen(matched -> matched ? decisionFuture : NEXT_DECISION)::apply;
+        return ruleFilter.andThen(matched -> matched ? decisionFuture : NEXT_DECISION)::apply;
     }
 
     @Override
@@ -165,7 +167,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     /**
      * Adds the specified exception type for a {@link RetryRule} which will retry
-     * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
+     * if an {@link Exception} is raised and it is an instance of the specified {@code exception}.
      */
     @Override
     public RetryRuleBuilder onException(Class<? extends Throwable> exception) {

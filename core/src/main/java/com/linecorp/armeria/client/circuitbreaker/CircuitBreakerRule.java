@@ -43,8 +43,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * {@link CircuitBreaker}. If you need to determine whether the request was successful by looking into the
  * {@link Response} content, use {@link CircuitBreakerRuleWithContent}.
  *
- * <p>Note that the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
- * a {@link Response} is not matched with the {@link CircuitBreakerRule}s, the {@link Response} will be
+ * <p>Note that if the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
+ * a {@link Response} is not matched with the {@link CircuitBreakerRule}s, then the {@link Response} will be
  * reported as a success.
  *
  * <p>For example:
@@ -119,7 +119,7 @@ public interface CircuitBreakerRule {
 
     /**
      * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
-     * if an {@link Exception} is raised and that is an instance of the specified {@code exception}.
+     * if an {@link Exception} is raised and it is an instance of the specified {@code exception}.
      */
     static CircuitBreakerRule onException(Class<? extends Throwable> exception) {
         return builder().onException(exception).thenFailure();
@@ -221,9 +221,9 @@ public interface CircuitBreakerRule {
      * ignores it. If {@link CircuitBreakerDecision#next()} is returned, a next {@link CircuitBreakerRule} will
      * be evaluated.
      *
-     * <p>Note that the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()} or
-     * a {@link Response} is not matched with the given {@link CircuitBreakerRule}s,
-     * the {@link Response} is reported as a success.
+     * <p>Note that if the last {@link CircuitBreakerRule} completes with {@link CircuitBreakerDecision#next()}
+     * or a {@link Response} is not matched with the given {@link CircuitBreakerRule}s,
+     * then the {@link Response} is reported as a success.
      *
      * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      * <pre>{@code

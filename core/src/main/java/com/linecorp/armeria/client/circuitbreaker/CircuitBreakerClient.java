@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.client.ContentPreviewResponse;
+import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
@@ -244,10 +244,10 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
                     if (needsContentInRule && cause == null) {
                         try (HttpResponseDuplicator duplicator =
                                      response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength())) {
-                            final ContentPreviewResponse contentPreviewResponse =
-                                    new ContentPreviewResponse(duplicator.duplicate(), contentPreviewLength);
+                            final TruncatingHttpResponse truncatingHttpResponse =
+                                    new TruncatingHttpResponse(duplicator.duplicate(), contentPreviewLength);
                             reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
-                                    ctx, contentPreviewResponse, null));
+                                    ctx, truncatingHttpResponse, null));
                             return duplicator.duplicate();
                         }
                     } else {

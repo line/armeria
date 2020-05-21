@@ -20,18 +20,21 @@ import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
  * A builder for creating a new {@link RetryRuleWithContent}.
@@ -83,7 +86,12 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
 
-        final RetryRule first = RetryRuleBuilder.build(this, decision, hasResponseFilter);
+        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
+                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(),
+                                                    responseHeadersFilter(),
+                                                    exceptionFilter(), hasResponseFilter);
+
+        final RetryRule first = RetryRuleBuilder.build(ruleFilter, decision);
         if (!hasResponseFilter) {
             return RetryRuleUtil.fromRetryRule(first);
         }
@@ -189,7 +197,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
     /**
      * Adds the specified exception type for a {@link RetryRuleWithContent} which will retry
-     * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
+     * if an {@link Exception} is raised and it is an instance of the specified {@code exception}.
      */
     @SuppressWarnings("unchecked")
     @Override

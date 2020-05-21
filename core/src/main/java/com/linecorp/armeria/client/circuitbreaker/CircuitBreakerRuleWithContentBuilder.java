@@ -19,16 +19,19 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
  * A builder for creating a new {@link CircuitBreakerRuleWithContent}.
@@ -68,7 +71,11 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     private CircuitBreakerRuleWithContent<T> build(CircuitBreakerDecision decision) {
         final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         final boolean hasResponseFilter = responseFilter != null;
-        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(this, decision, hasResponseFilter);
+        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
+                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
+                                                    exceptionFilter(), hasResponseFilter);
+
+        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(ruleFilter, decision);
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }
@@ -189,7 +196,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
 
     /**
      * Adds the specified exception type for a {@link CircuitBreakerRuleWithContent}.
-     * If an {@link Exception} is raised and that is instance of the specified {@code exception},
+     * If an {@link Exception} is raised and it is an instance of the specified {@code exception},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
