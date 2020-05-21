@@ -239,9 +239,7 @@ public interface ClientRequestContext extends RequestContext {
     default ClientRequestContext newDerivedContext(RequestId id,
                                                    @Nullable HttpRequest req,
                                                    @Nullable RpcRequest rpcReq) {
-        final Endpoint endpoint = endpoint();
-        checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(id, req, rpcReq, endpoint);
+        return newDerivedContext(id, req, rpcReq, endpoint());
     }
 
     /**
@@ -252,7 +250,7 @@ public interface ClientRequestContext extends RequestContext {
      * <p>Note that this method does not copy the {@link RequestLog} properties to the derived context.
      */
     ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                           Endpoint endpoint);
+                                           @Nullable Endpoint endpoint);
 
     /**
      * Returns the {@link EndpointGroup} used for the current {@link Request}.

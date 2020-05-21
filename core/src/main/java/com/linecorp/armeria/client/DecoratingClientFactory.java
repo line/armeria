@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -90,8 +92,10 @@ public class DecoratingClientFactory implements ClientFactory {
     }
 
     @Override
-    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol) {
-        return delegate().acquireEventLoop(endpoint, sessionProtocol);
+    public ReleasableHolder<EventLoop> acquireEventLoop(SessionProtocol sessionProtocol,
+                                                        EndpointGroup endpointGroup,
+                                                        @Nullable Endpoint endpoint) {
+        return delegate().acquireEventLoop(sessionProtocol, endpointGroup, endpoint);
     }
 
     @Override
