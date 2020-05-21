@@ -43,6 +43,10 @@ dependencies {
     configurations["kapt"].dependencies.add(project(":annotation-processor"))
 }
 
+kapt {
+    annotationProcessor("com.linecorp.armeria.server.annotation.processor.DocumentationProcessor")
+}
+
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xjsr305=strict")
