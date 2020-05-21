@@ -43,7 +43,8 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
      * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent} and
      * the specified {@code maxContentLength}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
+    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                                int maxContentLength) {
         super(ruleWithContent);
         needsContentInRule = true;
         this.maxContentLength = maxContentLength;
