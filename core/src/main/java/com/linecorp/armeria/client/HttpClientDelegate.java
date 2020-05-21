@@ -69,7 +69,6 @@ final class HttpClientDelegate implements HttpClient {
             // when context initialization failed due to an `EmptyEndpointGroupException`.
             //
             // See `DefaultClientRequestContext.init()` for more information.
-            System.err.println("!!!!!!");
             final UnprocessedRequestException cause =
                     new UnprocessedRequestException(EmptyEndpointGroupException.get());
             handleEarlyRequestException(ctx, req, cause);
