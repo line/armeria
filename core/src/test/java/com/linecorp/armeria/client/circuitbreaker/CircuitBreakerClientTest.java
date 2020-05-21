@@ -121,7 +121,7 @@ class CircuitBreakerClientTest {
     void ruleWithContent() {
         final CircuitBreakerRuleWithContent<HttpResponse> rule =
                 CircuitBreakerRuleWithContent.<HttpResponse>builder().onServerErrorStatus().thenFailure();
-        circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(rule));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(rule, 10000));
     }
 
     private static void circuitBreakerIsOpenOnServerError(CircuitBreakerClientBuilder builder) {

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -27,6 +28,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
@@ -190,7 +192,21 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      */
     public static CircuitBreakerClientBuilder builder(
             CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        return new CircuitBreakerClientBuilder(ruleWithContent);
+        return builder(ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerClientBuilder} with the specified
+     * {@link CircuitBreakerRuleWithContent} and the specified {@code maxContentLength} which is required to
+     * determine a {@link Response} as a success or failure.
+     *
+     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
+     *                                  less than {@code 0}
+     */
+    public static CircuitBreakerClientBuilder builder(
+            CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
+        checkArgument(maxContentLength > 0, "maxContentLength: %s (expected: > 0)", maxContentLength);
+        return new CircuitBreakerClientBuilder(ruleWithContent, maxContentLength);
     }
 
     private final boolean needsContentInRule;

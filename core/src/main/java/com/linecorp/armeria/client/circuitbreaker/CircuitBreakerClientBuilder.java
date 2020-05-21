@@ -16,14 +16,10 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Response;
 
 /**
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
@@ -32,7 +28,7 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
     static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
 
     private final boolean needsContentInRule;
-    private int maxContentLength = DEFAULT_MAX_CONTENT_LENGTH;
+    private final int maxContentLength;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -40,36 +36,17 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
     CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
         super(rule);
         needsContentInRule = false;
+        maxContentLength = 0;
     }
 
     /**
-     * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent}.
+     * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent} and
+     * the specified {@code maxContentLength}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
         super(ruleWithContent);
         needsContentInRule = true;
-    }
-
-    /**
-     * Sets the length of content required to determine a {@link Response} as a success or failure.
-     * Note that this property is useful only if you specified a {@link CircuitBreakerRuleWithContent} when
-     * calling this builder's constructor. The default value of this property is
-     * {@value #DEFAULT_MAX_CONTENT_LENGTH}.
-     *
-     * @param maxContentLength the maximum allowed content length. {@code 0} does not disable the length limit.
-     *
-     * @throws IllegalStateException if this builder is created with a {@link CircuitBreakerRule} rather than
-     *                               {@link CircuitBreakerRuleWithContent}
-     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
-     *                                  less than {@code 0}
-     */
-    public CircuitBreakerClientBuilder maxContentLength(int maxContentLength) {
-        checkState(needsContentInRule, "cannot set maxContentLength when CircuitBreakerRule " +
-                                       "is used; Use CircuitBreakerRuleWithContent to enable this feature.");
-        checkArgument(maxContentLength > 0,
-                      "maxContentLength: %s (expected: > 0)", maxContentLength);
         this.maxContentLength = maxContentLength;
-        return this;
     }
 
     /**

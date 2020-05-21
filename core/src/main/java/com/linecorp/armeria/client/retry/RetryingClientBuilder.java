@@ -37,7 +37,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     private boolean useRetryAfter;
 
     private int maxContentLength = DEFAULT_MAX_CONTENT_LENGTH;
-
+    private boolean isMaxContentLengthSet;
     private final boolean needsContentInRule;
 
     /**
@@ -46,6 +46,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     RetryingClientBuilder(RetryRule retryRule) {
         super(retryRule);
         needsContentInRule = false;
+        maxContentLength = 0;
     }
 
     /**
@@ -54,6 +55,16 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
         super(retryRuleWithContent);
         needsContentInRule = true;
+    }
+
+    /**
+     * Creates a new builder with the specified {@link RetryRuleWithContent}.
+     */
+    RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxContentLength) {
+        super(retryRuleWithContent);
+        needsContentInRule = true;
+        isMaxContentLengthSet = true;
+        this.maxContentLength = maxContentLength;
     }
 
     /**
@@ -77,14 +88,17 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      * Note that this property is useful only if you specified {@link RetryRuleWithContent} when calling
      * this builder's constructor. The default value of this property is {@value #DEFAULT_MAX_CONTENT_LENGTH}.
      *
-     * @param maxContentLength the maximum allowed content length. {@code 0} does not disable the length limit.
-     *
      * @throws IllegalStateException if this builder is created with a {@link RetryRule} rather than
      *                               {@link RetryRuleWithContent}
      * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
      *                                  less than {@code 0}
+     *
+     * @deprecated Use {@link RetryingClient#builder(RetryRuleWithContent, int)}.
      */
+    @Deprecated
     public RetryingClientBuilder maxContentLength(int maxContentLength) {
+        checkState(!isMaxContentLengthSet, "maxContentLength is already set by " +
+                                           "RetryingClient.builder(RetryRuleWithContent, maxContentLength)");
         checkState(needsContentInRule, "cannot set maxContentLength when RetryRule is used; " +
                                        "Use RetryRuleWithContent to enable this feature.");
         checkArgument(maxContentLength > 0,

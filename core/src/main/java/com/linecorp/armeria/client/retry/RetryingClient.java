@@ -69,6 +69,22 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
+     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRuleWithContent} and
+     * the specified {@code maxContentLength}.
+     * The {@code maxContentLength} required to determine whether to retry or not. If the total length of
+     * content exceeds this length and there's no retry condition matched,
+     * it will hand over the stream to the client.
+     *
+     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
+     *                                  less than {@code 0}
+     */
+    public static RetryingClientBuilder builder(RetryRuleWithContent<HttpResponse> retryRuleWithContent,
+                                                int maxContentLength) {
+        checkArgument(maxContentLength > 0, "maxContentLength: %s (expected: > 0)", maxContentLength);
+        return new RetryingClientBuilder(retryRuleWithContent, maxContentLength);
+    }
+
+    /**
      * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
      * requests.
      *
