@@ -503,7 +503,10 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void serverHeader() {
-        assertThat(ArmeriaHttpUtil.SERVER_HEADER).contains("Armeria/");
+        final String pattern = "Armeria/(\\d+).(\\d+).(\\d+)(-SNAPSHOT)?";
+        assertThat("Armeria/1.0.0").containsPattern(pattern);
+        assertThat("Armeria/1.0.0-SNAPSHOT").containsPattern(pattern);
+        assertThat(ArmeriaHttpUtil.SERVER_HEADER).containsPattern(pattern);
     }
 
     private static ServerConfig serverConfig() {
