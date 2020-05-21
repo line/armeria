@@ -19,8 +19,31 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class WebClientBuilderTest {
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/echo-path", (ctx, req) -> {
+                String pathAndQuery = ctx.path();
+                if (ctx.query() != null) {
+                    pathAndQuery += '?' + ctx.query();
+                }
+                return HttpResponse.of(pathAndQuery);
+            });
+        }
+    };
 
     @Test
     void uriWithNonePlusProtocol() throws Exception {
@@ -46,6 +69,23 @@ class WebClientBuilderTest {
         final WebClient client = WebClient.builder("http", Endpoint.of("127.0.0.1"), "/foo")
                                           .build();
         assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/foo");
+    }
+
+    @Test
+    void authorityHeader() {
+        final String path = "/echo-path?foo=bar";
+        final RequestHeadersBuilder requestHeadersBuilder =
+                RequestHeaders.builder()
+                              .authority("localhost:" + server.httpPort())
+                              .scheme("h2c")
+                              .add("param1", "val1")
+                              .path(path);
+
+        final AggregatedHttpRequest request = AggregatedHttpRequest.of(
+                requestHeadersBuilder.method(HttpMethod.GET).build());
+        final HttpResponse response = WebClient.of().execute(request);
+        assertThat(response.isOpen()).isTrue();
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo(path);
     }
 
     @Test
