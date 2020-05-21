@@ -29,10 +29,10 @@ import com.linecorp.armeria.common.Response;
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
  */
 public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
-    static final int DEFAULT_CONTENT_PREVIEW_LENGTH = Integer.MAX_VALUE;
+    static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
 
     private final boolean needsContentInRule;
-    private int contentPreviewLength = DEFAULT_CONTENT_PREVIEW_LENGTH;
+    private int maxContentLength = DEFAULT_MAX_CONTENT_LENGTH;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -54,21 +54,21 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
      * Sets the length of content required to determine a {@link Response} as a success or failure.
      * Note that this property is useful only if you specified a {@link CircuitBreakerRuleWithContent} when
      * calling this builder's constructor. The default value of this property is
-     * {@value #DEFAULT_CONTENT_PREVIEW_LENGTH}.
+     * {@value #DEFAULT_MAX_CONTENT_LENGTH}.
      *
-     * @param contentPreviewLength the content length to preview. {@code 0} does not disable the length limit.
+     * @param maxContentLength the maximum allowed content length. {@code 0} does not disable the length limit.
      *
      * @throws IllegalStateException if this builder is created with a {@link CircuitBreakerRule} rather than
      *                               {@link CircuitBreakerRuleWithContent}
-     * @throws IllegalArgumentException if the specified {@code contentPreviewLength} is equal to or
+     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
      *                                  less than {@code 0}
      */
-    public CircuitBreakerClientBuilder contentPreviewLength(int contentPreviewLength) {
-        checkState(needsContentInRule, "cannot set contentPreviewLength when CircuitBreakerRule " +
+    public CircuitBreakerClientBuilder maxContentLength(int maxContentLength) {
+        checkState(needsContentInRule, "cannot set maxContentLength when CircuitBreakerRule " +
                                        "is used; Use CircuitBreakerRuleWithContent to enable this feature.");
-        checkArgument(contentPreviewLength > 0,
-                      "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
-        this.contentPreviewLength = contentPreviewLength;
+        checkArgument(maxContentLength > 0,
+                      "maxContentLength: %s (expected: > 0)", maxContentLength);
+        this.maxContentLength = maxContentLength;
         return this;
     }
 
@@ -77,7 +77,7 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
      */
     public CircuitBreakerClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent(), contentPreviewLength);
+            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent(), maxContentLength);
         }
 
         return new CircuitBreakerClient(delegate, mapping(), rule());

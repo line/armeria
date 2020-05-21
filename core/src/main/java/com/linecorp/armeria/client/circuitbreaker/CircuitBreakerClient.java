@@ -194,7 +194,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
     }
 
     private final boolean needsContentInRule;
-    private final int contentPreviewLength;
+    private final int maxContentLength;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
@@ -202,7 +202,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
         super(delegate, mapping, rule);
         needsContentInRule = false;
-        contentPreviewLength = 0;
+        maxContentLength = 0;
     }
 
     /**
@@ -210,18 +210,17 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        this(delegate, mapping, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_CONTENT_PREVIEW_LENGTH);
+        this(delegate, mapping, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
-                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
-                         int contentPreviewLength) {
+                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
         super(delegate, mapping, ruleWithContent);
         needsContentInRule = true;
-        this.contentPreviewLength = contentPreviewLength;
+        this.maxContentLength = maxContentLength;
     }
 
     @Override
@@ -245,7 +244,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
                         try (HttpResponseDuplicator duplicator =
                                      response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength())) {
                             final TruncatingHttpResponse truncatingHttpResponse =
-                                    new TruncatingHttpResponse(duplicator.duplicate(), contentPreviewLength);
+                                    new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
                             reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
                                     ctx, truncatingHttpResponse, null));
                             return duplicator.duplicate();

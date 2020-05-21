@@ -32,11 +32,11 @@ import com.linecorp.armeria.common.HttpResponse;
  */
 public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<HttpResponse> {
 
-    private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = Integer.MAX_VALUE;
+    private static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
 
     private boolean useRetryAfter;
 
-    private int contentPreviewLength = DEFAULT_CONTENT_PREVIEW_LENGTH;
+    private int maxContentLength = DEFAULT_MAX_CONTENT_LENGTH;
 
     private final boolean needsContentInRule;
 
@@ -75,23 +75,42 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      * Sets the length of content required to determine whether to retry or not. If the total length of content
      * exceeds this length and there's no retry condition matched, it will hand over the stream to the client.
      * Note that this property is useful only if you specified {@link RetryRuleWithContent} when calling
-     * this builder's constructor. The default value of this property is
-     * {@value #DEFAULT_CONTENT_PREVIEW_LENGTH}.
+     * this builder's constructor. The default value of this property is {@value #DEFAULT_MAX_CONTENT_LENGTH}.
+     *
+     * @param maxContentLength the maximum allowed content length. {@code 0} does not disable the length limit.
+     *
+     * @throws IllegalStateException if this builder is created with a {@link RetryRule} rather than
+     *                               {@link RetryRuleWithContent}
+     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
+     *                                  less than {@code 0}
+     */
+    public RetryingClientBuilder maxContentLength(int maxContentLength) {
+        checkState(needsContentInRule, "cannot set maxContentLength when RetryRule is used; " +
+                                       "Use RetryRuleWithContent to enable this feature.");
+        checkArgument(maxContentLength > 0,
+                      "maxContentLength: %s (expected: > 0)", maxContentLength);
+        this.maxContentLength = maxContentLength;
+        return this;
+    }
+
+    /**
+     * Sets the length of content required to determine whether to retry or not. If the total length of content
+     * exceeds this length and there's no retry condition matched, it will hand over the stream to the client.
+     * Note that this property is useful only if you specified {@link RetryRuleWithContent} when calling
+     * this builder's constructor. The default value of this property is {@value #DEFAULT_MAX_CONTENT_LENGTH}.
      *
      * @param contentPreviewLength the content length to preview. {@code 0} does not disable the length limit.
      *
      * @throws IllegalStateException if this builder is created with a {@link RetryRule} rather than
      *                               {@link RetryRuleWithContent}
-     * @throws IllegalArgumentException if the specified {@code contentPreviewLength} is equal to or
+     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
      *                                  less than {@code 0}
+     *
+     * @deprecated Use {@link #maxContentLength(int)}.
      */
+    @Deprecated
     public RetryingClientBuilder contentPreviewLength(int contentPreviewLength) {
-        checkState(needsContentInRule, "cannot set contentPreviewLength when RetryRule is used; " +
-                                       "Use RetryRuleWithContent to enable this feature.");
-        checkArgument(contentPreviewLength > 0,
-                      "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
-        this.contentPreviewLength = contentPreviewLength;
-        return this;
+        return maxContentLength(contentPreviewLength);
     }
 
     /**
@@ -100,8 +119,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     public RetryingClient build(HttpClient delegate) {
         if (needsContentInRule) {
             return new RetryingClient(delegate, retryRuleWithContent(), maxTotalAttempts(),
-                                      responseTimeoutMillisForEachAttempt(), useRetryAfter,
-                                      contentPreviewLength);
+                                      responseTimeoutMillisForEachAttempt(), useRetryAfter, maxContentLength);
         }
 
         return new RetryingClient(delegate, retryRule(), maxTotalAttempts(),
@@ -120,7 +138,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     public String toString() {
         final ToStringHelper stringHelper = toStringHelper().add("useRetryAfter", useRetryAfter);
         if (needsContentInRule) {
-            stringHelper.add("contentPreviewLength", contentPreviewLength);
+            stringHelper.add("maxContentLength", maxContentLength);
         }
         return stringHelper.toString();
     }

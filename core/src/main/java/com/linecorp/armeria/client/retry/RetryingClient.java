@@ -149,7 +149,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private final boolean useRetryAfter;
 
-    private final int contentPreviewLength;
+    private final int maxContentLength;
 
     private final boolean needsContentInRule;
 
@@ -161,7 +161,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         super(delegate, retryRule, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
         needsContentInRule = false;
         this.useRetryAfter = useRetryAfter;
-        contentPreviewLength = 0;
+        maxContentLength = 0;
     }
 
     /**
@@ -169,13 +169,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      */
     RetryingClient(HttpClient delegate,
                    RetryRuleWithContent<HttpResponse> retryRuleWithContent, int totalMaxAttempts,
-                   long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int contentPreviewLength) {
+                   long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int maxContentLength) {
         super(delegate, retryRuleWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
         needsContentInRule = true;
         this.useRetryAfter = useRetryAfter;
-        checkArgument(contentPreviewLength > 0,
-                      "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
-        this.contentPreviewLength = contentPreviewLength;
+        checkArgument(maxContentLength > 0,
+                      "maxContentLength: %s (expected: > 0)", maxContentLength);
+        this.maxContentLength = maxContentLength;
     }
 
     @Override
@@ -240,7 +240,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                  response.toDuplicator(derivedCtx.eventLoop(),
                                                        derivedCtx.maxResponseLength())) {
                         final TruncatingHttpResponse truncatingHttpResponse =
-                                new TruncatingHttpResponse(duplicator.duplicate(), contentPreviewLength);
+                                new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
                         final HttpResponse duplicated = duplicator.duplicate();
                         retryRuleWithContent().shouldRetry(derivedCtx, truncatingHttpResponse, null)
                                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
