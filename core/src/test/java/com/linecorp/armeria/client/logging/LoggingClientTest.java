@@ -119,12 +119,12 @@ class LoggingClientTest {
                              .build(delegate);
 
         // Pre sanitize step
-        assertThat(ctx.logBuilder().toString().contains("trustin"));
-        assertThat(ctx.logBuilder().toString().contains("test.com"));
+        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains("test.com");
         defaultLoggerClient.execute(ctx, req);
         // After the sanitize
-        assertThat(!ctx.logBuilder().toString().contains("trustin"));
-        assertThat(!ctx.logBuilder().toString().contains("com"));
+        assertThat(ctx.logBuilder().toString()).doesNotContain("trustin");
+        assertThat(ctx.logBuilder().toString()).doesNotContain("com");
     }
 
     @Test
@@ -147,9 +147,9 @@ class LoggingClientTest {
                              .build(delegate);
 
         // Before sanitize content
-        assertThat(ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
         defaultLoggerClient.execute(ctx, req);
         // Ensure sanitize the request content of the phone number 333-490-4499
-        assertThat(!ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(ctx.logBuilder().toString()).doesNotContain("333-490-4499");
     }
 }

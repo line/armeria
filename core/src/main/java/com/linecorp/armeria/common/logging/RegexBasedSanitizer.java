@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,11 +15,14 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import java.util.Arrays;
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Regex based sanitizer.
@@ -29,11 +32,11 @@ public final class RegexBasedSanitizer implements Function<Object, String> {
     private final List<Pattern> patterns;
 
     /**
-     * Constructor.
-     * @param p Regex pattern.
+     * Creates a new instance.
+     * @param patterns {@link Pattern}.
      */
-    RegexBasedSanitizer(List<Pattern> p) {
-        this.patterns = p;
+    RegexBasedSanitizer(List<Pattern> patterns) {
+        this.patterns = patterns;
     }
 
     @Override
@@ -50,10 +53,21 @@ public final class RegexBasedSanitizer implements Function<Object, String> {
 
     /**
      * Utility method to create RegexBasedSanitizer.
-     * @param p Pattern.
-     * @return
+     * @param patterns {@link Pattern}
+     * @return {@link RegexBasedSanitizer}
      */
-    public static RegexBasedSanitizer of(Pattern...p) {
-        return new RegexBasedSanitizer(Arrays.asList(p));
+    public static RegexBasedSanitizer of(Pattern... patterns) {
+        requireNonNull(patterns, "patterns");
+        return new RegexBasedSanitizer(ImmutableList.copyOf(patterns));
+    }
+
+    /**
+     * Utility method to create RegexBasedSanitizer.
+     * @param patterns {@link Pattern}
+     * @return {@link RegexBasedSanitizer}
+     */
+    public static RegexBasedSanitizer of(Iterable<Pattern> patterns) {
+        requireNonNull(patterns, "patterns");
+        return new RegexBasedSanitizer(ImmutableList.copyOf(patterns));
     }
 }

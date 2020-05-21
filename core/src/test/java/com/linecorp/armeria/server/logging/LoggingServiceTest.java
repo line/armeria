@@ -379,8 +379,8 @@ class LoggingServiceTest {
         assertThat(ctx.logBuilder().toString().contains("trustin"));
         assertThat(ctx.logBuilder().toString().contains("test.com"));
         service.serve(ctx, ctx.request());
-        assertThat(!ctx.logBuilder().toString().contains("trustin"));
-        assertThat(!ctx.logBuilder().toString().contains("com"));
+        assertThat(ctx.logBuilder().toString()).doesNotContain("trustin");
+        assertThat(ctx.logBuilder().toString()).doesNotContain("com");
     }
 
     @Test
@@ -404,9 +404,9 @@ class LoggingServiceTest {
                                                        Pattern.compile("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")))
                               .newDecorator().apply(delegate);
 
-        assertThat(ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
         service.serve(ctx, ctx.request());
-        assertThat(!ctx.logBuilder().toString().contains("333-490-4499"));
+        assertThat(ctx.logBuilder().toString()).doesNotContain("333-490-4499");
     }
 
     @Test
