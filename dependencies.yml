@@ -4,7 +4,7 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.11.0
-  - io.dropwizard.metrics:metrics-bom:4.1.7
+  - io.dropwizard.metrics:metrics-bom:4.1.8
   - io.grpc:grpc-bom:1.29.0
   - io.micrometer:micrometer-bom:1.5.1
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
@@ -40,7 +40,7 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.8.2'
+    version: '2.8.3'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
@@ -53,7 +53,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.2.0' }
 
 com.github.node-gradle:
-  gradle-node-plugin: { version: '2.2.3' }
+  gradle-node-plugin: { version: '2.2.4' }
 
 com.google.api:
   gax-grpc: { version: '1.56.0' }
@@ -112,14 +112,14 @@ com.google.protobuf:
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
-  eureka-client: { version: &EUREKA_VERSION '1.9.20' }
+  eureka-client: { version: &EUREKA_VERSION '1.9.22' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.32' }
 
 com.salesforce.servicelibs:
-  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.0' }
+  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
   reactor-grpc-stub: { version: *REACTVIVE_GRPC_VERSION }
 
 com.spotify:
@@ -132,7 +132,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.8.1'
+    version: &RETROFIT2_VERSION '2.8.2'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -201,7 +201,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.1' }
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.2' }
   protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
@@ -377,7 +377,7 @@ org.assertj:
   assertj-core: { version: '3.16.1' }
 
 org.awaitility:
-  awaitility: { version: '4.0.2' }
+  awaitility: { version: '4.0.3' }
 
 org.bouncycastle:
   bcprov-jdk15on:
@@ -432,7 +432,7 @@ org.jetbrains.kotlin:
   kotlin-allopen: { version: &KOTLIN_VERSION '1.3.72' }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.6' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.7' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
