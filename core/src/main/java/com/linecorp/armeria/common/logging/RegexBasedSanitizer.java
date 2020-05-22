@@ -44,9 +44,7 @@ public final class RegexBasedSanitizer implements Function<Object, String> {
         String rawData = input.toString();
         for (Pattern pattern : patterns) {
             final Matcher m = pattern.matcher(rawData);
-            if (m.find()) {
-                rawData = m.replaceAll("");
-            }
+            rawData = m.replaceAll("");
         }
         return rawData;
     }
