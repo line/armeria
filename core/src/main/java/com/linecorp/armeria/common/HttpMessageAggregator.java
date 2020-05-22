@@ -96,6 +96,7 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
                 }
                 content = HttpData.wrap(merged);
             }
+            contentList.clear();
         }
 
         try {
