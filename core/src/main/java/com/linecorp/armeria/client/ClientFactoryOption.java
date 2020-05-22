@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -30,7 +31,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
+import com.linecorp.armeria.client.proxy.ProxyConfigSelector.WrappingProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOption;
@@ -216,10 +218,10 @@ public final class ClientFactoryOption<T>
             define("METER_REGISTRY", Metrics.globalRegistry);
 
     /**
-     * The {@link ProxyConfig} which contains proxy related configuration.
+     * TODO: add javadoc.
      */
-    public static final ClientFactoryOption<ProxyConfig> PROXY_CONFIG =
-            define("PROXY_CONFIG", ProxyConfig.direct());
+    public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
+            define("PROXY_CONFIG_SELECTOR", WrappingProxyConfigSelector.of(ProxySelector.getDefault()));
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.

@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 
 import javax.annotation.Nullable;
 
@@ -137,6 +138,7 @@ final class HttpClientDelegate implements HttpClient {
         final int port = endpointWithPort.port();
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop());
+        final URI originalUri = endpointWithPort.toUri(ctx.sessionProtocol(), req.path());
 
         final PoolKey key = new PoolKey(host, ipAddr, port);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
@@ -144,16 +146,17 @@ final class HttpClientDelegate implements HttpClient {
             logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
-                logSession(ctx, newPooledChannel, timingsBuilder.build());
-                if (cause == null) {
-                    doExecute(newPooledChannel, ctx, req, res);
-                } else {
-                    handleEarlyRequestException(ctx, req, cause);
-                    res.close(cause);
-                }
-                return null;
-            });
+            pool.acquireLater(protocol, key, timingsBuilder, originalUri)
+                .handle((newPooledChannel, cause) -> {
+                    logSession(ctx, newPooledChannel, timingsBuilder.build());
+                    if (cause == null) {
+                        doExecute(newPooledChannel, ctx, req, res);
+                    } else {
+                        handleEarlyRequestException(ctx, req, cause);
+                        res.close(cause);
+                    }
+                    return null;
+                });
         }
     }
 
