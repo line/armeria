@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.endpoint;
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.roundRobin;
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.weightedRoundRobin;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Random;
