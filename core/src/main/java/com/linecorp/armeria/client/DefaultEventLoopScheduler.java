@@ -37,6 +37,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -111,18 +112,22 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     }
 
     @Override
-    public ReleasableHolder<EventLoop> acquire(Endpoint endpoint, SessionProtocol sessionProtocol) {
-        requireNonNull(endpoint, "endpoint");
+    public ReleasableHolder<EventLoop> acquire(SessionProtocol sessionProtocol,
+                                               EndpointGroup endpointGroup,
+                                               @Nullable Endpoint endpoint) {
         requireNonNull(sessionProtocol, "sessionProtocol");
-        final AbstractEventLoopState state = state(endpoint, sessionProtocol);
+        requireNonNull(endpointGroup, "endpointGroup");
+        final AbstractEventLoopState state = state(sessionProtocol, endpointGroup, endpoint);
         final AbstractEventLoopEntry acquired = state.acquire();
         cleanup();
         return acquired;
     }
 
     @VisibleForTesting
-    List<AbstractEventLoopEntry> entries(Endpoint endpoint, SessionProtocol sessionProtocol) {
-        return state(endpoint, sessionProtocol).entries();
+    List<AbstractEventLoopEntry> entries(SessionProtocol sessionProtocol,
+                                         EndpointGroup endpointGroup,
+                                         @Nullable Endpoint endpoint) {
+        return state(sessionProtocol, endpointGroup, endpoint).entries();
     }
 
     /**
@@ -134,7 +139,15 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
      * {@code maxNumEventLoopsPerEndpoint} and {@code maxNumEventLoopsPerHttp1Endpoint} dependent on
      * the {@link SessionProtocol} when the {@code maxNumEventLoopsFunction} does not produce a value.
      */
-    private AbstractEventLoopState state(Endpoint endpoint, SessionProtocol sessionProtocol) {
+    private AbstractEventLoopState state(SessionProtocol sessionProtocol,
+                                         EndpointGroup endpointGroup,
+                                         @Nullable Endpoint endpoint) {
+        if (endpoint == null) {
+            // Use a fake endpoint if no endpoint was selected from the endpointGroup.
+            endpoint = Endpoint.of(
+                    "armeria-group-" + Integer.toHexString(System.identityHashCode(endpointGroup)));
+        }
+
         final String firstTryHost;
         final String secondTryHost;
         if (endpoint.hasIpAddr()) {

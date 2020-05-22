@@ -239,6 +239,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                         // future is cancelled when the client factory is closed.
                         actionOnException.accept(new IllegalStateException(
                                 ClientFactory.class.getSimpleName() + " has been closed."));
+                    } else if (future.cause() != null) {
+                        // Other unexpected exceptions.
+                        actionOnException.accept(future.cause());
                     }
                 });
             }

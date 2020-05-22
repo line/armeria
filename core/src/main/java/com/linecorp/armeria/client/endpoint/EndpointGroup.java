@@ -136,7 +136,8 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      * Selects an {@link Endpoint} from this {@link EndpointGroup}.
      *
      * @return the {@link Endpoint} selected by the {@link EndpointSelectionStrategy},
-     *         which was specified when constructing this {@link EndpointGroup}.
+     *         which was specified when constructing this {@link EndpointGroup},
+     *         or {@code null} if this {@link EndpointGroup} is empty.
      */
     @Override
     Endpoint select(ClientRequestContext ctx);
