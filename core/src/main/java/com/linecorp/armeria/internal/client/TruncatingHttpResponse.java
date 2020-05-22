@@ -34,8 +34,9 @@ public final class TruncatingHttpResponse extends FilteredHttpResponse {
     private final int maxContentLength;
 
     private int contentLength;
+    private boolean overflow;
     @Nullable
-    private Subscription subscription;
+    private Subscriber<? super HttpObject> subscriber;
 
     public TruncatingHttpResponse(HttpResponse delegate, int maxContentLength) {
         super(delegate);
@@ -44,7 +45,7 @@ public final class TruncatingHttpResponse extends FilteredHttpResponse {
 
     @Override
     protected void beforeSubscribe(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
-        this.subscription = subscription;
+        this.subscriber = subscriber;
     }
 
     @Override
@@ -52,9 +53,10 @@ public final class TruncatingHttpResponse extends FilteredHttpResponse {
         if (obj instanceof HttpData) {
             final int dataLength = ((HttpData) obj).length();
             contentLength += dataLength;
-            if (contentLength >= maxContentLength) {
-                assert subscription != null;
-                subscription.cancel();
+            if (contentLength > maxContentLength && !overflow) {
+                overflow = true;
+                assert subscriber != null;
+                subscriber.onComplete();
             }
         }
         return obj;
