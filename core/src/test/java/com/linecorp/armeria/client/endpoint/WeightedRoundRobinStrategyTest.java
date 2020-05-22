@@ -45,7 +45,7 @@ class WeightedRoundRobinStrategyTest {
                                     Endpoint.parse("localhost:2345"))
                                 .select(ctx)).isNotNull();
 
-        assertThatThrownBy(() -> emptyGroup.select(ctx)).isInstanceOf(EmptyEndpointGroupException.class);
+        assertThat(emptyGroup.select(ctx)).isNull();
     }
 
     @Test

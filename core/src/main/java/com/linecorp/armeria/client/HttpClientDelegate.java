@@ -60,13 +60,12 @@ final class HttpClientDelegate implements HttpClient {
         if (endpoint == null) {
             // It is possible that we reach here even when `EndpointGroup` is not empty,
             // because `endpoint` can be `null` for the following two cases:
-            // - `EndpointGroup.select()` raised an `EmptyEndpointGroupException`.
-            // - Other exception was raised while context initialization.
+            // - `EndpointGroup.select()` returned `null`.
+            // - An exception was raised while context initialization.
             //
             // Because all the clean-up is done by `DefaultClientRequestContext.failEarly()`
-            // when context initialization fails with an exception other than `EmptyEndpointGroupException`,
-            // we can assume that the exception and response created here will be exposed only
-            // when context initialization failed due to an `EmptyEndpointGroupException`.
+            // when context initialization fails with an exception, we can assume that the exception
+            // and response created here will be exposed only when `EndpointGroup.select()` returned `null`.
             //
             // See `DefaultClientRequestContext.init()` for more information.
             final UnprocessedRequestException cause =

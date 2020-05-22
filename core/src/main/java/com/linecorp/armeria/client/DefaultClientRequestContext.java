@@ -29,7 +29,6 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -214,11 +213,6 @@ public final class DefaultClientRequestContext
                 runThreadLocalContextCustomizers();
                 updateEndpoint(endpointGroup.select(this));
             }
-        } catch (EmptyEndpointGroupException e) {
-            // We still need to continue to process the request to give decorators
-            // a chance to handle the case of no available endpoints.
-            // For example, RetryingClient could re-attempt the request
-            // when the endpoint group has endpoints available again.
         } catch (Throwable t) {
             cause = t;
         }

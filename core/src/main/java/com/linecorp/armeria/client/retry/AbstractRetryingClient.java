@@ -32,7 +32,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -345,14 +344,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final EndpointGroup endpointGroup = ctx.endpointGroup();
         final ClientRequestContext derived;
         if (endpointGroup != null && !initialAttempt) {
-            Endpoint endpoint = null;
-            try {
-                endpoint = endpointGroup.select(ctx);
-            } catch (EmptyEndpointGroupException e) {
-                // Use null to indicate an empty endpoint group,
-                // like we do in `DefaultClientRequestContext.init()`.
-            }
-            derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
+            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.select(ctx));
         } else {
             derived = ctx.newDerivedContext(id, req, rpcReq);
         }

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
@@ -28,7 +30,10 @@ public interface EndpointSelector {
      * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
      * {@link ClientRequestContext}.
      *
-     * @return the {@link Endpoint} selected by this {@link EndpointSelector}'s selection strategy
+     * @return the {@link Endpoint} selected by this {@link EndpointSelector}'s selection strategy,
+     *         or {@code null} if no {@link Endpoint} was selected, which can happen
+     *         if the {@link EndpointGroup} is empty.
      */
+    @Nullable
     Endpoint select(ClientRequestContext ctx);
 }
