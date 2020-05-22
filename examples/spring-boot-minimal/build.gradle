@@ -9,10 +9,6 @@ buildscript {
 
 apply plugin: 'org.springframework.boot'
 
-springBoot {
-    mainClassName = 'example.springframework.boot.minimal.Main'
-}
-
 dependencies {
     implementation project(':spring:boot-starter')
     implementation 'org.hibernate.validator:hibernate-validator'

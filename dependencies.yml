@@ -12,6 +12,7 @@ boms:
   - io.zipkin.brave:brave-bom:5.12.3
   - org.eclipse.jetty:jetty-bom:9.4.28.v20200408
   - org.junit:junit-bom:5.6.2
+
 cglib:
   cglib: { version: '3.3.0' }
 
@@ -494,12 +495,16 @@ org.slf4j:
     - https://static.javadoc.io/org.slf4j/slf4j-api/1.7.30/
   slf4j-simple: { version: *SLF4J_VERSION }
 
+org.springframework:
+  spring-web: { version: '5.2.6.RELEASE' }
+
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.2.7.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.3.0.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
+  spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }

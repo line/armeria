@@ -3,6 +3,8 @@ dependencies {
     api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
 
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
