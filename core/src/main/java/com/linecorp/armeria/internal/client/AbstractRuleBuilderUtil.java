@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal.client;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -35,8 +37,9 @@ public final class AbstractRuleBuilderUtil {
      */
     public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
     buildFilter(Predicate<RequestHeaders> requestHeadersFilter,
-                Predicate<ResponseHeaders> responseHeadersFilter,
-                Predicate<Throwable> exceptionFilter, boolean hasResponseFilter) {
+                @Nullable Predicate<ResponseHeaders> responseHeadersFilter,
+                @Nullable Predicate<Throwable> exceptionFilter,
+                boolean hasResponseFilter) {
         return (ctx, cause) -> {
             if (ctx.log().isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
                 final RequestHeaders requestHeaders = ctx.log().partial().requestHeaders();

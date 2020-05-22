@@ -96,7 +96,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      * @deprecated Use {@link RetryingClient#builder(RetryRuleWithContent, int)}.
      */
     @Deprecated
-    public RetryingClientBuilder maxContentLength(int maxContentLength) {
+    public RetryingClientBuilder contentPreviewLength(int maxContentLength) {
         checkState(!isMaxContentLengthSet, "maxContentLength is already set by " +
                                            "RetryingClient.builder(RetryRuleWithContent, maxContentLength)");
         checkState(needsContentInRule, "cannot set maxContentLength when RetryRule is used; " +
@@ -105,26 +105,6 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
                       "maxContentLength: %s (expected: > 0)", maxContentLength);
         this.maxContentLength = maxContentLength;
         return this;
-    }
-
-    /**
-     * Sets the length of content required to determine whether to retry or not. If the total length of content
-     * exceeds this length and there's no retry condition matched, it will hand over the stream to the client.
-     * Note that this property is useful only if you specified {@link RetryRuleWithContent} when calling
-     * this builder's constructor. The default value of this property is {@value #DEFAULT_MAX_CONTENT_LENGTH}.
-     *
-     * @param contentPreviewLength the content length to preview. {@code 0} does not disable the length limit.
-     *
-     * @throws IllegalStateException if this builder is created with a {@link RetryRule} rather than
-     *                               {@link RetryRuleWithContent}
-     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
-     *                                  less than {@code 0}
-     *
-     * @deprecated Use {@link #maxContentLength(int)}.
-     */
-    @Deprecated
-    public RetryingClientBuilder contentPreviewLength(int contentPreviewLength) {
-        return maxContentLength(contentPreviewLength);
     }
 
     /**

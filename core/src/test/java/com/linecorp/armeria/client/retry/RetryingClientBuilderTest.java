@@ -46,12 +46,12 @@ class RetryingClientBuilderTest {
         final RetryRuleWithContent<HttpResponse> rule = RetryRuleWithContent.onResponse(unused -> null);
 
         RetryingClient.builder(rule, 1);
-        RetryingClient.builder(rule).maxContentLength(10);
+        RetryingClient.builder(rule).contentPreviewLength(10);
 
         assertThatThrownBy(() -> RetryingClient.builder(rule, -1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("maxContentLength: -1 (expected: > 0)");
-        assertThatThrownBy(() -> RetryingClient.builder(rule, 1).maxContentLength(10))
+        assertThatThrownBy(() -> RetryingClient.builder(rule, 1).contentPreviewLength(10))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("maxContentLength is already set by");
     }
