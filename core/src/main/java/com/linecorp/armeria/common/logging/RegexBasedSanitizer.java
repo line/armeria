@@ -22,12 +22,30 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 /**
  * Regex based sanitizer.
  */
 public final class RegexBasedSanitizer implements Function<Object, String> {
+
+    /**
+     * Returns a new instance created from the specified {@link Pattern}s.
+     */
+    public static RegexBasedSanitizer of(Pattern... patterns) {
+        requireNonNull(patterns, "patterns");
+        return new RegexBasedSanitizer(ImmutableList.copyOf(patterns));
+    }
+
+    /**
+     * Returns a new instance created from the specified {@link Pattern}s.
+     */
+    public static RegexBasedSanitizer of(Iterable<Pattern> patterns) {
+        requireNonNull(patterns, "patterns");
+        return new RegexBasedSanitizer(ImmutableList.copyOf(patterns));
+    }
 
     private final List<Pattern> patterns;
 
@@ -39,33 +57,18 @@ public final class RegexBasedSanitizer implements Function<Object, String> {
         this.patterns = patterns;
     }
 
+    @Nullable
     @Override
-    public String apply(Object input) {
+    public String apply(@Nullable Object input) {
+        if (input == null) {
+            return null;
+        }
+
         String rawData = input.toString();
         for (Pattern pattern : patterns) {
             final Matcher m = pattern.matcher(rawData);
             rawData = m.replaceAll("");
         }
         return rawData;
-    }
-
-    /**
-     * Utility method to create RegexBasedSanitizer.
-     * @param patterns {@link Pattern}
-     * @return {@link RegexBasedSanitizer}
-     */
-    public static RegexBasedSanitizer of(Pattern... patterns) {
-        requireNonNull(patterns, "patterns");
-        return new RegexBasedSanitizer(ImmutableList.copyOf(patterns));
-    }
-
-    /**
-     * Utility method to create RegexBasedSanitizer.
-     * @param patterns {@link Pattern}
-     * @return {@link RegexBasedSanitizer}
-     */
-    public static RegexBasedSanitizer of(Iterable<Pattern> patterns) {
-        requireNonNull(patterns, "patterns");
-        return new RegexBasedSanitizer(ImmutableList.copyOf(patterns));
     }
 }
