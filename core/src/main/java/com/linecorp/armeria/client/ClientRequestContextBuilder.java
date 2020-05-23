@@ -23,6 +23,8 @@ import java.net.URI;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
@@ -74,6 +76,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Nullable
     private ClientConnectionTimings connectionTimings;
 
+    private boolean enableTimeout = true;
+
     ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
         fragment = null;
@@ -114,6 +118,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         return this;
     }
 
+    @VisibleForTesting
+    ClientRequestContextBuilder enableTimeout(boolean enableTimeout) {
+        this.enableTimeout = enableTimeout;
+        return this;
+    }
+
     /**
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
@@ -142,13 +152,15 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             ctx.logBuilder().requestContent(rpcRequest(), null);
         }
 
-        final DefaultTimeoutController timeoutController;
-        if (isTimedOut()) {
-            timeoutController = noopTimedOutController;
-        } else {
-            timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
+        if (enableTimeout) {
+            final DefaultTimeoutController timeoutController;
+            if (isTimedOut()) {
+                timeoutController = noopTimedOutController;
+            } else {
+                timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
+            }
+            ctx.setResponseTimeoutController(timeoutController);
         }
-        ctx.setResponseTimeoutController(timeoutController);
 
         return ctx;
     }
