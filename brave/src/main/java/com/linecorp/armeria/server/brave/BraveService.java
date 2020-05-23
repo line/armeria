@@ -101,7 +101,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
 
             final HttpServerResponse braveRes =
                 ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
-            handler.handleSend(braveRes, braveRes.error(), span);
+            handler.handleSend(braveRes, span);
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

@@ -1,0 +1,89 @@
+# Calling a Thrift service
+
+Let's assume we have the following Thrift IDL, served at `http://127.0.0.1:8080/hello`, just like what we
+used in [Running a Thrift service](/docs/server-thrift):
+
+```protobuf
+namespace java com.example.thrift.hello
+
+service HelloService {
+    string hello(1:string name)
+}
+```
+
+Making a call starts from creating a client:
+
+```java
+import com.linecorp.armeria.client.Clients;
+
+HelloService.Iface helloService = Clients.newClient(
+        "tbinary+http://127.0.0.1:8080/hello",
+        HelloService.Iface.class); // or AsyncIface.class
+
+String greeting = helloService.hello("Armerian World");
+assert greeting.equals("Hello, Armerian World!");
+```
+
+Note that we added the serialization format of the call using the `+` operator in the scheme part of the URI.
+Because we are calling a Thrift server, we should choose: `tbinary`, `tcompact`, `tjson` or `ttext`.
+
+Since we specified `HelloService.Iface` as the client type, `Clients.newClient()` will return a synchronous
+client implementation.  If we specified `HelloService.AsyncIface`, the calling code would have looked like
+the following:
+
+```java
+import com.linecorp.armeria.common.thrift.ThriftFuture;
+import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.client.Clients;
+
+HelloService.AsyncIface helloService = Clients.newClient(
+        "tbinary+http://127.0.0.1:8080/hello",
+        HelloService.AsyncIface.class);
+
+ThriftFuture<String> future = new ThriftFuture<String>();
+helloService.hello("Armerian World", future);
+
+future.thenAccept(response -> assert response.equals("Hello, Armerian World!"))
+      .exceptionally(cause -> {
+          cause.printStackTrace();
+          return null;
+      });
+
+// You can also wait until the call is finished.
+String reply = future.get();
+```
+
+The example above introduces a new class called <type://ThriftFuture>. It is a subtype of Java 8
+CompletableFuture_ that implements Thrift [AsyncMethodCallback]. Once passed as a callback of an asynchronous
+Thrift call, <type://ThriftFuture> will complete itself when the reply is received or the call
+fails. You'll find it way more convenient to consume the reply than [AsyncMethodCallback] thanks to the rich set
+of methods provided by [CompletableFuture].
+
+You can also use the builder pattern for client construction:
+
+```java
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+
+HelloService.Iface helloService =
+    Clients.builder("tbinary+http://127.0.0.1:8080/hello")
+           .responseTimeoutMillis(10000)
+           .decorator(LoggingClient.newDecorator())
+           .build(HelloService.Iface.class); // or AsyncIface.class
+
+String greeting = helloService.hello("Armerian World");
+assert greeting.equals("Hello, Armerian World!");
+```
+
+As you might have noticed already, we decorated the client using <type://LoggingClient>, which logs all
+requests and responses. You might be interested in decorating a client using other decorators, for example
+to gather metrics. Please also refer to <type://ClientBuilder> for more configuration options.
+
+## See also
+
+- [Running a Thrift service](/docs/server-thrift)
+- [Decorating a client](/docs/client-decorator)
+- [Sending custom HTTP headers](/docs/client-custom-http-headers)
+
+[AsyncMethodCallback]: https://github.com/apache/thrift/blob/bd964c7f3460c308161cb6eb90583874a7d8d848/lib/java/src/org/apache/thrift/async/AsyncMethodCallback.java#L22
+[CompletableFuture]: https://docs.oracle.com/javase/10/docs/api/java/util/concurrent/CompletableFuture.html

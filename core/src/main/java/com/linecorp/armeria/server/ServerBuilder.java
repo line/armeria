@@ -1478,7 +1478,7 @@ public final class ServerBuilder {
 
         if (pingIntervalMillis > 0) {
             pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
-            if (pingIntervalMillis >= idleTimeoutMillis) {
+            if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
                 pingIntervalMillis = 0;
             }
         }

@@ -174,25 +174,33 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             }
         }
         assert subscription != null;
+        final SubscriptionImpl abortedSubscription = subscription;
 
         if (setState(State.OPEN, State.CLEANUP)) {
-            notifySubscriberOfCloseEvent(subscription, newCloseEvent(cause));
+            notifySubscriberOfCloseEvent(abortedSubscription, newCloseEvent(cause));
             return;
         }
 
         if (setState(State.CLOSED, State.CLEANUP)) {
             // close() or close(cause) has been called before cancel() or abort() is called.
-
-            final Object o = queue.peek();
-            // If there's no data pushed (i.e empty stream), notify subscriber with the event pushed by
-            // close() or close(cause).
-            if (!wroteAny && o instanceof CloseEvent) {
-                notifySubscriberOfCloseEvent(subscription, (CloseEvent) queue.remove());
-                return;
+            if (abortedSubscription.needsDirectInvocation()) {
+                abort0(cause, abortedSubscription);
+            } else {
+                abortedSubscription.executor().execute(() -> abort0(cause, abortedSubscription));
             }
-
-            notifySubscriberOfCloseEvent(subscription, newCloseEvent(cause));
         }
+    }
+
+    private void abort0(Throwable cause, SubscriptionImpl subscription) {
+        final Object o = queue.peek();
+        // If there's no data pushed (i.e empty stream), notify subscriber with the event pushed by
+        // close() or close(cause).
+        if (!wroteAny && o instanceof CloseEvent) {
+            notifySubscriberOfCloseEvent(subscription, (CloseEvent) queue.remove());
+            return;
+        }
+
+        notifySubscriberOfCloseEvent(subscription, newCloseEvent(cause));
     }
 
     @Override

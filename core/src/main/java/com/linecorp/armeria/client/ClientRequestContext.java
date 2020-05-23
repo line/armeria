@@ -24,8 +24,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -47,11 +45,9 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -174,115 +170,6 @@ public interface ClientRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link ServiceRequestContext} whose {@link Service} invokes the {@link Client}
-     * {@link Request} which created this {@link ClientRequestContext}, or {@code null} if this client request
-     * was not made in the context of a server request.
-     */
-    @Nullable
-    ServiceRequestContext root();
-
-    /**
-     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
-     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
-     *
-     * <p>If the value does not exist in this context but only in {@link #root()},
-     * this method will return the value from the {@link #root()}.
-     * <pre>{@code
-     * ClientRequestContext ctx = ...;
-     * assert ctx.root().attr(KEY).equals("root");
-     * assert ctx.attr(KEY).equals("root");
-     * assert ctx.ownAttr(KEY) == null;
-     * }</pre>
-     * If the value exists both in this context and {@link #root()},
-     * this method will return the value from this context.
-     * <pre>{@code
-     * ClientRequestContext ctx = ...;
-     * assert ctx.root().attr(KEY).equals("root");
-     * assert ctx.ownAttr(KEY).equals("child");
-     * assert ctx.attr(KEY).equals("child");
-     * }</pre>
-     *
-     * @see #ownAttr(AttributeKey)
-     */
-    @Nullable
-    @Override
-    <V> V attr(AttributeKey<V> key);
-
-    /**
-     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
-     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
-     * Unlike {@link #attr(AttributeKey)}, this does not search in {@link #root()}.
-     *
-     * @see #attr(AttributeKey)
-     */
-    @Nullable
-    <V> V ownAttr(AttributeKey<V> key);
-
-    /**
-     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
-     *
-     * <p>The {@link Iterator} returned by this method will also yield the {@link Entry}s from the
-     * {@link #root()} except those whose {@link AttributeKey} exist already in this context, e.g.
-     * <pre>{@code
-     * ClientRequestContext ctx = ...;
-     * assert ctx.ownAttr(KEY_A).equals("child_a");
-     * assert ctx.root().attr(KEY_A).equals("root_a");
-     * assert ctx.root().attr(KEY_B).equals("root_b");
-     *
-     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
-     * assert attrs.next().getValue().equals("child_a"); // KEY_A
-     * // Skip KEY_A in the root.
-     * assert attrs.next().getValue().equals("root_b"); // KEY_B
-     * assert attrs.hasNext() == false;
-     * }</pre>
-     * Please note that any changes made to the {@link Entry} returned by {@link Iterator#next()} never
-     * affects the {@link Entry} owned by {@link #root()}. For example:
-     * <pre>{@code
-     * ClientRequestContext ctx = ...;
-     * assert ctx.root().attr(KEY).equals("root");
-     * assert ctx.ownAttr(KEY) == null;
-     *
-     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
-     * Entry<AttributeKey<?>, Object> next = attrs.next();
-     * assert next.getKey() == KEY;
-     * // Overriding the root entry creates the client context's own entry.
-     * next.setValue("child");
-     * assert ctx.attr(KEY).equals("child");
-     * assert ctx.ownAttr(KEY).equals("child");
-     * // root attribute remains unaffected.
-     * assert ctx.root().attr(KEY).equals("root");
-     * }</pre>
-     * If you want to change the value from the root while iterating, please call
-     * {@link #attrs()} from {@link #root()}.
-     * <pre>{@code
-     * ClientRequestContext ctx = ...;
-     * assert ctx.root().attr(KEY).equals("root");
-     * assert ctx.ownAttr(KEY) == null;
-     *
-     * // Call attrs() from the root to set a value directly while iterating.
-     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.root().attrs();
-     * Entry<AttributeKey<?>, Object> next = attrs.next();
-     * assert next.getKey() == KEY;
-     * next.setValue("another_root");
-     * // The ctx does not have its own attribute.
-     * assert ctx.ownAttr(KEY) == null;
-     * assert ctx.attr(KEY).equals("another_root");
-     * }</pre>
-     *
-     * @see #ownAttrs()
-     */
-    @Override
-    Iterator<Entry<AttributeKey<?>, Object>> attrs();
-
-    /**
-     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
-     * Unlike {@link #attrs()}, this does not iterate {@link #root()}.
-     *
-     * @see #attrs()
-     */
-    Iterator<Entry<AttributeKey<?>, Object>> ownAttrs();
-
-    /**
      * {@inheritDoc} For example, when you send an RPC request, this method will return {@code null} until
      * the RPC request is translated into an HTTP request.
      */
@@ -333,8 +220,7 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         final ServiceRequestContext root = root();
-        if ((oldCtx instanceof ServiceRequestContext && oldCtx == root) ||
-            oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
+        if (oldCtx.root() == root) {
             return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
@@ -353,9 +239,7 @@ public interface ClientRequestContext extends RequestContext {
     default ClientRequestContext newDerivedContext(RequestId id,
                                                    @Nullable HttpRequest req,
                                                    @Nullable RpcRequest rpcReq) {
-        final Endpoint endpoint = endpoint();
-        checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(id, req, rpcReq, endpoint);
+        return newDerivedContext(id, req, rpcReq, endpoint());
     }
 
     /**
@@ -366,7 +250,7 @@ public interface ClientRequestContext extends RequestContext {
      * <p>Note that this method does not copy the {@link RequestLog} properties to the derived context.
      */
     ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                           Endpoint endpoint);
+                                           @Nullable Endpoint endpoint);
 
     /**
      * Returns the {@link EndpointGroup} used for the current {@link Request}.

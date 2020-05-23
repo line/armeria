@@ -29,9 +29,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -57,8 +54,6 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     // Forked from Netty 4.1.43 at 2e5dd288008d4e674f53beaf8d323595813062fb
     // - if else logic in static initialization block
     // - anyInterfaceSupportsIpV6()
-
-    private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolverGroup.class);
 
     private static final List<DnsRecordType> defaultDnsRecordTypes;
 

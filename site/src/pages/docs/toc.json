@@ -1,0 +1,46 @@
+{
+  "root": ["index", "setup"],
+  "References": {
+    "Community articles": "/community/articles",
+    "API documentation": "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/index.html",
+    "Release notes": "/release-notes"
+  },
+  "Server": [
+    "server-basics",
+    "server-decorator",
+    "server-grpc",
+    "server-thrift",
+    "server-docservice",
+    "server-annotated-service",
+    "server-http-file",
+    "server-servlet",
+    "server-access-log",
+    "server-cors",
+    "server-sse"
+  ],
+  "Client": [
+    "client-http",
+    "client-thrift",
+    "client-grpc",
+    "client-decorator",
+    "client-retrofit",
+    "client-custom-http-headers",
+    "client-timeouts",
+    "client-retry",
+    "client-circuit-breaker",
+    "client-service-discovery"
+  ],
+  "Advanced": [
+    "advanced-logging",
+    "advanced-structured-logging",
+    "advanced-custom-attributes",
+    "advanced-structured-logging-kafka",
+    "advanced-unit-testing",
+    "advanced-production-checklist",
+    "advanced-zipkin",
+    "advanced-zookeeper",
+    "advanced-saml",
+    "advanced-spring-webflux-integration",
+    "advanced-dropwizard-integration"
+  ]
+}

@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -48,6 +49,10 @@ public abstract class NettyServerExtension extends AbstractAllOrEachExtension {
     public final InetSocketAddress address() {
         checkState(channel != null);
         return (InetSocketAddress) channel.localAddress();
+    }
+
+    public final Endpoint endpoint() {
+        return Endpoint.of(address().getHostString(), address().getPort());
     }
 
     protected abstract void configure(Channel ch) throws Exception;

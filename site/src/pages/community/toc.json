@@ -1,0 +1,13 @@
+{
+  "root": ["index"],
+  "Pages": [
+    "articles",
+    "developer-guide",
+    "code-of-conduct",
+    "design-resources"
+  ],
+  "See also": {
+    "User manual": "/docs",
+    "LINE Engineering": "https://engineering.linecorp.com/en/"
+  }
+}

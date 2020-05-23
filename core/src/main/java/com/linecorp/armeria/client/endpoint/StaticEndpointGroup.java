@@ -83,9 +83,7 @@ final class StaticEndpointGroup implements EndpointGroup {
     private static class EmptyEndpointSelectionStrategy implements EndpointSelectionStrategy {
         @Override
         public EndpointSelector newSelector(EndpointGroup endpointGroup) {
-            return ctx -> {
-                throw EmptyEndpointGroupException.get();
-            };
+            return ctx -> null;
         }
     }
 }

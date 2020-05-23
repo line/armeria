@@ -20,7 +20,7 @@
    cd ../site-armeria
    git checkout gh-pages
    rm -fr .buildinfo .doctrees .gradle *
-   rsync -aiP --exclude '.*' --exclude 'Lato' --exclude 'RobotoSlab' ../upstream-armeria/site/build/site/ .
+   rsync -aiP --exclude '.*' ../upstream-armeria/site/public/ .
    git add -A .
    git commit --amend -m 'Deploy the web site'
    git push --force

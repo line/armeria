@@ -13,7 +13,7 @@ import com.linecorp.armeria.server.annotation.Param;
  * Note that this is not a Spring-based component but an annotated HTTP service that leverages
  * Armeria's built-in annotations.
  *
- * @see <a href="https://line.github.io/armeria/server-annotated-service.html">Annotated HTTP Service</a>
+ * @see <a href="https://line.github.io/armeria/docs/server-annotated-service">Annotated HTTP Service</a>
  */
 @Component
 @Validated
@@ -27,6 +27,7 @@ public class HelloAnnotatedService {
 
     /**
      * An example in order to show how to use validation framework in an annotated HTTP service.
+     * @param name The name that should be greeted.
      */
     @Get("/hello/{name}")
     public String hello(

@@ -27,6 +27,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -53,9 +54,11 @@ import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.PathPrefix;
@@ -70,6 +73,7 @@ import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFac
 class AnnotatedServiceFactoryTest {
 
     private static final String HOME_PATH_PREFIX = "/home";
+    private static final String ANNOTATED_DESCRIPTION = "This is a description from the annotation";
 
     @Test
     void ofNoOrdering() throws NoSuchMethodException {
@@ -275,6 +279,31 @@ class AnnotatedServiceFactoryTest {
                        ImmutableList.of());
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
+    }
+
+    @Test
+    void testDescriptionLoadingPriority() throws NoSuchMethodException {
+        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod1", String.class)
+                                                                       .getParameters()[0];
+        assertThat(AnnotatedServiceFactory.findDescription(parameter)).isEqualTo(ANNOTATED_DESCRIPTION);
+    }
+
+    @Test
+    void testDescriptionLoadFromFile() throws NoSuchMethodException {
+        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod2", String.class)
+                                                                       .getParameters()[0];
+        assertThat(AnnotatedServiceFactory.findDescription(parameter))
+                .isEqualTo("This is a description from the properties file");
+    }
+
+    private static class DescriptionAnnotatedTestClass {
+        // Resource file from JavaDoc was already created
+        @Get("/some/path")
+        public void testMethod1(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param) { }
+
+        // Resource file from JavaDoc was already created
+        @Get("/some/path")
+        public void testMethod2(@Param("param") String param) { }
     }
 
     private static List<AnnotatedServiceElement> getServiceElements(

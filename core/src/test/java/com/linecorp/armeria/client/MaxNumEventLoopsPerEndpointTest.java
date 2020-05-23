@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.DefaultEventLoopGroup;
@@ -37,13 +38,23 @@ import io.netty.channel.EventLoopGroup;
 
 class MaxNumEventLoopsPerEndpointTest {
 
+    private static final Endpoint endpointA = Endpoint.of("a");
+    private static final Endpoint endpointA80 = Endpoint.of("a", 80);
+    private static final Endpoint endpointA443 = Endpoint.of("a", 443);
+    private static final Endpoint endpointA8443 = Endpoint.of("a", 8443);
+    private static final Endpoint endpointB = Endpoint.of("b");
+    private static final Endpoint endpointB80 = Endpoint.of("b", 80);
+    private static final Endpoint endpointB443 = Endpoint.of("b", 443);
+    private static final Endpoint endpointB8443 = Endpoint.of("b", 8443);
+    private static final Endpoint endpointC = Endpoint.of("c");
+
     @Test
     void defaultMaxNumEventLoopsEqualsOne() {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of());
-        final List<AbstractEventLoopEntry> entries1 = s.entries(Endpoint.of("a"), SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
         assertThat(entries1).hasSize(0);
-        acquireTenEntries(s, Endpoint.of("a"), SessionProtocol.H1C);
+        acquireTenEntries(s, SessionProtocol.H1C, endpointA, endpointA);
         assertThat(entries1).hasSize(1);
     }
 
@@ -52,42 +63,42 @@ class MaxNumEventLoopsPerEndpointTest {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(
                 group, 4, 5, ImmutableList.of(endpoint -> {
-            if (endpoint.equals(Endpoint.of("a"))) {
+            if (endpoint.equals(endpointA)) {
                 return 3;
             } else {
                 return -1;
             }
         }));
-        checkMaxNumEventLoops(s, Endpoint.of("a"), Endpoint.of("b"));
+        checkMaxNumEventLoops(s, endpointA, endpointB);
     }
 
     private static void checkMaxNumEventLoops(DefaultEventLoopScheduler s,
                                               Endpoint preDefined, Endpoint undefined) {
-        final List<AbstractEventLoopEntry> entries1 = s.entries(preDefined, SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries1 = s.entries(SessionProtocol.H1C, preDefined, preDefined);
         assertThat(entries1).hasSize(0);
-        acquireTenEntries(s, preDefined, SessionProtocol.H1C);
+        acquireTenEntries(s, SessionProtocol.H1C, preDefined, preDefined);
         assertThat(entries1).hasSize(3);
 
-        final List<AbstractEventLoopEntry> entries2 = s.entries(undefined, SessionProtocol.H2);
+        final List<AbstractEventLoopEntry> entries2 = s.entries(SessionProtocol.H2, undefined, undefined);
         assertThat(entries2).hasSize(0);
-        acquireTenEntries(s, undefined, SessionProtocol.H2);
+        acquireTenEntries(s, SessionProtocol.H2, undefined, undefined);
         assertThat(entries2).hasSize(4);
 
-        final List<AbstractEventLoopEntry> entries3 = s.entries(undefined, SessionProtocol.H2C);
+        final List<AbstractEventLoopEntry> entries3 = s.entries(SessionProtocol.H2C, undefined, undefined);
         assertThat(entries2).isNotSameAs(entries3);
         assertThat(entries3).hasSize(0);
-        acquireTenEntries(s, undefined, SessionProtocol.H2C);
+        acquireTenEntries(s, SessionProtocol.H2C, undefined, undefined);
         assertThat(entries3).hasSize(4);
 
-        final List<AbstractEventLoopEntry> entries4 = s.entries(undefined, SessionProtocol.H1);
+        final List<AbstractEventLoopEntry> entries4 = s.entries(SessionProtocol.H1, undefined, undefined);
         assertThat(entries4).hasSize(0);
-        acquireTenEntries(s, undefined, SessionProtocol.H1);
+        acquireTenEntries(s, SessionProtocol.H1, undefined, undefined);
         assertThat(entries4).hasSize(5);
 
-        final List<AbstractEventLoopEntry> entries5 = s.entries(undefined, SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries5 = s.entries(SessionProtocol.H1C, undefined, undefined);
         assertThat(entries4).isNotSameAs(entries5);
         assertThat(entries5).hasSize(0);
-        acquireTenEntries(s, undefined, SessionProtocol.H1C);
+        acquireTenEntries(s, SessionProtocol.H1C, undefined, undefined);
         assertThat(entries5).hasSize(5);
     }
 
@@ -97,13 +108,13 @@ class MaxNumEventLoopsPerEndpointTest {
 
         final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = ImmutableList.of(
                 endpoint -> {
-                    if (endpoint.host().contains("a.com")) {
+                    if ("a".equals(endpoint.host())) {
                         if (endpoint.hasPort()) {
                             final int port = endpoint.port();
                             if (port == 80) {
                                 return 2;
                             }
-                            if (port == 36462) {
+                            if (port == 8443) {
                                 return 3;
                             }
                         }
@@ -112,90 +123,83 @@ class MaxNumEventLoopsPerEndpointTest {
                     return -1;
                 },
                 endpoint -> {
-                    if (endpoint.equals(Endpoint.of("b.com", 80))) {
+                    if (endpoint.equals(endpointB80)) {
                         return 4;
                     }
-                    if (endpoint.equals(Endpoint.of("b.com", 443))) {
+                    if (endpoint.equals(endpointB443)) {
                         return 5;
                     }
                     return -1;
                 });
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 7, 7,
                                                                           maxNumEventLoopsFunctions);
-        final List<AbstractEventLoopEntry> entries1 = s.entries(Endpoint.of("a.com"),
-                                                                SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
         assertThat(entries1).hasSize(0);
-        acquireTenEntries(s, Endpoint.of("a.com"), SessionProtocol.H1C);
+        acquireTenEntries(s, SessionProtocol.H1C, endpointA, endpointA);
         assertThat(entries1).hasSize(2);
 
-        final List<AbstractEventLoopEntry> entries2 = s.entries(Endpoint.of("a.com", 80),
-                                                                SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries2 = s.entries(SessionProtocol.H1C, endpointA80, endpointA80);
         assertThat(entries2).hasSize(2);
 
         final List<AbstractEventLoopEntry> entries3 =
-                s.entries(Endpoint.of("a.com", 10000), SessionProtocol.H1C);
+                s.entries(SessionProtocol.H1C, endpointA443, endpointA443);
         assertThat(entries3).hasSize(0);
-        acquireTenEntries(s, Endpoint.of("a.com", 10000), SessionProtocol.H1C);
+        acquireTenEntries(s, SessionProtocol.H1C, endpointA443, endpointA443);
         assertThat(entries3).hasSize(1); // Fallback to "a.com"
 
         final List<AbstractEventLoopEntry> entries4 =
-                s.entries(Endpoint.of("a.com", 36462), SessionProtocol.H1C);
+                s.entries(SessionProtocol.H1C, endpointA8443, endpointA8443);
         assertThat(entries4).hasSize(0);
-        acquireTenEntries(s, Endpoint.of("a.com", 36462), SessionProtocol.H1C);
+        acquireTenEntries(s, SessionProtocol.H1C, endpointA8443, endpointA8443);
         assertThat(entries4).hasSize(3); // Matched to Endpoint.of("a.com", 36462)
 
         // Clear text SessionProtocols.
 
         final List<AbstractEventLoopEntry> bComClearText =
-                s.entries(Endpoint.of("b.com", 80), SessionProtocol.H1C);
+                s.entries(SessionProtocol.H1C, endpointB80, endpointB80);
         assertThat(bComClearText).hasSize(0);
-        acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H1C);
+        acquireTenEntries(s, SessionProtocol.H1C, endpointB, endpointB);
         assertThat(bComClearText).hasSize(4); // Fallback to "b.com:80"
 
-        final List<AbstractEventLoopEntry> entries5 = s.entries(Endpoint.of("b.com"),
-                                                                SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries5 = s.entries(SessionProtocol.H1C, endpointB, endpointB);
         assertThat(bComClearText).isSameAs(entries5);
 
-        final List<AbstractEventLoopEntry> entries6 = s.entries(Endpoint.of("b.com"),
-                                                                SessionProtocol.H2C);
-        acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H2C);
+        final List<AbstractEventLoopEntry> entries6 = s.entries(SessionProtocol.H2C, endpointB, endpointB);
+        acquireTenEntries(s, SessionProtocol.H2C, endpointB, endpointB);
         assertThat(bComClearText).hasSize(4);
-        final List<AbstractEventLoopEntry> entries7 = s.entries(Endpoint.of("b.com"),
-                                                                SessionProtocol.HTTP);
+        final List<AbstractEventLoopEntry> entries7 = s.entries(SessionProtocol.HTTP, endpointB, endpointB);
         assertThat(entries6).isSameAs(entries7);
 
         // TLS SessionProtocols.
 
-        final List<AbstractEventLoopEntry> bComTls = s.entries(Endpoint.of("b.com", 443),
-                                                               SessionProtocol.H1);
+        final List<AbstractEventLoopEntry> bComTls = s.entries(SessionProtocol.H1, endpointB443, endpointB443);
         assertThat(bComTls).hasSize(0);
-        acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H1);
+        acquireTenEntries(s, SessionProtocol.H1, endpointB, endpointB);
         assertThat(bComTls).hasSize(5); // Fallback to "b.com:433"
 
-        final List<AbstractEventLoopEntry> entries8 = s.entries(Endpoint.of("b.com"),
-                                                                SessionProtocol.H1);
+        final List<AbstractEventLoopEntry> entries8 = s.entries(SessionProtocol.H1, endpointB, endpointB);
         assertThat(bComTls).isSameAs(entries8);
 
-        final List<AbstractEventLoopEntry> entries9 = s.entries(Endpoint.of("b.com"),
-                                                                SessionProtocol.H2);
-        acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H2);
+        final List<AbstractEventLoopEntry> entries9 = s.entries(SessionProtocol.H2, endpointB, endpointB);
+        acquireTenEntries(s, SessionProtocol.H2, endpointB, endpointB);
         assertThat(entries9).hasSize(5);
-        final List<AbstractEventLoopEntry> entries10 = s.entries(Endpoint.of("b.com"),
-                                                                 SessionProtocol.HTTPS);
+        final List<AbstractEventLoopEntry> entries10 = s.entries(SessionProtocol.HTTPS, endpointB, endpointB);
         assertThat(entries9).isSameAs(entries10);
 
         final List<AbstractEventLoopEntry> entries11 =
-                s.entries(Endpoint.of("b.com", 8443), SessionProtocol.H1);
+                s.entries(SessionProtocol.H1, endpointB8443, endpointB8443);
         assertThat(entries11).hasSize(
                 1); // One entry is pushed when eventLoops.size() == maxNumEventLoops
-        acquireTenEntries(s, Endpoint.of("b.com", 8443), SessionProtocol.H1);
+        acquireTenEntries(s, SessionProtocol.H1, endpointB8443, endpointB8443);
         assertThat(entries11).hasSize(7); // No match
     }
 
-    private static void acquireTenEntries(DefaultEventLoopScheduler s, Endpoint endpoint,
-                                          SessionProtocol sessionProtocol) {
+    private static void acquireTenEntries(DefaultEventLoopScheduler s,
+                                          SessionProtocol sessionProtocol,
+                                          EndpointGroup endpointGroup,
+                                          Endpoint endpoint) {
         for (int i = 0; i < 10; i++) {
-            s.acquire(endpoint, sessionProtocol);
+            s.acquire(sessionProtocol, endpointGroup, endpoint);
         }
     }
 
@@ -212,13 +216,13 @@ class MaxNumEventLoopsPerEndpointTest {
     void eventLoopGroupAssignedSequentially() {
         final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = ImmutableList.of(
                 endpoint -> {
-                    if (endpoint.equals(Endpoint.of("a"))) {
+                    if (endpoint.equals(endpointA)) {
                         return 2;
                     }
-                    if (endpoint.equals(Endpoint.of("b"))) {
+                    if (endpoint.equals(endpointB)) {
                         return 3;
                     }
-                    if (endpoint.equals(Endpoint.of("c"))) {
+                    if (endpoint.equals(endpointC)) {
                         return 5;
                     }
                     return -1;
@@ -240,10 +244,10 @@ class MaxNumEventLoopsPerEndpointTest {
     void eventLoopGroupAssignedSequentiallyWithDefaultMaxNumEventLoops() {
         final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = ImmutableList.of(
                 endpoint -> {
-                    if (endpoint.equals(Endpoint.of("a"))) {
+                    if (endpoint.equals(endpointA)) {
                         return 2;
                     }
-                    if (endpoint.equals(Endpoint.of("b"))) {
+                    if (endpoint.equals(endpointB)) {
                         return 3;
                     }
                     return -1;
@@ -264,7 +268,6 @@ class MaxNumEventLoopsPerEndpointTest {
 
         // endpointA
 
-        final Endpoint endpointA = Endpoint.of("a");
         EventLoop firstEventLoop = acquireEntry(s, endpointA).get();
         int firstEventLoopIdx = findIndex(eventLoops, firstEventLoop);
         assertThat(firstEventLoopIdx).isIn(0, 1);
@@ -274,7 +277,6 @@ class MaxNumEventLoopsPerEndpointTest {
 
         // endpointB
 
-        final Endpoint endpointB = Endpoint.of("b");
         firstEventLoop = acquireEntry(s, endpointB).get();
         firstEventLoopIdx = findIndex(eventLoops, firstEventLoop);
         assertThat(firstEventLoopIdx).isIn(2, 3, 4);
@@ -284,7 +286,6 @@ class MaxNumEventLoopsPerEndpointTest {
 
         // endpointC
 
-        final Endpoint endpointC = Endpoint.of("c");
         firstEventLoop = acquireEntry(s, endpointC).get();
         firstEventLoopIdx = findIndex(eventLoops, firstEventLoop);
         assertThat(firstEventLoopIdx).isIn(0, 1, 2, 5, 6);

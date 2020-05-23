@@ -1815,5 +1815,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer,
                                                                trailersSanitizer);
         }
+
+        @Override
+        public String toString() {
+            return DefaultRequestLog.this.toString();
+        }
     }
 }

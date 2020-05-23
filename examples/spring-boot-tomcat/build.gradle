@@ -9,10 +9,6 @@ buildscript {
 
 apply plugin: 'org.springframework.boot'
 
-springBoot {
-    mainClassName = 'example.springframework.boot.tomcat.Main'
-}
-
 dependencies {
     implementation project(':core')
     implementation project(':spring:boot-starter')

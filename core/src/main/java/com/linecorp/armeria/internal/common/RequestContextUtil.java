@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -57,7 +59,7 @@ public final class RequestContextUtil {
     private static final Set<Thread> REPORTED_THREADS =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
-    private static final RequestContextStorage requestContextStorage;
+    private static RequestContextStorage requestContextStorage;
 
     static {
         final List<RequestContextStorageProvider> providers = ImmutableList.copyOf(
@@ -156,6 +158,12 @@ public final class RequestContextUtil {
             logger.warn("An error occurred while popping a context", ex);
         }
         return ex;
+    }
+
+    public static void hook(Function<? super RequestContextStorage, ? extends RequestContextStorage> function) {
+        final RequestContextStorage newStorage = function.apply(requestContextStorage);
+        checkState(newStorage != null, "function.apply() returned null: %s", function);
+        requestContextStorage = newStorage;
     }
 
     /**

@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.PercentDecoder.decodeComponent;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -82,7 +83,7 @@ class QueryParamsTest {
 
     @Test
     void testSetObject() {
-        final String expectedDate = "Mon, 3 Dec 2007 10:15:30 GMT";
+        final String expectedDate = "Mon, 03 Dec 2007 10:15:30 GMT";
         final Instant instant = Instant.parse("2007-12-03T10:15:30.00Z");
         final Date date = new Date(instant.toEpochMilli());
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -226,13 +227,11 @@ class QueryParamsTest {
         for (int i = 0; i < encoded.size(); i++) {
             final String src = encoded.get(i);
             final String expected = decoded.get(i);
-            String actual = QueryStringDecoder.decodeComponent(TemporaryThreadLocals.get(),
-                                                               src, 0, src.length());
+            String actual = decodeComponent(src);
             assertThat(actual).isEqualTo(expected);
 
             // Off-by-one check
-            actual = QueryStringDecoder.decodeComponent(TemporaryThreadLocals.get(),
-                                                        ' ' + src + ' ', 1, src.length() + 1);
+            actual = decodeComponent(TemporaryThreadLocals.get(), ' ' + src + ' ', 1, src.length() + 1);
             assertThat(actual).isEqualTo(expected);
         }
     }

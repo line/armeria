@@ -73,6 +73,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
 
+    @Nullable
+    private SocketAddress proxyDestinationAddress;
+
     /**
      * Whether the current channel is active or not.
      */
@@ -131,14 +134,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public int unfinishedResponses() {
+    public boolean hasUnfinishedResponses() {
         assert responseDecoder != null;
-        return responseDecoder.unfinishedResponses();
+        return responseDecoder.hasUnfinishedResponses();
     }
 
     @Override
-    public int maxUnfinishedResponses() {
-        return maxUnfinishedResponses;
+    public boolean incrementNumUnfinishedResponses() {
+        assert responseDecoder != null;
+        return responseDecoder.reserveUnfinishedResponse(maxUnfinishedResponses);
     }
 
     @Override
@@ -286,7 +290,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             if (protocol == H1 || protocol == H1C) {
                 final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
-                if (idleTimeoutMillis > 0) {
+                if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
                     final Http1ClientKeepAliveHandler keepAliveHandler =
                             new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
                                                             idleTimeoutMillis, pingIntervalMillis);
@@ -323,9 +327,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
             evt instanceof SslHandshakeCompletionEvent ||
             evt instanceof SslCloseCompletionEvent ||
-            evt instanceof ChannelInputShutdownReadComplete ||
-            evt instanceof ProxyConnectionEvent) {
+            evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
+            return;
+        }
+
+        if (evt instanceof ProxyConnectionEvent) {
+            proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
             return;
         }
 
@@ -340,7 +348,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            channelPool.connect(remoteAddress, H1C, sessionPromise);
+            if (proxyDestinationAddress != null) {
+                channelPool.connect(proxyDestinationAddress, H1C, sessionPromise);
+            } else {
+                channelPool.connect(remoteAddress, H1C, sessionPromise);
+            }
         } else {
             // Fail all pending responses.
             final HttpResponseDecoder responseDecoder = this.responseDecoder;

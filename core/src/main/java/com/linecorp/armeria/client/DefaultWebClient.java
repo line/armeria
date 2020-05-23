@@ -54,7 +54,11 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 uri = null;
             }
         } else {
-            uri = null;
+            if (req.scheme() != null && req.authority() != null) {
+                uri = req.uri();
+            } else {
+                uri = null;
+            }
         }
 
         if (uri != null) {

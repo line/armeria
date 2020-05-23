@@ -1,7 +1,7 @@
 # Armeria proxy server
 
 A proxy server that balances individual requests across the healthy backends using 
-[Client-side load balancing](https://line.github.io/armeria/client-service-discovery.html).
+[Client-side load balancing](https://line.github.io/armeria/docs/client-service-discovery).
 
 ## Demo
 

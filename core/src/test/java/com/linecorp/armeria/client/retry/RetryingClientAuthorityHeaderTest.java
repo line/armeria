@@ -81,7 +81,8 @@ public class RetryingClientAuthorityHeaderTest {
                 Endpoint.of("www.bar.com", backend2.httpPort()).withIpAddr("127.0.0.1"));
 
         return WebClient.builder(SessionProtocol.H2C, endpointGroup)
-                        .decorator(RetryingClient.newDecorator(RetryStrategy.onServerErrorStatus()))
+                        .decorator(RetryingClient.newDecorator(
+                                RetryRule.builder().onServerErrorStatus().onException().thenBackoff()))
                         .build();
     }
 }

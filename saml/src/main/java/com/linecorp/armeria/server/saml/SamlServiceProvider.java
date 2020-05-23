@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.auth.Authorizer;
 /**
  * A SAML service provider implementation.
  *
- * @see <a href="https://line.github.io/armeria/advanced-saml.html">SAML Single Sign-On</a>
+ * @see <a href="https://line.github.io/armeria/docs/advanced-saml">SAML Single Sign-On</a>
  */
 public final class SamlServiceProvider {
 

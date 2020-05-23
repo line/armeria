@@ -85,7 +85,7 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
 
             final List<Endpoint> endpoints = endpointGroup.endpoints();
             if (endpoints.isEmpty()) {
-                throw EmptyEndpointGroupException.get();
+                return null;
             }
 
             final long key = requestContextHasher.applyAsLong(ctx);

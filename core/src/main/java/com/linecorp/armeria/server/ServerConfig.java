@@ -38,9 +38,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.internal.common.metric.ExecutorServiceMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
@@ -155,11 +155,9 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (!ExecutorServiceMetrics.isMonitoredExecutor(blockingTaskExecutor)) {
-            blockingTaskExecutor =
-                    ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                                   "blockingTaskExecutor", "armeria.executor");
-        }
+        blockingTaskExecutor =
+                ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
+                                               "blockingTaskExecutor", "armeria");
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 

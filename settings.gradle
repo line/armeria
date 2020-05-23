@@ -6,8 +6,10 @@ apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 includeWithFlags ':bom',                       'bom', 'publish'
 
 // Published Java projects
+includeWithFlags ':annotation-processor',               'java', 'publish', 'relocate'
 includeWithFlags ':brave',                              'java', 'publish', 'relocate'
 includeWithFlags ':core',                               'java', 'publish', 'shade', 'trim'
+includeWithFlags ':eureka',                             'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                               'java', 'publish', 'relocate'
 includeWithFlags ':grpc-protocol',                      'java', 'publish', 'relocate'
 includeWithFlags ':jetty',                              'java', 'publish', 'relocate'

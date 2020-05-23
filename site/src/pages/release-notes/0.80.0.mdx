@@ -1,0 +1,173 @@
+## New features
+
+- A user now can see the content of HTTP request/response in logs. #1574
+  ```java
+  ServerBuilder sb = new ServerBuilder();
+  // Enables previewing the content with the maximum length of 100 for textual contents.
+  sb.contentPreview(100);
+
+  // A user can use their customized previewer factory.
+  sb.contentPreviewerFactory((ctx, headers) -> {
+      return ContentPreviewer.ofBinary(100, byteBuf -> {
+          byte[] contents = new byte[Math.min(byteBuf.readableBytes(), 100)];
+          byteBuf.readBytes(contents);
+          return BaseEncoding.base16().encode(contents);
+      });
+  });
+  ```
+- Added `ClientRequestContextBuilder` and `ServiceRequestContextBuilder`. #1548
+  - A user can create a mock of `RequestContext`.
+  - A user can emulate an incoming request and feed it into his or her processing pipeline.
+  ```java
+  @Test
+  public void testService() throws Exception {
+      // Given
+      HttpRequest req = HttpRequest.of(HttpMethod.POST, "/greet",
+                                       MediaType.JSON_UTF_8,
+                                       "{ \"name\": \"foo\" }");
+      ServiceRequestContext sctx = ServiceRequestContext.of(req);
+ 
+      // When
+      HttpResponse res = service.serve(sctx, req);
+ 
+      // Then
+      AggregatedHttpMessage aggregatedRes = res.aggregate().get();
+      assertEquals(200, aggregatedRes.status().code());
+  }
+  ```
+- A user can use `@CorsDecorator` in annotated services. #1547
+  ```java
+  sb.annotatedService("/cors6", new Object() {
+
+      @Get("/any/get")
+      @CorsDecorator(origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
+          allowedRequestHeaders = { "allow_request_1", "allow_request_2" },
+          allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
+          preflightRequestHeaders = {
+              @AdditionalHeader(name = "x-preflight-cors", value = "Hello CORS")
+          })
+      public HttpResponse anyoneGet() {
+          return HttpResponse.of(HttpStatus.OK);
+      }
+  }
+  ```
+- Added `ClientFactoryBuilder.domainNameResolverCustomizer()` so that a user can customize the resolver easily. #1553
+  ```java
+  ClientFactory f = new ClientFactoryBuilder()
+      .domainNameResolverCustomizer(resolverBuilder -> {
+          resolverBuilder.maxQueriesPerResolve(10);
+          resolverBuilder.traceEnabled(false);
+      })
+      .build();
+  ```
+- A user can define a custome annotation which attaches other annotations for simplicity. #1560
+  ```java
+  // Define a custom annotation:
+  @ProducesJson
+  @LoggingDecorator
+  @interface MyApiSpecification {}
+
+  // Apply it to the annotated HTTP service:
+  @Get("/api")
+  @MyApiSpecification // You can use one annotation which holds other other annotations.
+  public Something getSomething() {}
+  ```
+- Added `@AdditionalHeader` and `@AdditionalTrailer` to insert headers easily in annotated services. #1555
+- Added a way to add multiple gRPC services with a single method call. #1563
+  ```java
+  // Before
+  GrpcService s = new GrpcServiceBuilder().addService(a)
+                                          .addService(b)
+                                          .build();
+  // After
+  GrpcService s = new GrpcServiceBuilder().addServices(a, b).build();
+  ```
+- Added more shortcut methods for convenience. #1576
+  ```java
+  HttpRequest req = ...;
+  AggregatedHttpMessage aggregated = ...;
+  MediaType contentType;
+  String content;
+ 
+  // Before
+  contentType = req.headers().contentType();
+  contentType = aggregated.headers().contentType();
+  content = aggregated.content().toStringUtf8();
+ 
+  // After
+  contentType = req.contentType();
+  contentType = aggregated.contentType();
+  content = aggregated.contentUtf8();
+  ```
+- `RequestObject` is shown in `DocService`. #1557 
+- Added `verboseSocketExceptions` flag so that a user can ignore harmless socket-related error message. #1577
+- Added automatic directory listing generation to `HttpFileService`. #1573
+- Added `armeria-spring-boot-actuator` dependency. #1578
+  - Works without Spring Web or Webflux.
+- Added metrics related to timeouts. #1589
+- Added `responseCauseSanitizer` to `LoggingDecoratorBuilder`. #1594
+  - A user can sanitize the stack trace of `RequestLog.responseCause()` or avoid logging the stack trace completely.
+  ```java
+  ServerBuilder sb = ...
+  final Function<Throwable, Throwable> responseCauseSanitizer = cause -> {
+      if (cause instanceOf AnticipatedException) {
+          return null; // Do not log when AnticipatedException is raised. 
+      }
+      return cause;
+   };
+
+   sb.decorator(new LoggingServiceBuilder().requestLogLevel(LogLevel.INFO)                                                    
+                                           .successfulResponseLogLevel(LogLevel.INFO)                                                    
+                                           .responseCauseSanitizer(responseCauseSanitizer)
+                                           .newDecorator());
+  ```
+- A user can easily send [Server-Sent Events](https://www.w3.org/TR/2009/WD-eventsource-20090421/). #1551
+  ```java
+  public class MyAnnotatedService {
+      @Get("/publisher")
+      @ProducesEventStream
+      public Publisher<ServerSentEvent<?>> publisher() {
+          return Flux.just(ServerSentEvent.ofData("foo"),
+                           ServerSentEvent.ofData("bar"),
+                           ServerSentEvent.ofData("baz"),
+                           ServerSentEvent.ofData("qux"));
+      }
+  }
+  ```
+
+## Improvements
+
+- User-friendly message when `400 Bad Request` happens. #1575
+- Enabled DNS query traces by default. #1553
+- Added `armeria-retry-count` header when `RetryingClient` is used. #1593
+
+## Bug fixes
+
+- Fixed a bug where `httpStatus` tag is not set properly. #1559
+- Do not set `Content-length` header when HTTP trailers exist. #1566
+- Fixed a bug where max request length is not set correctly in `GrpcService` when the value is `0` or `Long.MAX_VALUE`. #1549
+- Fixed a but where gRPC JSON marshaller is initialized even when unnecessary. #1558
+- Fixed a bug where gRPC callbacks are not executed in order. #1600
+
+## Breaking Change
+- The `HttpHeaders` in `AggregatedHttpMessage` is immutable.
+  - You should call `headers.toMutable()` to set or remove a header. 
+
+## Deprecations
+
+- `RequestContext.isTimedOut()` has been deprecated. #1589
+  - Use `ServiceRequestContext.isTimedOut()` instead.
+
+## Dependencies
+
+- Bouncy Castle 1.60 -> 1.61
+- Brave 5.6.0 -> 5.6.1
+- java-jwt 3.5.0 -> 3.7.0
+- Micrometer 1.1.2 -> 1.1.3
+- Netty 4.1.32 -> 4.1.33
+- Project Reactor 3.2.5 -> 3.2.6
+- protobuf-jackson 0.3.0 -> 0.3.1
+- RxJava 2.2.5 -> 2.2.6
+- Thrift 0.11.0 -> 0.12.0
+- Tomcat 9.0.14 -> 9.0.16, 8.5.37 -> 8.5.38
+- spring-boot-starter-actuator has benn removed from the transitive dependencies.
