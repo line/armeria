@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
-import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Date;
@@ -27,20 +26,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.common.FilteredHttpResponse;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
@@ -50,6 +42,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
 
@@ -69,16 +62,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
-     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryStrategy}.
-     *
-     * @deprecated Use {@link #builder(RetryRule)}
-     */
-    @Deprecated
-    public static RetryingClientBuilder builder(RetryStrategy retryStrategy) {
-        return builder(RetryRuleUtil.fromRetryStrategy(requireNonNull(retryStrategy, "retryStrategy")));
-    }
-
-    /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryingClientBuilder builder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
@@ -86,15 +69,19 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
-     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRuleWithContent}.
+     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRuleWithContent} and
+     * the specified {@code maxContentLength}.
+     * The {@code maxContentLength} required to determine whether to retry or not. If the total length of
+     * content exceeds this length and there's no retry condition matched,
+     * it will hand over the stream to the client.
      *
-     * @deprecated Use {@link #builder(RetryRuleWithContent)}.
+     * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
+     *                                  less than {@code 0}
      */
-    @Deprecated
-    public static RetryingClientBuilder builder(
-            RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
-        requireNonNull(retryStrategyWithContent, "retryStrategyWithContent");
-        return builder(RetryRuleUtil.fromRetryStrategyWithContent(retryStrategyWithContent));
+    public static RetryingClientBuilder builder(RetryRuleWithContent<HttpResponse> retryRuleWithContent,
+                                                int maxContentLength) {
+        checkArgument(maxContentLength > 0, "maxContentLength: %s (expected: > 0)", maxContentLength);
+        return new RetryingClientBuilder(retryRuleWithContent, maxContentLength);
     }
 
     /**
@@ -105,19 +92,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      */
     public static Function<? super HttpClient, RetryingClient> newDecorator(RetryRule retryRule) {
         return builder(retryRule).newDecorator();
-    }
-
-    /**
-     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
-     * requests.
-     *
-     * @param retryStrategy the retry strategy
-     *
-     * @deprecated Use {@link #newDecorator(RetryRule)}.
-     */
-    @Deprecated
-    public static Function<? super HttpClient, RetryingClient> newDecorator(RetryStrategy retryStrategy) {
-        return newDecorator(RetryRuleUtil.fromRetryStrategy(requireNonNull(retryStrategy, "retryStrategy")));
     }
 
     /**
@@ -141,22 +115,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryRule retryRule, int maxTotalAttempts) {
         return builder(retryRule).maxTotalAttempts(maxTotalAttempts).newDecorator();
-    }
-
-    /**
-     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
-     * requests.
-     *
-     * @param retryStrategy the retry strategy
-     * @param maxTotalAttempts the maximum number of total attempts
-     *
-     * @deprecated Use {@link #newDecorator(RetryRule, int)}.
-     */
-    @Deprecated
-    public static Function<? super HttpClient, RetryingClient>
-    newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
-        requireNonNull(retryStrategy, "retryStrategy");
-        return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy), maxTotalAttempts);
     }
 
     /**
@@ -188,25 +146,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
-     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
-     * requests.
-     *
-     * @param retryStrategy the retry strategy
-     * @param maxTotalAttempts the maximum number of total attempts
-     * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
-     *                                            the timeout
-     *
-     * @deprecated Use {@link #newDecorator(RetryRule, int, long)}.
-     */
-    @Deprecated
-    public static Function<? super HttpClient, RetryingClient>
-    newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        requireNonNull(retryStrategy, "retryStrategy");
-        return newDecorator(RetryRuleUtil.fromRetryStrategy(retryStrategy),
-                            maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-    }
-
-    /**
      * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
      * handles failures of an invocation and retries HTTP requests.
      *
@@ -226,7 +165,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private final boolean useRetryAfter;
 
-    private final int contentPreviewLength;
+    private final int maxContentLength;
 
     private final boolean needsContentInRule;
 
@@ -238,7 +177,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         super(delegate, retryRule, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
         needsContentInRule = false;
         this.useRetryAfter = useRetryAfter;
-        contentPreviewLength = 0;
+        maxContentLength = 0;
     }
 
     /**
@@ -246,13 +185,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      */
     RetryingClient(HttpClient delegate,
                    RetryRuleWithContent<HttpResponse> retryRuleWithContent, int totalMaxAttempts,
-                   long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int contentPreviewLength) {
+                   long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int maxContentLength) {
         super(delegate, retryRuleWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
         needsContentInRule = true;
         this.useRetryAfter = useRetryAfter;
-        checkArgument(contentPreviewLength > 0,
-                      "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
-        this.contentPreviewLength = contentPreviewLength;
+        checkArgument(maxContentLength > 0,
+                      "maxContentLength: %s (expected: > 0)", maxContentLength);
+        this.maxContentLength = maxContentLength;
     }
 
     @Override
@@ -316,10 +255,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     try (HttpResponseDuplicator duplicator =
                                  response.toDuplicator(derivedCtx.eventLoop(),
                                                        derivedCtx.maxResponseLength())) {
-                        final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
-                                duplicator.duplicate(), contentPreviewLength);
+                        final TruncatingHttpResponse truncatingHttpResponse =
+                                new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
                         final HttpResponse duplicated = duplicator.duplicate();
-                        retryRuleWithContent().shouldRetry(derivedCtx, contentPreviewResponse, null)
+                        retryRuleWithContent().shouldRetry(derivedCtx, truncatingHttpResponse, null)
                                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                     originalReq, returnedRes, future,
                                                                     duplicated, duplicator::abort));
@@ -417,36 +356,5 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
 
         return -1;
-    }
-
-    private static class ContentPreviewResponse extends FilteredHttpResponse {
-
-        private final int contentPreviewLength;
-        private int contentLength;
-        @Nullable
-        private Subscription subscription;
-
-        ContentPreviewResponse(HttpResponse delegate, int contentPreviewLength) {
-            super(delegate);
-            this.contentPreviewLength = contentPreviewLength;
-        }
-
-        @Override
-        protected void beforeSubscribe(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
-            this.subscription = subscription;
-        }
-
-        @Override
-        protected HttpObject filter(HttpObject obj) {
-            if (obj instanceof HttpData) {
-                final int dataLength = ((HttpData) obj).length();
-                contentLength += dataLength;
-                if (contentLength >= contentPreviewLength) {
-                    assert subscription != null;
-                    subscription.cancel();
-                }
-            }
-            return obj;
-        }
     }
 }

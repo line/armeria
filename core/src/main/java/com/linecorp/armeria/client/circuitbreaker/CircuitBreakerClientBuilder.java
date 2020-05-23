@@ -25,35 +25,40 @@ import com.linecorp.armeria.common.HttpResponse;
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
  */
 public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
+    static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
 
-    private final boolean needsContentInStrategy;
+    private final boolean needsContentInRule;
+    private final int maxContentLength;
 
     /**
-     * Creates a new builder with the specified {@link CircuitBreakerStrategy}.
+     * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerStrategy strategy) {
-        super(strategy);
-        needsContentInStrategy = false;
+    CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
+        super(rule);
+        needsContentInRule = false;
+        maxContentLength = 0;
     }
 
     /**
-     * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
+     * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent} and
+     * the specified {@code maxContentLength}.
      */
-    CircuitBreakerClientBuilder(
-            CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
-        super(strategyWithContent);
-        needsContentInStrategy = true;
+    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                                int maxContentLength) {
+        super(ruleWithContent);
+        needsContentInRule = true;
+        this.maxContentLength = maxContentLength;
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
      */
     public CircuitBreakerClient build(HttpClient delegate) {
-        if (needsContentInStrategy) {
-            return new CircuitBreakerClient(delegate, mapping(), strategyWithContent());
+        if (needsContentInRule) {
+            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent(), maxContentLength);
         }
 
-        return new CircuitBreakerClient(delegate, mapping(), strategy());
+        return new CircuitBreakerClient(delegate, mapping(), rule());
     }
 
     /**

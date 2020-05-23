@@ -720,16 +720,6 @@ class RetryingClientTest {
             final Backoff backoffOn503 = Backoff.fixed(10).withMaxAttempts(2);
             final Backoff backoffOn500 = Backoff.fixed(1000).withMaxAttempts(2);
 
-            final RetryStrategy retryStrategy = RetryStrategy.onStatus((status, unused) -> {
-                if (status == HttpStatus.SERVICE_UNAVAILABLE) {
-                    return backoffOn503;
-                }
-                if (status == HttpStatus.INTERNAL_SERVER_ERROR) {
-                    return backoffOn500;
-                }
-                return null;
-            });
-
             final RetryRule retryRule =
                     RetryRule.of(RetryRule.builder()
                                           .onStatus(HttpStatus.SERVICE_UNAVAILABLE)
@@ -738,8 +728,7 @@ class RetryingClientTest {
                                           .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                                           .thenBackoff(backoffOn500));
 
-            return Stream.of(RetryRuleUtil.fromRetryStrategy(retryStrategy), retryRule)
-                         .map(Arguments::of);
+            return Stream.of(retryRule).map(Arguments::of);
         }
     }
 }

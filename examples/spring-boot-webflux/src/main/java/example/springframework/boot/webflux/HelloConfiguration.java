@@ -7,7 +7,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -64,8 +64,11 @@ public class HelloConfiguration {
         // Customize the client using the given WebClientBuilder. For example:
         return builder -> {
             // Use a circuit breaker for each remote host.
-            final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(CircuitBreakerClient.builder(strategy)
+            final CircuitBreakerRule rule = CircuitBreakerRule.builder()
+                                                              .onServerErrorStatus()
+                                                              .onException()
+                                                              .thenFailure();
+            builder.decorator(CircuitBreakerClient.builder(rule)
                                                   .newDecorator());
 
             // Set a custom client factory.

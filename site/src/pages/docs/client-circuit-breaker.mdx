@@ -59,15 +59,19 @@ You can use the `decorator()` method in <type://WebClientBuilder> to build a <ty
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
-CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
+CircuitBreakerRule rule = CircuitBreakerRule.builder()
+                                            .onServerErrorStatus()
+                                            .onException()
+                                            .thenFailure();
+
 WebClient client = WebClient
         .builder(...)
-        .decorator(CircuitBreakerClient.builder(strategy)
+        .decorator(CircuitBreakerClient.builder(rule)
                                        .newDecorator())
         .build();
 
@@ -79,13 +83,13 @@ Now, the <type://WebClient> can track the number of success or failure events de
 by the total number of <typeplural://Request> exceeds the failure rate.
 Then the <type://WebClient> will immediately get <type://FailFastException> by the <type://CircuitBreaker>.
 
-## `CircuitBreakerStrategy`
+## `CircuitBreakerRule`
 
 How does a <type://CircuitBreaker> know whether a <type://Response> is successful or not?
-<type://CircuitBreakerStrategy> does the job. In the example above, if the status of a <type://Response> is `5xx`
+<type://CircuitBreakerRule> does the job. In the example above, if the status of a <type://Response> is `5xx`
 or an `Exception` is raised during the call, the count of failure is increased.
-Of course, you can have your own `strategy` by implementing <type://CircuitBreakerStrategy>.
-The following example shows a <type://CircuitBreakerStrategy> implementation that fails when an `Exception`
+You can have your own `rule` by building <type://CircuitBreakerRule>.
+The following example builds a <type://CircuitBreakerRule> that fails when an `Exception`
 is raised or the status is `5xx`, succeeds when the status is `2xx` and ignores others.
 
 ```java
@@ -94,83 +98,48 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 
-final CircuitBreakerStrategy myStrategy = new CircuitBreakerStrategy() {
-
-    @Override
-    public CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx,
-                                                          @Nullable Throwable cause) {
-        if (cause != null) {
-            if (cause instanceof UnprocessedRequestException) {
+final CircuitBreakerRule myRule = 
+        CircuitBreakerRule.of(
+                // A failure if an Exception is raised.
+                CircuitBreakerRule.onException(), 
                 // Neither a success nor a failure because the request has not been handled by the server.
-                return CompletableFuture.completedFuture(null);
-            }
-            // A failure if an Exception is raised.
-            return CompletableFuture.completedFuture(false);
-        }
-
-        final HttpStatus status = ctx.log().responseHeaders().status();
-        if (status != null) {
-            // A failure if the response is 5xx.
-            if (status.codeClass() == HttpStatusClass.SERVER_ERROR) {
-                return CompletableFuture.completedFuture(false);
-            }
-
-            // A success if the response is 2xx.
-            if (status.codeClass() == HttpStatusClass.SUCCESS) {
-                return CompletableFuture.completedFuture(true);
-            }
-        }
-
-        // Neither a success nor a failure. Do not take this response into account.
-        return CompletableFuture.completedFuture(null);
-    }
-};
+                CircuitBreakerRule.builder()
+                                  .onUnprocessed()
+                                  .thenIgnore(),
+                // A failure if the response is 5xx.
+                CircuitBreakerRule.onServerErrorStatus(),
+                // A success if the response is 2xx.
+                CircuitBreakerRule.builder()
+                                  .onStatusClass(HttpStatusClass.SUCCESS)
+                                  .thenSuccess(),
+                // Neither a success nor a failure. Do not take this response into account.
+                CircuitBreakerRule.builder().thenIgnore());
 ```
 
-If you want to treat a <type://Response> as a success, return `true`. Return `false` to treat as a failure.
-Note that <type://CircuitBreakerStrategy> can return `null` as well. It won't be counted as a success nor
-a failure.
-
 If you need to determine whether the request was successful by looking into the response content,
-you should implement <type://CircuitBreakerStrategyWithContent> and specify it when you create an
+you should build <type://CircuitBreakerRuleWithContent> and specify it when you create an
 <type://WebClient> using <type://CircuitBreakerClientBuilder>:
 
 ```java
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategyWithContent;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 
-final CircuitBreakerStrategyWithContent<HttpResponse> myStrategy =
-        new CircuitBreakerStrategyWithContent<HttpResponse>() {
-
-            @Override
-            public CompletionStage<Boolean> shouldReportAsSuccess(ClientRequestContext ctx,
-                                                                  HttpResponse response) {
-                return response.aggregate().handle((res, cause) -> {
-                    if (cause != null) {
-                        if (cause instanceof UnprocessedRequestException) {
-                            // Neither a success nor a failure because the request has not been handled
-                            // by the server.
-                            return null;
-                        }
-                        // A failure if an Exception is raised.
-                        return false;
-                    }
-
-                    final String content = res.contentUtf8();
-                    if ("Success".equals(content)) {
-                        return true;
-                    } else if ("Failure".equals(content)) {
-                        return false;
-                    }
-
-                    // Neither a success nor a failure. Do not take this response into account.
-                    return null;
-                });
-            }
-        };
+final CircuitBreakerRuleWithContent<HttpResponse> myRule =
+        CircuitBreakerRuleWithContent.of(
+                CircuitBreakerRuleWithContent.<HttpResponse>builder()
+                                             .onUnprocessed()
+                                             .thenIgnore(),
+                CircuitBreakerRuleWithContent.<HttpResponse>builder()
+                                             .onException()
+                                             .thenFailure(),
+                CircuitBreakerRuleWithContent.<HttpResponse>builder()
+                                             .onResponse(response -> response.aggregate().thenApply(content -> {
+                                                 return content.equals("Failure");
+                                             }))
+                                             .thenFailure());
 
 WebClient client = WebClient
         .builder(...)
-        .decorator(CircuitBreakerClient.builder(myStrategy) // Specify the strategy
+        .decorator(CircuitBreakerClient.builder(myRule) // Specify the rule
                                        .newDecorator())
         .build();
 
@@ -194,15 +163,18 @@ Therefore, Armeria provides various ways that let users group the range of circu
   import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
   import com.linecorp.armeria.common.RpcResponse;
 
+  final CircuitBreakerRule httpRule = CircuitBreakerRule.builder()
+                                                        .onServerErrorStatus()
+                                                        .onException()
+                                                        .thenFailure();
+  final CircuitBreakerRule rpcRule = CircuitBreakerRule.onException();
+  
   // Create a CircuitBreaker with the key name
   final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
-  final CircuitBreakerStrategy httpStrategy = CircuitBreakerStrategy.onServerErrorStatus();
-  final CircuitBreakerStrategy rpcStrategy =
-          response -> response.completionFuture().handle((res, cause) -> cause == null);
+  
   // Create CircuitBreakers per host (a.com, b.com ...)
-
-  CircuitBreakerClient.newPerHostDecorator(factory, httpStrategy);
-  CircuitBreakerRpcClient.newPerHostDecorator(factory, rpcStrategy);
+  CircuitBreakerClient.newPerHostDecorator(factory, httpRule);
+  CircuitBreakerRpcClient.newPerHostDecorator(factory, rpcRule);
   // The names of the created CircuitBreaker: my-cb-a.com, my-cb-b.com, ...
   ```
 
@@ -210,10 +182,10 @@ Therefore, Armeria provides various ways that let users group the range of circu
 
   ```java
   // Create CircuitBreakers per method
-  CircuitBreakerClient.newPerMethodDecorator(factory, httpStrategy);
+  CircuitBreakerClient.newPerMethodDecorator(factory, httpRule);
   // The names of the created CircuitBreaker: my-cb-GET, my-cb-POST, ...
 
-  CircuitBreakerRpcClient.newPerMethodDecorator(factory, rpcStrategy);
+  CircuitBreakerRpcClient.newPerMethodDecorator(factory, rpcRule);
   // The names of the created CircuitBreaker: my-cb-methodA, my-cb-methodB, ...
   ```
 
@@ -221,11 +193,11 @@ Therefore, Armeria provides various ways that let users group the range of circu
 
   ```java
   // Create CircuitBreakers per host and method
-  CircuitBreakerClient.newPerHostAndMethodDecorator(factory, httpStrategy);
+  CircuitBreakerClient.newPerHostAndMethodDecorator(factory, httpRule);
   // The names of the created CircuitBreaker: my-cb-a.com#GET,
   // my-cb-a.com#POST, my-cb-b.com#GET, my-cb-b.com#POST, ...
 
-  CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rpcStrategy);
+  CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rpcRule);
   // The names of the created CircuitBreaker: my-cb-a.com#methodA,
   // my-cb-a.com#methodB, my-cb-b.com#methodA, my-cb-b.com#methodB, ...
   ```
@@ -241,7 +213,7 @@ import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.Key
 final KeyedCircuitBreakerMapping<String> mapping =
         new KeyedCircuitBreakerMapping<>((ctx, req) -> ctx.path(), factory);
 
-CircuitBreakerClient.newDecorator(mapping, httpStrategy);
+CircuitBreakerClient.newDecorator(mapping, httpRule);
 ```
 
 ## `CircuitBreakerBuilder`

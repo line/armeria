@@ -14,29 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.retry;
+package com.linecorp.armeria.client.circuitbreaker;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
+import com.linecorp.armeria.common.HttpResponse;
 
-class RetryRuleTest {
+class CircuitBreakerClientBuilderTest {
 
     @Test
-    void testOf() {
-        final RetryRule retryRule = RetryRule.onException();
-        final RetryRule derived = RetryRule.of(retryRule);
-        assertThat(derived).isEqualTo(retryRule);
+    void buildWithMaxContentLength() {
+        final CircuitBreakerRuleWithContent<HttpResponse> rule =
+                CircuitBreakerRuleWithContent.onResponse(unused -> null);
+        assertThatThrownBy(() -> CircuitBreakerClient.builder(rule, 0))
+                  .isInstanceOf(IllegalArgumentException.class)
+                  .hasMessageContaining("maxContentLength: 0 (expected: > 0)");
 
-        assertThatThrownBy(() -> RetryRule.of(ImmutableList.of()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("can't be empty.");
-
-        assertThatThrownBy(RetryRule::of)
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("can't be empty.");
+        CircuitBreakerClient.builder(rule, 1);
     }
 }

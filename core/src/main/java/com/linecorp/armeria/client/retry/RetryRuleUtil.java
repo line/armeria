@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.DEFAULT_DECISION;
-import static com.linecorp.armeria.client.retry.AbstractRetryRuleBuilder.NEXT_DECISION;
-
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
@@ -30,35 +28,10 @@ import com.linecorp.armeria.common.Response;
 
 final class RetryRuleUtil {
 
-    static RetryStrategy toRetryStrategy(RetryRule rule) {
-        return (ctx, cause) -> rule.shouldRetry(ctx, cause).thenApply(RetryDecision::backoff);
-    }
-
-    static RetryRule fromRetryStrategy(RetryStrategy strategy) {
-        return (ctx, cause) -> strategy.shouldRetry(ctx, cause).thenApply(backoff -> {
-            if (backoff == null) {
-                return RetryDecision.noRetry();
-            } else {
-                return RetryDecision.retry(backoff);
-            }
-        });
-    }
-
-    static <T extends Response> RetryStrategyWithContent<T> toRetryStrategyWithContent(
-            RetryRuleWithContent<T> rule) {
-        return (ctx, content) -> rule.shouldRetry(ctx, content, null).thenApply(RetryDecision::backoff);
-    }
-
-    static <T extends Response> RetryRuleWithContent<T> fromRetryStrategyWithContent(
-            RetryStrategyWithContent<T> strategy) {
-        return (ctx, content, cause) -> strategy.shouldRetry(ctx, content).thenApply(backoff -> {
-            if (backoff == null) {
-                return RetryDecision.noRetry();
-            } else {
-                return RetryDecision.retry(backoff);
-            }
-        });
-    }
+    static final CompletableFuture<RetryDecision> NEXT_DECISION =
+            CompletableFuture.completedFuture(RetryDecision.next());
+    static final CompletableFuture<RetryDecision> DEFAULT_DECISION =
+            CompletableFuture.completedFuture(RetryDecision.retry(Backoff.ofDefault()));
 
     static <T extends Response> RetryRule fromRetryRuleWithContent(RetryRuleWithContent<T> retryRule) {
         return (ctx, cause) -> retryRule.shouldRetry(ctx, null, cause);

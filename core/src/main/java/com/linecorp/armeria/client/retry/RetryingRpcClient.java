@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
-import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -50,44 +49,12 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
      * RPC requests.
      *
-     * @param retryStrategyWithContent the retry strategy
-     *
-     * @deprecated Use {@link #newDecorator(RetryRuleWithContent)}.
-     */
-    @Deprecated
-    public static Function<? super RpcClient, RetryingRpcClient>
-    newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
-        requireNonNull(retryStrategyWithContent, "retryStrategyWithContent");
-        return newDecorator(RetryRuleUtil.fromRetryStrategyWithContent(retryStrategyWithContent));
-    }
-
-    /**
-     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
-     * RPC requests.
-     *
      * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum number of total attempts
      */
     public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryRuleWithContent<RpcResponse> retryRuleWithContent, int maxTotalAttempts) {
         return builder(retryRuleWithContent).maxTotalAttempts(maxTotalAttempts).newDecorator();
-    }
-
-    /**
-     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
-     * RPC requests.
-     *
-     * @param retryStrategyWithContent the retry strategy
-     * @param maxTotalAttempts the maximum number of total attempts
-     *
-     * @deprecated Use {@link #newDecorator(RetryRuleWithContent, int)}.
-     */
-    @Deprecated
-    public static Function<? super RpcClient, RetryingRpcClient>
-    newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent, int maxTotalAttempts) {
-        requireNonNull(retryStrategyWithContent, "retryStrategyWithContent");
-        return newDecorator(RetryRuleUtil.fromRetryStrategyWithContent(retryStrategyWithContent),
-                            maxTotalAttempts);
     }
 
     /**
@@ -109,41 +76,10 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     }
 
     /**
-     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
-     * RPC requests.
-     *
-     * @param retryStrategyWithContent the retry strategy
-     * @param maxTotalAttempts the maximum number of total attempts
-     * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
-     *                                            the timeout
-     * @deprecated Use {@link #newDecorator(RetryRuleWithContent, int, long)}.
-     */
-    @Deprecated
-    public static Function<? super RpcClient, RetryingRpcClient>
-    newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent,
-                 int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        requireNonNull(retryStrategyWithContent, "retryStrategyWithContent");
-        return newDecorator(RetryRuleUtil.fromRetryStrategyWithContent(retryStrategyWithContent),
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-    }
-
-    /**
      * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryingRpcClientBuilder builder(RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
         return new RetryingRpcClientBuilder(retryRuleWithContent);
-    }
-
-    /**
-     * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryRuleWithContent}.
-     *
-     * @deprecated Use {@link #builder(RetryRuleWithContent)}
-     */
-    @Deprecated
-    public static RetryingRpcClientBuilder builder(
-            RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
-        requireNonNull(retryStrategyWithContent, "retryStrategyWithContent");
-        return builder(RetryRuleUtil.fromRetryStrategyWithContent(retryStrategyWithContent));
     }
 
     /**

@@ -27,15 +27,15 @@ import com.linecorp.armeria.common.RpcResponse;
 public final class CircuitBreakerRpcClientBuilder
         extends AbstractCircuitBreakerClientBuilder<RpcResponse> {
 
-    CircuitBreakerRpcClientBuilder(CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
-        super(strategyWithContent);
+    CircuitBreakerRpcClientBuilder(CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        super(ruleWithContent);
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return new CircuitBreakerRpcClient(delegate, mapping(), strategyWithContent());
+        return new CircuitBreakerRpcClient(delegate, mapping(), ruleWithContent());
     }
 
     /**
