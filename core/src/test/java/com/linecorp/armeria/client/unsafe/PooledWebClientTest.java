@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.client.unsafe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.unsafe.PooledWebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledAggregatedHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
