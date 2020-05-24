@@ -236,6 +236,12 @@ public final class Flags {
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
+    private static final long DEFAULT_DEFAULT_CLIENT_MAX_AGE_MILLIS = 300000; // 5 mins
+    private static final long DEFAULT_CLIENT_MAX_AGE_MILLIS =
+            getLong("defaultClientMaxAgeMillis",
+                    DEFAULT_DEFAULT_CLIENT_MAX_AGE_MILLIS,
+                    value -> value >= 0);
+
     private static final long DEFAULT_DEFAULT_PING_INTERVAL_MILLIS = 0; // Disabled
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
             getLong("defaultPingIntervalMillis",
@@ -676,6 +682,18 @@ public final class Flags {
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side connection max-age in milliseconds.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultClientMaxAgeMillis=<integer>} JVM option to override
+     * the default value.
+     */
+    public static long defaultClientMaxAgeMillis() {
+        return DEFAULT_CLIENT_MAX_AGE_MILLIS;
     }
 
     /**

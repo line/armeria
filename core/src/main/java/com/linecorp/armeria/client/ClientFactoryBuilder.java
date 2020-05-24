@@ -428,6 +428,16 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the max age of a socket connection in milliseconds. The connection is closed
+     * after this amount of time of creation.
+     */
+    public ClientFactoryBuilder maxAgeMillis(long maxAgeMillis) {
+        checkArgument(maxAgeMillis >= 0, "maxAgeMillis: %s (expected: >= 0)", maxAgeMillis);
+        option(ClientFactoryOption.MAX_AGE_MILLIS, maxAgeMillis);
+        return this;
+    }
+
+    /**
      * Sets the PING interval in milliseconds.
      * When neither read nor write was performed for the given {@code pingIntervalMillis},
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or

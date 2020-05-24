@@ -180,6 +180,12 @@ public final class ClientFactoryOption<T>
             define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
     /**
+     * The max-age of a socket connection in milliseconds.
+     */
+    public static final ClientFactoryOption<Long> MAX_AGE_MILLIS =
+            define("MAX_AGE_MILLIS", Flags.defaultClientMaxAgeMillis());
+
+    /**
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or

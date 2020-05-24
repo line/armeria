@@ -218,6 +218,10 @@ public final class ClientFactoryOptions
         return get(ClientFactoryOption.IDLE_TIMEOUT_MILLIS);
     }
 
+    public long maxAgeMillis() {
+        return get(ClientFactoryOption.MAX_AGE_MILLIS);
+    }
+
     /**
      * Returns the PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
