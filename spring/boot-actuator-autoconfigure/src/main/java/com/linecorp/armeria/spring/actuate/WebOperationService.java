@@ -60,9 +60,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 
@@ -275,7 +275,7 @@ final class WebOperationService implements HttpService {
         final long nextRemainingBytes = remainingBytes - readBytes;
         final boolean endOfStream = nextRemainingBytes == 0;
         if (readBytes > 0) {
-            if (!res.tryWrite(new ByteBufHttpData(buf, endOfStream))) {
+            if (!res.tryWrite(PooledHttpData.wrap(buf).withEndOfStream())) {
                 close(in);
                 return;
             }

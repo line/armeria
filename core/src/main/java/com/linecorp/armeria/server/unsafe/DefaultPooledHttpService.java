@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.server.unsafe;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class DefaultPooledHttpService extends AbstractUnwrappable<HttpService> implements PooledHttpService {
@@ -33,5 +36,10 @@ final class DefaultPooledHttpService extends AbstractUnwrappable<HttpService> im
         // Always a wrapped non-pooled service, make sure it gets a normal request.
         assert !(delegate() instanceof PooledHttpService);
         return PooledHttpResponse.of(delegate().serve(ctx, req.toUnpooled()));
+    }
+
+    @Override
+    public boolean shouldCachePath(String path, @Nullable String query, Route route) {
+        return delegate().shouldCachePath(path, query, route);
     }
 }

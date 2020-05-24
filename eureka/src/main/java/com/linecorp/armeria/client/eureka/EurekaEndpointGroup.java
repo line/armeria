@@ -45,16 +45,18 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.unsafe.PooledWebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.eureka.Application;
 import com.linecorp.armeria.internal.common.eureka.Applications;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
@@ -63,7 +65,6 @@ import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -158,7 +159,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
     private final RequestHeaders requestHeaders;
     private final Function<byte[], List<Endpoint>> responseConverter;
-    private final WebClient webClient;
+    private final PooledWebClient webClient;
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
     private volatile boolean closed;
@@ -166,7 +167,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     EurekaEndpointGroup(WebClient webClient, long registryFetchIntervalSeconds, @Nullable String appName,
                         @Nullable String instanceId, @Nullable String vipAddress,
                         @Nullable String secureVipAddress, @Nullable List<String> regions) {
-        this.webClient = webClient;
+        this.webClient = PooledWebClient.of(webClient);
         this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();
@@ -181,7 +182,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void fetchRegistry() {
-        final HttpResponse response;
+        final PooledHttpResponse response;
         final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             response = webClient.execute(requestHeaders);
@@ -190,7 +191,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
         final EventLoop eventLoop = ctx.eventLoop();
         response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
-            try {
+            try (SafeCloseable unused = aggregatedRes) {
                 if (closed) {
                     return null;
                 }
@@ -216,8 +217,6 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                         }
                     }
                 }
-            } finally {
-                ReferenceCountUtil.release(aggregatedRes.content());
             }
             scheduledFuture = eventLoop.schedule(this::fetchRegistry,
                                                  registryFetchIntervalSeconds, TimeUnit.SECONDS);
