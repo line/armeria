@@ -4,13 +4,13 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.11.0
-  - io.dropwizard.metrics:metrics-bom:4.1.8
+  - io.dropwizard.metrics:metrics-bom:4.1.9
   - io.grpc:grpc-bom:1.29.0
   - io.micrometer:micrometer-bom:1.5.1
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.50.Final
   - io.zipkin.brave:brave-bom:5.12.3
-  - org.eclipse.jetty:jetty-bom:9.4.28.v20200408
+  - org.eclipse.jetty:jetty-bom:9.4.29.v20200521
   - org.junit:junit-bom:5.6.2
 cglib:
   cglib: { version: '3.3.0' }
@@ -40,7 +40,7 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.8.3'
+    version: '2.8.4'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
@@ -132,7 +132,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.8.2'
+    version: &RETROFIT2_VERSION '2.9.0'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -249,7 +249,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.0.3'
+    version: '3.0.4'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
