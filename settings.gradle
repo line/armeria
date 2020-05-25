@@ -45,7 +45,6 @@ includeWithFlags ':javadoc',                            'java', 'publish', 'no_a
 // Unpublished Java projects
 includeWithFlags ':benchmarks',               'java'
 includeWithFlags ':it:context-storage',       'java'
-includeWithFlags ':it:micrometer1.3',         'java', 'relocate'
 includeWithFlags ':it:server',                'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'
@@ -54,6 +53,7 @@ includeWithFlags ':thrift0.12',               'java', 'relocate'
 
 // Unpublished non-Java projects
 includeWithFlags ':docs-client'
+
 
 // Site generation project
 includeWithFlags ':site'
