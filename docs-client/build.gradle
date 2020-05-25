@@ -16,7 +16,7 @@ apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
 tasks.yarn {
-    args += ['--frozen-lockfile', '--verbose', '--network-timeout', '600000']
+    args += ['--frozen-lockfile', '--mutex', 'network', '--verbose']
 
     // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
     // This makes sense in principal but Gradle often handles up-to-date checking much more
