@@ -28,7 +28,7 @@ import static com.linecorp.armeria.client.ClientFactoryOption.HTTP2_INITIAL_STRE
 import static com.linecorp.armeria.client.ClientFactoryOption.HTTP2_MAX_FRAME_SIZE;
 import static com.linecorp.armeria.client.ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE;
 import static com.linecorp.armeria.client.ClientFactoryOption.IDLE_TIMEOUT_MILLIS;
-import static com.linecorp.armeria.client.ClientFactoryOption.MAX_AGE_MILLIS;
+import static com.linecorp.armeria.client.ClientFactoryOption.MAX_CONNECTION_AGE_MILLIS;
 import static com.linecorp.armeria.client.ClientFactoryOption.METER_REGISTRY;
 import static com.linecorp.armeria.client.ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE;
 import static com.linecorp.armeria.client.ClientFactoryOption.USE_HTTP1_PIPELINING;
@@ -117,7 +117,7 @@ class ClientFactoryOptionsTest {
                     arguments(HTTP1_MAX_HEADER_SIZE, 6),
                     arguments(HTTP1_MAX_CHUNK_SIZE, 7),
                     arguments(IDLE_TIMEOUT_MILLIS, 8),
-                    arguments(MAX_AGE_MILLIS, 9),
+                    arguments(MAX_CONNECTION_AGE_MILLIS, 9),
                     arguments(USE_HTTP2_PREFACE, true),
                     arguments(USE_HTTP1_PIPELINING, false),
                     arguments(CONNECTION_POOL_LISTENER, ConnectionPoolListener.noop()),

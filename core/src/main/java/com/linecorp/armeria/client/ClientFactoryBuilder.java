@@ -431,9 +431,18 @@ public final class ClientFactoryBuilder {
      * Sets the max age of a socket connection in milliseconds. The connection is closed
      * after this amount of time of creation.
      */
-    public ClientFactoryBuilder maxAgeMillis(long maxAgeMillis) {
+    public ClientFactoryBuilder maxConnectionAgeMillis(long maxAgeMillis) {
         checkArgument(maxAgeMillis >= 0, "maxAgeMillis: %s (expected: >= 0)", maxAgeMillis);
-        option(ClientFactoryOption.MAX_AGE_MILLIS, maxAgeMillis);
+        option(ClientFactoryOption.MAX_CONNECTION_AGE_MILLIS, maxAgeMillis);
+        return this;
+    }
+
+    /**
+     * Sets the max age of a socket connection in the given duration. The connection is closed
+     * after this amount of time of creation.
+     */
+    public ClientFactoryBuilder maxConnectionAge(Duration maxAge) {
+        maxConnectionAgeMillis(requireNonNull(maxAge, "maxAge").toMillis());
         return this;
     }
 

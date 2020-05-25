@@ -218,8 +218,11 @@ public final class ClientFactoryOptions
         return get(ClientFactoryOption.IDLE_TIMEOUT_MILLIS);
     }
 
-    public long maxAgeMillis() {
-        return get(ClientFactoryOption.MAX_AGE_MILLIS);
+    /**
+     * Returns the max connection age in milliseconds.
+     */
+    public long maxConnectionAgeMillis() {
+        return get(ClientFactoryOption.MAX_CONNECTION_AGE_MILLIS);
     }
 
     /**

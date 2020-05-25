@@ -181,8 +181,9 @@ public final class ClientFactoryOption<T>
 
     /**
      * The max-age of a socket connection in milliseconds.
+     * The connection is closed after this amount of time of creation.
      */
-    public static final ClientFactoryOption<Long> MAX_AGE_MILLIS =
+    public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
             define("MAX_AGE_MILLIS", Flags.defaultClientMaxAgeMillis());
 
     /**
