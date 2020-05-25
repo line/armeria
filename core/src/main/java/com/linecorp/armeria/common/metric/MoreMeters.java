@@ -18,14 +18,21 @@ package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+
+import org.reflections.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.DistributionSummary.Builder;
 import io.micrometer.core.instrument.Measurement;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,7 +45,21 @@ import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
  */
 public final class MoreMeters {
 
+    private static final Logger logger = LoggerFactory.getLogger(MoreMeters.class);
+
     private static final double[] PERCENTILES = { 0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0 };
+
+    private static final boolean MICROMETER_1_5;
+
+    static {
+        final Set<Method> methods = ReflectionUtils.getMethods(Builder.class, method ->
+                method != null && "serviceLevelObjectives".equals(method.getName()));
+        if (methods.isEmpty()) {
+            MICROMETER_1_5 = false;
+        } else {
+            MICROMETER_1_5 = true;
+        }
+    }
 
     /**
      * Export the percentile values only by default. We specify all properties so that we get consistent values
@@ -90,19 +111,29 @@ public final class MoreMeters {
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
 
-        return DistributionSummary.builder(name)
-                                  .tags(tags)
-                                  .publishPercentiles(distStatCfg.getPercentiles())
-                                  .publishPercentileHistogram(
-                                          distStatCfg.isPercentileHistogram())
-                                  .maximumExpectedValue(distStatCfg.getMaximumExpectedValueAsDouble())
-                                  .minimumExpectedValue(distStatCfg.getMinimumExpectedValueAsDouble())
-                                  .distributionStatisticBufferLength(
-                                          distStatCfg.getBufferLength())
-                                  .distributionStatisticExpiry(distStatCfg.getExpiry())
-                                  .serviceLevelObjectives(
-                                          distributionStatisticConfig().getServiceLevelObjectiveBoundaries())
-                                  .register(registry);
+        final Builder builder =
+                DistributionSummary.builder(name)
+                                   .tags(tags)
+                                   .publishPercentiles(distStatCfg.getPercentiles())
+                                   .publishPercentileHistogram(distStatCfg.isPercentileHistogram())
+                                   .distributionStatisticBufferLength(distStatCfg.getBufferLength())
+                                   .distributionStatisticExpiry(distStatCfg.getExpiry());
+
+        if (MICROMETER_1_5) {
+            builder.maximumExpectedValue(distStatCfg.getMaximumExpectedValueAsDouble())
+                   .minimumExpectedValue(distStatCfg.getMinimumExpectedValueAsDouble())
+                   .serviceLevelObjectives(distributionStatisticConfig().getServiceLevelObjectiveBoundaries());
+        } else {
+            final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValueAsDouble();
+            final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValueAsDouble();
+            final Long maxExpectedValue =
+                    maxExpectedValueNanos != null ? maxExpectedValueNanos.longValue() : null;
+            final Long minExpectedValue =
+                    minExpectedValueNanos != null ? minExpectedValueNanos.longValue() : null;
+            builder.maximumExpectedValue(maxExpectedValue);
+            builder.minimumExpectedValue(minExpectedValue);
+        }
+        return builder.register(registry);
     }
 
     /**
