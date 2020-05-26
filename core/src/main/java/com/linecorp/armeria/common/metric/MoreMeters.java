@@ -18,13 +18,11 @@ package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Stream;
 
-import org.reflections.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,13 +50,9 @@ public final class MoreMeters {
     private static final boolean MICROMETER_1_5;
 
     static {
-        final Set<Method> methods = ReflectionUtils.getMethods(Builder.class, method ->
-                method != null && "serviceLevelObjectives".equals(method.getName()));
-        if (methods.isEmpty()) {
-            MICROMETER_1_5 = false;
-        } else {
-            MICROMETER_1_5 = true;
-        }
+        MICROMETER_1_5 = Stream.of(Builder.class.getMethods())
+                               .anyMatch(method -> method != null &&
+                                                   "serviceLevelObjectives".equals(method.getName()));
     }
 
     /**
