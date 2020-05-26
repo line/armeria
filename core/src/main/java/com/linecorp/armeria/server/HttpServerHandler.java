@@ -266,16 +266,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ChannelPipeline pipeline = ctx.pipeline();
         final Http2ServerConnectionHandler handler = pipeline.get(Http2ServerConnectionHandler.class);
         if (responseEncoder == null) {
-            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
-                                                           config.isDateHeaderEnabled(),
-                                                           config.isServerHeaderEnabled()
-            );
+            responseEncoder = newServerHttp2ObjectEncoder(ctx, handler);
         } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
-            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
-                                                           config.isDateHeaderEnabled(),
-                                                           config.isServerHeaderEnabled()
-            );
+            responseEncoder = newServerHttp2ObjectEncoder(ctx, handler);
         }
 
         // Update the connection-level flow-control window size.
@@ -283,6 +277,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (initialWindow > DEFAULT_WINDOW_SIZE) {
             incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
         }
+    }
+
+    private ServerHttp2ObjectEncoder newServerHttp2ObjectEncoder(ChannelHandlerContext ctx,
+                                                                 Http2ServerConnectionHandler handler) {
+        return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
+                                            config.maxConnectionAgeMillis(),
+                                            config.isDateHeaderEnabled(),
+                                            config.isServerHeaderEnabled()
+        );
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {

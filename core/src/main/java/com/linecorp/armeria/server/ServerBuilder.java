@@ -172,6 +172,7 @@ public final class ServerBuilder {
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
+    private long maxConnectionAgeMillis = Flags.defaultServerMaxConnectionAgeMillis();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -497,6 +498,28 @@ public final class ServerBuilder {
     public ServerBuilder pingInterval(Duration pingInterval) {
         pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
         return this;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     *
+     * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
+     */
+    public ServerBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
+        validateNonNegative(maxConnectionAgeMillis, "maxConnectionAgeMillis");
+        this.maxConnectionAgeMillis = maxConnectionAgeMillis;
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAge} since the connection was established.
+     *
+     * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
+     */
+    public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
+        return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
     }
 
     /**
@@ -1483,10 +1506,14 @@ public final class ServerBuilder {
             }
         }
 
+        if (maxConnectionAgeMillis > 0 && idleTimeoutMillis > maxConnectionAgeMillis) {
+            idleTimeoutMillis = maxConnectionAgeMillis;
+        }
+
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, http2InitialConnectionWindowSize,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,

@@ -242,6 +242,12 @@ public final class Flags {
                     DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
                     value -> value >= 0);
 
+    private static final long DEFAULT_DEFAULT_SERVER_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
+    private static final long DEFAULT_SERVER_MAX_CONNECTION_AGE_MILLIS =
+            getLong("defaultServerMaxConnectionAgeMillis",
+                    DEFAULT_DEFAULT_SERVER_MAX_CONNECTION_AGE_MILLIS,
+                    value -> value >= 0);
+
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getInt("defaultHttp2InitialConnectionWindowSize",
@@ -754,6 +760,21 @@ public final class Flags {
      */
     public static long defaultPingIntervalMillis() {
         return DEFAULT_PING_INTERVAL_MILLIS;
+    }
+
+    /**
+     * Returns the default server-side max age of a connection for keep-alive in milliseconds.
+     * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of the time since the connection was established.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_SERVER_MAX_CONNECTION_AGE_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerMaxConnectionAgeMillis=<integer>} JVM option
+     * to override the default value.
+     *
+     * @see ServerBuilder#maxConnectionAgeMillis(long)
+     */
+    public static long defaultServerMaxConnectionAgeMillis() {
+        return DEFAULT_SERVER_MAX_CONNECTION_AGE_MILLIS;
     }
 
     /**

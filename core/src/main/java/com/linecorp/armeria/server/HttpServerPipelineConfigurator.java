@@ -67,6 +67,7 @@ import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -94,11 +95,15 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
     };
 
+    static final AttributeKey<Long> CONNECTION_START_TIME_NANO =
+            AttributeKey.valueOf(HttpServerPipelineConfigurator.class, "CONNECTION_START_TIME_NANO");
+
     private final ServerConfig config;
     private final ServerPort port;
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
+    private final long maxConnectionAgeMillis;
 
     /**
      * Creates a new instance.
@@ -112,11 +117,15 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
+        maxConnectionAgeMillis = config.maxConnectionAgeMillis();
     }
 
     @Override
     protected void initChannel(Channel ch) throws Exception {
         ChannelUtil.disableWriterBufferWatermark(ch);
+        if (maxConnectionAgeMillis > 0) {
+            ch.attr(CONNECTION_START_TIME_NANO).set(System.nanoTime());
+        }
 
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
@@ -163,8 +172,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final KeepAliveHandler keepAliveHandler =
                 idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis) : null;
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), SessionProtocol.H1C, keepAliveHandler, config.isDateHeaderEnabled(),
-                config.isServerHeaderEnabled()
+                p.channel(), SessionProtocol.H1C, keepAliveHandler, config.maxConnectionAgeMillis(),
+                config.isDateHeaderEnabled(), config.isServerHeaderEnabled()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
@@ -402,8 +411,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final KeepAliveHandler keepAliveHandler =
                     idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis) : null;
             final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
-                    ch, SessionProtocol.H1, keepAliveHandler, config.isDateHeaderEnabled(),
-                    config.isServerHeaderEnabled());
+                    ch, SessionProtocol.H1, keepAliveHandler, config.maxConnectionAgeMillis(),
+                    config.isDateHeaderEnabled(), config.isServerHeaderEnabled());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),

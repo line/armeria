@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.CONNECTION_START_TIME_NANO;
+
+import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -35,7 +39,6 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
@@ -44,14 +47,16 @@ import io.netty.handler.codec.http.HttpVersion;
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
     @Nullable
     private final KeepAliveHandler keepAliveHandler;
+    private final long maxConnectionAgeNano;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
-                             @Nullable KeepAliveHandler keepAliveHandler,
+                             @Nullable KeepAliveHandler keepAliveHandler, long maxConnectionAgeMillis,
                              boolean enableDateHeader, boolean enableServerHeader) {
         super(ch, protocol);
         this.keepAliveHandler = keepAliveHandler;
+        maxConnectionAgeNano = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
     }
@@ -63,14 +68,22 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return newClosedSessionFuture();
         }
 
-        final HttpObject converted = convertHeaders(headers, endStream, isTrailersEmpty);
+        final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty);
         if (headers.status().isInformational()) {
             return write(id, converted, false);
+        }
+
+        if (maxConnectionAgeNano > 0) {
+            final Long connectionStartTimeNano = channel().attr(CONNECTION_START_TIME_NANO).get();
+            if (connectionStartTimeNano != null &&
+                System.nanoTime() - connectionStartTimeNano > maxConnectionAgeNano) {
+                converted.headers().set(HttpHeaderNames.CONNECTION, "close");
+            }
         }
         return writeNonInformationalHeaders(id, converted, endStream);
     }
 
-    private HttpObject convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
+    private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
         final int statusCode = headers.status().code();
         final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
 
@@ -103,6 +116,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             convertHeaders(headers, res.headers(), isTrailersEmpty);
             maybeSetTransferEncoding(res);
         }
+
         return res;
     }
 
