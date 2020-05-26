@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.metric;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -111,7 +112,7 @@ public final class MoreMeters {
         if (MICROMETER_1_5) {
             builder.maximumExpectedValue(distStatCfg.getMaximumExpectedValueAsDouble())
                    .minimumExpectedValue(distStatCfg.getMinimumExpectedValueAsDouble())
-                   .serviceLevelObjectives(distributionStatisticConfig().getServiceLevelObjectiveBoundaries());
+                   .serviceLevelObjectives(distStatCfg.getServiceLevelObjectiveBoundaries());
         } else {
             final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValueAsDouble();
             final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValueAsDouble();
@@ -121,6 +122,10 @@ public final class MoreMeters {
                     minExpectedValueNanos != null ? minExpectedValueNanos.longValue() : null;
             builder.maximumExpectedValue(maxExpectedValue);
             builder.minimumExpectedValue(minExpectedValue);
+            final double[] slas = distStatCfg.getServiceLevelObjectiveBoundaries();
+            if (slas != null) {
+                builder.sla(Arrays.stream(slas).mapToLong(sla -> (long) sla).toArray());
+            }
         }
         return builder.register(registry);
     }
