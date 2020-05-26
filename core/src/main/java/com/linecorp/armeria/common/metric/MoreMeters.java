@@ -121,6 +121,7 @@ public final class MoreMeters {
                     minExpectedValueNanos != null ? minExpectedValueNanos.longValue() : null;
             builder.maximumExpectedValue(maxExpectedValue);
             builder.minimumExpectedValue(minExpectedValue);
+            builder.sla(distributionStatisticConfig().getSlaBoundaries());
         }
         return builder.register(registry);
     }
