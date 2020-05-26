@@ -21,12 +21,14 @@ apply plugin: 'com.github.node-gradle.node'
 
 node {
     version = '12.16.3'
+    // Note: We use yarn 1.22.4 for bootstrapping yarn 2.
+    //       See .yarnrc.yml and .yarn/releases
     yarnVersion = '1.22.4'
     download = true
 }
 
 tasks.yarn {
-    args += ['--frozen-lockfile', '--mutex', 'network', '--verbose']
+    args += ['--frozen-lockfile']
 
     // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
     // This makes sense in principal but Gradle often handles up-to-date checking much more
