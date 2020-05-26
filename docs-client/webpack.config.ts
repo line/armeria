@@ -4,6 +4,8 @@ import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { Configuration, DefinePlugin } from 'webpack';
 
+const PnpWebpackPlugin = require(`pnp-webpack-plugin`);
+
 import { docServiceDebug } from './src/lib/header-provider';
 
 const armeriaPort = process.env.ARMERIA_PORT || '8080';
@@ -74,6 +76,10 @@ const config: Configuration = {
     modules: ['src', 'node_modules'],
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
     mainFields: ['browser', 'module', 'jsnext:main', 'main'],
+    plugins: [ PnpWebpackPlugin ],
+  },
+  resolveLoader: {
+    plugins: [ PnpWebpackPlugin ],
   },
   plugins: [
     new HtmlWebpackPlugin({
