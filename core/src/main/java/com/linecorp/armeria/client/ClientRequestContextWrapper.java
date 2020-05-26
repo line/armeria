@@ -45,7 +45,7 @@ public class ClientRequestContextWrapper
 
     @Override
     public ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req,
-                                                  @Nullable RpcRequest rpcReq, Endpoint endpoint) {
+                                                  @Nullable RpcRequest rpcReq, @Nullable Endpoint endpoint) {
         return delegate().newDerivedContext(id, req, rpcReq, endpoint);
     }
 

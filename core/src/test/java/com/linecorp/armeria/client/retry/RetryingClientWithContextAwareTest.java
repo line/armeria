@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class RetryingHttpClientWithContextAwareTest {
+class RetryingClientWithContextAwareTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

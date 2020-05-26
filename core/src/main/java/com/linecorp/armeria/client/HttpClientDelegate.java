@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
+import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -44,11 +45,6 @@ import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements HttpClient {
 
-    private static final Throwable CONTEXT_INITIALIZATION_FAILED = new Exception(
-            ClientRequestContext.class.getSimpleName() + " initialization failed", null, false, false) {
-        private static final long serialVersionUID = 837901495421033459L;
-    };
-
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
 
@@ -62,12 +58,20 @@ final class HttpClientDelegate implements HttpClient {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
-            // Note that this response will be ignored because:
-            // - `ClientRequestContext.endpoint()` returns `null` only when the context initialization failed.
-            // - `ClientUtil.initContextAndExecuteWithFallback()` will use the fallback response rather than
-            //   what we return here.
-            req.abort(CONTEXT_INITIALIZATION_FAILED);
-            return HttpResponse.ofFailure(CONTEXT_INITIALIZATION_FAILED);
+            // It is possible that we reach here even when `EndpointGroup` is not empty,
+            // because `endpoint` can be `null` for the following two cases:
+            // - `EndpointGroup.select()` returned `null`.
+            // - An exception was raised while context initialization.
+            //
+            // Because all the clean-up is done by `DefaultClientRequestContext.failEarly()`
+            // when context initialization fails with an exception, we can assume that the exception
+            // and response created here will be exposed only when `EndpointGroup.select()` returned `null`.
+            //
+            // See `DefaultClientRequestContext.init()` for more information.
+            final UnprocessedRequestException cause =
+                    new UnprocessedRequestException(EmptyEndpointGroupException.get());
+            handleEarlyRequestException(ctx, req, cause);
+            return HttpResponse.ofFailure(cause);
         }
 
         if (!isValidPath(req)) {

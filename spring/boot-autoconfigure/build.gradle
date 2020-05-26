@@ -3,6 +3,8 @@ dependencies {
     compileOnly project(':thrift')
     implementation project(':logback')
 
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
     optionalApi 'io.micrometer:micrometer-registry-prometheus'
     optionalApi 'io.dropwizard.metrics:metrics-json'
