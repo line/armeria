@@ -20,7 +20,7 @@
            .auth(OAuth2Token.of("token-0123456789abcdef"))
            .build();
   ```
-- New <type://RetryRule> and <type://RetryRuleWithContent> API lets you define a complex retry policy
+- New <type://RetryRule> and <type://RetryRuleWithContent> API let you define a complex retry policy
   conveniently. #1634 #2661 #2709
   ```java
   Backoff myBackoff = Backoff.exponential(1000, 60000)
