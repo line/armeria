@@ -38,7 +38,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['node_modules/', 'public/', 'build/', '!.*.js', '!.*.json'],
+  ignorePatterns: ['node_modules/', 'public/', 'build/', '.gradle/', '.yarn/', '.pnp.js'],
   // Settings for .js, .jsx and .json
   parserOptions: {
     ...commonParserOptions,

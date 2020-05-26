@@ -4,8 +4,8 @@
   "license": "Apache-2.0",
   "scripts": {
     "prebuild": "yarn run check",
-    "build": "yarn run prebuild && cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" webpack",
-    "check": "tsc --project .",
+    "build": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" webpack",
+    "check": "tsc --project . && yarn run lint",
     "start": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" WEBPACK_DEV=true webpack-dev-server",
     "lint": "eslint --ext .json,.js,.jsx,.ts,.tsx .",
     "lint:fix": "eslint --fix --ext .json,.js,.jsx,.ts,.tsx ."
@@ -50,7 +50,7 @@
     "babel-loader": "^8.0.4",
     "cross-env": "^5.2.0",
     "css-loader": "^3.2.0",
-    "eslint": "^6.8.0",
+    "eslint": "^7.1.0",
     "eslint-config-airbnb": "^18.1.0",
     "eslint-config-airbnb-typescript": "^7.2.0",
     "eslint-config-prettier": "^6.10.0",
