@@ -23,14 +23,14 @@
 - You can now easily bind an MDC property to a <type://RequestContext> and log it using a logging framework.
   #2634 #2724 #2729
   ```java
-  ServiceRequestContext sctx = ...;
-  try (SafeCloseable ignored = sctx.push()) {
-      RequestScopedMdc.put(sctx, "transactionId", "1234");
+  MDC.put("transactionId", "1234");
+  WebClient client = ...;
+  try (SafeCloseable ignored = Clients.withContextCustomizer(ctx -> {
+      RequestScopedMdc.copy(ctx, "transactionId");
+  }) {
+      assert MDC.get("transactionId").equals("1234");
 
-      ClientRequestContext cctx = ...;
-      try (SafeCloseable ignored2 = cctx.push()) {
-          assert MDC.get("transactionId").equals("1234");
-      }
+      client.execute(...);
   }
   ```
 - You can now install a custom hook to <type://RequestContextStorage> in runtime, usually at startup time. #2723
