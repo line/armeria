@@ -43,8 +43,6 @@ import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
  */
 public final class MoreMeters {
 
-    private static final Logger logger = LoggerFactory.getLogger(MoreMeters.class);
-
     private static final double[] PERCENTILES = { 0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0 };
 
     private static final boolean MICROMETER_1_5;
