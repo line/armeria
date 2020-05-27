@@ -15,20 +15,29 @@ if (rootProject.hasProperty('noWeb')) {
 apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
-task yarnInstall(type: YarnTask) {
+node {
+    version = '12.16.3'
+    // Note: We use yarn 1.22.4 for bootstrapping yarn 2.
+    //       See .yarnrc.yml and .yarn/releases
+    yarnVersion = '1.22.4'
+    download = true
+}
+
+tasks.yarn {
     args = ['install', '--immutable']
-}
+    yarnCommand = null
 
-task yarnUpdate(type: YarnTask) {
-    args = ['install']
-}
-
-task yarnVersion(type: YarnTask) {
-    args = ['--version']
+    // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
+    // This makes sense in principal but Gradle often handles up-to-date checking much more
+    // slowly than yarn itself for a large node_modules, so we go ahead and remove it all
+    // from up-to-date checking.
+    nodeModulesOutputFilter = {
+        it.exclude("**/*")
+    }
 }
 
 task buildWeb(type: YarnTask) {
-    dependsOn yarnInstall
+    dependsOn tasks.yarn
 
     args = ['run', 'build']
 
@@ -39,7 +48,7 @@ task buildWeb(type: YarnTask) {
 }
 
 task checkWeb(type: YarnTask) {
-    dependsOn yarnInstall
+    dependsOn tasks.yarn
 
     args = ['run', 'check']
 
@@ -50,19 +59,11 @@ task checkWeb(type: YarnTask) {
 }
 
 task copyWeb(type: Copy) {
-    dependsOn buildWeb
+    dependsOn tasks.buildWeb
 
     from 'build/web'
     into 'build/javaweb/com/linecorp/armeria/server/docs'
 }
 
-tasks.assemble.dependsOn copyWeb
-tasks.check.dependsOn checkWeb
-
-node {
-    version = '12.16.3'
-    // Note: We use yarn 1.22.4 for bootstrapping yarn 2.
-    //       See .yarnrc.yml and .yarn/releases
-    yarnVersion = '1.22.4'
-    download = true
-}
+tasks.assemble.dependsOn tasks.copyWeb
+tasks.check.dependsOn tasks.checkWeb

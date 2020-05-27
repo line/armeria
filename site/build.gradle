@@ -28,7 +28,8 @@ node {
 }
 
 tasks.yarn {
-    args += ['--frozen-lockfile']
+    args = ['install', '--immutable']
+    yarnCommand = null
 
     // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
     // This makes sense in principal but Gradle often handles up-to-date checking much more
@@ -40,9 +41,10 @@ tasks.yarn {
 }
 
 task yarnClean(type: YarnTask) {
-    dependsOn 'yarn'
+    dependsOn tasks.yarn
     args = ['run', 'clean']
 }
+
 tasks.clean.dependsOn tasks.yarnClean
 tasks.clean.delete(project.file("${project.projectDir}/gen-src"))
 
@@ -52,7 +54,7 @@ task apiIndex(type: ApiIndexTask) {
 }
 task contributorList(type: ContributorListTask)
 task prepare {
-    dependsOn tasks.yarn_install
+    dependsOn tasks.yarn
     dependsOn tasks.versionIndex
     dependsOn tasks.apiIndex
     dependsOn tasks.contributorList
@@ -60,7 +62,7 @@ task prepare {
 
 task develop(type: YarnTask) {
     dependsOn tasks.prepare
-    dependsOn 'yarn'
+    dependsOn tasks.yarn
 
     args = ['run', 'develop']
 }
@@ -81,11 +83,11 @@ if (checkstyleEnabled) {
 // because it takes long to build a site.
 task site(type: YarnTask) {
     dependsOn tasks.prepare
-    dependsOn 'yarn'
+    dependsOn tasks.yarn
 
-    if (checkstyleEnabled) {
-        dependsOn 'lint'
-    }
+    //if (checkstyleEnabled) {
+    //    dependsOn tasks.lint
+    //}
     args = ['run', 'build']
     inputs.dir('src')
     inputs.file('gatsby-config.js')
