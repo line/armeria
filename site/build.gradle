@@ -57,7 +57,7 @@ if (checkstyleEnabled) {
         inputs.dir('src')
         inputs.file('.eslintrc.js')
         inputs.file('package.json')
-        inputs.file('yarn.lock')
+        inputs.file('package-lock.json')
     }
 }
 
@@ -72,8 +72,8 @@ task site(type: NpmTask) {
     inputs.dir('src')
     inputs.file('gatsby-config.js')
     inputs.file('package.json')
+    inputs.file('package-lock.json')
     inputs.file('tsconfig.json')
-    inputs.file('yarn.lock')
     outputs.dir('.cache')
     outputs.dir('public')
 }

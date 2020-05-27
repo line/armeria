@@ -28,7 +28,7 @@ task buildWeb(type: NpmTask) {
 
     inputs.dir('src')
     inputs.file('package.json')
-    inputs.file('yarn.lock')
+    inputs.file('package-lock.json')
     outputs.dir('build/web')
 }
 
@@ -39,7 +39,7 @@ task checkWeb(type: NpmTask) {
 
     inputs.dir('src')
     inputs.file('package.json')
-    inputs.file('yarn.lock')
+    inputs.file('package-lock.json')
     outputs.upToDateWhen { true }
 }
 
