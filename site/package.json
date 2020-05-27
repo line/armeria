@@ -54,6 +54,7 @@
     "eslint-plugin-react": "^7.19.0",
     "eslint-plugin-react-hooks": "^2.5.0",
     "gatsby": "^2.19.45",
+    "gatsby-cli": "^2.12.36",
     "gatsby-image": "^2.3.1",
     "gatsby-link": "^2.2.31",
     "gatsby-plugin-build-date": "^1.0.0",

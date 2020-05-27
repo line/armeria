@@ -28,7 +28,7 @@ init:
 build_script:
   - cmd: 'gradlew.bat --version'
   - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% -PnoCheckstyle -PnoWeb :core:test :grpc:test :thrift:test :it:server:test'
-  - sh: './.appveyor.build.sh "$PROFILE"'
+  - sh: 'PURGE_CACHE=1 ./.appveyor.build.sh "$PROFILE"'
 
 test: off
 

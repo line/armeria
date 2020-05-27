@@ -15,24 +15,14 @@ if (rootProject.hasProperty('noWeb')) {
 apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
-tasks.yarn {
-    args += ['--frozen-lockfile']
-
-    // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
-    // This makes sense in principal but Gradle often handles up-to-date checking much more
-    // slowly than yarn itself for a large node_modules, so we go ahead and remove it all
-    // from up-to-date checking.
-    nodeModulesOutputFilter = {
-        it.exclude("**/*")
-    }
+node {
+    version = '12.17.0'
+    npmVersion = '6.14.5'
+    download = true
 }
 
-task yarnUpdate(type: YarnTask) {
-    args = ['install']
-}
-
-task buildWeb(type: YarnTask) {
-    dependsOn 'yarn'
+task buildWeb(type: NpmTask) {
+    dependsOn tasks.npmInstall
 
     args = ['run', 'build']
 
@@ -42,8 +32,8 @@ task buildWeb(type: YarnTask) {
     outputs.dir('build/web')
 }
 
-task checkWeb(type: YarnTask) {
-    dependsOn 'yarn'
+task checkWeb(type: NpmTask) {
+    dependsOn tasks.npmInstall
 
     args = ['run', 'check']
 
@@ -62,9 +52,3 @@ task copyWeb(type: Copy) {
 
 tasks.assemble.dependsOn copyWeb
 tasks.check.dependsOn checkWeb
-
-node {
-    version = '12.16.3'
-    yarnVersion = '1.22.4'
-    download = true
-}
