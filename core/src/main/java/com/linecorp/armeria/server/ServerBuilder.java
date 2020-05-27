@@ -1506,7 +1506,8 @@ public final class ServerBuilder {
             }
         }
 
-        if (maxConnectionAgeMillis > 0 && idleTimeoutMillis > maxConnectionAgeMillis) {
+        if (maxConnectionAgeMillis > 0 &&
+            (idleTimeoutMillis == 0 || idleTimeoutMillis > maxConnectionAgeMillis)) {
             idleTimeoutMillis = maxConnectionAgeMillis;
         }
 

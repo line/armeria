@@ -18,16 +18,16 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.withinPercentage;
+import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 
@@ -42,8 +42,6 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import io.netty.util.AttributeMap;
 
 class ServerMaxConnectionAgeTest {
-
-    private static final Logger logger = LoggerFactory.getLogger(ServerMaxConnectionAgeTest.class);
 
     private static final int MAX_CONNECTION_AGE_MILLIS = 5000;
 
@@ -140,5 +138,23 @@ class ServerMaxConnectionAgeTest {
             assertThat(closed).hasValue(0);
             Thread.sleep(100);
         }
+    }
+
+    @CsvSource({ "H1C", "H2C"})
+    @ParameterizedTest
+    void shouldCloseIdleConnectionByMaxConnectionAge(SessionProtocol protocol) {
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .connectionPoolListener(connectionPoolListener)
+                             .idleTimeoutMillis(0)
+                             .build();
+        final WebClient client =
+                WebClient.builder(server.uri(protocol))
+                         .factory(clientFactory)
+                         .build();
+
+        assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        await().untilAtomic(opened, Matchers.is(1));
+        await().untilAtomic(closed, Matchers.is(1));
     }
 }
