@@ -567,7 +567,8 @@ class ServerBuilderTest {
                                           .build()
                                           .config();
 
-        if (maxConnectionAgeMillis > 0 && idleTimeoutMillis > maxConnectionAgeMillis) {
+        if (maxConnectionAgeMillis > 0 &&
+            (idleTimeoutMillis == 0 || idleTimeoutMillis > maxConnectionAgeMillis)) {
             assertThat(config.maxConnectionAgeMillis()).isEqualTo(maxConnectionAgeMillis);
             assertThat(config.idleTimeoutMillis()).isEqualTo(maxConnectionAgeMillis);
         } else {

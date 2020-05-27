@@ -107,12 +107,13 @@ class ServerMaxConnectionAgeTest {
 
         while (closed.get() < 5) {
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
-            assertThat(opened).hasValue(closed.intValue() + 1);
+            final int closed = this.closed.get();
+            assertThat(opened).hasValueBetween(closed, closed + 1);
 
-            if (closed.get() > oldClosed.get()) {
+            if (this.closed.get() > oldClosed.get()) {
                 assertThat(stopwatch.elapsed().toMillis())
                         .isCloseTo(MAX_CONNECTION_AGE_MILLIS, withinPercentage(25));
-                oldClosed.set(closed.get());
+                oldClosed.set(this.closed.get());
                 stopwatch.reset().start();
             }
             Thread.sleep(100);
