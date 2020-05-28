@@ -46,6 +46,7 @@ class Http2KeepAliveHandlerTest {
 
     private static final long idleTimeoutMillis = 10000;
     private static final long pingIntervalMillis = 1000;
+    private static final long maxConnectionAgeMillis = 20000;
 
     @Mock
     private Http2FrameWriter frameWriter;
@@ -62,10 +63,16 @@ class Http2KeepAliveHandlerTest {
         when(ctx.channel()).thenReturn(channel);
 
         keepAliveHandler = new Http2KeepAliveHandler(channel, frameWriter, "test",
-                                                     idleTimeoutMillis, pingIntervalMillis) {
+                                                     idleTimeoutMillis, pingIntervalMillis,
+                                                     maxConnectionAgeMillis) {
             @Override
             protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
                 return false;
+            }
+
+            @Override
+            protected void closeMaxAgedConnection(ChannelHandlerContext ctx) {
+                channel.close();
             }
         };
 

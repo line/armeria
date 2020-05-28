@@ -83,6 +83,11 @@ public abstract class KeepAliveHandler {
     private long lastPingIdleTime;
     private boolean firstPingIdleEvent = true;
 
+    @Nullable
+    private ScheduledFuture<?> maxAgedConnection;
+    private final long maxConnectionAgeNanos;
+    private long connectionStartTimeNano;
+
     private boolean isInitialized;
     private PingState pingState = PingState.IDLE;
 
@@ -91,7 +96,8 @@ public abstract class KeepAliveHandler {
     @Nullable
     private Future<?> shutdownFuture;
 
-    protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis) {
+    protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis,
+                               long maxConnectionAgeMillis) {
         this.channel = channel;
         this.name = name;
 
@@ -105,6 +111,11 @@ public abstract class KeepAliveHandler {
         } else {
             pingIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis);
         }
+        if (maxConnectionAgeMillis <= 0) {
+            maxConnectionAgeNanos = 0;
+        } else {
+            maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
+        }
     }
 
     public final void initialize(ChannelHandlerContext ctx) {
@@ -114,7 +125,7 @@ public abstract class KeepAliveHandler {
             return;
         }
         isInitialized = true;
-        lastConnectionIdleTime = lastPingIdleTime = System.nanoTime();
+        connectionStartTimeNano = lastConnectionIdleTime = lastPingIdleTime = System.nanoTime();
 
         if (connectionIdleTimeNanos > 0) {
             connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
@@ -123,6 +134,10 @@ public abstract class KeepAliveHandler {
         if (pingIdleTimeNanos > 0) {
             pingIdleTimeout = executor().schedule(new PingIdleTimeoutTask(ctx),
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
+        }
+        if (maxConnectionAgeNanos > 0) {
+            maxAgedConnection = executor().schedule(new MaxAgedConnectionTask(ctx),
+                                                    maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -182,6 +197,8 @@ public abstract class KeepAliveHandler {
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 
+    protected abstract void closeMaxAgedConnection(ChannelHandlerContext ctx);
+
     @Nullable
     protected final Future<?> shutdownFuture() {
         return shutdownFuture;
@@ -204,6 +221,10 @@ public abstract class KeepAliveHandler {
         if (pingWriteFuture != null) {
             pingWriteFuture.cancel(false);
             pingWriteFuture = null;
+        }
+        if (maxAgedConnection != null) {
+            maxAgedConnection.cancel(false);
+            maxAgedConnection = null;
         }
     }
 
@@ -368,6 +389,29 @@ public abstract class KeepAliveHandler {
                 // A PING was sent or received within the ping timeout
                 // - set a new timeout with shorter delay.
                 pingIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+            }
+        }
+    }
+
+    private final class MaxAgedConnectionTask extends AbstractIdleTask {
+
+        MaxAgedConnectionTask(ChannelHandlerContext ctx) {
+            super(ctx);
+        }
+
+        @Override
+        protected void run(ChannelHandlerContext ctx) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("{} Closing an max-aged {} connection started from {}",
+                             ctx.channel(), name, connectionStartTimeNano);
+            }
+            try {
+                pingState = PingState.SHUTDOWN;
+                closeMaxAgedConnection(ctx);
+            } catch (Exception e) {
+                logger.warn("An error occurred while notifying a max-aged connection. Close forcibly {}",
+                            ctx.channel(), e);
+                ctx.channel().close();
             }
         }
     }

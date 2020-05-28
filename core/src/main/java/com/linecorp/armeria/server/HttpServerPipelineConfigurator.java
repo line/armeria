@@ -161,7 +161,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final KeepAliveHandler keepAliveHandler =
-                idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis) : null;
+                idleTimeoutMillis > 0 ?
+                // TODO: Update maxConnectionAgeMillis after adding serverConfig
+                new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis, idleTimeoutMillis)
+                                      : null;
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), SessionProtocol.H1C, keepAliveHandler, config.isDateHeaderEnabled(),
                 config.isServerHeaderEnabled()
@@ -400,7 +403,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             final long idleTimeoutMillis = config.idleTimeoutMillis();
             final KeepAliveHandler keepAliveHandler =
-                    idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis) : null;
+                    idleTimeoutMillis > 0 ?
+                    // TODO: Update maxConnectionAgeMillis after adding serverConfig
+                    new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis, idleTimeoutMillis) : null;
             final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
                     ch, SessionProtocol.H1, keepAliveHandler, config.isDateHeaderEnabled(),
                     config.isServerHeaderEnabled());

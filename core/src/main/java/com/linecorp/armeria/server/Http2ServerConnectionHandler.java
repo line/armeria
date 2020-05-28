@@ -44,9 +44,11 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
         if (config.idleTimeoutMillis() > 0 || config.pingIntervalMillis() > 0) {
+            // TODO: Update maxConnectionAgeMillis after adding serverConfig
             keepAliveHandler = new Http2ServerKeepAliveHandler(channel, encoder().frameWriter(),
                                                                config.idleTimeoutMillis(),
-                                                               config.pingIntervalMillis());
+                                                               config.pingIntervalMillis(),
+                                                               0L);
         } else {
             keepAliveHandler = null;
         }

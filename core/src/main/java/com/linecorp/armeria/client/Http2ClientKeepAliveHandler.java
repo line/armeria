@@ -24,12 +24,17 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 
 final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ClientKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
-                                long idleTimeoutMillis, long pingIntervalMillis) {
-        super(channel, frameWriter, "client", idleTimeoutMillis, pingIntervalMillis);
+                                long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis) {
+        super(channel, frameWriter, "client", idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis);
     }
 
     @Override
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
         return HttpSession.get(ctx.channel()).hasUnfinishedResponses();
+    }
+
+    @Override
+    protected void closeMaxAgedConnection(ChannelHandlerContext ctx) {
+        ctx.channel().close();
     }
 }

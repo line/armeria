@@ -23,8 +23,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
 class Http1ServerKeepAliveHandler extends KeepAliveHandler {
-    Http1ServerKeepAliveHandler(Channel channel, long idleTimeoutMillis) {
-        super(channel, "server", idleTimeoutMillis, 0);
+    Http1ServerKeepAliveHandler(Channel channel, long idleTimeoutMillis, long maxConnectionAgeMillis) {
+        super(channel, "server", idleTimeoutMillis, 0, maxConnectionAgeMillis);
     }
 
     @Override
@@ -41,5 +41,10 @@ class Http1ServerKeepAliveHandler extends KeepAliveHandler {
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
         final HttpServer server = HttpServer.get(ctx);
         return server != null && server.unfinishedRequests() != 0;
+    }
+
+    @Override
+    protected void closeMaxAgedConnection(ChannelHandlerContext ctx) {
+        // silently doing nothing
     }
 }

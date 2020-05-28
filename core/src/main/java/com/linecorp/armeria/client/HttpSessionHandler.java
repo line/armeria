@@ -72,6 +72,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
+    private final long maxConnectionAgeMillis;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -111,7 +112,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
+                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis,
+                       long maxConnectionAgeMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
@@ -120,6 +122,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
+        this.maxConnectionAgeMillis = maxConnectionAgeMillis;
     }
 
     @Override
@@ -293,7 +296,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
                     final Http1ClientKeepAliveHandler keepAliveHandler =
                             new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
-                                                            idleTimeoutMillis, pingIntervalMillis);
+                                                            idleTimeoutMillis, pingIntervalMillis,
+                                                            maxConnectionAgeMillis);
                     requestEncoder.setKeepAliveHandler(keepAliveHandler);
                     responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
                 }

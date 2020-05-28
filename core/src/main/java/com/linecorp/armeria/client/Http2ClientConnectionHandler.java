@@ -44,7 +44,8 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         if (clientFactory.idleTimeoutMillis() > 0 || clientFactory.pingIntervalMillis() > 0) {
             keepAliveHandler = new Http2ClientKeepAliveHandler(channel, encoder.frameWriter(),
                                                                clientFactory.idleTimeoutMillis(),
-                                                               clientFactory.pingIntervalMillis());
+                                                               clientFactory.pingIntervalMillis(),
+                                                               clientFactory.maxConnectionAgeMillis());
         } else {
             keepAliveHandler = null;
         }
