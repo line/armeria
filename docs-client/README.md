@@ -44,8 +44,5 @@ $ npx npm-check-updates
 
 ## Updating licenses
 
-When changing a dependency (i.e., when the `yarn.lock` file changes), refresh license information by running
-
-```console
-$ yarn licenses generate-disclaimer --prod > ../licenses/web-licenses.txt
-```
+Make sure to include the `../licenses/web-licenses.txt` file in your commit if it is updated automatically
+during the build process (`npm run build`).
