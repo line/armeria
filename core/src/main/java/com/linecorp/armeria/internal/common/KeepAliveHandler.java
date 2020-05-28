@@ -83,6 +83,9 @@ public abstract class KeepAliveHandler {
     private long lastPingIdleTime;
     private boolean firstPingIdleEvent = true;
 
+    private final long maxConnectionAgeNanos;
+    private long connectionStartNanos;
+
     private boolean isInitialized;
     private PingState pingState = PingState.IDLE;
 
@@ -91,7 +94,8 @@ public abstract class KeepAliveHandler {
     @Nullable
     private Future<?> shutdownFuture;
 
-    protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis) {
+    protected KeepAliveHandler(Channel channel, String name,
+                               long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis) {
         this.channel = channel;
         this.name = name;
 
@@ -100,10 +104,17 @@ public abstract class KeepAliveHandler {
         } else {
             connectionIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(idleTimeoutMillis);
         }
+
         if (pingIntervalMillis <= 0) {
             pingIdleTimeNanos = 0;
         } else {
             pingIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis);
+        }
+
+        if (maxConnectionAgeMillis <= 0) {
+            maxConnectionAgeNanos = 0;
+        } else {
+            maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         }
     }
 
@@ -114,7 +125,7 @@ public abstract class KeepAliveHandler {
             return;
         }
         isInitialized = true;
-        lastConnectionIdleTime = lastPingIdleTime = System.nanoTime();
+        lastConnectionIdleTime = lastPingIdleTime = connectionStartNanos = System.nanoTime();
 
         if (connectionIdleTimeNanos > 0) {
             connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
@@ -174,6 +185,14 @@ public abstract class KeepAliveHandler {
 
     public final boolean isClosing() {
         return pingState == PingState.SHUTDOWN;
+    }
+
+    public final boolean isMaxConnectionAgeExceeded() {
+        if (maxConnectionAgeNanos == 0) {
+            return false;
+        } else {
+            return System.nanoTime() - connectionStartNanos > maxConnectionAgeNanos;
+        }
     }
 
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);

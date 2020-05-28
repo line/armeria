@@ -578,9 +578,13 @@ class ServerBuilderTest {
     }
 
     @Test
-    void nonNegativeMaxConnectionAge() {
+    void invalidMaxConnectionAge() {
         assertThatThrownBy(() -> Server.builder().maxConnectionAgeMillis(-1))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("expected: >= 0");
+                .hasMessageContaining("expected: >= 1000 or == 0");
+
+        assertThatThrownBy(() -> Server.builder().maxConnectionAgeMillis(100))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 1000 or == 0");
     }
 }

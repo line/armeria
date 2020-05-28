@@ -25,7 +25,10 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ClientKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
                                 long idleTimeoutMillis, long pingIntervalMillis) {
-        super(channel, frameWriter, "client", idleTimeoutMillis, pingIntervalMillis);
+
+        // TODO(ikhoon): Should set maxConnectionAgeMillis by https://github.com/line/armeria/pull/2741
+        super(channel, frameWriter, "client", idleTimeoutMillis,
+              pingIntervalMillis, /* maxConnectionAgeMillis */ 0);
     }
 
     @Override

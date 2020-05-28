@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.CONNECTION_START_TIME_NANO;
-
-import java.util.concurrent.TimeUnit;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -47,16 +43,16 @@ import io.netty.handler.codec.http.HttpVersion;
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
     @Nullable
     private final KeepAliveHandler keepAliveHandler;
-    private final long maxConnectionAgeNano;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
+    private boolean isClosedConnection;
+
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
-                             @Nullable KeepAliveHandler keepAliveHandler, long maxConnectionAgeMillis,
+                             @Nullable KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader) {
         super(ch, protocol);
         this.keepAliveHandler = keepAliveHandler;
-        maxConnectionAgeNano = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
     }
@@ -73,12 +69,9 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return write(id, converted, false);
         }
 
-        if (maxConnectionAgeNano > 0) {
-            final Long connectionStartTimeNano = channel().attr(CONNECTION_START_TIME_NANO).get();
-            if (connectionStartTimeNano != null &&
-                System.nanoTime() - connectionStartTimeNano > maxConnectionAgeNano) {
-                converted.headers().set(HttpHeaderNames.CONNECTION, "close");
-            }
+        if (keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
+            converted.headers().set(HttpHeaderNames.CONNECTION, "close");
+            isClosedConnection = true;
         }
         return writeNonInformationalHeaders(id, converted, endStream);
     }
@@ -165,5 +158,9 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     protected boolean isPing(int id) {
         return false;
+    }
+
+    boolean isClosedConnection() {
+        return isClosedConnection;
     }
 }

@@ -282,7 +282,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private ServerHttp2ObjectEncoder newServerHttp2ObjectEncoder(ChannelHandlerContext ctx,
                                                                  Http2ServerConnectionHandler handler) {
         return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
-                                            config.maxConnectionAgeMillis(),
                                             config.isDateHeaderEnabled(),
                                             config.isServerHeaderEnabled()
         );
@@ -316,6 +315,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final VirtualHost virtualHost = config.findVirtualHost(hostname);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
+
+        // Handle max connection age for HTTP/1.
+        if (responseEncoder instanceof ServerHttp1ObjectEncoder &&
+            ((ServerHttp1ObjectEncoder) responseEncoder).isClosedConnection()) {
+            final ServiceRequestContext reqCtx =
+                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
+                                                     proxiedAddresses, clientAddress, null);
+            respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, null, ClosedSessionException.get());
+            return;
+        }
 
         // Handle 'OPTIONS * HTTP/1.1'.
         final String originalPath = headers.path();

@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.CONNECTION_START_TIME_NANO;
-
-import java.util.concurrent.TimeUnit;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -41,23 +37,20 @@ import io.netty.handler.codec.http2.Http2Headers;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
-    private static final ByteBuf MAX_CONNECTION_AGE_DEBUG =
-            Unpooled.wrappedBuffer("max-age".getBytes());
+    private static final ByteBuf MAX_CONNECTION_AGE_DEBUG = Unpooled.wrappedBuffer("max-age".getBytes());
 
     @Nullable
     private final KeepAliveHandler keepAliveHandler;
-    private final long maxConnectionAgeNano;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
     private boolean isGoAwaySent;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                             @Nullable KeepAliveHandler keepAliveHandler, long maxConnectionAgeMillis,
+                             @Nullable KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader) {
         super(ctx, encoder);
         this.keepAliveHandler = keepAliveHandler;
-        maxConnectionAgeNano = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
     }
@@ -72,15 +65,11 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        if (maxConnectionAgeNano > 0 && !isGoAwaySent) {
-            final Long connectionStartTimeNano = channel().attr(CONNECTION_START_TIME_NANO).get();
-            if (connectionStartTimeNano != null &&
-                System.nanoTime() - connectionStartTimeNano > maxConnectionAgeNano) {
-                final int lastStreamId = encoder().connection().remote().lastStreamCreated();
-                encoder().writeGoAway(ctx(), lastStreamId, Http2Error.NO_ERROR.code(),
-                                      MAX_CONNECTION_AGE_DEBUG.retain(), ctx().newPromise());
-                isGoAwaySent = true;
-            }
+        if (!isGoAwaySent && keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
+            final int lastStreamId = encoder().connection().remote().lastStreamCreated();
+            encoder().writeGoAway(ctx(), lastStreamId, Http2Error.NO_ERROR.code(),
+                                  MAX_CONNECTION_AGE_DEBUG.retain(), ctx().newPromise());
+            isGoAwaySent = true;
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
