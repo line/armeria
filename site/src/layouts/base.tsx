@@ -72,6 +72,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
         contentClasses={styles.cookieConsentContent}
         buttonClasses={styles.cookieConsentAcceptButton}
         declineButtonClasses={styles.cookieConsentDeclineButton}
+        sameSite="strict"
         enableDeclineButton
         disableButtonStyles
         acceptOnScroll
