@@ -110,7 +110,7 @@ interface NamedObject {
 }
 
 function createMapByName<T extends NamedObject>(objs: T[]): Map<string, T> {
-  return new Map(objs.map(obj => [obj.name, obj] as [string, T]));
+  return new Map(objs.map((obj) => [obj.name, obj] as [string, T]));
 }
 
 export class Specification {
@@ -170,7 +170,7 @@ export class Specification {
   public getTypeSignatureHtml(typeSignature: string) {
     // Split on all non-identifier parts and optimistically find matches for type identifiers.
     const parts = typeSignature.split(/([^\w.]+)/g);
-    return <>{parts.map(part => this.renderTypePart(part))}</>;
+    return <>{parts.map((part) => this.renderTypePart(part))}</>;
   }
 
   private renderTypePart(part: string) {

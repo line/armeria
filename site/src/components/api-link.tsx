@@ -9,7 +9,7 @@ interface TypeLinkProps {
   plural?: boolean;
 }
 
-const TypeLink: React.FC<TypeLinkProps> = props => {
+const TypeLink: React.FC<TypeLinkProps> = (props) => {
   let simpleTypeName = props.name;
   const lastDotIdx = simpleTypeName.lastIndexOf('.');
   if (lastDotIdx >= 0) {

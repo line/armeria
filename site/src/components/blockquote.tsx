@@ -14,7 +14,7 @@ interface BlockquoteProps {
   reverse?: boolean;
 }
 
-const Blockquote: React.FC<BlockquoteProps> = props => {
+const Blockquote: React.FC<BlockquoteProps> = (props) => {
   const data = useStaticQuery(graphql`
     query {
       pattern1: file(relativePath: { eq: "pattern-1.svg" }) {

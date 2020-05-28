@@ -10,7 +10,7 @@ const path2title = {};
 exports.createPages = ({ graphql, actions: { createPage } }) => {
   function createShortUrlPages() {
     const template = path.resolve(__dirname, 'src', 'layouts', 'short-url.tsx');
-    gatsbyConfig.siteMetadata.shortUrls.forEach(e => {
+    gatsbyConfig.siteMetadata.shortUrls.forEach((e) => {
       createPage({
         path: `/s/${e.name}`,
         component: template,
@@ -51,13 +51,13 @@ exports.createPages = ({ graphql, actions: { createPage } }) => {
           }
         }
       }
-    `).then(result => {
+    `).then((result) => {
       if (result.errors) {
         throw result.errors;
       }
 
       const pageNames = pageNameSorter(
-        result.data.allMdx.nodes.map(node => node.parent.name),
+        result.data.allMdx.nodes.map((node) => node.parent.name),
       );
 
       // Populate the pages' hrefs.
@@ -82,7 +82,7 @@ exports.createPages = ({ graphql, actions: { createPage } }) => {
         path2hrefs[`/${sourceName}/${pageNames[0]}`];
 
       // Populate the pages' titles.
-      result.data.allMdx.nodes.forEach(node => {
+      result.data.allMdx.nodes.forEach((node) => {
         const pageName = node.parent.name;
         const key = `/${sourceName}/${pageName}`;
         const tableOfContents = node.tableOfContents;
@@ -112,16 +112,16 @@ exports.createPages = ({ graphql, actions: { createPage } }) => {
   return Promise.all([
     createPageIndices(
       'release-notes',
-      pageNames => {
+      (pageNames) => {
         const versionRegex = /^(([0-9]+)\.([0-9]+)\.([0-9]+))/;
         return (
           pageNames
             // Extract [pageName, fullVersion, major, minor, micro] from the page name.
-            .map(pageName => versionRegex.exec(pageName))
+            .map((pageName) => versionRegex.exec(pageName))
             // Remove the pages whose name is not a version.
-            .filter(e => e !== null)
+            .filter((e) => e !== null)
             // Convert major, minor, micro version number into numbers.
-            .map(e => [
+            .map((e) => [
               e[0],
               e[1],
               Number.parseInt(e[2], 10),
@@ -141,18 +141,18 @@ exports.createPages = ({ graphql, actions: { createPage } }) => {
               return b[4] - a[4];
             })
             // Convert to a full version number.
-            .map(e => e[1])
+            .map((e) => e[1])
         );
       },
-      pagePath => `v${pagePath.substring(pagePath.lastIndexOf('/') + 1)}`,
+      (pagePath) => `v${pagePath.substring(pagePath.lastIndexOf('/') + 1)}`,
     ),
     createPageIndices(
       'news',
-      pageNames => {
+      (pageNames) => {
         const dateRegex = /^[0-9]{8}/;
         return (
           pageNames
-            .filter(pageName => pageName.match(dateRegex))
+            .filter((pageName) => pageName.match(dateRegex))
             // Descending sort by page name.
             .sort((a, b) => {
               if (a > b) {
@@ -174,7 +174,7 @@ exports.onCreateWebpackConfig = ({ stage, actions, getConfig }) => {
   if (stage === 'build-javascript') {
     const config = getConfig();
     const miniCssExtractPlugin = config.plugins.find(
-      plugin => plugin.constructor.name === 'MiniCssExtractPlugin',
+      (plugin) => plugin.constructor.name === 'MiniCssExtractPlugin',
     );
     if (miniCssExtractPlugin) {
       miniCssExtractPlugin.options.ignoreOrder = true;

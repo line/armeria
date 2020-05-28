@@ -6,7 +6,7 @@ interface ProjectBadgeProps {
   url: string;
 }
 
-const ProjectBadge: React.FC<ProjectBadgeProps> = props => (
+const ProjectBadge: React.FC<ProjectBadgeProps> = (props) => (
   <span className={styles.badge}>
     <object data={props.url} role="img" aria-label="" />
   </span>
