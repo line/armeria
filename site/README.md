@@ -71,6 +71,14 @@ module.exports = {
    $ git push --force
    ```
 
+### Checking for dependency updates
+
+Use [npm-check-updates](https://www.npmjs.com/package/npm-check-updates)
+
+```console
+$ npx npm-check-updates --semverLevel major
+```
+
 ### Checking what's taking space in `.js` bundles
 
 Make sure the resource or component you're adding does not increase the

@@ -13,7 +13,7 @@ export const onPreRenderHTML = ({
   // described in https://github.com/gatsbyjs/gatsby/issues/1526
   // takes data-href from <style> tag with inline styles which contains URL to global css file
   // and transforms it into stylesheet link component
-  const transformedHeadComponents = headComponents.map(node => {
+  const transformedHeadComponents = headComponents.map((node) => {
     if (node.type === 'style') {
       const globalStyleHref = node.props['data-href'];
       if (globalStyleHref) {

@@ -7,7 +7,7 @@ interface ShortUrlRedirectProps {
   pageContext: { href: string };
 }
 
-const ShortUrlRedirect: React.FC<ShortUrlRedirectProps> = props => {
+const ShortUrlRedirect: React.FC<ShortUrlRedirectProps> = (props) => {
   const [manualRedirect, setManualRedirect] = useState(false);
   setTimeout(() => setManualRedirect(true), 3000);
   return (

@@ -3,8 +3,8 @@ const visit = require('unist-util-visit');
 /* eslint-enable import/no-extraneous-dependencies */
 const apiIndex = require('../../gen-src/api-index.json');
 
-const transformer = markdownAST => {
-  visit(markdownAST, 'link', node => {
+const transformer = (markdownAST) => {
+  visit(markdownAST, 'link', (node) => {
     if (
       !node.url.startsWith('type://') &&
       !node.url.startsWith('typeplural://')

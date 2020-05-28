@@ -26,7 +26,7 @@ interface BaseLayoutProps extends RouteComponentProps {
 
 let firstRender = true;
 
-const BaseLayout: React.FC<BaseLayoutProps> = props => {
+const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
   useEffect(() => {
     // Jump to hash or flash at hash only when rendering in a browser.
     if (typeof window !== 'undefined') {
