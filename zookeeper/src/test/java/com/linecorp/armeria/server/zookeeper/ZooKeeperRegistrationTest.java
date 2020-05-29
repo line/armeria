@@ -27,7 +27,6 @@ import org.apache.curator.x.discovery.ServiceType;
 import org.apache.curator.x.discovery.UriSpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.springframework.cloud.zookeeper.discovery.ZookeeperInstance;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -110,7 +109,6 @@ class ZooKeeperRegistrationTest {
                 instanceSpec = InstanceSpec.curatorXInstanceBuilder(CURATOR_X_SERVICE_NAME)
                                            .serviceId(String.valueOf(i))
                                            .serviceAddress(CURATOR_X_ADDRESS)
-                                           .payload(new ZookeeperInstance("a", "b", ImmutableMap.of()))
                                            .build();
             }
             final ServerListener listener =
@@ -156,7 +154,7 @@ class ZooKeeperRegistrationTest {
     private static ServiceInstance<Object> expectedInstance(List<Server> servers, int index) {
         return new ServiceInstance<>(
                 CURATOR_X_SERVICE_NAME, String.valueOf(index), CURATOR_X_ADDRESS,
-                servers.get(index).activeLocalPort(), null, new ZookeeperInstance("a", "b", ImmutableMap.of()),
+                servers.get(index).activeLocalPort(), null, null,
                 0, ServiceType.DYNAMIC, new UriSpec("{scheme}://{address}:{port}"), true);
     }
 }

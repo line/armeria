@@ -30,9 +30,6 @@ import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 import org.apache.curator.x.discovery.details.ServiceDiscoveryImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.springframework.cloud.zookeeper.discovery.ZookeeperInstance;
-
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.DiscoverySpec;
@@ -60,10 +57,10 @@ class CuratorServiceDiscoveryCompatibilityTest {
                                        .retryPolicy(new ExponentialBackoffRetry(1000, 3))
                                        .build();
         client.start();
-        final JsonInstanceSerializer<ZookeeperInstance> serializer =
-                new JsonInstanceSerializer<>(ZookeeperInstance.class);
-        final ServiceInstance<ZookeeperInstance> registered = serviceInstance(endpoint);
-        final ServiceDiscoveryImpl<ZookeeperInstance> serviceDiscovery =
+        final JsonInstanceSerializer<Void> serializer =
+                new JsonInstanceSerializer<>(Void.class);
+        final ServiceInstance<Void> registered = serviceInstance(endpoint);
+        final ServiceDiscoveryImpl<Void> serviceDiscovery =
                 new ServiceDiscoveryImpl<>(client, Z_NODE, serializer, registered, false);
         serviceDiscovery.start();
         assertInstance(registered);
@@ -75,7 +72,6 @@ class CuratorServiceDiscoveryCompatibilityTest {
                             .serviceId("bar")
                             .serviceAddress("foo.com")
                             .port(endpoint.port())
-                            .payload(new ZookeeperInstance("a", "b", ImmutableMap.of()))
                             .uriSpec(CURATOR_X_URI_SPEC)
                             .build();
 
@@ -92,7 +88,7 @@ class CuratorServiceDiscoveryCompatibilityTest {
         client.close();
     }
 
-    private static void assertInstance(ServiceInstance<ZookeeperInstance> registered) throws Throwable {
+    private static void assertInstance(ServiceInstance<Void> registered) throws Throwable {
         await().untilAsserted(() -> zkInstance.assertExists(Z_NODE + "/foo/bar"));
 
         final CompletableFuture<ServiceInstance<?>> instanceCaptor = new CompletableFuture<>();
@@ -108,9 +104,8 @@ class CuratorServiceDiscoveryCompatibilityTest {
         }
     }
 
-    private static ServiceInstance<ZookeeperInstance> serviceInstance(Endpoint endpoint) {
+    private static ServiceInstance<Void> serviceInstance(Endpoint endpoint) {
         return new ServiceInstance<>("foo", "bar", "foo.com", endpoint.port(), null,
-                                     new ZookeeperInstance("a", "b", ImmutableMap.of()), 0,
-                                     ServiceType.DYNAMIC, CURATOR_X_URI_SPEC, true);
+                                     null, 0, ServiceType.DYNAMIC, CURATOR_X_URI_SPEC, true);
     }
 }
