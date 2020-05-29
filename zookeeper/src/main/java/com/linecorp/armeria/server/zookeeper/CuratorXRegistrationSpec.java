@@ -15,25 +15,24 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import static java.util.Objects.requireNonNull;
+import org.apache.curator.x.discovery.ServiceInstance;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.DefaultNodeValueCodec;
+import com.linecorp.armeria.internal.common.zookeeper.CuratorXDiscoveryNodeValueCodec;
 
-final class EndpointInstanceSpec implements InstanceSpec {
+final class CuratorXRegistrationSpec implements RegistrationSpec {
 
-    private final Endpoint endpoint;
+    private final ServiceInstance<?> serviceInstance;
     private final String pathForRegistration;
 
-    EndpointInstanceSpec(Endpoint endpoint) {
-        this.endpoint = requireNonNull(endpoint, "endpoint");
-        pathForRegistration = '/' + endpoint.host() + '_' + endpoint.port();
+    CuratorXRegistrationSpec(ServiceInstance<?> serviceInstance) {
+        this.serviceInstance = serviceInstance;
+        pathForRegistration = '/' + serviceInstance.getName() + '/' + serviceInstance.getId();
     }
 
-    Endpoint endpoint() {
-        return endpoint;
+    ServiceInstance<?> serviceInstance() {
+        return serviceInstance;
     }
 
     @Override
@@ -43,13 +42,13 @@ final class EndpointInstanceSpec implements InstanceSpec {
 
     @Override
     public byte[] encodedInstance() {
-        return DefaultNodeValueCodec.INSTANCE.encode(endpoint);
+        return CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(serviceInstance);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("endpoint", endpoint)
+                          .add("serviceInstance", serviceInstance)
                           .add("pathForRegistration", pathForRegistration)
                           .toString();
     }

@@ -20,15 +20,38 @@ import com.linecorp.armeria.client.zookeeper.DiscoverySpec;
 import com.linecorp.armeria.server.Server;
 
 /**
- * An instance specification for {@link ZooKeeperUpdatingListener}. The specification is used for encoding
+ * A registration specification for {@link ZooKeeperUpdatingListener}. The specification is used for encoding
  * and registering the {@link Server} to <a href="https://zookeeper.apache.org/">ZooKeeper</a>.
  *
  * @see DiscoverySpec
  */
-public interface InstanceSpec {
+public interface RegistrationSpec {
 
     /**
-     * Returns the {@link InstanceSpec} that registers the {@link Server} using the specified
+     * Returns the {@link RegistrationSpec} that registers the {@link Server} using
+     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>.
+     * This is also, compatible with
+     * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
+     *
+     * @see DiscoverySpec#ofCuratorX(String)
+     */
+    static RegistrationSpec ofCuratorXRegistration(String serviceName) {
+        return new CuratorXRegistrationSpecBuilder(serviceName).build();
+    }
+
+    /**
+     * Returns a new {@link CuratorXRegistrationSpecBuilder}. The specification is compatible with
+     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a> and
+     * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
+     *
+     * @see DiscoverySpec#curatorXBuilder(String)
+     */
+    static CuratorXRegistrationSpecBuilder curatorXRegistrationBuilder(String serviceName) {
+        return new CuratorXRegistrationSpecBuilder(serviceName);
+    }
+
+    /**
+     * Returns the {@link RegistrationSpec} that registers the {@link Server} using the specified
      * {@link Endpoint}. The {@link Endpoint} is encoded to a comma-separated string whose format is
      * {@code <host>[:<port_number>[:weight]]}, such as:
      * <ul>
@@ -39,33 +62,10 @@ public interface InstanceSpec {
      * </ul>
      * Note that the port number must be specified when you want to specify the weight.
      *
-     * @see DiscoverySpec#ofDefault()
+     * @see DiscoverySpec#ofLegacy()
      */
-    static InstanceSpec ofEndpoint(Endpoint endpoint) {
-        return new EndpointInstanceSpec(endpoint);
-    }
-
-    /**
-     * Returns the {@link InstanceSpec} that registers the {@link Server} using
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>.
-     * This is also, compatible with
-     * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
-     *
-     * @see DiscoverySpec#ofCuratorX(String)
-     */
-    static InstanceSpec ofCuratorXInstance(String serviceName) {
-        return new CuratorXInstanceSpecBuilder(serviceName).build();
-    }
-
-    /**
-     * Returns a new {@link CuratorXInstanceSpecBuilder}. The specification is compatible with
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a> and
-     * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
-     *
-     * @see DiscoverySpec#curatorXBuilder(String)
-     */
-    static CuratorXInstanceSpecBuilder curatorXInstanceBuilder(String serviceName) {
-        return new CuratorXInstanceSpecBuilder(serviceName);
+    static RegistrationSpec ofLegacy(Endpoint endpoint) {
+        return new LegacyRegistrationSpec(endpoint);
     }
 
     /**

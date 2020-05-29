@@ -23,9 +23,9 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
 /**
- * The default codec.
+ * The legacy codec.
  */
-public enum DefaultNodeValueCodec {
+public enum LegacyNodeValueCodec {
     INSTANCE;
 
     private static final String fieldDelimiter = ":";

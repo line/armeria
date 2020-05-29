@@ -38,7 +38,7 @@ public final class CuratorXDiscoverySpecBuilder {
     @Nullable
     private Boolean useSsl;
     @Nullable
-    private Function<ServiceInstance<?>, Endpoint> converter;
+    private Function<? super ServiceInstance<?>, Endpoint> converter;
 
     /**
      * Creates a new instance.
@@ -70,14 +70,14 @@ public final class CuratorXDiscoverySpecBuilder {
      * Sets the specified converter to convert a {@link ServiceInstance} into an {@link Endpoint}.
      * If you don't want to connect to the service, you can simply return {@code null} in the converter.
      */
-    public CuratorXDiscoverySpecBuilder converter(Function<ServiceInstance<?>, Endpoint> converter) {
+    public CuratorXDiscoverySpecBuilder converter(Function<? super ServiceInstance<?>, Endpoint> converter) {
         checkState(instanceId == null, "converter() and instanceId() are mutually exclusive.");
         checkState(useSsl == null, "converter() and useSsl() are mutually exclusive.");
         this.converter = requireNonNull(converter, "converter");
         return this;
     }
 
-    private Function<ServiceInstance<?>, Endpoint> converter() {
+    private Function<? super ServiceInstance<?>, Endpoint> converter() {
         if (converter != null) {
             return converter;
         }

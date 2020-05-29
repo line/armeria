@@ -28,8 +28,6 @@ import org.apache.curator.x.discovery.UriSpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.DiscoverySpec;
 import com.linecorp.armeria.common.HttpResponse;
@@ -52,7 +50,7 @@ class ZooKeeperRegistrationTest {
     static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
 
     @Test
-    void endpointInstanceSpec() throws Throwable {
+    void endpointRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(true);
         //all servers start and with zNode created
         await().untilAsserted(() -> sampleEndpoints.forEach(
@@ -60,7 +58,7 @@ class ZooKeeperRegistrationTest {
 
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             for (Endpoint sampleEndpoint : sampleEndpoints) {
-                assertThat(DiscoverySpec.ofDefault().decode(zk.getData(
+                assertThat(DiscoverySpec.ofLegacy().decode(zk.getData(
                         Z_NODE + '/' + sampleEndpoint.host() + '_' + sampleEndpoint.port()).get()))
                         .isEqualTo(sampleEndpoint);
             }
@@ -70,7 +68,7 @@ class ZooKeeperRegistrationTest {
     }
 
     private static void validateOneNodeRemoved(
-            List<Server> servers, CloseableZooKeeper zk, boolean endpointInstanceSpec) throws Throwable {
+            List<Server> servers, CloseableZooKeeper zk, boolean endpointRegistrationSpec) throws Throwable {
         servers.get(0).stop().get();
         servers.remove(0);
 
@@ -79,7 +77,7 @@ class ZooKeeperRegistrationTest {
 
         for (int i = 0; i < sampleEndpoints.size(); i++) {
             final String key;
-            if (endpointInstanceSpec) {
+            if (endpointRegistrationSpec) {
                 key = Z_NODE + '/' + sampleEndpoints.get(i).host() + '_' + sampleEndpoints.get(i).port();
             } else {
                 key = Z_NODE + '/' + CURATOR_X_SERVICE_NAME + '/' + i;
@@ -95,24 +93,24 @@ class ZooKeeperRegistrationTest {
         assertThat(remaining).isEqualTo(sampleEndpoints.size() - 1);
     }
 
-    private static List<Server> startServers(boolean endpointInstanceSpec) {
+    private static List<Server> startServers(boolean endpointRegistrationSpec) {
         final List<Server> servers = new ArrayList<>();
         for (int i = 0; i < sampleEndpoints.size(); i++) {
             final Server server = Server.builder()
                                         .http(sampleEndpoints.get(i).port())
                                         .service("/", (ctx, req) -> HttpResponse.of(200))
                                         .build();
-            final InstanceSpec instanceSpec;
-            if (endpointInstanceSpec) {
-                instanceSpec = InstanceSpec.ofEndpoint(sampleEndpoints.get(i));
+            final RegistrationSpec registrationSpec;
+            if (endpointRegistrationSpec) {
+                registrationSpec = RegistrationSpec.ofLegacy(sampleEndpoints.get(i));
             } else {
-                instanceSpec = InstanceSpec.curatorXInstanceBuilder(CURATOR_X_SERVICE_NAME)
-                                           .serviceId(String.valueOf(i))
-                                           .serviceAddress(CURATOR_X_ADDRESS)
-                                           .build();
+                registrationSpec = RegistrationSpec.curatorXRegistrationBuilder(CURATOR_X_SERVICE_NAME)
+                                                   .serviceId(String.valueOf(i))
+                                                   .serviceAddress(CURATOR_X_ADDRESS)
+                                                   .build();
             }
             final ServerListener listener =
-                    ZooKeeperUpdatingListener.builder(zkInstance.connectString(), Z_NODE, instanceSpec)
+                    ZooKeeperUpdatingListener.builder(zkInstance.connectString(), Z_NODE, registrationSpec)
                                              .sessionTimeoutMillis(SESSION_TIMEOUT_MILLIS)
                                              .build();
             server.addListener(listener);
@@ -123,7 +121,7 @@ class ZooKeeperRegistrationTest {
     }
 
     @Test
-    void curatorXInstanceSpec() throws Throwable {
+    void curatorXRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(false);
         //all servers start and with zNode created
         await().untilAsserted(() -> {

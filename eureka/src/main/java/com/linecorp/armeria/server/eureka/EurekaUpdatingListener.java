@@ -238,7 +238,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                     return oldPortWrapper;
                 }
             }
-            logger.warn("The port number: {} (expected one of activePorts: {})",
+            logger.warn("The specified port number {} does not exist. (expected one of activePorts: {})",
                         oldPortWrapper.getPort(), server.activePorts());
         }
 

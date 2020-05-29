@@ -67,16 +67,16 @@ class CuratorServiceDiscoveryCompatibilityTest {
         serviceDiscovery.close();
         await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/foo/bar"));
 
-        final InstanceSpec instanceSpec =
-                InstanceSpec.curatorXInstanceBuilder("foo")
-                            .serviceId("bar")
-                            .serviceAddress("foo.com")
-                            .port(endpoint.port())
-                            .uriSpec(CURATOR_X_URI_SPEC)
-                            .build();
+        final RegistrationSpec registrationSpec =
+                RegistrationSpec.curatorXRegistrationBuilder("foo")
+                                .serviceId("bar")
+                                .serviceAddress("foo.com")
+                                .port(endpoint.port())
+                                .uriSpec(CURATOR_X_URI_SPEC)
+                                .build();
 
         final ZooKeeperUpdatingListener listener =
-                ZooKeeperUpdatingListener.builder(zkInstance.connectString(), Z_NODE, instanceSpec).build();
+                ZooKeeperUpdatingListener.builder(zkInstance.connectString(), Z_NODE, registrationSpec).build();
         final Server server = Server.builder()
                                     .http(endpoint.port())
                                     .service("/", (ctx, req) -> HttpResponse.of(200))

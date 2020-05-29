@@ -27,9 +27,9 @@ import com.linecorp.armeria.internal.common.zookeeper.CuratorXDiscoveryNodeValue
 final class CuratorXDiscoverySpec implements DiscoverySpec {
 
     private final String serviceName;
-    private final Function<ServiceInstance<?>, Endpoint> converter;
+    private final Function<? super ServiceInstance<?>, Endpoint> converter;
 
-    CuratorXDiscoverySpec(String serviceName, Function<ServiceInstance<?>, Endpoint> converter) {
+    CuratorXDiscoverySpec(String serviceName, Function<? super ServiceInstance<?>, Endpoint> converter) {
         this.serviceName = serviceName;
         this.converter = converter;
     }

@@ -320,13 +320,13 @@ net.shibboleth.utilities:
 # See: https://github.com/apache/curator/blob/master/pom.xml
 org.apache.curator:
   curator-recipes:
-    version: '4.3.0'
+    version: &CURATOR_VERSION '4.3.0'
     javadocs:
     - https://static.javadoc.io/org.apache.curator/curator-recipes/4.3.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
   curator-x-discovery:
-    version: '4.3.0'
+    version: *CURATOR_VERSION
     javadocs:
      - https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/4.3.0/
 

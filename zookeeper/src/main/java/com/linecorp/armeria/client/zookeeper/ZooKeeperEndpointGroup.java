@@ -58,35 +58,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      *
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
-     */
-    public static ZooKeeperEndpointGroup of(String zkConnectionStr, String zNodePath) {
-        return builder(zkConnectionStr, zNodePath).build();
-    }
-
-    /**
-     * Returns a new {@link ZooKeeperEndpointGroup} that retrieves the {@link Endpoint} list from
-     * the ZNode at the specified connection string and path. A new ZooKeeper client will be created internally.
-     * The ZooKeeper client will be destroyed when the returned {@link ZooKeeperEndpointGroup} is closed.
-     *
-     * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
      * @param spec the {@link DiscoverySpec} to find and decode the registered instances
      */
     public static ZooKeeperEndpointGroup of(String zkConnectionStr, String zNodePath, DiscoverySpec spec) {
         return builder(zkConnectionStr, zNodePath, spec).build();
-    }
-
-    /**
-     * Returns a new {@link ZooKeeperEndpointGroup} that retrieves the {@link Endpoint} list from
-     * the ZNode at the specified path using the specified {@link CuratorFramework}.
-     * Note that the specified {@link CuratorFramework} will not be destroyed when the returned
-     * {@link ZooKeeperEndpointGroup} is closed.
-     *
-     * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
-     */
-    public static ZooKeeperEndpointGroup of(CuratorFramework client, String zNodePath) {
-        return builder(client, zNodePath).build();
     }
 
     /**
@@ -111,23 +86,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      *
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
-     */
-    public static ZooKeeperEndpointGroupBuilder builder(String zkConnectionStr, String zNodePath) {
-        return builder(zkConnectionStr, zNodePath, DiscoverySpec.ofDefault());
-    }
-
-    /**
-     * Returns a new {@link ZooKeeperEndpointGroupBuilder} created with the specified ZooKeeper connection
-     * string and ZNode path. The {@link ZooKeeperEndpointGroup} built by the returned builder will create
-     * a new ZooKeeper client internally. The ZooKeeper client will be destroyed when
-     * the {@link ZooKeeperEndpointGroup} is closed.
-     *
-     * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
      * @param spec the {@link DiscoverySpec} to find and decode the registered instances
      */
-    public static ZooKeeperEndpointGroupBuilder builder(String zkConnectionStr, String zNodePath,
-                                                        DiscoverySpec spec) {
+    public static ZooKeeperEndpointGroupBuilder builder(
+            String zkConnectionStr, String zNodePath, DiscoverySpec spec) {
         return new ZooKeeperEndpointGroupBuilder(zkConnectionStr, zNodePath, spec);
     }
 
@@ -138,22 +100,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
-     */
-    public static ZooKeeperEndpointGroupBuilder builder(CuratorFramework client, String zNodePath) {
-        return builder(client, zNodePath, DiscoverySpec.ofDefault());
-    }
-
-    /**
-     * Returns a new {@link ZooKeeperEndpointGroupBuilder} created with the specified {@link CuratorFramework}
-     * and ZNode path. Note that the specified {@link CuratorFramework} will not be destroyed when
-     * the {@link ZooKeeperEndpointGroup} built by the returned builder is closed.
-     *
-     * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
      * @param spec the {@link DiscoverySpec} to find and decode the registered instances
      */
-    public static ZooKeeperEndpointGroupBuilder builder(CuratorFramework client, String zNodePath,
-                                                        DiscoverySpec spec) {
+    public static ZooKeeperEndpointGroupBuilder builder(
+            CuratorFramework client, String zNodePath, DiscoverySpec spec) {
         return new ZooKeeperEndpointGroupBuilder(client, zNodePath, spec);
     }
 

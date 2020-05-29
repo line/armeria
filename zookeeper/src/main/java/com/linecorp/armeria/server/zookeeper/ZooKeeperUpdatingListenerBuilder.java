@@ -15,10 +15,10 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.util.function.Consumer;
-
-import javax.annotation.Nullable;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
@@ -40,12 +40,12 @@ import com.linecorp.armeria.server.Server;
  * }</pre>
  * This registers the {@link Server} with the information that are automatically found from
  * {@link SystemInfo#defaultNonLoopbackIpV4Address()} and {@link Server#activePort()} in the form as specified
- * in {@link InstanceSpec#ofEndpoint(Endpoint)}.
+ * in {@link RegistrationSpec#ofLegacy(Endpoint)}.
  * If you want to use
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>, please use
- * {@link InstanceSpec#ofCuratorXInstance(String)}.
+ * {@link RegistrationSpec#ofCuratorXRegistration(String)}.
  * <pre>{@code
- * InstanceSpec spec = InstanceSpec.ofCuratorXInstance("myServices");
+ * RegistrationSpec spec = RegistrationSpec.ofCuratorXInstance("myServices");
  * ZooKeeperUpdatingListener listener =
  *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints", spec)
  *                              .sessionTimeoutMillis(10000)
@@ -70,8 +70,7 @@ import com.linecorp.armeria.server.Server;
  * */
 public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
 
-    @Nullable
-    private final InstanceSpec spec;
+    private final RegistrationSpec spec;
 
     /**
      * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
@@ -80,9 +79,9 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath, @Nullable InstanceSpec spec) {
+    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath, RegistrationSpec spec) {
         super(client, zNodePath);
-        this.spec = spec;
+        this.spec = requireNonNull(spec, "spec");
     }
 
     /**
@@ -91,9 +90,9 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath, @Nullable InstanceSpec spec) {
+    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath, RegistrationSpec spec) {
         super(zkConnectionStr, zNodePath);
-        this.spec = spec;
+        this.spec = requireNonNull(spec, "spec");
     }
 
     /**

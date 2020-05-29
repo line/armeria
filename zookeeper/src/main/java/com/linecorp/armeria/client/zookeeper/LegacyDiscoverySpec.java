@@ -18,9 +18,9 @@ package com.linecorp.armeria.client.zookeeper;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.DefaultNodeValueCodec;
+import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
-enum DefaultDiscoverySpec implements DiscoverySpec {
+enum LegacyDiscoverySpec implements DiscoverySpec {
     INSTANCE;
 
     @Nullable
@@ -31,6 +31,6 @@ enum DefaultDiscoverySpec implements DiscoverySpec {
 
     @Override
     public Endpoint decode(byte[] zNodeValue) {
-        return DefaultNodeValueCodec.INSTANCE.decode(zNodeValue);
+        return LegacyNodeValueCodec.INSTANCE.decode(zNodeValue);
     }
 }

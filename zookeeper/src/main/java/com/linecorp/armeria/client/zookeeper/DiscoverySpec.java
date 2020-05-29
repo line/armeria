@@ -18,31 +18,15 @@ package com.linecorp.armeria.client.zookeeper;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.server.zookeeper.InstanceSpec;
+import com.linecorp.armeria.server.zookeeper.RegistrationSpec;
 
 /**
  * A discovery specification for {@link ZooKeeperEndpointGroup}. The specification is used for finding
  * and decoding the registered instances into {@link Endpoint}s.
  *
- * @see InstanceSpec
+ * @see RegistrationSpec
  */
 public interface DiscoverySpec {
-
-    /**
-     * Returns the default {@link DiscoverySpec} implementation which assumes a zNode value is
-     * a comma-separated string. Each element of the zNode value represents an {@link Endpoint} whose format is
-     * {@code <host>[:<port_number>[:weight]]}, such as:
-     * <ul>
-     *   <li>{@code "foo.com"} - default port number, default weight (1000)</li>
-     *   <li>{@code "bar.com:8080} - port number 8080, default weight (1000)</li>
-     *   <li>{@code "10.0.2.15:0:500} - default port number, weight 500</li>
-     *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
-     * </ul>
-     * Note that the port number must be specified when you want to specify the weight.
-     */
-    static DiscoverySpec ofDefault() {
-        return DefaultDiscoverySpec.INSTANCE;
-    }
 
     /**
      * Returns a {@link DiscoverySpec} that is compatible with
@@ -61,6 +45,22 @@ public interface DiscoverySpec {
      */
     static CuratorXDiscoverySpecBuilder curatorXBuilder(String serviceName) {
         return new CuratorXDiscoverySpecBuilder(serviceName);
+    }
+
+    /**
+     * Returns the legacy {@link DiscoverySpec} implementation which assumes a zNode value is
+     * a comma-separated string. Each element of the zNode value represents an {@link Endpoint} whose format is
+     * {@code <host>[:<port_number>[:weight]]}, such as:
+     * <ul>
+     *   <li>{@code "foo.com"} - default port number, default weight (1000)</li>
+     *   <li>{@code "bar.com:8080} - port number 8080, default weight (1000)</li>
+     *   <li>{@code "10.0.2.15:0:500} - default port number, weight 500</li>
+     *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
+     * </ul>
+     * Note that the port number must be specified when you want to specify the weight.
+     */
+    static DiscoverySpec ofLegacy() {
+        return LegacyDiscoverySpec.INSTANCE;
     }
 
     /**

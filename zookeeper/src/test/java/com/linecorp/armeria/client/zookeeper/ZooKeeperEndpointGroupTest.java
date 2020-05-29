@@ -35,7 +35,7 @@ import com.google.common.collect.ImmutableSet.Builder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
-import com.linecorp.armeria.server.zookeeper.InstanceSpec;
+import com.linecorp.armeria.server.zookeeper.RegistrationSpec;
 
 import zookeeperjunit.CloseableZooKeeper;
 
@@ -53,7 +53,7 @@ class ZooKeeperEndpointGroupTest {
     void defaultSpec() throws Throwable {
         final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
         setDefaultSpecNodeChildren(sampleEndpoints);
-        final ZooKeeperEndpointGroup endpointGroup = endpointGroup(DiscoverySpec.ofDefault());
+        final ZooKeeperEndpointGroup endpointGroup = endpointGroup(DiscoverySpec.ofLegacy());
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
 
         // Add two more nodes.
@@ -83,7 +83,7 @@ class ZooKeeperEndpointGroupTest {
             // Register all child nodes.
             for (Endpoint endpoint : children) {
                 zk.create(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port(),
-                          InstanceSpec.ofEndpoint(endpoint).encodedInstance(),
+                          RegistrationSpec.ofLegacy(endpoint).encodedInstance(),
                           Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             }
         }
