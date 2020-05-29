@@ -39,7 +39,6 @@ class CuratorXDiscoverySpecTest {
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 100));
 
         spec = DiscoverySpec.curatorXBuilder("foo").useSsl(true).build();
-        instance = serviceInstance(true);
         endpoint = spec.decode(CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 200)); // useSsl
 
@@ -47,9 +46,8 @@ class CuratorXDiscoverySpecTest {
         spec = DiscoverySpec.curatorXBuilder("foo")
                             .converter(serviceInstance -> bar)
                             .build();
-        instance = serviceInstance(true);
         endpoint = spec.decode(CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(instance));
-        assertThat(endpoint).isEqualTo(bar); // Use converter.
+        assertThat(endpoint).isSameAs(bar); // Use converter.
     }
 
     private static ServiceInstance<?> serviceInstance(boolean enabled) {
