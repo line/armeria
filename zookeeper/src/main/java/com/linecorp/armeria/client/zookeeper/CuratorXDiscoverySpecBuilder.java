@@ -82,6 +82,9 @@ public final class CuratorXDiscoverySpecBuilder {
             return converter;
         }
         return instance -> {
+            if (!instance.isEnabled()) {
+                return null;
+            }
             if (instanceId != null && !instanceId.equals(instance.getId())) {
                 return null;
             }
