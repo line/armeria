@@ -50,15 +50,15 @@ class ZooKeeperEndpointGroupTest {
     static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
 
     @Test
-    void defaultSpec() throws Throwable {
+    void legacySpec() throws Throwable {
         final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
-        setDefaultSpecNodeChildren(sampleEndpoints);
+        setLegacySpecNodeChildren(sampleEndpoints);
         final ZooKeeperEndpointGroup endpointGroup = endpointGroup(DiscoverySpec.ofLegacy());
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
 
         // Add two more nodes.
         final List<Endpoint> extraEndpoints = ZooKeeperTestUtil.sampleEndpoints(2);
-        setDefaultSpecNodeChildren(extraEndpoints);
+        setLegacySpecNodeChildren(extraEndpoints);
 
         // Construct the final expected node list.
         final Builder<Endpoint> builder = ImmutableSet.builder();
@@ -73,7 +73,7 @@ class ZooKeeperEndpointGroupTest {
         disconnectZk(endpointGroup);
     }
 
-    private static void setDefaultSpecNodeChildren(List<Endpoint> children) throws Throwable {
+    private static void setLegacySpecNodeChildren(List<Endpoint> children) throws Throwable {
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             // If the parent node does not exist, create it.
             if (!zk.exists(Z_NODE).get()) {
