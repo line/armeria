@@ -221,7 +221,7 @@ public final class ArmeriaHttpUtil {
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
     public static final String SERVER_HEADER =
-            "Armeria/" + Version.getAll(ArmeriaHttpUtil.class.getClassLoader()).get("armeria")
+            "Armeria/" + Version.get("armeria", ArmeriaHttpUtil.class.getClassLoader())
                                 .artifactVersion();
 
     /**

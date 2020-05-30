@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.logging;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -32,15 +34,17 @@ import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 
 class LoggingClientTest {
-
     private static final HttpClient delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
@@ -94,5 +98,58 @@ class LoggingClientTest {
 
         defaultLoggerClient.execute(ctx, req);
         verifyNoInteractions(logger);
+    }
+
+    @Test
+    void sanitizeRequestHeaders() throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+
+        // use default logger
+        final LoggingClient defaultLoggerClient =
+                LoggingClient.builder()
+                             .requestLogLevel(LogLevel.INFO)
+                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                                     Pattern.compile("trustin"),
+                                     Pattern.compile("com")))
+                             .build(delegate);
+
+        // Pre sanitize step
+        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        defaultLoggerClient.execute(ctx, req);
+        // After the sanitize
+        assertThat(ctx.logBuilder().toString()).doesNotContain("trustin");
+        assertThat(ctx.logBuilder().toString()).doesNotContain("com");
+    }
+
+    @Test
+    void sanitizeRequestContent() throws Exception {
+
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
+
+        // use default logger
+        final LoggingClient defaultLoggerClient =
+                LoggingClient.builder()
+                             .requestLogLevel(LogLevel.INFO)
+                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .requestContentSanitizer(RegexBasedSanitizer.of(
+                                     Pattern.compile("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")))
+                             .build(delegate);
+
+        // Before sanitize content
+        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
+        defaultLoggerClient.execute(ctx, req);
+        // Ensure sanitize the request content of the phone number 333-490-4499
+        assertThat(ctx.logBuilder().toString()).doesNotContain("333-490-4499");
     }
 }

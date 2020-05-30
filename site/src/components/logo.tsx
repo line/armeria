@@ -17,7 +17,7 @@ interface LogoProps {
   ariaHidden?: boolean;
 }
 
-const Logo: React.FC<LogoProps> = props => {
+const Logo: React.FC<LogoProps> = (props) => {
   const primaryStyle: React.CSSProperties = props.primaryColor
     ? { fill: props.primaryColor }
     : {};

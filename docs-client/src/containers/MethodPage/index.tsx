@@ -82,8 +82,8 @@ function getExamplePaths(
   return (
     specification
       .getServiceByName(service.name)
-      ?.methods?.find(m => m.name === method.name)
-      ?.examplePaths?.map(path => {
+      ?.methods?.find((m) => m.name === method.name)
+      ?.examplePaths?.map((path) => {
         return { label: path, value: path };
       }) || []
   );
@@ -97,8 +97,8 @@ function getExampleQueries(
   return (
     specification
       .getServiceByName(service.name)
-      ?.methods?.find(m => m.name === method.name)
-      ?.exampleQueries?.map(queries => {
+      ?.methods?.find((m) => m.name === method.name)
+      ?.exampleQueries?.map((queries) => {
         return { label: queries, value: queries };
       }) || []
   );
@@ -128,7 +128,7 @@ type Props = OwnProps &
     httpMethod: string;
   }>;
 
-const MethodPage: React.FunctionComponent<Props> = props => {
+const MethodPage: React.FunctionComponent<Props> = (props) => {
   const service = props.specification.getServiceByName(
     props.match.params.serviceName,
   );
@@ -137,7 +137,7 @@ const MethodPage: React.FunctionComponent<Props> = props => {
   }
 
   const method = service.methods.find(
-    m =>
+    (m) =>
       m.name === props.match.params.methodName &&
       m.httpMethod === props.match.params.httpMethod,
   );

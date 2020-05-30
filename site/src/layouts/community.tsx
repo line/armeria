@@ -10,7 +10,7 @@ interface CommunityLayoutProps extends RouteComponentProps {
   pageTitle: string;
 }
 
-const CommunityLayout: React.FC<CommunityLayoutProps> = props => {
+const CommunityLayout: React.FC<CommunityLayoutProps> = (props) => {
   const {
     allMdx: { nodes: candidateMdxNodes },
   } = useStaticQuery(graphql`

@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.roundRobin;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +51,6 @@ class RoundRobinStrategyTest {
     @Test
     void selectEmpty() {
         assertThat(group.select(ctx)).isNotNull();
-
-        assertThatThrownBy(() -> emptyGroup.select(ctx)).isInstanceOf(EmptyEndpointGroupException.class);
+        assertThat(emptyGroup.select(ctx)).isNull();
     }
 }

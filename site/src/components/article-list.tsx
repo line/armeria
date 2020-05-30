@@ -28,7 +28,7 @@ interface ArticleListProps {
   dataSource: Article[];
 }
 
-const ArticleList: React.FC<ArticleListProps> = props => {
+const ArticleList: React.FC<ArticleListProps> = (props) => {
   const [language, setLanguage] = useState('en');
   const [tags, setTags] = useState([
     'articles',
@@ -50,7 +50,9 @@ const ArticleList: React.FC<ArticleListProps> = props => {
         let url: string = e.article.url[e.language];
         let machineTranslated = false;
         if (!url) {
-          const startLanguage = ['en', 'ja', 'ko'].find(l => e.article.url[l]);
+          const startLanguage = ['en', 'ja', 'ko'].find(
+            (l) => e.article.url[l],
+          );
           if (startLanguage) {
             url = `https://translate.google.com/translate?sl=${startLanguage}&tl=${language}&u=${encodeURIComponent(
               e.article.url[startLanguage],
@@ -113,16 +115,16 @@ const ArticleList: React.FC<ArticleListProps> = props => {
 
   function convert(articles: Article[]) {
     const formatTags = tags.filter(
-      tag => tag === 'articles' || tag === 'slides',
+      (tag) => tag === 'articles' || tag === 'slides',
     );
     const typeTags = tags.filter(
-      tag => tag === 'knowledge' || tag === 'experience',
+      (tag) => tag === 'knowledge' || tag === 'experience',
     );
     return articles.flatMap((e, i) => {
       // Skip if the tags do not match.
       if (
-        !formatTags.find(tag => e.tags.includes(tag)) ||
-        !typeTags.find(tag => e.tags.includes(tag))
+        !formatTags.find((tag) => e.tags.includes(tag)) ||
+        !typeTags.find((tag) => e.tags.includes(tag))
       ) {
         return [];
       }
@@ -155,7 +157,7 @@ const ArticleList: React.FC<ArticleListProps> = props => {
       <Form className={styles.form} layout="inline">
         <Form.Item>
           <Radio.Group
-            onChange={useCallback(e => setLanguage(e.target.value), [])}
+            onChange={useCallback((e) => setLanguage(e.target.value), [])}
             value={language}
           >
             <Radio value="en">English</Radio>
@@ -177,9 +179,9 @@ const ArticleList: React.FC<ArticleListProps> = props => {
           <TreeSelect
             className={styles.tagsSelect}
             value={tags}
-            onChange={useCallback(values => {
+            onChange={useCallback((values) => {
               const filteredValues = values.filter(
-                value => !value.startsWith('_'),
+                (value) => !value.startsWith('_'),
               );
               setTags(filteredValues);
             }, [])}

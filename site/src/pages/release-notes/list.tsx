@@ -22,7 +22,7 @@ export default (props: any) => {
       pageTitle="Release notes for all past versions"
       allItems={allReleases}
       layout={ReleaseNotesLayout}
-      grouper={useCallback(pagePath => {
+      grouper={useCallback((pagePath) => {
         const version = pagePathToVersion(pagePath);
         const firstDotIndex = version.indexOf('.');
         const majorVersion =

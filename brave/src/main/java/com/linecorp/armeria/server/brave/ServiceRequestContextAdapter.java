@@ -30,7 +30,6 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
-import brave.http.HttpServerAdapter;
 import brave.http.HttpServerHandler;
 
 /**
@@ -56,8 +55,7 @@ final class ServiceRequestContextAdapter {
          */
         @Override
         public boolean parseClientIpAndPort(Span span) {
-            return parseClientIpFromXForwardedFor(span) ||
-                SpanTags.updateRemoteEndpoint(span, ctx);
+            return parseClientIpFromXForwardedFor(span) || SpanTags.updateRemoteEndpoint(span, ctx);
         }
 
         @Override
@@ -70,13 +68,6 @@ final class ServiceRequestContextAdapter {
             return ctx.method().name();
         }
 
-        /**
-         * Original implementation is calling {@link HttpServerAdapter#url(Object)} which needs {@link
-         * RequestLog#scheme()}, but because {@link RequestLog#scheme()} is not always available, we need to
-         * use {@link RequestContext#path()} directly.
-         *
-         * @see brave.http.HttpServerRequest#path()
-         */
         @Override
         public String path() {
             return ctx.path();
@@ -118,8 +109,8 @@ final class ServiceRequestContextAdapter {
         }
     }
 
-    static brave.http.HttpServerResponse asHttpServerResponse(RequestLog log,
-        brave.http.HttpServerRequest request) {
+    static brave.http.HttpServerResponse asHttpServerResponse(
+            RequestLog log, brave.http.HttpServerRequest request) {
         return new HttpServerResponse(log, request);
     }
 

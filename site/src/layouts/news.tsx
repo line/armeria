@@ -12,7 +12,7 @@ interface NewsLayoutProps extends RouteComponentProps {
   noEdit?: boolean;
 }
 
-const NewsLayout: React.FC<NewsLayoutProps> = props => {
+const NewsLayout: React.FC<NewsLayoutProps> = (props) => {
   const newsLinks: { [version: string]: string } = {};
   const releaseLinks: { [version: string]: string } = {};
   const index = {

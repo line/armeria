@@ -4,7 +4,7 @@ interface MaxWidthProps {
   value: number | string;
 }
 
-const MaxWidth: React.FC<MaxWidthProps> = props => (
+const MaxWidth: React.FC<MaxWidthProps> = (props) => (
   <div
     style={{
       maxWidth:

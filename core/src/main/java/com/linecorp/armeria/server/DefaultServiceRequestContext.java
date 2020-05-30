@@ -174,6 +174,19 @@ public final class DefaultServiceRequestContext
         this.additionalResponseTrailers = additionalResponseTrailers;
     }
 
+    @Nullable
+    @Override
+    public <V> V attr(AttributeKey<V> key) {
+        // Don't check the root attributes; root is always null.
+        return ownAttr(key);
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        // Don't check the root attributes; root is always null.
+        return ownAttrs();
+    }
+
     @Nonnull
     @Override
     public <A extends SocketAddress> A remoteAddress() {

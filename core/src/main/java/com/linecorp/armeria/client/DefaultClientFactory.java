@@ -25,6 +25,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
@@ -119,8 +122,10 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     @Override
-    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol) {
-        return httpClientFactory.acquireEventLoop(endpoint, sessionProtocol);
+    public ReleasableHolder<EventLoop> acquireEventLoop(SessionProtocol sessionProtocol,
+                                                        EndpointGroup endpointGroup,
+                                                        @Nullable Endpoint endpoint) {
+        return httpClientFactory.acquireEventLoop(sessionProtocol, endpointGroup, endpoint);
     }
 
     @Override

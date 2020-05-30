@@ -150,6 +150,17 @@ configure(projectsWithFlags('java')) {
     // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
     // canBeConsumed are set otherwise.
     afterEvaluate {
+        // From Boot 2.3.0, productionRuntimeClasspath is newly added and its canBeConsumed is set to true
+        // so change it to false. Otherwise, Gradle can't resolve the dependency in bootJar task
+        // because the version will not be added in the following `Add to resolvable configurations`.
+        // https://github.com/spring-projects/spring-boot/blob/v2.3.0.RELEASE/spring-boot-project/spring-boot-tools/spring-boot-gradle-plugin/src/main/java/org/springframework/boot/gradle/plugin/JavaPluginAction.java#L175-L178
+        def springBootGradlePlugin = plugins.findPlugin('org.springframework.boot')
+        def bootJarTask = tasks.findByName('bootJar')
+        def productionRuntimeClasspathConfig = configurations.findByName('productionRuntimeClasspath')
+        if (springBootGradlePlugin != null && bootJarTask != null && productionRuntimeClasspathConfig != null) {
+            productionRuntimeClasspathConfig.canBeConsumed(false)
+        }
+
         dependencies {
             configurations.configureEach { configuration ->
                 // Add to resolvable configurations

@@ -28,6 +28,7 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -55,6 +56,52 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
      */
     protected final T delegate() {
         return delegate;
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext root() {
+        return delegate().root();
+    }
+
+    @Nullable
+    @Override
+    public <V> V attr(AttributeKey<V> key) {
+        return delegate().attr(key);
+    }
+
+    @Nullable
+    @Override
+    public <V> V ownAttr(AttributeKey<V> key) {
+        return delegate().ownAttr(key);
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        return delegate().attrs();
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+        return delegate().ownAttrs();
+    }
+
+    @Override
+    public <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
+        delegate().setAttr(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
+        return delegate().setAttrIfAbsent(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V computeAttrIfAbsent(AttributeKey<V> key,
+                                     Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
+        return delegate().computeAttrIfAbsent(key, mappingFunction);
     }
 
     @Override
@@ -149,35 +196,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     @Override
     public ByteBufAllocator alloc() {
         return delegate().alloc();
-    }
-
-    @Nullable
-    @Override
-    public <V> V attr(AttributeKey<V> key) {
-        return delegate().attr(key);
-    }
-
-    @Override
-    public <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
-        delegate().setAttr(key, value);
-    }
-
-    @Nullable
-    @Override
-    public <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
-        return delegate().setAttrIfAbsent(key, value);
-    }
-
-    @Nullable
-    @Override
-    public <V> V computeAttrIfAbsent(
-            AttributeKey<V> key, Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
-        return delegate().computeAttrIfAbsent(key, mappingFunction);
-    }
-
-    @Override
-    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
-        return delegate().attrs();
     }
 
     @Override

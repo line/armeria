@@ -16,55 +16,14 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
-
 import org.junit.jupiter.api.Test;
-import org.junit.platform.commons.util.ReflectionUtils;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 class RetryRuleTest {
-
-    @Test
-    void checkStaticMethods() {
-        final Map<Class<?>, Class<? extends AbstractRetryRuleBuilder>> classes =
-                ImmutableMap.of(RetryRule.class, RetryRuleBuilder.class,
-                                RetryRuleWithContent.class, RetryRuleWithContentBuilder.class);
-
-        classes.forEach((rule, builder) -> {
-            final List<Method> builderMethods =
-                    ReflectionUtils.findMethods(RetryRuleBuilder.class,
-                                                method -> !Modifier.isStatic(method.getModifiers()) &&
-                                                          Modifier.isPublic(method.getModifiers()) &&
-                                                          method.getName().startsWith("on") &&
-                                                          !"onResponseHeaders".equals(method.getName()) &&
-                                                          !method.isVarArgs());
-
-            final List<Method> ruleMethods =
-                    ReflectionUtils.findMethods(RetryRule.class,
-                                                method -> Modifier.isStatic(method.getModifiers()) &&
-                                                          Modifier.isPublic(method.getModifiers()) &&
-                                                          method.getName().startsWith("on"));
-            assertThat(builderMethods).isNotEmpty();
-            for (Method builderMethod : builderMethods) {
-                final Predicate<Method> predicate = ruleMethod ->
-                        ruleMethod.getName().equals(builderMethod.getName()) &&
-                        Arrays.equals(ruleMethod.getParameterTypes(), builderMethod.getParameterTypes());
-
-                assertThat(ruleMethods.stream().filter(predicate).collect(toImmutableList())).hasSize(1);
-            }
-        });
-    }
 
     @Test
     void testOf() {

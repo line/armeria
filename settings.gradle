@@ -6,6 +6,7 @@ apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 includeWithFlags ':bom',                       'bom', 'publish'
 
 // Published Java projects
+includeWithFlags ':annotation-processor',               'java', 'publish', 'relocate'
 includeWithFlags ':brave',                              'java', 'publish', 'relocate'
 includeWithFlags ':core',                               'java', 'publish', 'shade', 'trim'
 includeWithFlags ':eureka',                             'java', 'publish', 'relocate'
@@ -42,9 +43,9 @@ includeWithFlags ':bucket4j',                           'java', 'publish', 'relo
 includeWithFlags ':javadoc',                            'java', 'publish', 'no_aggregation'
 
 // Unpublished Java projects
-includeWithFlags ':annotation-processor',     'java'
 includeWithFlags ':benchmarks',               'java'
 includeWithFlags ':it:context-storage',       'java'
+includeWithFlags ':it:micrometer1.3',         'java', 'relocate'
 includeWithFlags ':it:server',                'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'
@@ -53,7 +54,6 @@ includeWithFlags ':thrift0.12',               'java', 'relocate'
 
 // Unpublished non-Java projects
 includeWithFlags ':docs-client'
-
 
 // Site generation project
 includeWithFlags ':site'

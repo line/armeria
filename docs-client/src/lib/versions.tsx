@@ -41,7 +41,7 @@ interface ArtifactIdObject {
 function createMapByArtifactId<T extends ArtifactIdObject>(
   objs: T[],
 ): Map<string, T> {
-  return new Map(objs.map(obj => [obj.artifactId, obj] as [string, T]));
+  return new Map(objs.map((obj) => [obj.artifactId, obj] as [string, T]));
 }
 
 export class Versions {

@@ -63,6 +63,7 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 
 class ArmeriaHttpUtilTest {
+
     @Test
     void testConcatPaths() throws Exception {
         assertThat(concatPaths(null, "a")).isEqualTo("/a");
@@ -498,6 +499,14 @@ class ArmeriaHttpUtilTest {
                 "",
                 null);
         bad.forEach(path -> assertThat(ArmeriaHttpUtil.isAbsoluteUri(path)).isFalse());
+    }
+
+    @Test
+    void serverHeader() {
+        final String pattern = "Armeria/(\\d+).(\\d+).(\\d+)(-SNAPSHOT)?";
+        assertThat("Armeria/1.0.0").containsPattern(pattern);
+        assertThat("Armeria/1.0.0-SNAPSHOT").containsPattern(pattern);
+        assertThat(ArmeriaHttpUtil.SERVER_HEADER).containsPattern(pattern);
     }
 
     private static ServerConfig serverConfig() {
