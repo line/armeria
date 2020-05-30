@@ -275,7 +275,7 @@ final class WebOperationService implements HttpService {
         final long nextRemainingBytes = remainingBytes - readBytes;
         final boolean endOfStream = nextRemainingBytes == 0;
         if (readBytes > 0) {
-            if (!res.tryWrite(PooledHttpData.wrap(buf).withEndOfStream())) {
+            if (!res.tryWrite(PooledHttpData.wrap(buf).withEndOfStream(endOfStream))) {
                 close(in);
                 return;
             }
