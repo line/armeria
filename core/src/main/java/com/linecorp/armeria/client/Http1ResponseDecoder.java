@@ -178,14 +178,14 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         res.initTimeout();
                         res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes));
                     } else {
-                        failWithUnexpectedMessageType(ctx, msg);
+                        failWithUnexpectedMessageType(ctx, msg, HttpResponse.class);
                     }
                     break;
                 case NEED_INFORMATIONAL_DATA:
                     if (msg instanceof LastHttpContent) {
                         state = State.NEED_HEADERS;
                     } else {
-                        failWithUnexpectedMessageType(ctx, msg);
+                        failWithUnexpectedMessageType(ctx, msg, LastHttpContent.class);
                     }
                     break;
                 case NEED_DATA_OR_TRAILERS:
@@ -230,7 +230,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             }
                         }
                     } else {
-                        failWithUnexpectedMessageType(ctx, msg);
+                        failWithUnexpectedMessageType(ctx, msg, HttpContent.class);
                     }
                     break;
                 case DISCARD:
@@ -241,9 +241,9 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         }
     }
 
-    private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg) {
+    private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
         fail(ctx, new ProtocolViolationException(
-                "unexpected message type: " + msg.getClass().getName()));
+                "unexpected message type: " + msg.getClass().getName() + ", expected " + expected.getName()));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
