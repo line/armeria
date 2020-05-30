@@ -64,6 +64,7 @@ public final class MetadataUtil {
         if (InternalMetadata.headerCount(metadata) == 0) {
             return;
         }
+
         final byte[][] serializedMetadata = InternalMetadata.serialize(metadata);
         assert serializedMetadata.length % 2 == 0;
 
@@ -91,8 +92,7 @@ public final class MetadataUtil {
     }
 
     /**
-     * Copies the headers in the Armeria {@link HttpHeaders} into a gRPC {@link Metadata}
-     * except for specified keys.
+     * Copies the headers in the Armeria {@link HttpHeaders} into a gRPC {@link Metadata}.
      */
     public static Metadata copyFromHeaders(HttpHeaders headers) {
         if (headers.isEmpty()) {
