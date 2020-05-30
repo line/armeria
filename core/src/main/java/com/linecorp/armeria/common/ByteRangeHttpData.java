@@ -57,7 +57,10 @@ class ByteRangeHttpData extends AbstractHttpData {
     }
 
     @Override
-    public ByteRangeHttpData withEndOfStream() {
-        return new ByteRangeHttpData(array, offset, length, true);
+    public ByteRangeHttpData withEndOfStream(boolean endOfStream) {
+        if (this.endOfStream == endOfStream) {
+            return this;
+        }
+        return new ByteRangeHttpData(array, offset, length, endOfStream);
     }
 }

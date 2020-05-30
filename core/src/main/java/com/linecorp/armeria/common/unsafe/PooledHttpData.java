@@ -56,7 +56,7 @@ import io.netty.buffer.Unpooled;
  *     .thenApply(aggResp -> {
  *         // try-with-resources here ensures the content is released if it is a ByteBufHttpData, or otherwise
  *         // is a no-op if it is not.
- *         try (HttpData content = aggResp.content()) {
+ *         try (PooledHttpData content = aggResp.content()) {
  *             if (!aggResp.status().equals(HttpStatus.OK)) {
  *                 throw new IllegalStateException("Bad response");
  *             }
@@ -125,9 +125,11 @@ public interface PooledHttpData extends HttpData, ByteBufHolder, SafeCloseable {
         return new ByteBufHttpData(buf, false);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    PooledHttpData withEndOfStream();
+    default PooledHttpData withEndOfStream() {
+        return withEndOfStream(true);
+    }
+
+    @Override
+    PooledHttpData withEndOfStream(boolean endOfStream);
 }

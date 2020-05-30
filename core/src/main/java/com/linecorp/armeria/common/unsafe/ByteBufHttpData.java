@@ -185,8 +185,11 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
     }
 
     @Override
-    public ByteBufHttpData withEndOfStream() {
-        return new ByteBufHttpData(buf, true);
+    public ByteBufHttpData withEndOfStream(boolean endOfStream) {
+        if (endOfStream == this.endOfStream) {
+            return this;
+        }
+        return new ByteBufHttpData(buf, endOfStream);
     }
 
     @Override

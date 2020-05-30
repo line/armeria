@@ -376,5 +376,12 @@ public interface HttpData extends HttpObject {
     /**
      * Returns a new {@link HttpData} whose HTTP/2 {@code endOfStream} flag is set.
      */
-    HttpData withEndOfStream();
+    default HttpData withEndOfStream() {
+        return withEndOfStream(true);
+    }
+
+    /**
+     * Returns a new {@link HttpData} whose HTTP/2 {@code endOfStream} flag is set to {@code endOfStream}.
+     */
+    HttpData withEndOfStream(boolean endOfStream);
 }

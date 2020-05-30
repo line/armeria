@@ -25,15 +25,9 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  */
 public interface PooledAggregatedHttpResponse extends AggregatedHttpResponse, SafeCloseable {
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     PooledHttpData content();
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     PooledHttpResponse toHttpResponse();
 }

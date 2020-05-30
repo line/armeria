@@ -61,7 +61,10 @@ final class DefaultHttpData extends AbstractHttpData {
     }
 
     @Override
-    public DefaultHttpData withEndOfStream() {
-        return new DefaultHttpData(data, true);
+    public DefaultHttpData withEndOfStream(boolean endOfStream) {
+        if (this.endOfStream == endOfStream) {
+            return this;
+        }
+        return new DefaultHttpData(data, endOfStream);
     }
 }

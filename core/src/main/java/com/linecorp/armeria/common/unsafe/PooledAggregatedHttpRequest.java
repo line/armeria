@@ -39,9 +39,6 @@ public interface PooledAggregatedHttpRequest extends AggregatedHttpRequest, Safe
         return new DefaultPooledAggregatedHttpRequest(delegate);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     PooledHttpData content();
 
