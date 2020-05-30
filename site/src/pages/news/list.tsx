@@ -11,7 +11,7 @@ export default (props: any) => (
     pageTitle="All past news items"
     allItems={allNewsItems}
     layout={NewsLayout}
-    grouper={useCallback(pagePath => {
+    grouper={useCallback((pagePath) => {
       const startIdx = pagePath.lastIndexOf('/') + 1;
       return pagePath.substring(
         startIdx,

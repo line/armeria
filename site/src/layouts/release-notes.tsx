@@ -13,7 +13,7 @@ interface ReleaseNotesLayoutProps extends RouteComponentProps {
   noEdit?: boolean;
 }
 
-const ReleaseNotesLayout: React.FC<ReleaseNotesLayoutProps> = props => {
+const ReleaseNotesLayout: React.FC<ReleaseNotesLayoutProps> = (props) => {
   const newsLinks: { [version: string]: string } = {};
   const releaseLinks: { [version: string]: string } = {};
   const index = {

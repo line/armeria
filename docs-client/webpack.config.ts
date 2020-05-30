@@ -2,6 +2,7 @@ import path from 'path';
 
 import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
+import { LicenseWebpackPlugin } from 'license-webpack-plugin';
 import { Configuration, DefinePlugin } from 'webpack';
 
 import { docServiceDebug } from './src/lib/header-provider';
@@ -86,6 +87,13 @@ const config: Configuration = {
       mode: 'light',
       devMode: 'light',
     }),
+    new LicenseWebpackPlugin({
+      stats: {
+        warnings: true,
+        errors: true,
+      },
+      outputFilename: '../../../licenses/web-licenses.txt',
+    }) as any,
     new DefinePlugin({
       'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
     }),

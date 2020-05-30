@@ -14,13 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.retry;
+package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -29,21 +28,22 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
- * An abstract builder class which creates a {@link RetryRule} or a {@link RetryRuleWithContent}.
+ * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
+ * {@link CircuitBreakerRule} and {@link CircuitBreakerRuleWithContent}.
  */
-abstract class AbstractRetryRuleBuilder {
-
-    static final CompletableFuture<RetryDecision> NEXT_DECISION =
-            CompletableFuture.completedFuture(RetryDecision.next());
-    static final CompletableFuture<RetryDecision> DEFAULT_DECISION =
-            CompletableFuture.completedFuture(RetryDecision.DEFAULT);
+@UnstableApi
+public abstract class AbstractRuleBuilder {
 
     private final Predicate<RequestHeaders> requestHeadersFilter;
 
@@ -52,16 +52,18 @@ abstract class AbstractRetryRuleBuilder {
     @Nullable
     private Predicate<Throwable> exceptionFilter;
 
+    /**
+     * Creates a new instance with the specified {@code requestHeadersFilter}.
+     */
     @SuppressWarnings("unchecked")
-    AbstractRetryRuleBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    protected AbstractRuleBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
         this.requestHeadersFilter = (Predicate<RequestHeaders>) requestHeadersFilter;
     }
 
     /**
-     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRule} which will retry
-     * if the {@code responseHeadersFilter} returns {@code true}.
+     * Adds the specified {@code responseHeadersFilter}.
      */
-    public AbstractRetryRuleBuilder onResponseHeaders(
+    public AbstractRuleBuilder onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
         requireNonNull(responseHeadersFilter, "responseHeadersFilter");
         if (this.responseHeadersFilter != null) {
@@ -75,18 +77,16 @@ abstract class AbstractRetryRuleBuilder {
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
-     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     * Adds the specified {@link HttpStatusClass}es.
      */
-    public AbstractRetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
+    public AbstractRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
         return onStatusClass(ImmutableSet.copyOf(requireNonNull(statusClasses, "statusClasses")));
     }
 
     /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
-     * if the class of the response status is one of the specified {@link HttpStatusClass}es.
+     * Adds the specified {@link HttpStatusClass}es.
      */
-    public AbstractRetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
+    public AbstractRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
         requireNonNull(statusClasses, "statusClasses");
         checkArgument(!Iterables.isEmpty(statusClasses), "statusClasses can't be empty.");
 
@@ -96,26 +96,23 @@ abstract class AbstractRetryRuleBuilder {
     }
 
     /**
-     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRule} which will retry
-     * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     * Adds the {@link HttpStatusClass#SERVER_ERROR}.
      */
-    public AbstractRetryRuleBuilder onServerErrorStatus() {
+    public AbstractRuleBuilder onServerErrorStatus() {
         return onStatusClass(HttpStatusClass.SERVER_ERROR);
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * Adds the specified {@link HttpStatus}es.
      */
-    public AbstractRetryRuleBuilder onStatus(HttpStatus... statuses) {
+    public AbstractRuleBuilder onStatus(HttpStatus... statuses) {
         return onStatus(ImmutableSet.copyOf(requireNonNull(statuses, "statuses")));
     }
 
     /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if the response status is one of the specified {@link HttpStatus}es.
+     * Adds the specified {@link HttpStatus}es.
      */
-    public AbstractRetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
+    public AbstractRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
         requireNonNull(statuses, "statuses");
         checkArgument(!Iterables.isEmpty(statuses), "statuses can't be empty.");
 
@@ -125,29 +122,26 @@ abstract class AbstractRetryRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
-     * if the response status matches the specified {@code statusFilter}.
+     * Adds the specified {@code statusFilter}.
      */
-    public AbstractRetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
+    public AbstractRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
         requireNonNull(statusFilter, "statusFilter");
         onResponseHeaders(headers -> statusFilter.test(headers.status()));
         return this;
     }
 
     /**
-     * Adds the specified exception type for a {@link RetryRule} which will retry
-     * if an {@link Exception} is raised and that is instance of the specified {@code exception}.
+     * Adds the specified exception type.
      */
-    public AbstractRetryRuleBuilder onException(Class<? extends Throwable> exception) {
+    public AbstractRuleBuilder onException(Class<? extends Throwable> exception) {
         requireNonNull(exception, "exception");
         return onException(exception::isInstance);
     }
 
     /**
-     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
-     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     * Adds the specified {@code exceptionFilter}.
      */
-    public AbstractRetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
+    public AbstractRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
         requireNonNull(exceptionFilter, "exceptionFilter");
         if (this.exceptionFilter != null) {
             this.exceptionFilter = this.exceptionFilter.or(exceptionFilter);
@@ -160,32 +154,39 @@ abstract class AbstractRetryRuleBuilder {
     }
 
     /**
-     * Makes a {@link RetryRule} retry on any {@link Exception}.
+     * Adds any {@link Exception}.
      */
-    public AbstractRetryRuleBuilder onException() {
+    public AbstractRuleBuilder onException() {
         return onException(unused -> true);
     }
 
     /**
-     * Makes a {@link RetryRule} retry on an {@link UnprocessedRequestException} which means that the request
-     * has not been processed by the server. Therefore, you can safely retry the request without worrying about
-     * the idempotency of the request.
+     * Adds an {@link UnprocessedRequestException}.
      */
-    public AbstractRetryRuleBuilder onUnprocessed() {
+    public AbstractRuleBuilder onUnprocessed() {
         return onException(UnprocessedRequestException.class);
     }
 
-    Predicate<RequestHeaders> requestHeadersFilter() {
+    /**
+     * Returns the {@link Predicate} of a {@link RequestHeaders}.
+     */
+    protected final Predicate<RequestHeaders> requestHeadersFilter() {
         return requestHeadersFilter;
     }
 
+    /**
+     * Returns the {@link Predicate} of a {@link ResponseHeaders}.
+     */
     @Nullable
-    Predicate<ResponseHeaders> responseHeadersFilter() {
+    protected final Predicate<ResponseHeaders> responseHeadersFilter() {
         return responseHeadersFilter;
     }
 
+    /**
+     * Returns the {@link Predicate} of an {@link Exception}.
+     */
     @Nullable
-    Predicate<Throwable> exceptionFilter() {
+    protected final Predicate<Throwable> exceptionFilter() {
         return exceptionFilter;
     }
 }

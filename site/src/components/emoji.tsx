@@ -5,7 +5,7 @@ interface EmojiProps {
   text: string;
 }
 
-const Emoji: React.FC<EmojiProps> = props => svgEmoji(props.text);
+const Emoji: React.FC<EmojiProps> = (props) => svgEmoji(props.text);
 
 function svgEmoji(input: string) {
   try {

@@ -17,7 +17,9 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -38,7 +40,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 
-class RetryStrategyBuilderTest {
+class RetryRuleBuilderTest {
 
     private static final Backoff statusErrorBackOff = Backoff.fixed(2000);
     private static final Backoff unprocessBackOff = Backoff.exponential(4000, 40000);
@@ -211,5 +213,95 @@ class RetryStrategyBuilderTest {
         final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx4.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         assertBackoff(retryRule.shouldRetry(ctx4, null)).isNull();
+    }
+
+    @Test
+    void methodFilter() {
+        assertThatThrownBy(() -> RetryRule.builder(HttpMethod.HEAD).thenBackoff())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Should set at least one");
+
+        final RetryRule rule = RetryRule.builder(HttpMethod.HEAD)
+                                        .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .thenBackoff();
+
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.HEAD, "/"));
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+        assertBackoff(rule.shouldRetry(ctx1, null)).isSameAs(Backoff.ofDefault());
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+        assertBackoff(rule.shouldRetry(ctx2, null)).isNull();
+    }
+
+    @Test
+    void buildFluently() {
+        final Backoff idempotentBackoff = Backoff.fixed(100);
+        final Backoff unprocessedBackoff = Backoff.fixed(200);
+        final RetryRule retryRule =
+                RetryRule.of(RetryRule.builder(HttpMethod.idempotentMethods())
+                                      .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                                      .onException(ClosedChannelException.class)
+                                      .onStatusClass(HttpStatusClass.CLIENT_ERROR)
+                                      .thenBackoff(idempotentBackoff),
+                             RetryRule.builder()
+                                      .onUnprocessed()
+                                      .thenBackoff(unprocessedBackoff));
+
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertBackoff(retryRule.shouldRetry(ctx1, null)).isSameAs(idempotentBackoff);
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.POST, "/"));
+        ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+        assertBackoff(retryRule.shouldRetry(ctx2, null)).isNull();
+
+        final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.PUT, "/"));
+        assertBackoff(retryRule.shouldRetry(ctx3, new ClosedChannelException())).isSameAs(idempotentBackoff);
+
+        final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.PUT, "/"));
+        assertBackoff(retryRule.shouldRetry(ctx4,
+                                            new UnprocessedRequestException(new ClosedChannelException())))
+                .isSameAs(unprocessedBackoff);
+    }
+
+    @Test
+    void noRetry() {
+        final RetryRule rule = RetryRule.builder(HttpMethod.POST).thenNoRetry()
+                                        .orElse(RetryRule.onException());
+
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertBackoff(rule.shouldRetry(ctx1, new RuntimeException())).isSameAs(Backoff.ofDefault());
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.POST, "/"));
+        assertBackoff(rule.shouldRetry(ctx2, new RuntimeException())).isNull();
+    }
+
+    @Test
+    void noDelay() {
+        final int maxAttempts = 10;
+        final RetryRule rule = RetryRule.builder()
+                                        .onStatus(status -> status == HttpStatus.BAD_REQUEST ||
+                                                            status == HttpStatus.TOO_MANY_REQUESTS)
+                                        .thenBackoff(Backoff.withoutDelay().withMaxAttempts(maxAttempts));
+
+        for (int i = 1; i < maxAttempts; i++) {
+            final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.BAD_REQUEST));
+            assertThat(rule.shouldRetry(ctx1, null).toCompletableFuture().join()
+                           .backoff().nextDelayMillis(i))
+                    .isEqualTo(0);
+
+            final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+            assertBackoff(rule.shouldRetry(ctx2, null)).isNull();
+        }
+
+        final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx3.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.BAD_REQUEST));
+        assertThat(rule.shouldRetry(ctx3, null).toCompletableFuture().join()
+                       .backoff().nextDelayMillis(maxAttempts + 1))
+                .isEqualTo(-1);
     }
 }

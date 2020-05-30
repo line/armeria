@@ -24,7 +24,7 @@ const selectableKeysAndRegexes = {
   home: /.?/,
 };
 
-const HeaderComponent: React.FC<RouteComponentProps> = props => {
+const HeaderComponent: React.FC<RouteComponentProps> = (props) => {
   const [verticalMenuOpen, setVerticalMenuOpen] = useState(false);
 
   const selectedKeyAndRegex = Object.entries(

@@ -8,7 +8,7 @@ interface AspectRatioProps {
   children: React.ReactNode;
 }
 
-const AspectRatio: React.FC<AspectRatioProps> = props => (
+const AspectRatio: React.FC<AspectRatioProps> = (props) => (
   <div
     className={styles.wrapper}
     style={{

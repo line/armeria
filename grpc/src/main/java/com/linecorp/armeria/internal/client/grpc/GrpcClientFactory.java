@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -99,7 +100,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final MessageMarshaller jsonMarshaller =
                 GrpcSerializationFormats.isJson(serializationFormat) ?
                 GrpcJsonUtil.jsonMarshaller(
-                        stubMethods(enclosingClass),
+                        stubMethods(clientType),
                         options.get(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER)) : null;
 
         final ArmeriaChannel channel = new ArmeriaChannel(
@@ -201,12 +202,33 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         return ((Unwrappable) ch).as(type);
     }
 
-    private static List<MethodDescriptor<?, ?>> stubMethods(Class<?> stubClass) {
+    private static List<MethodDescriptor<?, ?>> stubMethods(Class<?> clientType) {
+        if (clientType.getName().endsWith("CoroutineStub")) {
+            final Annotation annotation = stubForAnnotation(clientType);
+            try {
+                final Method valueMethod = annotation.annotationType().getDeclaredMethod("value", null);
+                final Class<?> generatedStub = generatedStub(annotation, valueMethod);
+                final Method getServiceDescriptor =
+                        generatedStub.getDeclaredMethod("getServiceDescriptor", null);
+                try {
+                    final ServiceDescriptor descriptor =
+                            (ServiceDescriptor) getServiceDescriptor.invoke(generatedStub);
+                    return ImmutableList.copyOf(descriptor.getMethods());
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    throw new IllegalStateException(
+                            "Could not invoke getServiceDescriptor on a gRPC Kotlin client stub.");
+                }
+            } catch (NoSuchMethodException e) {
+                throw new IllegalStateException("Could not find value getter on StubFor annotation.");
+            }
+        }
+
+        final Class<?> stubClass = clientType.getEnclosingClass();
         final Method getServiceDescriptorMethod;
         try {
             getServiceDescriptorMethod = stubClass.getDeclaredMethod("getServiceDescriptor");
         } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Could not find getServiceDescriptor on gRPC client stub.");
+            throw new IllegalStateException("Could not find getServiceDescriptor on a gRPC client stub.");
         }
         final ServiceDescriptor descriptor;
         try {
@@ -215,5 +237,29 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             throw new IllegalStateException("Could not invoke getServiceDescriptor on a gRPC client stub.");
         }
         return ImmutableList.copyOf(descriptor.getMethods());
+    }
+
+    private static Class<?> generatedStub(Annotation annotation, Method valueMethod) {
+        try {
+            return (Class<?>) valueMethod.invoke(annotation, null);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalStateException("Could not find a gRPC Kotlin generated client stub.");
+        }
+    }
+
+    private static Annotation stubForAnnotation(Class<?> clientType) {
+        try {
+            @SuppressWarnings("unchecked")
+            final Class<Annotation> annotationClass =
+                    (Class<Annotation>) Class.forName("io.grpc.kotlin.StubFor");
+            final Annotation annotation = clientType.getAnnotation(annotationClass);
+            if (annotation == null) {
+                throw new IllegalStateException(
+                        "Could not find StubFor annotation on a gRPC Kotlin client stub.");
+            }
+            return annotation;
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Could not find StubFor annotation on a gRPC Kotlin client stub.");
+        }
     }
 }

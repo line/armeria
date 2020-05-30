@@ -32,7 +32,7 @@ interface Props {
   method: Method;
 }
 
-const Endpoints: React.FunctionComponent<Props> = props => (
+const Endpoints: React.FunctionComponent<Props> = (props) => (
   <Section>
     <Typography variant="h6">Endpoints</Typography>
     <Table>
@@ -44,13 +44,13 @@ const Endpoints: React.FunctionComponent<Props> = props => (
         </TableRow>
       </TableHead>
       <TableBody>
-        {props.method.endpoints.map(endpoint => (
+        {props.method.endpoints.map((endpoint) => (
           <TableRow key={`${endpoint.hostnamePattern}/${endpoint.pathMapping}`}>
             <TableCell>{endpoint.hostnamePattern}</TableCell>
             <TableCell>{endpointPathString(endpoint)}</TableCell>
             <TableCell>
               <List dense>
-                {endpoint.availableMimeTypes.map(mimeType => (
+                {endpoint.availableMimeTypes.map((mimeType) => (
                   <ListItem key={mimeType}>
                     <ListItemText
                       primary={mimeType}

@@ -66,6 +66,10 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
 
     @Override
     public final void onComplete() {
+        if (future.isDone()) {
+            return;
+        }
+
         final HttpData content;
         if (contentLength == 0) {
             content = HttpData.empty();
@@ -96,6 +100,7 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
                 }
                 content = HttpData.wrap(merged);
             }
+            contentList.clear();
         }
 
         try {

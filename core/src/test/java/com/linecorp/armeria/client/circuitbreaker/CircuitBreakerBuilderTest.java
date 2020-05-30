@@ -17,13 +17,13 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class CircuitBreakerBuilderTest {
+class CircuitBreakerBuilderTest {
 
     private static final String remoteServiceName = "testService";
 
@@ -33,29 +33,22 @@ public class CircuitBreakerBuilderTest {
 
     private static final Duration twoSeconds = Duration.ofSeconds(2);
 
-    private static void throwsException(Runnable runnable) {
-        try {
-            runnable.run();
-            fail();
-        } catch (IllegalArgumentException | IllegalStateException | NullPointerException e) {
-            // Expected
-        }
-    }
-
     private static CircuitBreakerBuilder builder() {
         return CircuitBreaker.builder(remoteServiceName);
     }
 
     @Test
-    public void testConstructor() {
+    void testConstructor() {
         assertThat(CircuitBreaker.builder(remoteServiceName).build().name()).isEqualTo(remoteServiceName);
         assertThat(CircuitBreaker.builder().build().name()).startsWith("circuit-breaker-");
     }
 
     @Test
-    public void testConstructorWithInvalidArgument() {
-        throwsException(() -> CircuitBreaker.builder(null));
-        throwsException(() -> CircuitBreaker.builder(""));
+    void testConstructorWithInvalidArgument() {
+        assertThatThrownBy(() -> CircuitBreaker.builder(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> CircuitBreaker.builder(""))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     CircuitBreakerConfig confOf(CircuitBreaker circuitBreaker) {
@@ -63,7 +56,7 @@ public class CircuitBreakerBuilderTest {
     }
 
     @Test
-    public void testFailureRateThreshold() {
+    void testFailureRateThreshold() {
         assertThat(confOf(builder().failureRateThreshold(0.123).build()).failureRateThreshold())
                 .isEqualTo(0.123);
         assertThat(confOf(builder().failureRateThreshold(1).build()).failureRateThreshold())
@@ -71,14 +64,17 @@ public class CircuitBreakerBuilderTest {
     }
 
     @Test
-    public void testFailureRateThresholdWithInvalidArgument() {
-        throwsException(() -> builder().failureRateThreshold(0));
-        throwsException(() -> builder().failureRateThreshold(-1));
-        throwsException(() -> builder().failureRateThreshold(1.1));
+    void testFailureRateThresholdWithInvalidArgument() {
+        assertThatThrownBy(() -> builder().failureRateThreshold(0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().failureRateThreshold(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().failureRateThreshold(1.1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testMinimumRequestThreshold() {
+    void testMinimumRequestThreshold() {
         final CircuitBreakerConfig config1 = confOf(builder().minimumRequestThreshold(Long.MAX_VALUE).build());
         assertThat(config1.minimumRequestThreshold()).isEqualTo(Long.MAX_VALUE);
 
@@ -87,98 +83,120 @@ public class CircuitBreakerBuilderTest {
     }
 
     @Test
-    public void testMinimumRequestThresholdWithInvalidArgument() {
-        throwsException(() -> builder().minimumRequestThreshold(-1));
+    void testMinimumRequestThresholdWithInvalidArgument() {
+        assertThatThrownBy(() -> builder().minimumRequestThreshold(-1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testTrialRequestInterval() {
+    void testTrialRequestInterval() {
         final CircuitBreakerConfig config = confOf(builder().trialRequestInterval(oneSecond).build());
         assertThat(config.trialRequestInterval()).isEqualTo(oneSecond);
     }
 
     @Test
-    public void testTrialRequestIntervalInMillis() {
+    void testTrialRequestIntervalInMillis() {
         final CircuitBreakerConfig config = confOf(
                 builder().trialRequestIntervalMillis(oneSecond.toMillis()).build());
         assertThat(config.trialRequestInterval()).isEqualTo(oneSecond);
     }
 
     @Test
-    public void testTrialRequestIntervalWithInvalidArgument() {
-        throwsException(() -> builder().trialRequestInterval(null));
-        throwsException(() -> builder().trialRequestInterval(Duration.ZERO));
-        throwsException(() -> builder().trialRequestInterval(minusDuration));
-        throwsException(() -> builder().trialRequestIntervalMillis(-1));
-        throwsException(() -> builder().trialRequestIntervalMillis(0));
+    void testTrialRequestIntervalWithInvalidArgument() {
+        assertThatThrownBy(() -> builder().trialRequestInterval(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().trialRequestInterval(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().trialRequestInterval(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().trialRequestIntervalMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().trialRequestIntervalMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testCircuitOpenWindow() {
+    void testCircuitOpenWindow() {
         final CircuitBreakerConfig config = confOf(builder().circuitOpenWindow(oneSecond).build());
         assertThat(config.circuitOpenWindow()).isEqualTo(oneSecond);
     }
 
     @Test
-    public void testCircuitOpenWindowInMillis() {
+    void testCircuitOpenWindowInMillis() {
         final CircuitBreakerConfig config =
                 confOf(builder().circuitOpenWindowMillis(oneSecond.toMillis()).build());
         assertThat(config.circuitOpenWindow()).isEqualTo(oneSecond);
     }
 
     @Test
-    public void testCircuitOpenWindowWithInvalidArgument() {
-        throwsException(() -> builder().circuitOpenWindow(null));
-        throwsException(() -> builder().circuitOpenWindow(Duration.ZERO));
-        throwsException(() -> builder().circuitOpenWindow(minusDuration));
-        throwsException(() -> builder().circuitOpenWindowMillis(-1));
-        throwsException(() -> builder().circuitOpenWindowMillis(0));
+    void testCircuitOpenWindowWithInvalidArgument() {
+        assertThatThrownBy(() -> builder().circuitOpenWindow(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindow(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindow(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindowMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().circuitOpenWindowMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testCounterSlidingWindow() {
+    void testCounterSlidingWindow() {
         final CircuitBreakerConfig config = confOf(builder().counterSlidingWindow(twoSeconds).build());
         assertThat(config.counterSlidingWindow()).isEqualTo(twoSeconds);
     }
 
     @Test
-    public void testCounterSlidingWindowInMillis() {
+    void testCounterSlidingWindowInMillis() {
         final CircuitBreakerConfig config = confOf(
                 builder().counterSlidingWindowMillis(twoSeconds.toMillis()).build());
         assertThat(config.counterSlidingWindow()).isEqualTo(twoSeconds);
     }
 
     @Test
-    public void testCounterSlidingWindowWithInvalidArgument() {
-        throwsException(() -> builder().counterSlidingWindow(null));
-        throwsException(() -> builder().counterSlidingWindow(Duration.ZERO));
-        throwsException(() -> builder().counterSlidingWindow(minusDuration));
-        throwsException(() -> builder().counterSlidingWindowMillis(-1));
-        throwsException(() -> builder().counterSlidingWindowMillis(0));
+    void testCounterSlidingWindowWithInvalidArgument() {
+        assertThatThrownBy(() -> builder().counterSlidingWindow(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindow(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindow(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindowMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterSlidingWindowMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
 
-        throwsException(() -> builder().counterSlidingWindow(oneSecond).counterUpdateInterval(twoSeconds)
-                                       .build());
+        assertThatThrownBy(() -> builder().counterSlidingWindow(oneSecond).counterUpdateInterval(twoSeconds)
+                                          .build())
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void testCounterUpdateInterval() {
+    void testCounterUpdateInterval() {
         final CircuitBreakerConfig config = confOf(builder().counterUpdateInterval(oneSecond).build());
         assertThat(config.counterUpdateInterval()).isEqualTo(oneSecond);
     }
 
     @Test
-    public void testCounterUpdateIntervalInMillis() {
+    void testCounterUpdateIntervalInMillis() {
         final CircuitBreakerConfig config = confOf(
                 builder().counterUpdateIntervalMillis(oneSecond.toMillis()).build());
         assertThat(config.counterUpdateInterval()).isEqualTo(oneSecond);
     }
 
     @Test
-    public void testCounterUpdateIntervalWithInvalidArgument() {
-        throwsException(() -> builder().counterUpdateInterval(null));
-        throwsException(() -> builder().counterUpdateInterval(Duration.ZERO));
-        throwsException(() -> builder().counterUpdateInterval(minusDuration));
-        throwsException(() -> builder().counterUpdateIntervalMillis(-1));
-        throwsException(() -> builder().counterUpdateIntervalMillis(0));
+    void testCounterUpdateIntervalWithInvalidArgument() {
+        assertThatThrownBy(() -> builder().counterUpdateInterval(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder().counterUpdateInterval(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterUpdateInterval(minusDuration))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterUpdateIntervalMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder().counterUpdateIntervalMillis(0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

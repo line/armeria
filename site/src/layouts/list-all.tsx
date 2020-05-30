@@ -12,7 +12,7 @@ interface ListAllLayoutProps extends RouteComponentProps {
   layout: React.FC;
 }
 
-const ListAllLayout: React.FC<ListAllLayoutProps> = props => {
+const ListAllLayout: React.FC<ListAllLayoutProps> = (props) => {
   const groupedItems: {
     [groupName: string]: { [pagePath: string]: string };
   } = {};
