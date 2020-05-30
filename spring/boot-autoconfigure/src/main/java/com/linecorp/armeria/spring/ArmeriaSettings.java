@@ -61,9 +61,6 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
  *     mime-types: text/*, application/json
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
- *   security:
- *     enabled: true
- *     ports: 8080
  * }</pre>
  * TODO(ide) Adds virtualhost settings
  */
@@ -258,30 +255,6 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Configurations for the internal service security.
-     */
-    public static class Security {
-        /**
-         * Specifies whether the internal service security is enabled.
-         */
-        private boolean enabled;
-
-        /**
-         * Returns {@code true} if the internal service security is enabled.
-         */
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        /**
-         * Sets whether the internal service security is enabled.
-         */
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-    }
-
-    /**
      * The ports to listen on for requests. If not specified, will listen on
      * port 8080 for HTTP (not SSL).
      */
@@ -345,12 +318,6 @@ public class ArmeriaSettings {
      */
     @Nullable
     private Compression compression;
-
-    /**
-     * Security configuration that the {@link Server} uses.
-     */
-    @Nullable
-    private Security security;
 
     /**
      * Returns the {@link Port}s of the {@link Server}.
@@ -499,20 +466,5 @@ public class ArmeriaSettings {
      */
     public void setCompression(Compression compression) {
         this.compression = compression;
-    }
-
-    /**
-     * Returns the internal service security configuration that the {@link Server} uses.
-     */
-    @Nullable
-    public Security getSecurity() {
-        return security;
-    }
-
-    /**
-     * Sets the internal service security configuration that the {@link Server} uses.
-     */
-    public void setSecurity(Security security) {
-        this.security = security;
     }
 }

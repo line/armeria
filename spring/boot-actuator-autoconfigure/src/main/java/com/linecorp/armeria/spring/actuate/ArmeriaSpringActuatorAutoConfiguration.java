@@ -49,6 +49,7 @@ import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpointDisco
 import org.springframework.boot.actuate.health.HealthStatusHttpMapper;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -101,9 +102,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             ImmutableList.of(ActuatorMediaType.V3_JSON, MediaTypeNames.JSON);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    private static final Port DEFAULT_INTERNAL_PORT = new Port().setPort(8001)
-                                                                .setProtocol(SessionProtocol.HTTP);
 
     @Bean
     @ConditionalOnMissingBean
@@ -220,21 +218,17 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty("management.server.port")
     ArmeriaServerConfigurator secureActuatorServerConfigurator(WebEndpointProperties properties,
                                                                ManagementServerProperties serverProperties,
-                                                               ArmeriaSettings settings,
-                                                               ConfigurableEnvironment environment) {
+                                                               ConfigurableEnvironment environment,
+                                                               ArmeriaSettings armeriaSettings) {
         return sb -> {
-            Port port = obtainManagementServerPort(serverProperties.getPort());
+            final Port port = obtainManagementServerPort(serverProperties.getPort());
             if (port != null) {
                 configurePorts(sb, ImmutableList.of(port));
                 addLocalManagementPortPropertyAlias(environment, port);
-            } else {
-                port = DEFAULT_INTERNAL_PORT;
-            }
-            final ArmeriaSettings.Security security = settings.getSecurity();
-            if (security != null && security.isEnabled()) {
-                configureSecureDecorator(sb, port, properties.getBasePath(), settings);
+                configureSecureDecorator(sb, port, properties.getBasePath(), armeriaSettings);
             }
         };
     }
@@ -262,16 +256,16 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     private static void configureSecureDecorator(ServerBuilder sb, Port port,
-                                                 @Nullable String basePath, ArmeriaSettings settings) {
+                                                 @Nullable String basePath, ArmeriaSettings armeriaSettings) {
         final DecoratingServiceBindingBuilder builder = sb.routeDecorator();
-        if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
-            builder.path(settings.getMetricsPath());
+        if (armeriaSettings.isEnableMetrics() && !Strings.isNullOrEmpty(armeriaSettings.getMetricsPath())) {
+            builder.path(armeriaSettings.getMetricsPath());
         }
-        if (!Strings.isNullOrEmpty(settings.getHealthCheckPath())) {
-            builder.path(settings.getHealthCheckPath());
+        if (!Strings.isNullOrEmpty(armeriaSettings.getHealthCheckPath())) {
+            builder.path(armeriaSettings.getHealthCheckPath());
         }
-        if (!Strings.isNullOrEmpty(settings.getDocsPath())) {
-            builder.path(settings.getDocsPath());
+        if (!Strings.isNullOrEmpty(armeriaSettings.getDocsPath())) {
+            builder.path(armeriaSettings.getDocsPath());
         }
         if (!Strings.isNullOrEmpty(basePath)) {
             builder.path(basePath)

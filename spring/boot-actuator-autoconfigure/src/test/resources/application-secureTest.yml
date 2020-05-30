@@ -2,8 +2,6 @@ armeria:
   ports:
     - port: 0
     - port: 0
-  security:
-    enabled: true
 
 management:
   server:

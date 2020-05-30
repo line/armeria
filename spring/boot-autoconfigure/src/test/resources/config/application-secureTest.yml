@@ -1,5 +1,0 @@
-armeria:
-  ports:
-    - port: 0
-  security:
-    enabled: true

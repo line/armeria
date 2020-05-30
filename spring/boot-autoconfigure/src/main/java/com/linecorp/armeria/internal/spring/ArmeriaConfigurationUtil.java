@@ -18,11 +18,9 @@ package com.linecorp.armeria.internal.spring;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -56,11 +54,8 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.DecoratingServiceBindingBuilder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -73,7 +68,6 @@ import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
-import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.ExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleRequest;
@@ -98,9 +92,6 @@ public final class ArmeriaConfigurationUtil {
     private static final String[] EMPTY_PROTOCOL_NAMES = new String[0];
 
     private static final String METER_TYPE = "server";
-
-    private static final Port DEFAULT_INTERNAL_PORT = new Port().setPort(8001)
-                                                                .setProtocol(SessionProtocol.HTTP);
 
     /**
      * The pattern for data size text.
@@ -170,32 +161,6 @@ public final class ArmeriaConfigurationUtil {
                                                       compression.getExcludedUserAgents(),
                                                       minBytesToForceChunkedAndEncoding));
         }
-        final ArmeriaSettings.Security security = settings.getSecurity();
-        if (security != null && security.isEnabled()) {
-            configurePorts(server, ImmutableList.of(DEFAULT_INTERNAL_PORT));
-            configureSecureDecorator(server, DEFAULT_INTERNAL_PORT, settings);
-        }
-    }
-
-    private static void configureSecureDecorator(ServerBuilder server, Port port, ArmeriaSettings settings) {
-        final DecoratingServiceBindingBuilder builder = server.routeDecorator();
-        if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
-            builder.path(settings.getMetricsPath());
-        }
-        if (!Strings.isNullOrEmpty(settings.getHealthCheckPath())) {
-            builder.path(settings.getHealthCheckPath());
-        }
-        if (!Strings.isNullOrEmpty(settings.getDocsPath())) {
-            builder.path(settings.getDocsPath());
-        }
-        builder.build((delegate, ctx, req) -> {
-            final InetSocketAddress laddr = ctx.localAddress();
-            if (port.getPort() == laddr.getPort()) {
-                return delegate.serve(ctx, req);
-            } else {
-                return HttpResponse.of(404);
-            }
-        });
     }
 
     private static boolean hasAllClasses(String... classNames) {
