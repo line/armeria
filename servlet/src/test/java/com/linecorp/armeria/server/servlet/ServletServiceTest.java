@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -254,7 +255,11 @@ public class ServletServiceTest {
                 assertThat(Objects.isNull(
                         request.getServletContext().getNamedDispatcher("/home"))).isEqualTo(false);
                 assertThat(Objects.isNull(
+                        request.getServletContext().getNamedDispatcher("/abc"))).isEqualTo(true);
+                assertThat(Objects.isNull(
                         request.getServletContext().getServlet("/home"))).isEqualTo(false);
+                assertThat(Objects.isNull(
+                        request.getServletContext().getServlet("/abc"))).isEqualTo(true);
                 assertThat(
                         Collections.list(request.getServletContext().getServlets()).size()).isEqualTo(1);
                 assertThat(
@@ -295,6 +300,12 @@ public class ServletServiceTest {
                 assertThat(Objects.isNull(filterRegistration.getServletNameMappings())).isEqualTo(false);
                 assertThat(Objects.isNull(filterRegistration.getUrlPatternMappings())).isEqualTo(false);
                 filterRegistration.setAsyncSupported(true);
+                final List dispatchers = new ArrayList();
+                dispatchers.add(DispatcherType.REQUEST);
+                filterRegistration.addMappingForServletNames(EnumSet.copyOf(dispatchers),
+                                                             true, "/home", "/");
+                filterRegistration.addMappingForUrlPatterns(EnumSet.copyOf(dispatchers),
+                                                            true, "/home", "/");
 
                 final ServletRegistration servletRegistration = (ServletRegistration) request
                         .getServletContext().getServletRegistration("/home");

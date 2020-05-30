@@ -566,7 +566,7 @@ public class ServletHttpRequest implements HttpServletRequest {
     @Override
     @Nullable
     public String getServerName() {
-        return ((InetSocketAddress)serviceRequestContext.remoteAddress()).getAddress().getHostAddress();
+        return ((InetSocketAddress) serviceRequestContext.remoteAddress()).getAddress().getHostAddress();
     }
 
     @Override
@@ -595,12 +595,12 @@ public class ServletHttpRequest implements HttpServletRequest {
 
     @Override
     public String getRemoteAddr() {
-        return ((InetSocketAddress)serviceRequestContext.remoteAddress()).getAddress().getHostAddress();
+        return ((InetSocketAddress) serviceRequestContext.remoteAddress()).getAddress().getHostAddress();
     }
 
     @Override
     public String getRemoteHost() {
-        return ((InetSocketAddress)serviceRequestContext.remoteAddress()).getHostName();
+        return ((InetSocketAddress) serviceRequestContext.remoteAddress()).getHostName();
     }
 
     @Override

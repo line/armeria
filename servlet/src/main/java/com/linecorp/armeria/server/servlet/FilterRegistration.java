@@ -91,9 +91,7 @@ public class FilterRegistration implements Dynamic {
 
     @Override
     public boolean setInitParameter(String name, String value) {
-        requireNonNull(name, "name");
-        requireNonNull(value, "value");
-        return initParameterMap.put(name, value) != null;
+        throw new IllegalStateException("Can't set init parameter after FilterRegistration is initialized");
     }
 
     @Override

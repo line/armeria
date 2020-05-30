@@ -97,9 +97,9 @@ class ServletContextPathTest {
             logger.info("GET: {}", request.getRequestURI());
             try {
                 // Context path: "/foo" and servlet path: ""
-                assertThat(((ServletRequestDispatcher)request
+                assertThat(((ServletRequestDispatcher) request
                         .getServletContext().getNamedDispatcher("/foo")).getName()).isEqualTo("/foo");
-                assertThat(((ServletRequestDispatcher)request
+                assertThat(((ServletRequestDispatcher) request
                         .getServletContext().getNamedDispatcher("/foo/")).getName()).isEqualTo("/foo");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
@@ -142,9 +142,9 @@ class ServletContextPathTest {
             logger.info("GET: {}", request.getRequestURI());
             try {
                 // Context path: "/foo" and servlet path: "/bar"
-                assertThat(((ServletRequestDispatcher)request
+                assertThat(((ServletRequestDispatcher) request
                         .getServletContext().getNamedDispatcher("/foo/bar")).getName()).isEqualTo("/foo/bar");
-                assertThat(((ServletRequestDispatcher)request
+                assertThat(((ServletRequestDispatcher) request
                         .getServletContext().getNamedDispatcher("/foo/bar/")).getName()).isEqualTo("/foo/bar");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
@@ -187,9 +187,9 @@ class ServletContextPathTest {
             logger.info("GET: {}", request.getRequestURI());
             try {
                 // Context path: "/foo" and servlet path: "/end/"
-                assertThat(((ServletRequestDispatcher)request
+                assertThat(((ServletRequestDispatcher) request
                         .getServletContext().getNamedDispatcher("/foo/end")).getName()).isEqualTo("/foo/end");
-                assertThat(((ServletRequestDispatcher)request
+                assertThat(((ServletRequestDispatcher) request
                         .getServletContext().getNamedDispatcher("/foo/end/")).getName()).isEqualTo("/foo/end");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());

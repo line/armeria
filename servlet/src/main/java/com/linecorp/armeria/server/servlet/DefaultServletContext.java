@@ -397,49 +397,22 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public FilterRegistration addFilter(String filterName, String className) {
-        ensureUninitialized("addFilter");
-        checkArgument(!isNullOrEmpty(filterName), "filterName: %s (expected: not null and empty)", filterName);
-        requireNonNull(className, "className");
-        try {
-            //noinspection unchecked
-            return addFilter(filterName, (Class<Filter>) Class.forName(className));
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to add a filter. filterName: " + filterName, e);
-        }
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public FilterRegistration addFilter(String filterName, Filter filter) {
-        ensureUninitialized("addFilter");
-        checkArgument(!isNullOrEmpty(filterName), "filterName: %s (expected: not null and empty)", filterName);
-        requireNonNull(filter, "filter");
-        filterName = filterName.trim();
-        final FilterRegistration registration =
-                new FilterRegistration(filterName, filter, filterUrlMapper);
-        filterRegistrationMap.put(filterName, registration);
-        return registration;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public FilterRegistration addFilter(String filterName, Class<? extends Filter> filterClass) {
-        ensureUninitialized("addFilter");
-        checkArgument(!isNullOrEmpty(filterName), "filterName: %s (expected: not null and empty)", filterName);
-        requireNonNull(filterClass, "filterClass");
-        try {
-            return addFilter(filterName, createFilter(filterClass));
-        } catch (ServletException e) {
-            throw new RuntimeException("Failed to add a filter. filterName: " + filterName, e);
-        }
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
-        requireNonNull(clazz, "clazz");
-        try {
-            return clazz.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create a filter: " + clazz.getSimpleName(), e);
-        }
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
@@ -492,12 +465,7 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public <T extends EventListener> T createListener(Class<T> clazz) throws ServletException {
-        requireNonNull(clazz, "clazz");
-        try {
-            return clazz.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create a listener: " + clazz.getSimpleName(), e);
-        }
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
