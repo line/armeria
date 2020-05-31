@@ -20,7 +20,6 @@ import static com.linecorp.armeria.client.proxy.DirectProxyConfig.DIRECT_PROXY_C
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.net.Proxy;
 
 import javax.annotation.Nullable;
 
@@ -119,28 +118,6 @@ public abstract class ProxyConfig {
      */
     public static ProxyConfig direct() {
         return DIRECT_PROXY_CONFIG;
-    }
-
-    /**
-     * TODO: add javadocs.
-     * FIXME: find a way to hide this.
-     */
-    public static ProxyConfig fromProxy(Proxy proxy) {
-        if (!(proxy.address() instanceof InetSocketAddress)) {
-            logger.warn("invalid proxy address for: {}", proxy);
-            return direct();
-        }
-
-        switch (proxy.type()) {
-            case HTTP:
-                return connect((InetSocketAddress) proxy.address());
-            case SOCKS:
-                // TODO: find a way to use flag "socksProxyVersion"
-                return socks5((InetSocketAddress) proxy.address());
-            case DIRECT:
-            default:
-                return direct();
-        }
     }
 
     ProxyConfig() {

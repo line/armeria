@@ -22,7 +22,7 @@ import java.net.URI;
 /**
  * TODO: add javadocs.
  */
-public final class StaticProxyConfigSelector extends ProxyConfigSelector {
+public final class StaticProxyConfigSelector implements ProxyConfigSelector {
 
     /**
      * TODO: add javadocs.

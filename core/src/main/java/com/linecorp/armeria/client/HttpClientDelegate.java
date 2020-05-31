@@ -138,7 +138,7 @@ final class HttpClientDelegate implements HttpClient {
         final int port = endpointWithPort.port();
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop());
-        final URI originalUri = endpointWithPort.toUri(ctx.sessionProtocol(), req.path());
+        final URI reqUri = req.uri();
 
         final PoolKey key = new PoolKey(host, ipAddr, port);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
@@ -146,7 +146,7 @@ final class HttpClientDelegate implements HttpClient {
             logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquireLater(protocol, key, timingsBuilder, originalUri)
+            pool.acquireLater(protocol, key, timingsBuilder, reqUri)
                 .handle((newPooledChannel, cause) -> {
                     logSession(ctx, newPooledChannel, timingsBuilder.build());
                     if (cause == null) {

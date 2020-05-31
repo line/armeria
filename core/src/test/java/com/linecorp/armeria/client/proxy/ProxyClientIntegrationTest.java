@@ -31,6 +31,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
@@ -201,6 +202,24 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
+    void testNullDefaultSelector() throws Exception {
+        final ProxySelector defaultProxySelector = ProxySelector.getDefault();
+        ProxySelector.setDefault(null);
+        try (ClientFactory clientFactory = ClientFactory.builder().build()) {
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory).build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(0);
+        } finally {
+            ProxySelector.setDefault(defaultProxySelector);
+        }
+    }
+
+    @Test
     void testSocks4BasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.socks4(socksProxyServer.address())).build();
@@ -250,6 +269,32 @@ public class ProxyClientIntegrationTest {
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
         clientFactory.close();
+    }
+
+    @Test
+    void testHttpProxyByDefaultSelector() throws Exception {
+        final String httpNonProxyHosts = System.getProperty("http.nonProxyHosts");
+        assertThat(ProxySelector.getDefault()).isNotNull();
+        try (ClientFactory clientFactory = ClientFactory.builder().build()) {
+            System.setProperty("http.proxyHost", httpProxyServer.address().getHostString());
+            System.setProperty("http.proxyPort", String.valueOf(httpProxyServer.address().getPort()));
+            System.setProperty("http.nonProxyHosts", "");
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        } finally {
+            System.clearProperty("http.proxyHost");
+            System.clearProperty("http.proxyPort");
+            System.setProperty("http.nonProxyHosts", httpNonProxyHosts);
+        }
     }
 
     @Test

@@ -354,11 +354,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            final URI originalUri = ctx.channel().attr(REQUEST_URI_KEY).get();
+            final URI reqUri = ctx.channel().attr(REQUEST_URI_KEY).get();
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, H1C, sessionPromise, originalUri);
+                channelPool.connect(proxyDestinationAddress, H1C, sessionPromise, reqUri);
             } else {
-                channelPool.connect(remoteAddress, H1C, sessionPromise, originalUri);
+                channelPool.connect(remoteAddress, H1C, sessionPromise, reqUri);
             }
         } else {
             // Fail all pending responses.
@@ -385,11 +385,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
             setPendingException(ctx, new UnprocessedRequestException(cause));
-            final URI originalUri = ctx.channel().attr(REQUEST_URI_KEY).get();
+            final URI reqUri = ctx.channel().attr(REQUEST_URI_KEY).get();
             try {
-                proxyConfigSelector.connectFailed(originalUri, ctx.channel().remoteAddress(), cause);
+                proxyConfigSelector.connectFailed(reqUri, ctx.channel().remoteAddress(), cause);
             } catch (Throwable t) {
-                logger.warn("Exception while invoking proxy connectFailed for <{}> ", originalUri, t);
+                logger.warn("Exception while invoking proxy connectFailed for <{}> ", reqUri, t);
             }
             return;
         }

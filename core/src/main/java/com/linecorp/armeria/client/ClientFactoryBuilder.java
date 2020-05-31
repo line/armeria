@@ -25,6 +25,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZ
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -47,6 +48,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.proxy.StaticProxyConfigSelector;
+import com.linecorp.armeria.client.proxy.WrappingProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -523,6 +525,7 @@ public final class ClientFactoryBuilder {
      * The {@link ProxyConfigSelector} which contains proxy related configuration.
      */
     public ClientFactoryBuilder proxyConfigSelector(ProxyConfigSelector proxyConfigSelector) {
+        requireNonNull(proxyConfigSelector, "proxyConfigSelector");
         option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, proxyConfigSelector);
         return this;
     }
@@ -588,6 +591,10 @@ public final class ClientFactoryBuilder {
                     };
             return ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
+
+        final ProxyConfigSelector selector = WrappingProxyConfigSelector.of(ProxySelector.getDefault());
+        options.computeIfAbsent(ClientFactoryOption.PROXY_CONFIG_SELECTOR, k ->
+                ClientFactoryOption.PROXY_CONFIG_SELECTOR.newValue(selector));
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();

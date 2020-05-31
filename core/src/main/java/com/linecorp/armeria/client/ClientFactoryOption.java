@@ -32,7 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
-import com.linecorp.armeria.client.proxy.ProxyConfigSelector.WrappingProxyConfigSelector;
+import com.linecorp.armeria.client.proxy.WrappingProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOption;
