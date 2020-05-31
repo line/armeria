@@ -293,7 +293,9 @@ public class ProxyClientIntegrationTest {
         } finally {
             System.clearProperty("http.proxyHost");
             System.clearProperty("http.proxyPort");
-            System.setProperty("http.nonProxyHosts", httpNonProxyHosts);
+            if (httpNonProxyHosts != null) {
+                System.setProperty("http.nonProxyHosts", httpNonProxyHosts);
+            }
         }
     }
 
