@@ -87,11 +87,13 @@ public class ServletServiceTest {
             assertThat(mapping.equals(new MimeMappings())).isEqualTo(false);
             assertThat(mapping.equals(mapping)).isEqualTo(true);
             assertThat(mapping.equals(null)).isEqualTo(false);
+            assertThat(mapping.equals("test")).isEqualTo(false);
 
             final MimeMappings.Mapping m = mapping.iterator().next();
             assertThat(m.getExtension()).isEqualTo("avi");
             assertThat(m.equals(null)).isEqualTo(false);
             assertThat(m.equals(m)).isEqualTo(true);
+            assertThat(m.equals("test")).isEqualTo(false);
             assertThat(m.equals(mapping.getAll().toArray()[1])).isEqualTo(false);
             m.toString();
 
@@ -130,6 +132,15 @@ public class ServletServiceTest {
                 assertThat(res.getHeaders(HttpHeaderNames.SET_COOKIE.toString())[0]
                                    .getElements()[0].getValue()).isEqualTo("session_id_1");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("welcome");
+                EntityUtils.consume(res.getEntity());
+            }
+        }
+    }
+
+    @Test
+    void doGetNotFound() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/test"))) {
                 EntityUtils.consume(res.getEntity());
             }
         }
@@ -359,6 +370,7 @@ public class ServletServiceTest {
                 assertThat(request.getParameterMap().size()).isEqualTo(1);
                 assertThat(request.getParameterMap().entrySet().size()).isEqualTo(1);
                 assertThat(request.getParameterMap().containsKey("application")).isEqualTo(true);
+                assertThat(request.getParameterMap().get("app")).isEqualTo(null);
                 assertThat(request.getParameterMap().containsValue("Armeria Servlet")).isEqualTo(true);
                 assertThat(request.getParameterMap().containsKey("null")).isEqualTo(false);
                 assertThat(Objects.isNull(((ServletHttpRequest) request).getHttpRequest())).isEqualTo(false);
@@ -408,6 +420,10 @@ public class ServletServiceTest {
                 throws ServletException, IOException {
             logger.info("PUT: {}", request.getRequestURI());
             try {
+                assertThat(request.getParameterMap().entrySet().size()).isEqualTo(0);
+                assertThat(request.getDateHeader("test")).isEqualTo(-1);
+                assertThat(request.getIntHeader("test")).isEqualTo(-1);
+                assertThat(request.getParameter("test")).isEqualTo(null);
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
@@ -485,7 +501,7 @@ public class ServletServiceTest {
                 newWriter.print('c');
                 newWriter.print(1);
                 newWriter.print(1L);
-                newWriter.print(1.1);
+                newWriter.print(1.1f);
                 newWriter.print(1.1D);
                 newWriter.print(new char[1]);
                 newWriter.print("test");
@@ -495,7 +511,7 @@ public class ServletServiceTest {
                 newWriter.println('c');
                 newWriter.println(1);
                 newWriter.println(1L);
-                newWriter.println(1.1);
+                newWriter.println(1.1f);
                 newWriter.println(1.1D);
                 newWriter.println(new char[1]);
                 newWriter.println("test");
@@ -508,6 +524,27 @@ public class ServletServiceTest {
                 final CharSequence cs = "test";
                 newWriter.append(cs);
                 newWriter.append(cs, 0, 1);
+                newWriter.append(null);
+                newWriter.setError();
+                newWriter.checkError();
+                newWriter.clearError();
+                final char[] c = new char[1];
+                c[0] = 'c';
+                newWriter.write(c, 0, 1);
+
+                final DefaultServletInputStream d = new DefaultServletInputStream();
+                try {
+                    d.skip(1);
+                    d.readLine(new byte[1], 0, 0);
+                } catch (Exception e) {
+                    logger.info("test");
+                }
+
+                try {
+                    d.read(new byte[1], 0, 0);
+                } catch (Exception e) {
+                    logger.info("test");
+                }
 
                 final UrlMapper mapper = new UrlMapper(true);
                 final List registers = new ArrayList();

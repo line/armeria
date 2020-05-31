@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -74,11 +73,11 @@ import io.netty.buffer.Unpooled;
  * The servlet request.
  */
 public class ServletHttpRequest implements HttpServletRequest {
-    public static final int HTTPS_PORT = 443;
-    public static final int HTTP_PORT = 80;
-    public static final String HTTPS = "https";
-    public static final String HTTP = "http";
-    public static final String POST = "POST";
+    private static final int HTTPS_PORT = 443;
+    private static final int HTTP_PORT = 80;
+    private static final String HTTPS = "https";
+    private static final String HTTP = "http";
+    private static final String POST = "POST";
 
     private static final Logger logger = LoggerFactory.getLogger(ServletHttpRequest.class);
     private static final Locale[] DEFAULT_LOCALS = { Locale.getDefault() };
@@ -300,7 +299,7 @@ public class ServletHttpRequest implements HttpServletRequest {
                 if (date != null) {
                     return date.getTime();
                 }
-            } catch (ParseException e) {
+            } catch (Exception e) {
                 logger.info("Try parse " + getHeader(name) + " to date");
             }
         }
@@ -628,11 +627,7 @@ public class ServletHttpRequest implements HttpServletRequest {
     }
 
     @Override
-    @Nullable
     public Locale getLocale() {
-        if (locales == null || locales.length == 0) {
-            return null;
-        }
         return locales[0];
     }
 

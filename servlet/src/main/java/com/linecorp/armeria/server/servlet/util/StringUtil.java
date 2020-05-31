@@ -37,7 +37,7 @@ public class StringUtil {
     // Forked from https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/main/java/
     // org/springframework/util/AntPathMatcher.java
 
-    public static final String DEFAULT_PATH_SEPARATOR = "/";
+    private static final String DEFAULT_PATH_SEPARATOR = "/";
     private static final int CACHE_TURNOFF_THRESHOLD = 65536;
     private static final char[] WILDCARD_CHARS = { '*', '?', '{' };
     private final String pathSeparator = DEFAULT_PATH_SEPARATOR;

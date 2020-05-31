@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.servlet;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -74,20 +73,12 @@ public class ServletPrintWriter extends PrintWriter {
 
     @Override
     public void flush() {
-        try {
-            out.flush();
-        } catch (IOException e) {
-            error = true;
-        }
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void close() {
-        try {
-            out.close();
-        } catch (IOException e) {
-            error = true;
-        }
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
@@ -97,9 +88,6 @@ public class ServletPrintWriter extends PrintWriter {
 
     @Override
     protected void setError() {
-        if (error) {
-            return;
-        }
         error = true;
     }
 
