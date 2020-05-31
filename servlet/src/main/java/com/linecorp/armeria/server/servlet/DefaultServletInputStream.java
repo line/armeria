@@ -50,7 +50,7 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public boolean isFinished() {
-        return source.readableBytes() == 0;
+        return source == null || source.readableBytes() == 0;
     }
 
     /**
@@ -59,7 +59,7 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public boolean isReady() {
-        return source.readableBytes() != 0;
+        return source != null && source.readableBytes() != 0;
     }
 
     @Override
@@ -72,6 +72,9 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public long skip(long n) throws IOException {
+        if (source == null) {
+            return 0;
+        }
         final long skipLen = Math.min(source.readableBytes(), n);
         source.skipBytes((int) skipLen);
         return skipLen;
@@ -106,7 +109,7 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public int read() throws IOException {
-        if (isFinished()) {
+        if (isFinished() || source == null) {
             return -1;
         }
         return source.readByte();

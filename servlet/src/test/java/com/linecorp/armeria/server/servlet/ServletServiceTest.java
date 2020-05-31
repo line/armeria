@@ -63,7 +63,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.servlet.util.HttpHeaderConstants;
 import com.linecorp.armeria.server.servlet.util.LinkedMultiValueMap;
 import com.linecorp.armeria.server.servlet.util.MimeMappings;
 import com.linecorp.armeria.server.servlet.util.ServletUtil;
@@ -342,7 +341,10 @@ public class ServletServiceTest {
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().write("welcome");
                 new StringUtil().match("/bla/**/bla", "/bla/testing/testing/bla", "**");
-
+                new StringUtil().match("test/*", "test/", "*");
+                new StringUtil().match("test*", "test/t", "*");
+                new StringUtil().match("test/*", "test", "*");
+                new StringUtil().match("*/*", "test/", "*");
                 dispatcher.clearFilter();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -443,12 +445,6 @@ public class ServletServiceTest {
                 assertThat(inputStream.read()).isEqualTo(-1);
                 inputStream.close();
 
-                assertThat(HttpHeaderConstants.POST).isEqualTo("POST");
-                assertThat(HttpHeaderConstants.HTTP).isEqualTo("http");
-                assertThat(HttpHeaderConstants.HTTPS).isEqualTo("https");
-                assertThat(HttpHeaderConstants.HTTP_PORT).isEqualTo(80);
-                assertThat(HttpHeaderConstants.HTTPS_PORT).isEqualTo(443);
-
                 final DefaultServletOutputStream outputStream = new DefaultServletOutputStream();
                 outputStream.getResponse();
 
@@ -464,9 +460,6 @@ public class ServletServiceTest {
                 map.getFirst("key1");
                 map.set("key1", "value1");
                 map.clear();
-                if (map.isEmpty()) {
-                    map.put("key2", request.getParameterMap().keySet().stream().collect(Collectors.toList()));
-                }
 
                 map.remove("key2");
                 map.putAll(request.getParameterMap());

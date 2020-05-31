@@ -49,7 +49,7 @@ public class UrlMapper<T> {
      * @param object     object.
      * @param objectName objectName.
      */
-    public void addMapping(String urlPattern, T object, String objectName) throws IllegalArgumentException {
+    public void addMapping(String urlPattern, T object, String objectName) {
         requireNonNull(urlPattern, "urlPattern");
         requireNonNull(object, "object");
         requireNonNull(objectName, "objectName");

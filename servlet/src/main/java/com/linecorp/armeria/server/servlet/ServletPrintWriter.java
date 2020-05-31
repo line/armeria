@@ -132,6 +132,9 @@ public class ServletPrintWriter extends PrintWriter {
         requireNonNull(s, "s");
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
+        if (response == null) {
+            return;
+        }
         final String writeStr;
         if (off == 0 && s.length() == len) {
             writeStr = s;
@@ -308,7 +311,7 @@ public class ServletPrintWriter extends PrintWriter {
     public PrintWriter append(@Nullable CharSequence csq, int start, int end) {
         checkArgument(start >= 0, "start: %s (expected: >= 0)", start);
         checkArgument(end >= 0, "end: %s (expected: >= 0)", end);
-        final CharSequence cs = (csq == null ? "null" : csq);
+        final CharSequence cs = csq == null ? "null" : csq;
         write(cs.subSequence(start, end).toString());
         return this;
     }

@@ -77,7 +77,7 @@ public abstract class ServletUtil {
         if (contentType == null) {
             return null;
         }
-        final int start = contentType.indexOf(HttpHeaderConstants.CHARSET + "=");
+        final int start = contentType.indexOf("charset=");
         if (start < 0) {
             return null;
         }
@@ -87,7 +87,7 @@ public abstract class ServletUtil {
             encoding = encoding.substring(0, end);
         }
         encoding = encoding.trim();
-        if ((encoding.length() > 2) && (encoding.startsWith("\"")) && (encoding.endsWith("\""))) {
+        if ((encoding.length() > 2) && encoding.startsWith("\"") && encoding.endsWith("\"")) {
             encoding = encoding.substring(1, encoding.length() - 1);
         }
         return encoding.trim();
@@ -133,88 +133,84 @@ public abstract class ServletUtil {
             }
 
             final int newNameStart = i;
-            int newNameEnd = i;
-            String value;
+            final int newNameEnd;
+            final String value;
 
-            if (i == headerLen) {
-                value = null;
-            } else {
-                keyValLoop:
-                while (true) {
-                    final char curChar = header.charAt(i);
-                    if (curChar == ';') {
-                        // NAME; (no value till ';')
-                        newNameEnd = i;
-                        value = null;
+            keyValLoop:
+            while (true) {
+                final char curChar = header.charAt(i);
+                if (curChar == ';') {
+                    // NAME; (no value till ';')
+                    newNameEnd = i;
+                    value = null;
+                    break;
+                } else if (curChar == '=') {
+                    // NAME=VALUE
+                    newNameEnd = i;
+                    i++;
+                    if (i == headerLen) {
+                        // NAME= (empty value, i.e. nothing after '=')
+                        value = "";
                         break;
-                    } else if (curChar == '=') {
-                        // NAME=VALUE
-                        newNameEnd = i;
+                    }
+
+                    final int newValueStart = i;
+                    char c = header.charAt(i);
+                    if (c == '"') {
+                        // NAME="VALUE"
+                        final StringBuilder newValueBuf = new StringBuilder();
+
+                        final char q = c;
+                        boolean hadBackslash = false;
                         i++;
-                        if (i == headerLen) {
-                            // NAME= (empty value, i.e. nothing after '=')
-                            value = "";
-                            break;
-                        }
-
-                        final int newValueStart = i;
-                        char c = header.charAt(i);
-                        if (c == '"') {
-                            // NAME="VALUE"
-                            final StringBuilder newValueBuf = new StringBuilder();
-
-                            final char q = c;
-                            boolean hadBackslash = false;
-                            i++;
-                            while (true) {
-                                if (i == headerLen) {
+                        while (true) {
+                            if (i == headerLen) {
+                                value = newValueBuf.toString();
+                                break keyValLoop;
+                            }
+                            if (hadBackslash) {
+                                hadBackslash = false;
+                                c = header.charAt(i++);
+                                if (c == '\\' || c == '"') {
+                                    // Escape last backslash.
+                                    newValueBuf.setCharAt(newValueBuf.length() - 1, c);
+                                } else {
+                                    // Do not escape last backslash.
+                                    newValueBuf.append(c);
+                                }
+                            } else {
+                                c = header.charAt(i++);
+                                if (c == q) {
                                     value = newValueBuf.toString();
                                     break keyValLoop;
                                 }
-                                if (hadBackslash) {
-                                    hadBackslash = false;
-                                    c = header.charAt(i++);
-                                    if (c == '\\' || c == '"') {
-                                        // Escape last backslash.
-                                        newValueBuf.setCharAt(newValueBuf.length() - 1, c);
-                                    } else {
-                                        // Do not escape last backslash.
-                                        newValueBuf.append(c);
-                                    }
-                                } else {
-                                    c = header.charAt(i++);
-                                    if (c == q) {
-                                        value = newValueBuf.toString();
-                                        break keyValLoop;
-                                    }
-                                    newValueBuf.append(c);
-                                    if (c == '\\') {
-                                        hadBackslash = true;
-                                    }
+                                newValueBuf.append(c);
+                                if (c == '\\') {
+                                    hadBackslash = true;
                                 }
                             }
-                        } else {
-                            // NAME=VALUE;
-                            final int semiPos = header.indexOf(';', i);
-                            if (semiPos > 0) {
-                                value = header.substring(newValueStart, semiPos);
-                                i = semiPos;
-                            } else {
-                                value = header.substring(newValueStart);
-                                i = headerLen;
-                            }
                         }
-                        break;
                     } else {
-                        i++;
+                        // NAME=VALUE;
+                        final int semiPos = header.indexOf(';', i);
+                        if (semiPos > 0) {
+                            value = header.substring(newValueStart, semiPos);
+                            i = semiPos;
+                        } else {
+                            value = header.substring(newValueStart);
+                            i = headerLen;
+                        }
                     }
+                    break;
+                } else {
+                    i++;
+                }
 
-                    if (i == headerLen) {
-                        // NAME (no value till the end of string)
-                        newNameEnd = headerLen;
-                        value = null;
-                        break;
-                    }
+                if (i == headerLen) {
+                    // NAME (no value till the end of string)
+                    newNameEnd = headerLen;
+                    value = null;
+                    break;
                 }
             }
 
@@ -290,8 +286,8 @@ public abstract class ServletUtil {
     /**
      * Decode post parameter.
      */
-    public static LinkedMultiValueMap decodeBody(LinkedMultiValueMap parammeters, byte[] data,
-                                                 String contentType) {
+    public static LinkedMultiValueMap<String, String> decodeBody(
+            LinkedMultiValueMap<String, String> parammeters, byte[] data, String contentType) {
         requireNonNull(parammeters, "parammeters");
         requireNonNull(data, "data");
         requireNonNull(contentType, "contentType");
@@ -313,7 +309,7 @@ public abstract class ServletUtil {
             final BufferedReader reqbuf = new BufferedReader(new StringReader(reqContent));
 
             final String firstLine = reqbuf.readLine();
-            parammeters = parseQuery(firstLine, parammeters);
+            parseQuery(firstLine, parammeters);
             boolean first = true;
             while (true) {
                 String s = "";
@@ -323,7 +319,7 @@ public abstract class ServletUtil {
                 } else {
                     s = reqbuf.readLine();
                 }
-                if ((s == null) || (s.equals(lastboundary))) {
+                if ((s == null) || s.equals(lastboundary)) {
                     break;
                 }
 
@@ -337,40 +333,42 @@ public abstract class ServletUtil {
         return parammeters;
     }
 
-    private static LinkedMultiValueMap parseQuery(String query, LinkedMultiValueMap parameters)
-            throws UnsupportedEncodingException {
+    private static LinkedMultiValueMap<String, String> parseQuery(
+            String query, LinkedMultiValueMap<String, String> parameters) throws UnsupportedEncodingException {
         requireNonNull(query, "query");
         requireNonNull(parameters, "parameters");
-        if (query != null) {
-            final String[] pairs = query.split("[&]");
 
-            for (String pair : pairs) {
-                final String[] param = pair.split("[=]");
+        final String[] pairs = query.split("[&]");
 
-                String key = null;
-                String value = null;
-                if (param.length > 0) {
-                    key = URLDecoder.decode(param[0], "utf-8");
+        for (String pair : pairs) {
+            final String[] param = pair.split("[=]");
+
+            String key = null;
+            String value = null;
+            if (param.length > 0) {
+                key = URLDecoder.decode(param[0], "utf-8");
+            }
+
+            if (param.length > 1) {
+                value = URLDecoder.decode(param[1], "utf-8");
+            }
+
+            if (key != null && parameters.containsKey(key)) {
+                final Object obj = parameters.get(key);
+                if (obj instanceof List<?>) {
+                    //noinspection unchecked
+                    final List<String> values = (List<String>) obj;
+                    values.add(value);
+                } else if (obj instanceof String) {
+                    final List<String> values = new ArrayList<String>();
+                    values.add((String) obj);
+                    values.add(value);
+                    //noinspection unchecked
+                    parameters.put(key, values);
                 }
-
-                if (param.length > 1) {
-                    value = URLDecoder.decode(param[1], "utf-8");
-                }
-
-                if (parameters.containsKey(key)) {
-                    final Object obj = parameters.get(key);
-                    if (obj instanceof List<?>) {
-                        final List<String> values = (List<String>) obj;
-                        values.add(value);
-                    } else if (obj instanceof String) {
-                        final List<String> values = new ArrayList<String>();
-                        values.add((String) obj);
-                        values.add(value);
-                        parameters.put(key, values);
-                    }
-                } else {
-                    parameters.add(key, value);
-                }
+            } else {
+                //noinspection unchecked
+                parameters.add(key, value);
             }
         }
         return parameters;

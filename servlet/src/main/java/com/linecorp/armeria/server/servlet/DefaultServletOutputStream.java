@@ -41,6 +41,7 @@ public class DefaultServletOutputStream extends ServletOutputStream {
     /**
      *  Get servlet response.
      */
+    @Nullable
     public ServletHttpResponse getResponse() {
         return response;
     }
@@ -85,7 +86,9 @@ public class DefaultServletOutputStream extends ServletOutputStream {
         requireNonNull(b, "b");
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
-        response.getHeadersBuilder().status(HttpStatus.OK);
+        if (response == null) {
+            return;
+        }
         response.getHeadersBuilder().setObject(
                 HttpHeaderNames.SET_COOKIE,
                 response.getCookies().stream().map(x ->
@@ -94,6 +97,7 @@ public class DefaultServletOutputStream extends ServletOutputStream {
                                                                  .httpOnly(true)
                                                                  .build().toSetCookieHeader()
                 ).collect(Collectors.toList()));
+        response.getHeadersBuilder().status(HttpStatus.OK);
         response.getResponseWriter().tryWrite(response.getHeadersBuilder().build());
         response.getResponseWriter().tryWrite(HttpData.copyOf(Arrays.copyOfRange(b, off, len)));
         response.getResponseWriter().close();

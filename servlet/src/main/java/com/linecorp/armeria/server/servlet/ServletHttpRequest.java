@@ -65,7 +65,6 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.servlet.util.HttpHeaderConstants;
 import com.linecorp.armeria.server.servlet.util.LinkedMultiValueMap;
 import com.linecorp.armeria.server.servlet.util.ServletUtil;
 
@@ -75,6 +74,12 @@ import io.netty.buffer.Unpooled;
  * The servlet request.
  */
 public class ServletHttpRequest implements HttpServletRequest {
+    public static final int HTTPS_PORT = 443;
+    public static final int HTTP_PORT = 80;
+    public static final String HTTPS = "https";
+    public static final String HTTP = "http";
+    public static final String POST = "POST";
+
     private static final Logger logger = LoggerFactory.getLogger(ServletHttpRequest.class);
     private static final Locale[] DEFAULT_LOCALS = { Locale.getDefault() };
     private static final String RFC1123_DATE = "EEE, dd MMM yyyy HH:mm:ss zzz";
@@ -230,9 +235,8 @@ public class ServletHttpRequest implements HttpServletRequest {
      * parse parameter specification.
      */
     private void decodeBody() {
-        if (HttpHeaderConstants.POST.equalsIgnoreCase(getMethod()) && getContentLength() > 0) {
-            parameterMap = ServletUtil.decodeBody(
-                    parameterMap, httpRequest.content().array(), getContentType());
+        if (POST.equalsIgnoreCase(getMethod()) && getContentLength() > 0) {
+            ServletUtil.decodeBody(parameterMap, httpRequest.content().array(), getContentType());
         }
     }
 
@@ -333,14 +337,14 @@ public class ServletHttpRequest implements HttpServletRequest {
         final String scheme = getScheme();
         int port = getServerPort();
         if (port < 0) {
-            port = HttpHeaderConstants.HTTP_PORT;
+            port = HTTP_PORT;
         }
 
         url.append(scheme);
         url.append("://");
         url.append(getServerName());
-        if ((HttpHeaderConstants.HTTP.equals(scheme) && (port != HttpHeaderConstants.HTTP_PORT)) ||
-            (HttpHeaderConstants.HTTPS.equals(scheme) && (port != HttpHeaderConstants.HTTPS_PORT))) {
+        if ((HTTP.equals(scheme) && (port != HTTP_PORT)) ||
+            (HTTPS.equals(scheme) && (port != HTTPS_PORT))) {
             url.append(':');
             url.append(port);
         }
@@ -405,8 +409,7 @@ public class ServletHttpRequest implements HttpServletRequest {
     public Enumeration<String> getHeaders(String name) {
         requireNonNull(name, "name");
         return Collections.enumeration(
-                httpRequest.headers().getAll(name).stream()
-                           .map(x -> x.toString()).collect(ImmutableList.toImmutableList()));
+                httpRequest.headers().getAll(name).stream().collect(ImmutableList.toImmutableList()));
     }
 
     /**
@@ -506,7 +509,7 @@ public class ServletHttpRequest implements HttpServletRequest {
     @Override
     public long getContentLengthLong() {
         return Integer.parseInt(httpRequest.headers().get(HttpHeaderNames.CONTENT_LENGTH)
-                                           .replace("[", "").replace("]", ""));
+                                           .replaceAll("\\[|\\]", ""));
     }
 
     @Override
@@ -640,7 +643,7 @@ public class ServletHttpRequest implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        return HttpHeaderConstants.HTTPS.equals(getScheme());
+        return HTTPS.equals(getScheme());
     }
 
     @Override
@@ -674,13 +677,12 @@ public class ServletHttpRequest implements HttpServletRequest {
     }
 
     @Override
-    public AsyncContext startAsync() throws IllegalStateException {
+    public AsyncContext startAsync() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
-            throws IllegalStateException {
+    public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

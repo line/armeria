@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -48,10 +49,10 @@ public class ServletHttpResponse implements HttpServletResponse {
     private final DefaultServletContext servletContext;
     private final List<Cookie> cookies = new ArrayList<>();
     private final DefaultServletOutputStream outputStream = new DefaultServletOutputStream();
+    private final ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
 
     private String characterEncoding = HttpConstants.DEFAULT_CHARSET.name();
     private Locale locale = Locale.getDefault();
-    private ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
 
     @Nullable
     private PrintWriter writer;
@@ -136,14 +137,15 @@ public class ServletHttpResponse implements HttpServletResponse {
 
     @Override
     public void sendError(int sc, @Nullable String msg) throws IOException {
+        if (responseWriter == null) {
+            return;
+        }
         if (msg == null) {
             msg = "";
         }
         headersBuilder.status(new HttpStatus(sc, msg));
         responseWriter.tryWrite(headersBuilder.build());
-        if (msg != null) {
-            responseWriter.tryWrite(HttpData.ofUtf8(msg));
-        }
+        responseWriter.tryWrite(HttpData.ofUtf8(msg));
         responseWriter.close();
     }
 
@@ -155,6 +157,9 @@ public class ServletHttpResponse implements HttpServletResponse {
     @Override
     public void sendRedirect(String location) throws IOException {
         requireNonNull(location, "location");
+        if (responseWriter == null) {
+            return;
+        }
         responseWriter.tryWrite(
                 ResponseHeaders.of(HttpStatus.SEE_OTHER, HttpHeaderNames.LOCATION.toString(), location));
         responseWriter.close();
@@ -270,7 +275,7 @@ public class ServletHttpResponse implements HttpServletResponse {
         }
 
         String characterEncoding = getCharacterEncoding();
-        if (characterEncoding == null || characterEncoding.isEmpty()) {
+        if (isNullOrEmpty(characterEncoding)) {
             characterEncoding = servletContext.getResponseCharacterEncoding();
             setCharacterEncoding(characterEncoding);
         }

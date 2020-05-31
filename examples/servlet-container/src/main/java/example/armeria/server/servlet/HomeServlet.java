@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.MediaType;
  */
 public class HomeServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(HomeServlet.class);
+    private static final long serialVersionUID = -439001093551151445L;
 
     @Override
     public void init(ServletConfig config) throws ServletException {

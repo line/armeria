@@ -105,13 +105,11 @@ public final class ServletRequestDispatcher implements RequestDispatcher {
             throws ServletException, IOException {
         requireNonNull(request, "request");
         requireNonNull(response, "response");
-        if (filterChain != null) {
-            if (request instanceof ServletHttpRequest) {
-                ((ServletHttpRequest) request).setAsyncSupportedFlag(
-                        filterChain.getServletRegistration().isAsyncSupported());
-            }
-            filterChain.doFilter(request, response);
+        if (request instanceof ServletHttpRequest) {
+            ((ServletHttpRequest) request).setAsyncSupportedFlag(
+                    filterChain.getServletRegistration().isAsyncSupported());
         }
+        filterChain.doFilter(request, response);
     }
 
     /**
@@ -125,12 +123,10 @@ public final class ServletRequestDispatcher implements RequestDispatcher {
      * Get name.
      */
     public String getName() {
-        return filterChain == null ? name : filterChain.getServletRegistration().getName();
+        return filterChain.getServletRegistration().getName();
     }
 
     void clearFilter() {
-        if (filterChain != null) {
-            filterChain.getFilterRegistrationList().clear();
-        }
+        filterChain.getFilterRegistrationList().clear();
     }
 }

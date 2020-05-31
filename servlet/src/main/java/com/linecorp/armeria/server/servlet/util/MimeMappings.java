@@ -61,7 +61,7 @@ public class MimeMappings implements Iterable<Mapping> {
         requireNonNull(extension, "extension");
         requireNonNull(mimeType, "mimeType");
         final Mapping previous = map.put(extension, new Mapping(extension, mimeType));
-        return (previous == null ? null : previous.getMimeType());
+        return previous == null ? null : previous.getMimeType();
     }
 
     /**
@@ -73,7 +73,7 @@ public class MimeMappings implements Iterable<Mapping> {
     public String get(String extension) {
         requireNonNull(extension, "extension");
         final Mapping mapping = map.get(extension);
-        return (mapping == null ? null : mapping.getMimeType());
+        return mapping == null ? null : mapping.getMimeType();
     }
 
     /**
@@ -85,7 +85,7 @@ public class MimeMappings implements Iterable<Mapping> {
     public String remove(String extension) {
         requireNonNull(extension, "extension");
         final Mapping previous = map.remove(extension);
-        return (previous == null ? null : previous.getMimeType());
+        return previous == null ? null : previous.getMimeType();
     }
 
     @Override

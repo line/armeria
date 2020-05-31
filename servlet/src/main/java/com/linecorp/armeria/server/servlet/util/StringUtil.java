@@ -111,7 +111,7 @@ public class StringUtil {
         if (pathIdxStart > pathIdxEnd) {
             // Path is exhausted, only match if rest of pattern is * or **'s
             if (pattIdxStart > pattIdxEnd) {
-                return (pattern.endsWith(pathSeparator) == path.endsWith(pathSeparator));
+                return pattern.endsWith(pathSeparator) == path.endsWith(pathSeparator);
             }
             if (!fullMatch || (pattIdxStart == pattIdxEnd && pattDirs[pattIdxStart].equals("*") &&
                                path.endsWith(pathSeparator))) {
@@ -168,8 +168,8 @@ public class StringUtil {
             }
             // Find the pattern between padIdxStart & padIdxTmp in str between
             // strIdxStart & strIdxEnd
-            final int patLength = (patIdxTmp - pattIdxStart - 1);
-            final int strLength = (pathIdxEnd - pathIdxStart + 1);
+            final int patLength = patIdxTmp - pattIdxStart - 1;
+            final int strLength = pathIdxEnd - pathIdxStart + 1;
             int foundIdx = -1;
 
             strLoop:
@@ -211,7 +211,7 @@ public class StringUtil {
             pos += skipped;
             skipped = skipSegment(path, pos, pattDir);
             if (skipped < pattDir.length()) {
-                return (skipped > 0 || (!pattDir.isEmpty() && isWildcardChar(pattDir.charAt(0))));
+                return skipped > 0 || (!pattDir.isEmpty() && isWildcardChar(pattDir.charAt(0)));
             }
             pos += skipped;
         }
@@ -262,7 +262,6 @@ public class StringUtil {
     /**
      * Tokenize the given path pattern into parts, based on this matcher's settings.
      */
-    @Nullable
     protected String[] tokenizePattern(String pattern) {
         requireNonNull(pattern, "pattern");
         String[] tokenized = null;
@@ -291,7 +290,6 @@ public class StringUtil {
      * @param path the path to tokenize.
      * @return the tokenized path parts.
      */
-    @Nullable
     protected String[] tokenizePath(String path) {
         requireNonNull(path, "path");
         return tokenizeToStringArray(path, pathSeparator, false, true);
@@ -303,7 +301,10 @@ public class StringUtil {
      * @param str the String which must be matched against the pattern (never {@code null}).
      * @return {@code true} if the string matches against the pattern, or {@code false} otherwise.
      */
-    private boolean matchStrings(String pattern, String str, Map<String, String> uriTemplateVariables) {
+    private boolean matchStrings(String pattern, String str,
+                                 @Nullable Map<String, String> uriTemplateVariables) {
+        requireNonNull(pattern, "pattern");
+        requireNonNull(str, "str");
         return getStringMatcher(pattern).matchStrings(str, uriTemplateVariables);
     }
 
@@ -378,9 +379,9 @@ public class StringUtil {
                 end = matcher.end();
             }
             patternBuilder.append(quote(pattern, end, pattern.length()));
-            this.pattern = (caseSensitive ? Pattern.compile(patternBuilder.toString())
-                                          :
-                            Pattern.compile(patternBuilder.toString(), Pattern.CASE_INSENSITIVE));
+            this.pattern = caseSensitive ? Pattern.compile(patternBuilder.toString())
+                                         :
+                           Pattern.compile(patternBuilder.toString(), Pattern.CASE_INSENSITIVE);
         }
 
         private String quote(String s, int start, int end) {
@@ -426,31 +427,27 @@ public class StringUtil {
     /**
      * Tokenize string by delimiters to string array.
      */
-    @Nullable
     public static String[] tokenizeToStringArray(String str, String delimiters, boolean trimTokens,
                                                  boolean ignoreEmptyTokens) {
+        requireNonNull(str, "str");
         requireNonNull(delimiters, "delimiters");
-        if (str == null) {
-            return null;
-        } else {
-            final StringTokenizer st = new StringTokenizer(str, delimiters);
-            final ArrayList<String> tokens = new ArrayList<>();
+        final StringTokenizer st = new StringTokenizer(str, delimiters);
+        final ArrayList<String> tokens = new ArrayList<>();
 
-            while (true) {
-                String token;
-                do {
-                    if (!st.hasMoreTokens()) {
-                        return tokens.toArray(new String[tokens.size()]);
-                    }
+        while (true) {
+            String token;
+            do {
+                if (!st.hasMoreTokens()) {
+                    return tokens.toArray(new String[tokens.size()]);
+                }
 
-                    token = st.nextToken();
-                    if (trimTokens) {
-                        token = token.trim();
-                    }
-                } while (ignoreEmptyTokens && token.length() <= 0);
+                token = st.nextToken();
+                if (trimTokens) {
+                    token = token.trim();
+                }
+            } while (ignoreEmptyTokens && token.length() <= 0);
 
-                tokens.add(token);
-            }
+            tokens.add(token);
         }
     }
 }

@@ -385,6 +385,7 @@ final class DefaultServletContext implements ServletContext {
     }
 
     @Override
+    @Nullable
     public ServletRegistration getServletRegistration(String servletName) {
         requireNonNull(servletName, "servletName");
         return servletRegistrationMap.get(servletName);

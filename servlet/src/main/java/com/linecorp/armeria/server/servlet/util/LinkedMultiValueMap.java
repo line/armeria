@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
  * @param <V> the value element type
  */
 public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
+    private static final long serialVersionUID = 5338250261420072687L;
 
     // Forked from https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/main/
     // java/org/springframework/util/LinkedMultiValueMap.java
@@ -62,7 +63,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     public V getFirst(K key) {
         requireNonNull(key, "key");
         final List<V> values = targetMap.get(key);
-        return (values != null ? values.get(0) : null);
+        return values != null ? values.get(0) : null;
     }
 
     /**
@@ -158,7 +159,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     public List<V> put(K key, List<V> value) {
         requireNonNull(key, "key");
         requireNonNull(value, "value");
-        return targetMap.put(key, value);
+        return requireNonNull(targetMap.put(key, value));
     }
 
     /**
@@ -219,5 +220,10 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     @Override
     public String toString() {
         return targetMap.toString();
+    }
+
+    @Override
+    public LinkedMultiValueMap<K, V> clone() throws CloneNotSupportedException {
+        return (LinkedMultiValueMap) super.clone();
     }
 }
