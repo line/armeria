@@ -1,8 +1,29 @@
+* text=auto eol=lf
+
 *.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.ai binary
+*.binarypb binary
 *.br binary
+*.class binary
+*.crt binary
+*.eot binary
+*.exe binary
+*.gif binary
 *.gz binary
+*.ico binary
+*.jar binary
 *.jks binary
+*.jpg binary
+*.jpeg binary
+*.m4a binary
+*.m4v binary
+*.mp4 binary
+*.p12 binary
+*.pdf binary
+*.pem binary
 *.pkcs12 binary
-
-/gradlew text eol=lf
-
+*.png binary
+*.xz binary
+*.zip binary

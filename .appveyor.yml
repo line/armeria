@@ -27,7 +27,7 @@ init:
 
 build_script:
   - cmd: 'gradlew.bat --version'
-  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% -PnoLint -PnoWeb :core:test :grpc:test :thrift:test :it:server:test'
+  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% lint :core:test :grpc:test :thrift:test :it:server:test'
   - sh: './.appveyor.build.sh "$PROFILE"'
 
 test: off
