@@ -28,9 +28,9 @@ import org.apache.curator.x.discovery.UriSpec;
 
 /**
  * Builds an {@link ZookeeperRegistrationSpec} for
- * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>..
+ * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
  */
-public final class CuratorXZookeeperRegistrationSpecBuilder {
+public final class CuratorRegistrationSpecBuilder {
 
     private final String serviceName;
     @Nullable
@@ -50,14 +50,14 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
     /**
      * Creates a new instance.
      */
-    CuratorXZookeeperRegistrationSpecBuilder(String serviceName) {
+    CuratorRegistrationSpecBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
     }
 
     /**
      * Sets the service address.
      */
-    public CuratorXZookeeperRegistrationSpecBuilder serviceAddress(String serviceAddress) {
+    public CuratorRegistrationSpecBuilder serviceAddress(String serviceAddress) {
         this.serviceAddress = requireNonNull(serviceAddress, "serviceAddress");
         return this;
     }
@@ -65,7 +65,7 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
     /**
      * Sets the port.
      */
-    public CuratorXZookeeperRegistrationSpecBuilder port(int port) {
+    public CuratorRegistrationSpecBuilder port(int port) {
         checkArgument(port > 0, "port: %s (expected: > 0)", port);
         this.port = port;
         return this;
@@ -74,7 +74,7 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
     /**
      * Sets the SSL port.
      */
-    public CuratorXZookeeperRegistrationSpecBuilder sslPort(int sslPort) {
+    public CuratorRegistrationSpecBuilder sslPort(int sslPort) {
         checkArgument(sslPort > 0, "sslPort: %s (expected: > 0)", sslPort);
         this.sslPort = sslPort;
         return this;
@@ -83,7 +83,7 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
     /**
      * Sets the service ID.
      */
-    public CuratorXZookeeperRegistrationSpecBuilder serviceId(String serviceId) {
+    public CuratorRegistrationSpecBuilder serviceId(String serviceId) {
         this.serviceId = requireNonNull(serviceId, "serviceId");
         return this;
     }
@@ -91,7 +91,7 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
     /**
      * Sets the payload.
      */
-    public <T> CuratorXZookeeperRegistrationSpecBuilder payload(T payload) {
+    public <T> CuratorRegistrationSpecBuilder payload(T payload) {
         this.payload = requireNonNull(payload, "payload");
         return this;
     }
@@ -99,7 +99,7 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
     /**
      * Sets the {@link ServiceType}.
      */
-    public CuratorXZookeeperRegistrationSpecBuilder serviceType(ServiceType serviceType) {
+    public CuratorRegistrationSpecBuilder serviceType(ServiceType serviceType) {
         this.serviceType = requireNonNull(serviceType, "serviceType");
         return this;
     }
@@ -107,7 +107,7 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
     /**
      * Sets the {@link UriSpec}.
      */
-    public CuratorXZookeeperRegistrationSpecBuilder uriSpec(UriSpec uriSpec) {
+    public CuratorRegistrationSpecBuilder uriSpec(UriSpec uriSpec) {
         this.uriSpec = requireNonNull(uriSpec, "uriSpec");
         return this;
     }
@@ -120,6 +120,6 @@ public final class CuratorXZookeeperRegistrationSpecBuilder {
         final ServiceInstance<?> serviceInstance =
                 new ServiceInstance<>(serviceName, serviceId, serviceAddress, port, sslPort,
                                       payload, System.currentTimeMillis(), serviceType, uriSpec);
-        return new CuratorXZookeeperRegistrationSpec(serviceInstance);
+        return new CuratorRegistrationSpec(serviceInstance);
     }
 }

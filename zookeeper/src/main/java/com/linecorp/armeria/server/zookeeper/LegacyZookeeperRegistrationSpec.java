@@ -25,11 +25,11 @@ import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec {
 
     private final Endpoint endpoint;
-    private final String pathForRegistration;
+    private final String path;
 
     LegacyZookeeperRegistrationSpec(Endpoint endpoint) {
         this.endpoint = requireNonNull(endpoint, "endpoint");
-        pathForRegistration = '/' + endpoint.host() + '_' + endpoint.port();
+        path = '/' + endpoint.host() + '_' + endpoint.port();
     }
 
     Endpoint endpoint() {
@@ -38,7 +38,7 @@ final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec
 
     @Override
     public String path() {
-        return pathForRegistration;
+        return path;
     }
 
     @Override
@@ -50,7 +50,7 @@ final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("endpoint", endpoint)
-                          .add("pathForRegistration", pathForRegistration)
+                          .add("path", path)
                           .toString();
     }
 }

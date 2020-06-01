@@ -51,7 +51,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * Creates a ZooKeeper server listener, which registers the {@link Server} into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link #builder(String, String)} instead.
+     * {@link #builder(String, String, ZookeeperRegistrationSpec)} instead.
      *
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
@@ -66,7 +66,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * Creates a ZooKeeper server listener, which registers the {@link Server} into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link #builder(CuratorFramework, String)} instead.
+     * {@link #builder(CuratorFramework, String, ZookeeperRegistrationSpec)} instead.
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
@@ -134,10 +134,10 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
             }
             final ServerPort serverPort = server.activePort();
             assert serverPort != null;
-            return ZookeeperRegistrationSpec.ofLegacy(endpoint.withPort(serverPort.localAddress().getPort()));
-        } else if (spec instanceof CuratorXZookeeperRegistrationSpec) {
+            return ZookeeperRegistrationSpec.legacy(endpoint.withPort(serverPort.localAddress().getPort()));
+        } else if (spec instanceof CuratorRegistrationSpec) {
             final ServiceInstance<?> serviceInstance =
-                    ((CuratorXZookeeperRegistrationSpec) spec).serviceInstance();
+                    ((CuratorRegistrationSpec) spec).serviceInstance();
             return fillAndCreateNewRegistrationSpec(serviceInstance, server);
         } else {
             return spec;
@@ -146,8 +146,8 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     private static ZookeeperRegistrationSpec fillAndCreateNewRegistrationSpec(
             ServiceInstance<?> serviceInstance, Server server) {
-        final CuratorXZookeeperRegistrationSpecBuilder builder =
-                ZookeeperRegistrationSpec.builderForCuratorX(serviceInstance.getName());
+        final CuratorRegistrationSpecBuilder builder =
+                ZookeeperRegistrationSpec.builderForCurator(serviceInstance.getName());
         builder.serviceId(serviceInstance.getId());
         final String address;
         if (serviceInstance.getAddress() != null) {

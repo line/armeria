@@ -68,7 +68,7 @@ class CuratorServiceDiscoveryCompatibilityTest {
         await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/foo/bar"));
 
         final ZookeeperRegistrationSpec registrationSpec =
-                ZookeeperRegistrationSpec.builderForCuratorX("foo")
+                ZookeeperRegistrationSpec.builderForCurator("foo")
                                          .serviceId("bar")
                                          .serviceAddress("foo.com")
                                          .port(endpoint.port())
@@ -93,7 +93,7 @@ class CuratorServiceDiscoveryCompatibilityTest {
 
         final CompletableFuture<ServiceInstance<?>> instanceCaptor = new CompletableFuture<>();
         try (CloseableZooKeeper zk = zkInstance.connection()) {
-            final ZookeeperDiscoverySpec discoverySpec = ZookeeperDiscoverySpec.builderForCuratorX("foo")
+            final ZookeeperDiscoverySpec discoverySpec = ZookeeperDiscoverySpec.builderForCurator("foo")
                                                                                .converter(serviceInstance -> {
                                                                  instanceCaptor.complete(serviceInstance);
                                                                  return null;

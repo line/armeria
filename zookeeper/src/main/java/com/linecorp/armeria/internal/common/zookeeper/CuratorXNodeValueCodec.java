@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
 /**
- * A codec for Curator-X-Discovery.
+ * A codec for Curator Service Discovery.
  */
 public enum CuratorXNodeValueCodec {
     INSTANCE;

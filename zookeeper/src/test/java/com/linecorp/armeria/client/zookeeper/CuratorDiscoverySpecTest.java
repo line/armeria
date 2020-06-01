@@ -25,11 +25,11 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-class CuratorXZookeeperDiscoverySpecTest {
+class CuratorDiscoverySpecTest {
 
     @Test
     void decode() {
-        ZookeeperDiscoverySpec spec = ZookeeperDiscoverySpec.ofCuratorX("foo");
+        ZookeeperDiscoverySpec spec = ZookeeperDiscoverySpec.curator("foo");
         ServiceInstance<?> instance = serviceInstance(false);
         Endpoint endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isNull(); // enabled is false;
@@ -38,12 +38,12 @@ class CuratorXZookeeperDiscoverySpecTest {
         endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 100));
 
-        spec = ZookeeperDiscoverySpec.builderForCuratorX("foo").useSsl(true).build();
+        spec = ZookeeperDiscoverySpec.builderForCurator("foo").useSsl(true).build();
         endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 200)); // useSsl
 
         final Endpoint bar = Endpoint.of("bar");
-        spec = ZookeeperDiscoverySpec.builderForCuratorX("foo")
+        spec = ZookeeperDiscoverySpec.builderForCurator("foo")
                                      .converter(serviceInstance -> bar)
                                      .build();
         endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));

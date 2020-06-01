@@ -30,21 +30,21 @@ public interface ZookeeperDiscoverySpec {
 
     /**
      * Returns a {@link ZookeeperDiscoverySpec} that is compatible with
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>.
-     * This is also, compatible with
+     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
+     * This is also compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      */
-    static ZookeeperDiscoverySpec ofCuratorX(String serviceName) {
-        return builderForCuratorX(serviceName).build();
+    static ZookeeperDiscoverySpec curator(String serviceName) {
+        return builderForCurator(serviceName).build();
     }
 
     /**
-     * Returns a new {@link CuratorXZookeeperDiscoverySpecBuilder}. The specification is compatible with
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a> and
+     * Returns a new {@link CuratorDiscoverySpecBuilder}. The specification is compatible with
+     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a> and
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      */
-    static CuratorXZookeeperDiscoverySpecBuilder builderForCuratorX(String serviceName) {
-        return new CuratorXZookeeperDiscoverySpecBuilder(serviceName);
+    static CuratorDiscoverySpecBuilder builderForCurator(String serviceName) {
+        return new CuratorDiscoverySpecBuilder(serviceName);
     }
 
     /**
@@ -59,7 +59,7 @@ public interface ZookeeperDiscoverySpec {
      * </ul>
      * Note that the port number must be specified when you want to specify the weight.
      */
-    static ZookeeperDiscoverySpec ofLegacy() {
+    static ZookeeperDiscoverySpec legacy() {
         return LegacyZookeeperDiscoverySpec.INSTANCE;
     }
 

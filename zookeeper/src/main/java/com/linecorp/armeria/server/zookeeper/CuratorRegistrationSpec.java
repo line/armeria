@@ -21,14 +21,14 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-final class CuratorXZookeeperRegistrationSpec implements ZookeeperRegistrationSpec {
+final class CuratorRegistrationSpec implements ZookeeperRegistrationSpec {
 
     private final ServiceInstance<?> serviceInstance;
-    private final String pathForRegistration;
+    private final String path;
 
-    CuratorXZookeeperRegistrationSpec(ServiceInstance<?> serviceInstance) {
+    CuratorRegistrationSpec(ServiceInstance<?> serviceInstance) {
         this.serviceInstance = serviceInstance;
-        pathForRegistration = '/' + serviceInstance.getName() + '/' + serviceInstance.getId();
+        path = '/' + serviceInstance.getName() + '/' + serviceInstance.getId();
     }
 
     ServiceInstance<?> serviceInstance() {
@@ -37,7 +37,7 @@ final class CuratorXZookeeperRegistrationSpec implements ZookeeperRegistrationSp
 
     @Override
     public String path() {
-        return pathForRegistration;
+        return path;
     }
 
     @Override
@@ -49,7 +49,7 @@ final class CuratorXZookeeperRegistrationSpec implements ZookeeperRegistrationSp
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("serviceInstance", serviceInstance)
-                          .add("pathForRegistration", pathForRegistration)
+                          .add("path", path)
                           .toString();
     }
 }

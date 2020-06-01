@@ -58,7 +58,7 @@ class ZooKeeperRegistrationTest {
 
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             for (Endpoint sampleEndpoint : sampleEndpoints) {
-                assertThat(ZookeeperDiscoverySpec.ofLegacy().decode(zk.getData(
+                assertThat(ZookeeperDiscoverySpec.legacy().decode(zk.getData(
                         Z_NODE + '/' + sampleEndpoint.host() + '_' + sampleEndpoint.port()).get()))
                         .isEqualTo(sampleEndpoint);
             }
@@ -102,9 +102,9 @@ class ZooKeeperRegistrationTest {
                                         .build();
             final ZookeeperRegistrationSpec registrationSpec;
             if (endpointRegistrationSpec) {
-                registrationSpec = ZookeeperRegistrationSpec.ofLegacy(sampleEndpoints.get(i));
+                registrationSpec = ZookeeperRegistrationSpec.legacy(sampleEndpoints.get(i));
             } else {
-                registrationSpec = ZookeeperRegistrationSpec.builderForCuratorX(CURATOR_X_SERVICE_NAME)
+                registrationSpec = ZookeeperRegistrationSpec.builderForCurator(CURATOR_X_SERVICE_NAME)
                                                             .serviceId(String.valueOf(i))
                                                             .serviceAddress(CURATOR_X_ADDRESS)
                                                             .build();
@@ -134,7 +134,7 @@ class ZooKeeperRegistrationTest {
             for (int i = 0; i < sampleEndpoints.size(); i++) {
                 final CompletableFuture<ServiceInstance<?>> instanceCaptor = new CompletableFuture<>();
                 final ZookeeperDiscoverySpec discoverySpec =
-                        ZookeeperDiscoverySpec.builderForCuratorX(CURATOR_X_SERVICE_NAME)
+                        ZookeeperDiscoverySpec.builderForCurator(CURATOR_X_SERVICE_NAME)
                                               .converter(serviceInstance -> {
                                          instanceCaptor.complete(serviceInstance);
                                          return null;

@@ -53,7 +53,7 @@ class ZooKeeperEndpointGroupTest {
     void legacySpec() throws Throwable {
         final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
         setLegacySpecNodeChildren(sampleEndpoints);
-        final ZooKeeperEndpointGroup endpointGroup = endpointGroup(ZookeeperDiscoverySpec.ofLegacy());
+        final ZooKeeperEndpointGroup endpointGroup = endpointGroup(ZookeeperDiscoverySpec.legacy());
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
 
         // Add two more nodes.
@@ -83,7 +83,7 @@ class ZooKeeperEndpointGroupTest {
             // Register all child nodes.
             for (Endpoint endpoint : children) {
                 zk.create(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port(),
-                          ZookeeperRegistrationSpec.ofLegacy(endpoint).encodedInstance(),
+                          ZookeeperRegistrationSpec.legacy(endpoint).encodedInstance(),
                           Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             }
         }
@@ -111,7 +111,7 @@ class ZooKeeperEndpointGroupTest {
     void curatorXDiscovery() throws Throwable {
         final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
         setCuratorXNodeChildren(sampleEndpoints, 0);
-        final ZookeeperDiscoverySpec spec = ZookeeperDiscoverySpec.builderForCuratorX(CURATOR_X_SERVICE_NAME)
+        final ZookeeperDiscoverySpec spec = ZookeeperDiscoverySpec.builderForCurator(CURATOR_X_SERVICE_NAME)
                                                                   .build();
         final ZooKeeperEndpointGroup endpointGroup = endpointGroup(spec);
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));

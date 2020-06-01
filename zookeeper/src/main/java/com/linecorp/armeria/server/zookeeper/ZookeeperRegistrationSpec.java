@@ -29,25 +29,25 @@ public interface ZookeeperRegistrationSpec {
 
     /**
      * Returns the {@link ZookeeperRegistrationSpec} that registers the {@link Server} using
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>.
-     * This is also, compatible with
+     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
+     * This is also compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
-     * @see ZookeeperDiscoverySpec#ofCuratorX(String)
+     * @see ZookeeperDiscoverySpec#curator(String)
      */
-    static ZookeeperRegistrationSpec ofCuratorXRegistration(String serviceName) {
-        return new CuratorXZookeeperRegistrationSpecBuilder(serviceName).build();
+    static ZookeeperRegistrationSpec curator(String serviceName) {
+        return new CuratorRegistrationSpecBuilder(serviceName).build();
     }
 
     /**
-     * Returns a new {@link CuratorXZookeeperRegistrationSpecBuilder}. The specification is compatible with
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a> and
+     * Returns a new {@link CuratorRegistrationSpecBuilder}. The specification is compatible with
+     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a> and
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
-     * @see ZookeeperDiscoverySpec#builderForCuratorX(String)
+     * @see ZookeeperDiscoverySpec#builderForCurator(String)
      */
-    static CuratorXZookeeperRegistrationSpecBuilder builderForCuratorX(String serviceName) {
-        return new CuratorXZookeeperRegistrationSpecBuilder(serviceName);
+    static CuratorRegistrationSpecBuilder builderForCurator(String serviceName) {
+        return new CuratorRegistrationSpecBuilder(serviceName);
     }
 
     /**
@@ -62,9 +62,9 @@ public interface ZookeeperRegistrationSpec {
      * </ul>
      * Note that the port number must be specified when you want to specify the weight.
      *
-     * @see ZookeeperDiscoverySpec#ofLegacy()
+     * @see ZookeeperDiscoverySpec#legacy()
      */
-    static ZookeeperRegistrationSpec ofLegacy(Endpoint endpoint) {
+    static ZookeeperRegistrationSpec legacy(Endpoint endpoint) {
         return new LegacyZookeeperRegistrationSpec(endpoint);
     }
 

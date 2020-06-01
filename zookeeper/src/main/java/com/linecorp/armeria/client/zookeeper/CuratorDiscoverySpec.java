@@ -24,20 +24,20 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-final class CuratorXZookeeperDiscoverySpec implements ZookeeperDiscoverySpec {
+final class CuratorDiscoverySpec implements ZookeeperDiscoverySpec {
 
-    private final String serviceName;
+    private final String path;
     private final Function<? super ServiceInstance<?>, Endpoint> converter;
 
-    CuratorXZookeeperDiscoverySpec(
+    CuratorDiscoverySpec(
             String serviceName, Function<? super ServiceInstance<?>, Endpoint> converter) {
-        this.serviceName = serviceName;
+        path = '/' + serviceName;
         this.converter = converter;
     }
 
     @Override
     public String path() {
-        return '/' + serviceName;
+        return path;
     }
 
     @Override
@@ -48,7 +48,7 @@ final class CuratorXZookeeperDiscoverySpec implements ZookeeperDiscoverySpec {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("serviceName", serviceName)
+                          .add("path", path)
                           .add("converter", converter)
                           .toString();
     }

@@ -23,29 +23,13 @@ import java.util.function.Consumer;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
 import com.linecorp.armeria.server.Server;
 
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.
  * <pre>{@code
- * ZooKeeperUpdatingListener listener =
- *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints")
- *                              .sessionTimeoutMillis(10000)
- *                              .build();
- * ServerBuilder sb = Server.builder();
- * sb.addListener(listener);
- * }</pre>
- * This registers the {@link Server} with the information that are automatically found from
- * {@link SystemInfo#defaultNonLoopbackIpV4Address()} and {@link Server#activePort()} in the form as specified
- * in {@link ZookeeperRegistrationSpec#ofLegacy(Endpoint)}.
- * If you want to use
- * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>, please use
- * {@link ZookeeperRegistrationSpec#ofCuratorXRegistration(String)}.
- * <pre>{@code
- * RegistrationSpec spec = RegistrationSpec.ofCuratorXInstance("myServices");
+ * ZookeeperRegistrationSpec spec = ZookeeperRegistrationSpec.curator("myServices");
  * ZooKeeperUpdatingListener listener =
  *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints", spec)
  *                              .sessionTimeoutMillis(10000)
@@ -53,6 +37,8 @@ import com.linecorp.armeria.server.Server;
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
+ * This registers the {@link Server} using the format compatible with
+ * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
  *
  * <p>You can also specify the {@link CuratorFramework} instance to use. In this case,
  * invoking {@link #connectTimeout(Duration)}, {@link #connectTimeoutMillis(long)},
