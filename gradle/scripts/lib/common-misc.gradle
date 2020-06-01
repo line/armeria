@@ -1,6 +1,8 @@
 allprojects {
     ext {
         hasSourceDirectory = this.&hasSourceDirectory.curry(project)
+        getGenerateSourcesTask = this.&getGenerateSourcesTask.curry(project)
+        getLintTask = this.&getLintTask.curry(project)
     }
 }
 
@@ -13,4 +15,28 @@ static boolean hasSourceDirectory(Project project, String name) {
     }).find {
         dir -> new File(dir, name).isDirectory()
     } != null
+}
+
+static Task getGenerateSourcesTask(Project project) {
+    Task task = project.tasks.findByName('generateSources')
+    if (task == null) {
+        task = project.task([
+                group: 'Build', description: 'Generates required source files.'
+        ], 'generateSources');
+    }
+    return task
+}
+
+static Task getLintTask(Project project) {
+    Task task = project.tasks.findByName('lint')
+    if (task == null) {
+        task = project.task([
+                group: 'Verification', description: 'Runs all linting tools.'
+        ], 'lint')
+
+        if (project.tasks.findByName('check') != null) {
+            project.tasks.check.dependsOn(task)
+        }
+    }
+    return task
 }
