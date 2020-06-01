@@ -26,12 +26,8 @@ init:
   - sh: 'git config --global core.autocrlf input'
 
 build_script:
-  - cmd: 'git rm -fr .'
-  - cmd: 'git reset --hard HEAD'
   - cmd: 'gradlew.bat --version'
-  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% lint :core:test :grpc:test :thrift:test :it:server:test'
-  - sh: 'git rm -fr .'
-  - sh: 'git reset --hard HEAD'
+  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% -PnoLint -PnoWeb :core:test :grpc:test :thrift:test :it:server:test'
   - sh: './.appveyor.build.sh "$PROFILE"'
 
 test: off
