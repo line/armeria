@@ -313,7 +313,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
             server.activePorts().values().stream()
                   .map(p -> p.localAddress().getPort())
                   .forEach(port -> {
-                      final Integer statusCode = actuatorPort.equals(port) ? 200 : 404;
+                      final int statusCode = actuatorPort.equals(port) ? 200 : 404;
                       assertStatus(port, "/actuator", statusCode);
                       assertStatus(port, "/actuator/health", statusCode);
                       assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, statusCode);
@@ -325,7 +325,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
         }
     }
 
-    private static void assertStatus(Integer port, String url, Integer statusCode) {
+    private static void assertStatus(int port, String url, int statusCode) {
         final WebClient client = WebClient.of(newUrl("http", port));
         final HttpResponse response = client.get(url);
 
