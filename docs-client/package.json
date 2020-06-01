@@ -3,11 +3,9 @@
   "description": "The web client to the armeria DocService",
   "license": "Apache-2.0",
   "scripts": {
-    "prebuild": "npm run check",
     "build": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" webpack",
-    "check": "tsc --project . && npm run lint",
-    "start": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" WEBPACK_DEV=true webpack-dev-server",
-    "lint": "eslint --ext .json,.js,.jsx,.ts,.tsx .",
+    "develop": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" WEBPACK_DEV=true webpack-dev-server",
+    "lint": "tsc --project . && eslint --ext .json,.js,.jsx,.ts,.tsx .",
     "lint:fix": "eslint --fix --ext .json,.js,.jsx,.ts,.tsx ."
   },
   "dependencies": {

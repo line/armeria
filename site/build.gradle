@@ -37,7 +37,8 @@ task apiIndex(type: ApiIndexTask) {
     dependsOn ':javadoc:javadoc'
 }
 task contributorList(type: ContributorListTask)
-task prepare {
+
+project.ext.getGenerateSourcesTask().configure {
     dependsOn tasks.npmInstall
     dependsOn tasks.versionIndex
     dependsOn tasks.apiIndex
@@ -45,28 +46,32 @@ task prepare {
 }
 
 task develop(type: NpmTask) {
-    dependsOn tasks.prepare
+    dependsOn tasks.generateSources
     args = ['run', 'develop']
 }
 
-final def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle')
-if (checkstyleEnabled) {
-    task lint(type: NpmTask) {
-        dependsOn tasks.prepare
+final def lintEnabled = !rootProject.hasProperty('noLint')
+if (lintEnabled) {
+    task eslint(type: NpmTask) {
+        dependsOn tasks.generateSources
         args = ['run', 'lint']
         inputs.dir('src')
         inputs.file('.eslintrc.js')
         inputs.file('package.json')
         inputs.file('package-lock.json')
     }
+
+    project.ext.getLintTask().configure {
+        dependsOn tasks.eslint
+    }
 }
 
 // Note that this task is not triggered by the 'build' task
 // because it takes long to build a site.
 task site(type: NpmTask) {
-    dependsOn tasks.prepare
-    if (checkstyleEnabled) {
-        dependsOn 'lint'
+    dependsOn tasks.generateSources
+    if (lintEnabled) {
+        dependsOn tasks.lint
     }
     args = ['run', 'build']
     inputs.dir('src')
