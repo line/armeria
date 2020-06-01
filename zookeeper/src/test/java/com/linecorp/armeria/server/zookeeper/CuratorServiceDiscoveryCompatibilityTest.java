@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.zookeeper.DiscoverySpec;
+import com.linecorp.armeria.client.zookeeper.ZookeeperDiscoverySpec;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
@@ -67,13 +67,13 @@ class CuratorServiceDiscoveryCompatibilityTest {
         serviceDiscovery.close();
         await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/foo/bar"));
 
-        final RegistrationSpec registrationSpec =
-                RegistrationSpec.curatorXRegistrationBuilder("foo")
-                                .serviceId("bar")
-                                .serviceAddress("foo.com")
-                                .port(endpoint.port())
-                                .uriSpec(CURATOR_X_URI_SPEC)
-                                .build();
+        final ZookeeperRegistrationSpec registrationSpec =
+                ZookeeperRegistrationSpec.builderForCuratorX("foo")
+                                         .serviceId("bar")
+                                         .serviceAddress("foo.com")
+                                         .port(endpoint.port())
+                                         .uriSpec(CURATOR_X_URI_SPEC)
+                                         .build();
 
         final ZooKeeperUpdatingListener listener =
                 ZooKeeperUpdatingListener.builder(zkInstance.connectString(), Z_NODE, registrationSpec).build();
@@ -93,8 +93,8 @@ class CuratorServiceDiscoveryCompatibilityTest {
 
         final CompletableFuture<ServiceInstance<?>> instanceCaptor = new CompletableFuture<>();
         try (CloseableZooKeeper zk = zkInstance.connection()) {
-            final DiscoverySpec discoverySpec = DiscoverySpec.curatorXBuilder("foo")
-                                                             .converter(serviceInstance -> {
+            final ZookeeperDiscoverySpec discoverySpec = ZookeeperDiscoverySpec.builderForCuratorX("foo")
+                                                                               .converter(serviceInstance -> {
                                                                  instanceCaptor.complete(serviceInstance);
                                                                  return null;
                                                              }).build();

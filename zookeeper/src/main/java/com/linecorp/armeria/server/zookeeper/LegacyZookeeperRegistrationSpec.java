@@ -13,42 +13,44 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.zookeeper;
+package com.linecorp.armeria.server.zookeeper;
 
-import java.util.function.Function;
-
-import org.apache.curator.x.discovery.ServiceInstance;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.CuratorXDiscoveryNodeValueCodec;
+import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
-final class CuratorXDiscoverySpec implements DiscoverySpec {
+final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec {
 
-    private final String serviceName;
-    private final Function<? super ServiceInstance<?>, Endpoint> converter;
+    private final Endpoint endpoint;
+    private final String pathForRegistration;
 
-    CuratorXDiscoverySpec(String serviceName, Function<? super ServiceInstance<?>, Endpoint> converter) {
-        this.serviceName = serviceName;
-        this.converter = converter;
+    LegacyZookeeperRegistrationSpec(Endpoint endpoint) {
+        this.endpoint = requireNonNull(endpoint, "endpoint");
+        pathForRegistration = '/' + endpoint.host() + '_' + endpoint.port();
+    }
+
+    Endpoint endpoint() {
+        return endpoint;
     }
 
     @Override
-    public String pathForDiscovery() {
-        return '/' + serviceName;
+    public String path() {
+        return pathForRegistration;
     }
 
     @Override
-    public Endpoint decode(byte[] data) {
-        return converter.apply(CuratorXDiscoveryNodeValueCodec.INSTANCE.decode(data));
+    public byte[] encodedInstance() {
+        return LegacyNodeValueCodec.INSTANCE.encode(endpoint);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("serviceName", serviceName)
-                          .add("converter", converter)
+                          .add("endpoint", endpoint)
+                          .add("pathForRegistration", pathForRegistration)
                           .toString();
     }
 }

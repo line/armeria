@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 /**
  * A codec for Curator-X-Discovery.
  */
-public enum CuratorXDiscoveryNodeValueCodec {
+public enum CuratorXNodeValueCodec {
     INSTANCE;
 
     private static final ObjectMapper mapper = new ObjectMapper().configure(

@@ -16,42 +16,42 @@
 package com.linecorp.armeria.server.zookeeper;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.zookeeper.DiscoverySpec;
+import com.linecorp.armeria.client.zookeeper.ZookeeperDiscoverySpec;
 import com.linecorp.armeria.server.Server;
 
 /**
  * A registration specification for {@link ZooKeeperUpdatingListener}. The specification is used for encoding
  * and registering the {@link Server} to <a href="https://zookeeper.apache.org/">ZooKeeper</a>.
  *
- * @see DiscoverySpec
+ * @see ZookeeperDiscoverySpec
  */
-public interface RegistrationSpec {
+public interface ZookeeperRegistrationSpec {
 
     /**
-     * Returns the {@link RegistrationSpec} that registers the {@link Server} using
+     * Returns the {@link ZookeeperRegistrationSpec} that registers the {@link Server} using
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>.
      * This is also, compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
-     * @see DiscoverySpec#ofCuratorX(String)
+     * @see ZookeeperDiscoverySpec#ofCuratorX(String)
      */
-    static RegistrationSpec ofCuratorXRegistration(String serviceName) {
-        return new CuratorXRegistrationSpecBuilder(serviceName).build();
+    static ZookeeperRegistrationSpec ofCuratorXRegistration(String serviceName) {
+        return new CuratorXZookeeperRegistrationSpecBuilder(serviceName).build();
     }
 
     /**
-     * Returns a new {@link CuratorXRegistrationSpecBuilder}. The specification is compatible with
+     * Returns a new {@link CuratorXZookeeperRegistrationSpecBuilder}. The specification is compatible with
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a> and
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
-     * @see DiscoverySpec#curatorXBuilder(String)
+     * @see ZookeeperDiscoverySpec#builderForCuratorX(String)
      */
-    static CuratorXRegistrationSpecBuilder curatorXRegistrationBuilder(String serviceName) {
-        return new CuratorXRegistrationSpecBuilder(serviceName);
+    static CuratorXZookeeperRegistrationSpecBuilder builderForCuratorX(String serviceName) {
+        return new CuratorXZookeeperRegistrationSpecBuilder(serviceName);
     }
 
     /**
-     * Returns the {@link RegistrationSpec} that registers the {@link Server} using the specified
+     * Returns the {@link ZookeeperRegistrationSpec} that registers the {@link Server} using the specified
      * {@link Endpoint}. The {@link Endpoint} is encoded to a comma-separated string whose format is
      * {@code <host>[:<port_number>[:weight]]}, such as:
      * <ul>
@@ -62,17 +62,17 @@ public interface RegistrationSpec {
      * </ul>
      * Note that the port number must be specified when you want to specify the weight.
      *
-     * @see DiscoverySpec#ofLegacy()
+     * @see ZookeeperDiscoverySpec#ofLegacy()
      */
-    static RegistrationSpec ofLegacy(Endpoint endpoint) {
-        return new LegacyRegistrationSpec(endpoint);
+    static ZookeeperRegistrationSpec ofLegacy(Endpoint endpoint) {
+        return new LegacyZookeeperRegistrationSpec(endpoint);
     }
 
     /**
      * Returns the path for registering the {@link Server}. The path is appended to the
      * {@code zNodePath} that is specified when creating {@link ZooKeeperUpdatingListener}.
      */
-    String pathForRegistration();
+    String path();
 
     /**
      * Returns the byte array representation of the {@link Server}.

@@ -27,10 +27,10 @@ import org.apache.curator.x.discovery.ServiceInstance;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
- * Builds a {@link DiscoverySpec} for
+ * Builds a {@link ZookeeperDiscoverySpec} for
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>.
  */
-public final class CuratorXDiscoverySpecBuilder {
+public final class CuratorXZookeeperDiscoverySpecBuilder {
 
     private final String serviceName;
     @Nullable
@@ -43,7 +43,7 @@ public final class CuratorXDiscoverySpecBuilder {
     /**
      * Creates a new instance.
      */
-    CuratorXDiscoverySpecBuilder(String serviceName) {
+    CuratorXZookeeperDiscoverySpecBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
     }
 
@@ -51,7 +51,7 @@ public final class CuratorXDiscoverySpecBuilder {
      * Sets the specified instance ID. If this is set, the {@link ZooKeeperEndpointGroup} will only connect to
      * the instance.
      */
-    public CuratorXDiscoverySpecBuilder instanceId(String instanceId) {
+    public CuratorXZookeeperDiscoverySpecBuilder instanceId(String instanceId) {
         checkState(converter == null, "converter() and instanceId() are mutually exclusive.");
         this.instanceId = requireNonNull(instanceId, "instanceId");
         return this;
@@ -60,7 +60,7 @@ public final class CuratorXDiscoverySpecBuilder {
     /**
      * Sets whether to connect an {@link Endpoint} using {@code sslPort} of {@link ServiceInstance}.
      */
-    public CuratorXDiscoverySpecBuilder useSsl(boolean useSsl) {
+    public CuratorXZookeeperDiscoverySpecBuilder useSsl(boolean useSsl) {
         checkState(converter == null, "converter() and useSsl() are mutually exclusive.");
         this.useSsl = useSsl;
         return this;
@@ -70,7 +70,8 @@ public final class CuratorXDiscoverySpecBuilder {
      * Sets the specified converter to convert a {@link ServiceInstance} into an {@link Endpoint}.
      * If you don't want to connect to the service, you can simply return {@code null} in the converter.
      */
-    public CuratorXDiscoverySpecBuilder converter(Function<? super ServiceInstance<?>, Endpoint> converter) {
+    public CuratorXZookeeperDiscoverySpecBuilder converter(
+            Function<? super ServiceInstance<?>, Endpoint> converter) {
         checkState(instanceId == null, "converter() and instanceId() are mutually exclusive.");
         checkState(useSsl == null, "converter() and useSsl() are mutually exclusive.");
         this.converter = requireNonNull(converter, "converter");
@@ -100,9 +101,9 @@ public final class CuratorXDiscoverySpecBuilder {
     }
 
     /**
-     * Returns a newly-created {@link DiscoverySpec} based on the properties set so far.
+     * Returns a newly-created {@link ZookeeperDiscoverySpec} based on the properties set so far.
      */
-    public DiscoverySpec build() {
-        return new CuratorXDiscoverySpec(serviceName, converter());
+    public ZookeeperDiscoverySpec build() {
+        return new CuratorXZookeeperDiscoverySpec(serviceName, converter());
     }
 }

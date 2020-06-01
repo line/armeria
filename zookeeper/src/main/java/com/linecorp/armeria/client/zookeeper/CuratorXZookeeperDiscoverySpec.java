@@ -13,44 +13,43 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.zookeeper;
+package com.linecorp.armeria.client.zookeeper;
 
-import static java.util.Objects.requireNonNull;
+import java.util.function.Function;
+
+import org.apache.curator.x.discovery.ServiceInstance;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
+import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-final class LegacyRegistrationSpec implements RegistrationSpec {
+final class CuratorXZookeeperDiscoverySpec implements ZookeeperDiscoverySpec {
 
-    private final Endpoint endpoint;
-    private final String pathForRegistration;
+    private final String serviceName;
+    private final Function<? super ServiceInstance<?>, Endpoint> converter;
 
-    LegacyRegistrationSpec(Endpoint endpoint) {
-        this.endpoint = requireNonNull(endpoint, "endpoint");
-        pathForRegistration = '/' + endpoint.host() + '_' + endpoint.port();
-    }
-
-    Endpoint endpoint() {
-        return endpoint;
+    CuratorXZookeeperDiscoverySpec(
+            String serviceName, Function<? super ServiceInstance<?>, Endpoint> converter) {
+        this.serviceName = serviceName;
+        this.converter = converter;
     }
 
     @Override
-    public String pathForRegistration() {
-        return pathForRegistration;
+    public String path() {
+        return '/' + serviceName;
     }
 
     @Override
-    public byte[] encodedInstance() {
-        return LegacyNodeValueCodec.INSTANCE.encode(endpoint);
+    public Endpoint decode(byte[] data) {
+        return converter.apply(CuratorXNodeValueCodec.INSTANCE.decode(data));
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("endpoint", endpoint)
-                          .add("pathForRegistration", pathForRegistration)
+                          .add("serviceName", serviceName)
+                          .add("converter", converter)
                           .toString();
     }
 }

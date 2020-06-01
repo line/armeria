@@ -27,10 +27,10 @@ import org.apache.curator.x.discovery.ServiceType;
 import org.apache.curator.x.discovery.UriSpec;
 
 /**
- * Builds an {@link RegistrationSpec} for
+ * Builds an {@link ZookeeperRegistrationSpec} for
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>..
  */
-public final class CuratorXRegistrationSpecBuilder {
+public final class CuratorXZookeeperRegistrationSpecBuilder {
 
     private final String serviceName;
     @Nullable
@@ -50,14 +50,14 @@ public final class CuratorXRegistrationSpecBuilder {
     /**
      * Creates a new instance.
      */
-    CuratorXRegistrationSpecBuilder(String serviceName) {
+    CuratorXZookeeperRegistrationSpecBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
     }
 
     /**
      * Sets the service address.
      */
-    public CuratorXRegistrationSpecBuilder serviceAddress(String serviceAddress) {
+    public CuratorXZookeeperRegistrationSpecBuilder serviceAddress(String serviceAddress) {
         this.serviceAddress = requireNonNull(serviceAddress, "serviceAddress");
         return this;
     }
@@ -65,7 +65,7 @@ public final class CuratorXRegistrationSpecBuilder {
     /**
      * Sets the port.
      */
-    public CuratorXRegistrationSpecBuilder port(int port) {
+    public CuratorXZookeeperRegistrationSpecBuilder port(int port) {
         checkArgument(port > 0, "port: %s (expected: > 0)", port);
         this.port = port;
         return this;
@@ -74,7 +74,7 @@ public final class CuratorXRegistrationSpecBuilder {
     /**
      * Sets the SSL port.
      */
-    public CuratorXRegistrationSpecBuilder sslPort(int sslPort) {
+    public CuratorXZookeeperRegistrationSpecBuilder sslPort(int sslPort) {
         checkArgument(sslPort > 0, "sslPort: %s (expected: > 0)", sslPort);
         this.sslPort = sslPort;
         return this;
@@ -83,7 +83,7 @@ public final class CuratorXRegistrationSpecBuilder {
     /**
      * Sets the service ID.
      */
-    public CuratorXRegistrationSpecBuilder serviceId(String serviceId) {
+    public CuratorXZookeeperRegistrationSpecBuilder serviceId(String serviceId) {
         this.serviceId = requireNonNull(serviceId, "serviceId");
         return this;
     }
@@ -91,7 +91,7 @@ public final class CuratorXRegistrationSpecBuilder {
     /**
      * Sets the payload.
      */
-    public <T> CuratorXRegistrationSpecBuilder payload(T payload) {
+    public <T> CuratorXZookeeperRegistrationSpecBuilder payload(T payload) {
         this.payload = requireNonNull(payload, "payload");
         return this;
     }
@@ -99,7 +99,7 @@ public final class CuratorXRegistrationSpecBuilder {
     /**
      * Sets the {@link ServiceType}.
      */
-    public CuratorXRegistrationSpecBuilder serviceType(ServiceType serviceType) {
+    public CuratorXZookeeperRegistrationSpecBuilder serviceType(ServiceType serviceType) {
         this.serviceType = requireNonNull(serviceType, "serviceType");
         return this;
     }
@@ -107,19 +107,19 @@ public final class CuratorXRegistrationSpecBuilder {
     /**
      * Sets the {@link UriSpec}.
      */
-    public CuratorXRegistrationSpecBuilder uriSpec(UriSpec uriSpec) {
+    public CuratorXZookeeperRegistrationSpecBuilder uriSpec(UriSpec uriSpec) {
         this.uriSpec = requireNonNull(uriSpec, "uriSpec");
         return this;
     }
 
     /**
-     * Returns a newly-created {@link RegistrationSpec} based on the properties set so far.
+     * Returns a newly-created {@link ZookeeperRegistrationSpec} based on the properties set so far.
      */
-    public RegistrationSpec build() {
+    public ZookeeperRegistrationSpec build() {
         final String serviceId = this.serviceId != null ? this.serviceId : UUID.randomUUID().toString();
         final ServiceInstance<?> serviceInstance =
                 new ServiceInstance<>(serviceName, serviceId, serviceAddress, port, sslPort,
                                       payload, System.currentTimeMillis(), serviceType, uriSpec);
-        return new CuratorXRegistrationSpec(serviceInstance);
+        return new CuratorXZookeeperRegistrationSpec(serviceInstance);
     }
 }

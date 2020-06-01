@@ -18,37 +18,37 @@ package com.linecorp.armeria.client.zookeeper;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.server.zookeeper.RegistrationSpec;
+import com.linecorp.armeria.server.zookeeper.ZookeeperRegistrationSpec;
 
 /**
  * A discovery specification for {@link ZooKeeperEndpointGroup}. The specification is used for finding
  * and decoding the registered instances into {@link Endpoint}s.
  *
- * @see RegistrationSpec
+ * @see ZookeeperRegistrationSpec
  */
-public interface DiscoverySpec {
+public interface ZookeeperDiscoverySpec {
 
     /**
-     * Returns a {@link DiscoverySpec} that is compatible with
+     * Returns a {@link ZookeeperDiscoverySpec} that is compatible with
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>.
      * This is also, compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      */
-    static DiscoverySpec ofCuratorX(String serviceName) {
-        return curatorXBuilder(serviceName).build();
+    static ZookeeperDiscoverySpec ofCuratorX(String serviceName) {
+        return builderForCuratorX(serviceName).build();
     }
 
     /**
-     * Returns a new {@link CuratorXDiscoverySpecBuilder}. The specification is compatible with
+     * Returns a new {@link CuratorXZookeeperDiscoverySpecBuilder}. The specification is compatible with
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a> and
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      */
-    static CuratorXDiscoverySpecBuilder curatorXBuilder(String serviceName) {
-        return new CuratorXDiscoverySpecBuilder(serviceName);
+    static CuratorXZookeeperDiscoverySpecBuilder builderForCuratorX(String serviceName) {
+        return new CuratorXZookeeperDiscoverySpecBuilder(serviceName);
     }
 
     /**
-     * Returns the legacy {@link DiscoverySpec} implementation which assumes a zNode value is
+     * Returns the legacy {@link ZookeeperDiscoverySpec} implementation which assumes a zNode value is
      * a comma-separated string. Each element of the zNode value represents an {@link Endpoint} whose format is
      * {@code <host>[:<port_number>[:weight]]}, such as:
      * <ul>
@@ -59,16 +59,16 @@ public interface DiscoverySpec {
      * </ul>
      * Note that the port number must be specified when you want to specify the weight.
      */
-    static DiscoverySpec ofLegacy() {
-        return LegacyDiscoverySpec.INSTANCE;
+    static ZookeeperDiscoverySpec ofLegacy() {
+        return LegacyZookeeperDiscoverySpec.INSTANCE;
     }
 
     /**
-     * Returns the path for finding the byte array of registered instances. The path is appended to the
-     * {@code zNodePath} that is specified when creating {@link ZooKeeperEndpointGroup}.
+     * Returns the path for finding the byte array representation of registered instances. The path is appended
+     * to the {@code zNodePath} that is specified when creating {@link ZooKeeperEndpointGroup}.
      */
     @Nullable
-    String pathForDiscovery();
+    String path();
 
     /**
      * Decodes a zNode value to an {@link Endpoint}.

@@ -19,14 +19,14 @@ import org.apache.curator.x.discovery.ServiceInstance;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.common.zookeeper.CuratorXDiscoveryNodeValueCodec;
+import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-final class CuratorXRegistrationSpec implements RegistrationSpec {
+final class CuratorXZookeeperRegistrationSpec implements ZookeeperRegistrationSpec {
 
     private final ServiceInstance<?> serviceInstance;
     private final String pathForRegistration;
 
-    CuratorXRegistrationSpec(ServiceInstance<?> serviceInstance) {
+    CuratorXZookeeperRegistrationSpec(ServiceInstance<?> serviceInstance) {
         this.serviceInstance = serviceInstance;
         pathForRegistration = '/' + serviceInstance.getName() + '/' + serviceInstance.getId();
     }
@@ -36,13 +36,13 @@ final class CuratorXRegistrationSpec implements RegistrationSpec {
     }
 
     @Override
-    public String pathForRegistration() {
+    public String path() {
         return pathForRegistration;
     }
 
     @Override
     public byte[] encodedInstance() {
-        return CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(serviceInstance);
+        return CuratorXNodeValueCodec.INSTANCE.encode(serviceInstance);
     }
 
     @Override

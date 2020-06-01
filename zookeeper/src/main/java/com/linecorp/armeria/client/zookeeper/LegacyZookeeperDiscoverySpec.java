@@ -20,12 +20,12 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
-enum LegacyDiscoverySpec implements DiscoverySpec {
+enum LegacyZookeeperDiscoverySpec implements ZookeeperDiscoverySpec {
     INSTANCE;
 
     @Nullable
     @Override
-    public String pathForDiscovery() {
+    public String path() {
         return null;
     }
 

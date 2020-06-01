@@ -23,30 +23,30 @@ import org.apache.curator.x.discovery.UriSpec;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.CuratorXDiscoveryNodeValueCodec;
+import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-class CuratorXDiscoverySpecTest {
+class CuratorXZookeeperDiscoverySpecTest {
 
     @Test
     void decode() {
-        DiscoverySpec spec = DiscoverySpec.ofCuratorX("foo");
+        ZookeeperDiscoverySpec spec = ZookeeperDiscoverySpec.ofCuratorX("foo");
         ServiceInstance<?> instance = serviceInstance(false);
-        Endpoint endpoint = spec.decode(CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(instance));
+        Endpoint endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isNull(); // enabled is false;
 
         instance = serviceInstance(true);
-        endpoint = spec.decode(CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(instance));
+        endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 100));
 
-        spec = DiscoverySpec.curatorXBuilder("foo").useSsl(true).build();
-        endpoint = spec.decode(CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(instance));
+        spec = ZookeeperDiscoverySpec.builderForCuratorX("foo").useSsl(true).build();
+        endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 200)); // useSsl
 
         final Endpoint bar = Endpoint.of("bar");
-        spec = DiscoverySpec.curatorXBuilder("foo")
-                            .converter(serviceInstance -> bar)
-                            .build();
-        endpoint = spec.decode(CuratorXDiscoveryNodeValueCodec.INSTANCE.encode(instance));
+        spec = ZookeeperDiscoverySpec.builderForCuratorX("foo")
+                                     .converter(serviceInstance -> bar)
+                                     .build();
+        endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isSameAs(bar); // Use converter.
     }
 

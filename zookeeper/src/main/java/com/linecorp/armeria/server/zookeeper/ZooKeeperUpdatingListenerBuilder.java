@@ -40,10 +40,10 @@ import com.linecorp.armeria.server.Server;
  * }</pre>
  * This registers the {@link Server} with the information that are automatically found from
  * {@link SystemInfo#defaultNonLoopbackIpV4Address()} and {@link Server#activePort()} in the form as specified
- * in {@link RegistrationSpec#ofLegacy(Endpoint)}.
+ * in {@link ZookeeperRegistrationSpec#ofLegacy(Endpoint)}.
  * If you want to use
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator-X-Discovery</a>, please use
- * {@link RegistrationSpec#ofCuratorXRegistration(String)}.
+ * {@link ZookeeperRegistrationSpec#ofCuratorXRegistration(String)}.
  * <pre>{@code
  * RegistrationSpec spec = RegistrationSpec.ofCuratorXInstance("myServices");
  * ZooKeeperUpdatingListener listener =
@@ -70,7 +70,7 @@ import com.linecorp.armeria.server.Server;
  * */
 public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
 
-    private final RegistrationSpec spec;
+    private final ZookeeperRegistrationSpec spec;
 
     /**
      * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
@@ -79,7 +79,8 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath, RegistrationSpec spec) {
+    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath,
+                                     ZookeeperRegistrationSpec spec) {
         super(client, zNodePath);
         this.spec = requireNonNull(spec, "spec");
     }
@@ -90,7 +91,8 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath, RegistrationSpec spec) {
+    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath,
+                                     ZookeeperRegistrationSpec spec) {
         super(zkConnectionStr, zNodePath);
         this.spec = requireNonNull(spec, "spec");
     }

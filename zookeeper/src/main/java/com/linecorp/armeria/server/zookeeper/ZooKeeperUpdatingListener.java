@@ -55,10 +55,10 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      *
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link RegistrationSpec} to encode and register the {@link Server}
+     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListener of(
-            String zkConnectionStr, String zNodePath, RegistrationSpec spec) {
+            String zkConnectionStr, String zNodePath, ZookeeperRegistrationSpec spec) {
         return builder(zkConnectionStr, zNodePath, spec).build();
     }
 
@@ -70,10 +70,10 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link RegistrationSpec} to encode and register the {@link Server}
+     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListener of(
-            CuratorFramework client, String zNodePath, RegistrationSpec spec) {
+            CuratorFramework client, String zNodePath, ZookeeperRegistrationSpec spec) {
         return builder(client, zNodePath, spec).build();
     }
 
@@ -83,10 +83,10 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link RegistrationSpec} to encode and register the {@link Server}
+     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
-            CuratorFramework client, String zNodePath, RegistrationSpec spec) {
+            CuratorFramework client, String zNodePath, ZookeeperRegistrationSpec spec) {
         return new ZooKeeperUpdatingListenerBuilder(client, zNodePath, requireNonNull(spec, "spec"));
     }
 
@@ -95,19 +95,19 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      *
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link RegistrationSpec} to encode and register the {@link Server}
+     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
-            String zkConnectionStr, String zNodePath, RegistrationSpec spec) {
+            String zkConnectionStr, String zNodePath, ZookeeperRegistrationSpec spec) {
         return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath, requireNonNull(spec, "spec"));
     }
 
     private final CuratorFramework client;
     private final String zNodePath;
-    private final RegistrationSpec spec;
+    private final ZookeeperRegistrationSpec spec;
     private final boolean closeClientOnStop;
 
-    ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, RegistrationSpec spec,
+    ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, ZookeeperRegistrationSpec spec,
                               boolean closeClientOnStop) {
         this.client = requireNonNull(client, "client");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
@@ -117,35 +117,37 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        final RegistrationSpec registrationSpec = fillAndCreateNewRegistrationSpec(spec, server);
+        final ZookeeperRegistrationSpec registrationSpec = fillAndCreateNewRegistrationSpec(spec, server);
         client.start();
         client.create()
               .creatingParentsIfNeeded()
               .withMode(CreateMode.EPHEMERAL)
-              .forPath(zNodePath + registrationSpec.pathForRegistration(), registrationSpec.encodedInstance());
+              .forPath(zNodePath + registrationSpec.path(), registrationSpec.encodedInstance());
     }
 
-    private static RegistrationSpec fillAndCreateNewRegistrationSpec(RegistrationSpec spec, Server server) {
-        if (spec instanceof LegacyRegistrationSpec) {
-            final Endpoint endpoint = ((LegacyRegistrationSpec) spec).endpoint();
+    private static ZookeeperRegistrationSpec fillAndCreateNewRegistrationSpec(
+            ZookeeperRegistrationSpec spec, Server server) {
+        if (spec instanceof LegacyZookeeperRegistrationSpec) {
+            final Endpoint endpoint = ((LegacyZookeeperRegistrationSpec) spec).endpoint();
             if (endpoint.hasPort() && validatePort(server, endpoint.port(), null)) {
                 return spec;
             }
             final ServerPort serverPort = server.activePort();
             assert serverPort != null;
-            return RegistrationSpec.ofLegacy(endpoint.withPort(serverPort.localAddress().getPort()));
-        } else if (spec instanceof CuratorXRegistrationSpec) {
-            final ServiceInstance<?> serviceInstance = ((CuratorXRegistrationSpec) spec).serviceInstance();
+            return ZookeeperRegistrationSpec.ofLegacy(endpoint.withPort(serverPort.localAddress().getPort()));
+        } else if (spec instanceof CuratorXZookeeperRegistrationSpec) {
+            final ServiceInstance<?> serviceInstance =
+                    ((CuratorXZookeeperRegistrationSpec) spec).serviceInstance();
             return fillAndCreateNewRegistrationSpec(serviceInstance, server);
         } else {
             return spec;
         }
     }
 
-    private static RegistrationSpec fillAndCreateNewRegistrationSpec(
+    private static ZookeeperRegistrationSpec fillAndCreateNewRegistrationSpec(
             ServiceInstance<?> serviceInstance, Server server) {
-        final CuratorXRegistrationSpecBuilder builder =
-                RegistrationSpec.curatorXRegistrationBuilder(serviceInstance.getName());
+        final CuratorXZookeeperRegistrationSpecBuilder builder =
+                ZookeeperRegistrationSpec.builderForCuratorX(serviceInstance.getName());
         builder.serviceId(serviceInstance.getId());
         final String address;
         if (serviceInstance.getAddress() != null) {
