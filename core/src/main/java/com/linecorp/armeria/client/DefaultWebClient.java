@@ -21,9 +21,6 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri
 
 import java.net.URI;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
@@ -34,8 +31,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultWebClient.class);
-
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
@@ -44,36 +39,32 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     @Override
     public HttpResponse execute(HttpRequest req) {
-        URI uri;
-
-        if (isAbsoluteUri(req.path())) {
-            try {
-                uri = URI.create(req.path());
-            } catch (Exception ex) {
-                logger.warn("Failed to create URI: {}", req.path(), ex);
-                uri = null;
-            }
-        } else {
-            if (req.scheme() != null && req.authority() != null) {
+        if (Clients.isUndefinedUri(uri())) {
+            final URI uri;
+            if (isAbsoluteUri(req.path())) {
+                try {
+                    uri = URI.create(req.path());
+                } catch (Exception ex) {
+                    return failureResponse(req, new IllegalArgumentException(
+                            "Failed to create a URI: " + req.path(), ex));
+                }
+            } else if (req.scheme() != null && req.authority() != null) {
                 uri = req.uri();
             } else {
-                uri = null;
+                return failureResponse(req, new IllegalArgumentException("no authority: " + req.path()));
             }
-        }
-
-        if (uri != null) {
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
             final String path = uri.getRawPath();
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder()
-                    .path(query == null ? path : path + '?' + query));
+                                                          .path(query == null ? path : path + '?' + query));
             return execute(endpoint, newReq);
         }
 
-        if (Clients.isUndefinedUri(uri())) {
-            final IllegalArgumentException cause = new IllegalArgumentException("no authority: " + req.path());
-            req.abort(cause);
-            return HttpResponse.ofFailure(cause);
+        if (isAbsoluteUri(req.path())) {
+            return failureResponse(req, new IllegalArgumentException(
+                    "Cannot send a request with an absolute path when the client is created with a base URI. " +
+                    "path: " + req.path()));
         }
 
         final String originalPath = req.path();
@@ -92,8 +83,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
-            req.abort(cause);
-            return HttpResponse.ofFailure(cause);
+            return failureResponse(req, cause);
         }
         return execute(endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
@@ -103,5 +93,10 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     @Override
     public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
         return execute(aggregatedReq.toHttpRequest());
+    }
+
+    private static HttpResponse failureResponse(HttpRequest req, IllegalArgumentException cause) {
+        req.abort(cause);
+        return HttpResponse.ofFailure(cause);
     }
 }
