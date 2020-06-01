@@ -270,7 +270,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             } else {
                 typeInfo = String.valueOf(msg);
             }
-            throw new IllegalStateException("unexpected message type: " + typeInfo + ", expected ByteBuf");
+            throw new IllegalStateException("unexpected message type: " + typeInfo + " (expected: ByteBuf)");
         } finally {
             ReferenceCountUtil.release(msg);
         }
