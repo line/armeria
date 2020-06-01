@@ -15,12 +15,6 @@
  */
 package com.linecorp.armeria.common.auth;
 
-import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_CONSUMER_KEY;
-import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_NONCE;
-import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_SIGNATURE;
-import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_SIGNATURE_METHOD;
-import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_TIMESTAMP;
-import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_TOKEN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -30,50 +24,32 @@ import com.google.common.collect.ImmutableMap;
 class OAuth1aTokenTest {
     @Test
     void testEquals() {
-        final OAuth1aToken token = OAuth1aToken.of(ImmutableMap.<String, String>builder()
-                                                           .put(OAUTH_CONSUMER_KEY, "a")
-                                                           .put(OAUTH_TOKEN, "b")
-                                                           .put(OAUTH_SIGNATURE_METHOD, "c")
-                                                           .put(OAUTH_SIGNATURE, "d")
-                                                           .put(OAUTH_TIMESTAMP, "0")
-                                                           .put(OAUTH_NONCE, "f")
-                                                           .put("x-others", "g")
-                                                           .build());
-        assertThat(token).isEqualTo(OAuth1aToken.of(ImmutableMap.<String, String>builder()
-                                                            .put(OAUTH_CONSUMER_KEY, "a")
-                                                            .put(OAUTH_TOKEN, "b")
-                                                            .put(OAUTH_SIGNATURE_METHOD, "c")
-                                                            .put(OAUTH_SIGNATURE, "d")
-                                                            .put(OAUTH_TIMESTAMP, "0")
-                                                            .put(OAUTH_NONCE, "f")
-                                                            .put("x-others", "g")
-                                                            .build()));
-        assertThat(token).isNotEqualTo(OAuth1aToken.of(ImmutableMap.<String, String>builder()
-                                                               .put(OAUTH_CONSUMER_KEY, "1")
-                                                               .put(OAUTH_TOKEN, "2")
-                                                               .put(OAUTH_SIGNATURE_METHOD, "3")
-                                                               .put(OAUTH_SIGNATURE, "4")
-                                                               .put(OAUTH_TIMESTAMP, "5")
-                                                               .put(OAUTH_NONCE, "6")
-                                                               .put("x-others", "7")
-                                                               .build()));
-        assertThat(token).isNotEqualTo(OAuth1aToken.of(ImmutableMap.<String, String>builder()
-                                                               .put(OAUTH_CONSUMER_KEY, "a")
-                                                               .put(OAUTH_TOKEN, "b")
-                                                               .put(OAUTH_SIGNATURE_METHOD, "c")
-                                                               .put(OAUTH_SIGNATURE, "d")
-                                                               .put(OAUTH_TIMESTAMP, "0")
-                                                               .put(OAUTH_NONCE, "f")
-                                                               .build()));
-        assertThat(token).isNotEqualTo(OAuth1aToken.of(ImmutableMap.<String, String>builder()
-                                                               .put(OAUTH_CONSUMER_KEY, "a")
-                                                               .put(OAUTH_TOKEN, "b")
-                                                               .put(OAUTH_SIGNATURE_METHOD, "c")
-                                                               .put(OAUTH_SIGNATURE, "d")
-                                                               .put(OAUTH_TIMESTAMP, "0")
-                                                               .put(OAUTH_NONCE, "f")
-                                                               .put("x-others", "g")
-                                                               .put("x-others-2", "h")
-                                                               .build()));
+        final OAuth1aToken token = OAuth1aToken.builder()
+                                               .consumerKey("a")
+                                               .token("b")
+                                               .signatureMethod("c")
+                                               .signature("d")
+                                               .timestamp("0")
+                                               .nonce("f")
+                                               .additionals(ImmutableMap.of("x-others", "g"))
+                                               .build();
+        assertThat(token).isNotEqualTo(OAuth1aToken.builder()
+                                                   .consumerKey("a")
+                                                   .token("b")
+                                                   .signatureMethod("c")
+                                                   .signature("d")
+                                                   .timestamp("0")
+                                                   .nonce("f")
+                                                   .build());
+        assertThat(token).isNotEqualTo(OAuth1aToken.builder()
+                                                   .consumerKey("a")
+                                                   .token("b")
+                                                   .signatureMethod("c")
+                                                   .signature("d")
+                                                   .timestamp("0")
+                                                   .nonce("f")
+                                                   .additionals(ImmutableMap.of("x-others", "g",
+                                                                                "x-others-2", "h"))
+                                                   .build());
     }
 }
