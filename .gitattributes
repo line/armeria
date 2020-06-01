@@ -20,10 +20,17 @@
 *.m4a binary
 *.m4v binary
 *.mp4 binary
+*.otf binary
 *.p12 binary
 *.pdf binary
 *.pem binary
 *.pkcs12 binary
 *.png binary
+*.ttc binary
+*.ttf binary
+*.webm binary
+*.webp binary
+*.woff binary
+*.woff2 binary
 *.xz binary
 *.zip binary
