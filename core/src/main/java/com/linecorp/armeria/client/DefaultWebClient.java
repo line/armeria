@@ -45,13 +45,14 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 try {
                     uri = URI.create(req.path());
                 } catch (Exception ex) {
-                    return failureResponse(req, new IllegalArgumentException(
+                    return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
                             "Failed to create a URI: " + req.path(), ex));
                 }
             } else if (req.scheme() != null && req.authority() != null) {
                 uri = req.uri();
             } else {
-                return failureResponse(req, new IllegalArgumentException("no authority: " + req.path()));
+                return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
+                        "A URI with scheme and authority must be specified. path: " + req.path()));
             }
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
@@ -62,9 +63,9 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         }
 
         if (isAbsoluteUri(req.path())) {
-            return failureResponse(req, new IllegalArgumentException(
-                    "Cannot send a request with an absolute path when the client is created with a base URI. " +
-                    "path: " + req.path()));
+            return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
+                    "Cannot send a request with a \":path\" header that contains a URI with the authority, " +
+                    "because the client was created with a base URI. path: " + req.path()));
         }
 
         final String originalPath = req.path();
@@ -83,7 +84,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
-            return failureResponse(req, cause);
+            return abortRequestAndReturnFailureResponse(req, cause);
         }
         return execute(endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
@@ -95,7 +96,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         return execute(aggregatedReq.toHttpRequest());
     }
 
-    private static HttpResponse failureResponse(HttpRequest req, IllegalArgumentException cause) {
+    private static HttpResponse abortRequestAndReturnFailureResponse(
+            HttpRequest req, IllegalArgumentException cause) {
         req.abort(cause);
         return HttpResponse.ofFailure(cause);
     }
