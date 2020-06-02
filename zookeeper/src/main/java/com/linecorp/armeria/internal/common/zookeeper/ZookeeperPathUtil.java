@@ -36,7 +36,7 @@ public final class ZookeeperPathUtil {
             // Simply prepend '/' to validate the path.
             PathUtils.validatePath('/' + path);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(name + " is invalid.", e);
+            throw new IllegalArgumentException(name + ": " + path + " (reason: " + e.getMessage() + ')');
         }
         return path;
     }

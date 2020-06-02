@@ -87,7 +87,8 @@ public class AbstractCuratorFrameworkBuilder {
         try {
             PathUtils.validatePath(zNodePath);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("zNodePath is invalid.", e);
+            throw new IllegalArgumentException("zNodePath: " + zNodePath +
+                                               " (reason: " + e.getMessage() + ')');
         }
     }
 
