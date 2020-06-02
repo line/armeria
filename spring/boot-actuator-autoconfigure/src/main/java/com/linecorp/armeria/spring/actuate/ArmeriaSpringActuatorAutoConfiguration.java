@@ -25,7 +25,6 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -232,7 +231,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static Port obtainManagementServerPort(Integer port) {
         int actualPort = requireNonNull(port, "port");
-        if (port.equals(0)) {
+        if (actualPort == 0) {
             actualPort = SocketUtils.findAvailableTcpPort();
         }
         return new Port().setPort(actualPort).setProtocol(SessionProtocol.HTTP);
