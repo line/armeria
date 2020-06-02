@@ -19,6 +19,7 @@ package com.linecorp.armeria.spring.actuate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -223,21 +224,18 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                                ArmeriaSettings armeriaSettings) {
         return sb -> {
             final Port port = obtainManagementServerPort(serverProperties.getPort());
-            if (port != null) {
-                configurePorts(sb, ImmutableList.of(port));
-                addLocalManagementPortPropertyAlias(environment, port);
-                configureSecureDecorator(sb, port, properties.getBasePath(), armeriaSettings);
-            }
+            configurePorts(sb, ImmutableList.of(port));
+            addLocalManagementPortPropertyAlias(environment, port);
+            configureSecureDecorator(sb, port, properties.getBasePath(), armeriaSettings);
         };
     }
 
-    @Nullable
-    private static Port obtainManagementServerPort(@Nullable Integer port) {
-        return Optional.ofNullable(port)
-                       .filter(it -> it.equals(0))
-                       .map(it -> SocketUtils.findAvailableTcpPort())
-                       .map(it -> new Port().setPort(port).setProtocol(SessionProtocol.HTTP))
-                       .orElse(null);
+    private static Port obtainManagementServerPort(Integer port) {
+        int actualPort = requireNonNull(port, "port");
+        if (port.equals(0)) {
+            actualPort = SocketUtils.findAvailableTcpPort();
+        }
+        return new Port().setPort(actualPort).setProtocol(SessionProtocol.HTTP);
     }
 
     private static void addLocalManagementPortPropertyAlias(ConfigurableEnvironment environment, Port port) {
