@@ -2,11 +2,11 @@
 const util = require('mdast-util-toc');
 /* eslint-enable import/no-extraneous-dependencies */
 
-const transformer = markdownAST => {
+const transformer = (markdownAST) => {
   // Find the first heading at the first level.
   // We will insert the ToC right next to it.
   const index = markdownAST.children.findIndex(
-    node => node.type === 'heading' && node.depth === 1,
+    (node) => node.type === 'heading' && node.depth === 1,
   );
 
   // we have no TOC
@@ -29,7 +29,7 @@ const transformer = markdownAST => {
   const result = util(
     {
       ...markdownAST,
-      children: markdownAST.children.flatMap(node => {
+      children: markdownAST.children.flatMap((node) => {
         if (node.type === 'heading' && node.depth >= 2) {
           return [node];
         }

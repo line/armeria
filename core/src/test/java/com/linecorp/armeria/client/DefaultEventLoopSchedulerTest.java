@@ -25,10 +25,13 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -58,6 +61,29 @@ class DefaultEventLoopSchedulerTest {
 
         for (int i = 0; i < 2; i++) {
             final AbstractEventLoopEntry e0again = acquireEntry(s, endpoint);
+            assertThat(e0again).isSameAs(e0);
+            assertThat(e0again.id()).isZero();
+            assertThat(e0again.activeRequests()).isEqualTo(1);
+            assertThat(e0again.get()).isSameAs(loop);
+            e0again.release();
+        }
+    }
+
+    /**
+     * Similar to {@link #acquireAndRelease()}, but with a {@code null} {@link Endpoint}.
+     */
+    @Test
+    void acquireAndReleaseWithNullEndpoint() {
+        final DefaultEventLoopScheduler s = defaultEventLoopScheduler();
+        final AbstractEventLoopEntry e0 = acquireEntry(s, null);
+        final EventLoop loop = e0.get();
+        assertThat(e0.id()).isZero();
+        assertThat(e0.activeRequests()).isEqualTo(1);
+        e0.release();
+        assertThat(e0.activeRequests()).isZero();
+
+        for (int i = 0; i < 2; i++) {
+            final AbstractEventLoopEntry e0again = acquireEntry(s, null);
             assertThat(e0again).isSameAs(e0);
             assertThat(e0again.id()).isZero();
             assertThat(e0again.activeRequests()).isEqualTo(1);
@@ -233,7 +259,7 @@ class DefaultEventLoopSchedulerTest {
 
         // Release all acquired entries to make sure activeRequests are all 0.
         acquiredEntries.forEach(AbstractEventLoopEntry::release);
-        final List<AbstractEventLoopEntry> entries = s.entries(endpoint, SessionProtocol.HTTP);
+        final List<AbstractEventLoopEntry> entries = s.entries(SessionProtocol.HTTP, endpoint, endpoint);
         for (AbstractEventLoopEntry e : entries) {
             assertThat(e.activeRequests()).withFailMessage("All entries must have 0 activeRequests.").isZero();
         }
@@ -242,7 +268,7 @@ class DefaultEventLoopSchedulerTest {
 
     private static void stressTest(DefaultEventLoopScheduler s, List<AbstractEventLoopEntry> acquiredEntries,
                                    double acquireRatio) {
-        final List<AbstractEventLoopEntry> entries = s.entries(endpoint, SessionProtocol.HTTP);
+        final List<AbstractEventLoopEntry> entries = s.entries(SessionProtocol.HTTP, endpoint, endpoint);
         final Random random = ThreadLocalRandom.current();
         final int acquireRatioAsInt = (int) (Integer.MAX_VALUE * acquireRatio);
 
@@ -274,8 +300,14 @@ class DefaultEventLoopSchedulerTest {
         return new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE, ImmutableList.of());
     }
 
-    static AbstractEventLoopEntry acquireEntry(DefaultEventLoopScheduler s, Endpoint endpointA) {
-        final ReleasableHolder<EventLoop> acquired = s.acquire(endpointA, SessionProtocol.HTTP);
+    static AbstractEventLoopEntry acquireEntry(DefaultEventLoopScheduler s,
+                                               @Nullable Endpoint endpoint) {
+        final ReleasableHolder<EventLoop> acquired;
+        if (endpoint != null) {
+            acquired = s.acquire(SessionProtocol.HTTP, endpoint, endpoint);
+        } else {
+            acquired = s.acquire(SessionProtocol.HTTP, EndpointGroup.empty(), null);
+        }
         assert acquired instanceof AbstractEventLoopEntry;
         return (AbstractEventLoopEntry) acquired;
     }

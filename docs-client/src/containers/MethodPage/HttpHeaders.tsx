@@ -37,7 +37,7 @@ interface Props {
   onStickyHeadersChange: React.Dispatch<unknown>;
 }
 
-const HttpHeaders: React.FunctionComponent<Props> = props => (
+const HttpHeaders: React.FunctionComponent<Props> = (props) => (
   <>
     <Typography variant="body2" paragraph />
     <Button color="secondary" onClick={props.onEditHttpHeadersClick}>

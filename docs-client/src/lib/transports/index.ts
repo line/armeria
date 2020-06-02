@@ -29,7 +29,9 @@ export class Transports {
   public getDebugTransport(method: Method): Transport | undefined {
     const mimeTypes = new Set<string>();
     for (const endpoint of method.endpoints) {
-      endpoint.availableMimeTypes.forEach(mimeType => mimeTypes.add(mimeType));
+      endpoint.availableMimeTypes.forEach((mimeType) =>
+        mimeTypes.add(mimeType),
+      );
     }
     for (const mimeType of mimeTypes) {
       if (grpcUnframedTransport.supportsMimeType(mimeType)) {

@@ -93,7 +93,7 @@ interface CodeBlockProps extends SyntaxHighlighterProps {
   filename?: string;
 }
 
-const CodeBlock: React.FC<CodeBlockProps> = props => {
+const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -180,7 +180,7 @@ function process(code: React.ReactNode) {
   }
 
   return (indentation !== 0
-    ? lines.map(line => line.substring(indentation))
+    ? lines.map((line) => line.substring(indentation))
     : lines
   ).join('\n');
 }

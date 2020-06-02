@@ -29,6 +29,18 @@ You can import Armeria into your IDE ([IntelliJ IDEA](https://www.jetbrains.com/
 
 <Tip>IntelliJ IDEA is our primary IDE for developing Armeria.</Tip>
 
+Before importing the project, run the `generateSources` task to generate some source files:
+
+```bash
+$ ./gradlew --parallel -PnoLint generateSources
+```
+
+<Tip>
+
+`-PnoLint` disables running lint tools such as Checkstyle and ESLint to save build time.
+
+</Tip>
+
 After importing the project, import the IDE settings as well:
 
 <Tabs>

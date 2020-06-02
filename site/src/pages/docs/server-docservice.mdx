@@ -151,11 +151,11 @@ without a hassle and thus will understand them sooner and better.
 Configure your build script so that it generates the required metadata file for your `.thrift` or `.proto`
 files into the specific location in the class path.
 
-For Thrift:
+### For Thrift
 - Use the `--gen json` option to generate the `.json` file that contains the docstrings.
 - Put the generated `.json` file into the `META-INF/armeria/thrift` directory.
 
-For gRPC:
+### For gRPC
 - Configure the protobuf plugin to generate the `.dsc` file that contains the docstrings and
   put it into the `META-INF/armeria/grpc` directory:
 
@@ -203,7 +203,9 @@ For gRPC:
   </plugin>
   ```
 
-  For annotated service, use <type://@Description> annotation:
+### For annotated service
+
+  Using <type://@Description> annotation:
 
   ```java
   import com.linecorp.armeria.server.annotation.Description;
@@ -216,5 +218,35 @@ For gRPC:
       public User getUser(@Param("id") @Description("the user ID") String id) { ... }
 
       ...
+  }
+  ```
+
+  Using JavaDoc:
+
+  This only works with method parameters.
+  To enable it, you have to add the armeria annotation processor to your project:
+
+  Gradle configuration:
+
+  ```groovy
+  dependencies {
+    compileOnly 'com.linecorp.armeria:armeria-annotation-processor'
+    annotationProcessor 'com.linecorp.armeria:armeria-annotation-processor'
+  }
+  ```
+
+  Kotlin configuration:
+
+  ```Kotlin
+  plugins {
+    kotlin("kapt") apply true
+  }
+
+  dependencies {
+      configurations["kapt"].dependencies.add("com.linecorp.armeria:armeria-annotation-processor")
+  }
+
+  kapt {
+      annotationProcessor("com.linecorp.armeria.server.annotation.processor.DocumentationProcessor")
   }
   ```

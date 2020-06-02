@@ -19,7 +19,7 @@ import styles from './index.module.less';
 
 const { Title, Paragraph } = Typography;
 
-const IndexPage: React.FC<RouteComponentProps> = props => {
+const IndexPage: React.FC<RouteComponentProps> = (props) => {
   const data = useStaticQuery(graphql`
     query {
       docServiceImages: allFile(

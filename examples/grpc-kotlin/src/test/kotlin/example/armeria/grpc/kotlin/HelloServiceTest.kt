@@ -14,31 +14,37 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 
 class HelloServiceTest {
 
-    @Test
-    fun reply() {
+    @ParameterizedTest
+    @MethodSource("uris")
+    fun reply(uri: String) {
         runBlocking {
-            val helloService = Clients.newClient(uri(), HelloServiceCoroutineStub::class.java)
+            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).message)
                     .isEqualTo("Hello, Armeria!")
         }
     }
 
-    @Test
-    fun replyWithDelay() {
+    @ParameterizedTest
+    @MethodSource("uris")
+    fun replyWithDelay(uri: String) {
         runBlocking {
-            val helloService = Clients.newClient(uri(), HelloServiceCoroutineStub::class.java)
+            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             val reply: HelloReply = helloService.lazyHello(HelloRequest.newBuilder().setName("Armeria").build())
             assertThat(reply.message).isEqualTo("Hello, Armeria!")
         }
     }
 
-    @Test
-    fun replyFromServerSideBlockingCall() {
+    @ParameterizedTest
+    @MethodSource("uris")
+    fun replyFromServerSideBlockingCall(uri: String) {
         runBlocking {
-            val helloService = Clients.newClient(uri(), HelloServiceCoroutineStub::class.java)
+            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             val watch = Stopwatch.createStarted()
             assertThat(helloService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build()).message)
                     .isEqualTo("Hello, Armeria!")
@@ -46,7 +52,6 @@ class HelloServiceTest {
         }
     }
 
-    // Should never reach here.
     @Test
     fun lotsOfReplies() {
         runBlocking {
@@ -87,10 +92,10 @@ class HelloServiceTest {
         runBlocking {
             val names = listOf("Armeria", "Grpc", "Streaming")
             val requests = names.map { HelloRequest.newBuilder().setName(it).build() }
-            val request = helloService.bidiHello(requests.asFlow())
+            val replies = helloService.bidiHello(requests.asFlow())
 
             var received = 0
-            request.collect {
+            replies.collect {
                 assertThat(it.message).isEqualTo("Hello, ${names[received++]}!")
             }
         }
@@ -106,7 +111,7 @@ class HelloServiceTest {
         fun beforeClass() {
             server = Main.newServer(0, 0)
             server.start().join()
-            helloService = Clients.newClient(uri(), HelloServiceCoroutineStub::class.java)
+            helloService = Clients.newClient(protoUri(), HelloServiceCoroutineStub::class.java)
         }
 
         @AfterAll
@@ -115,8 +120,18 @@ class HelloServiceTest {
             server.stop().join()
         }
 
-        private fun uri(): String {
+        @JvmStatic
+        fun uris() = listOf(
+                Arguments.of(protoUri()),
+                Arguments.of(jsonUri())
+        )
+
+        private fun protoUri(): String {
             return "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/'
+        }
+
+        private fun jsonUri(): String {
+            return "gjson+http://127.0.0.1:" + server.activeLocalPort() + '/'
         }
     }
 }

@@ -20,28 +20,16 @@ apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
 node {
-    version = '12.16.3'
-    yarnVersion = '1.22.4'
+    version = '12.17.0'
+    npmVersion = '6.14.5'
     download = true
 }
 
-tasks.yarn {
-    args += ['--frozen-lockfile']
-
-    // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
-    // This makes sense in principal but Gradle often handles up-to-date checking much more
-    // slowly than yarn itself for a large node_modules, so we go ahead and remove it all
-    // from up-to-date checking.
-    nodeModulesOutputFilter = {
-        it.exclude("**/*")
-    }
-}
-
-task yarnClean(type: YarnTask) {
-    dependsOn 'yarn'
+task npmClean(type: NpmTask) {
+    dependsOn tasks.npmInstall
     args = ['run', 'clean']
 }
-tasks.clean.dependsOn tasks.yarnClean
+tasks.clean.dependsOn tasks.npmClean
 tasks.clean.delete(project.file("${project.projectDir}/gen-src"))
 
 task versionIndex(type: VersionIndexTask)
@@ -49,47 +37,48 @@ task apiIndex(type: ApiIndexTask) {
     dependsOn ':javadoc:javadoc'
 }
 task contributorList(type: ContributorListTask)
-task prepare {
-    dependsOn tasks.yarn_install
+
+project.ext.getGenerateSourcesTask().configure {
+    dependsOn tasks.npmInstall
     dependsOn tasks.versionIndex
     dependsOn tasks.apiIndex
     dependsOn tasks.contributorList
 }
 
-task develop(type: YarnTask) {
-    dependsOn tasks.prepare
-    dependsOn 'yarn'
-
+task develop(type: NpmTask) {
+    dependsOn tasks.generateSources
     args = ['run', 'develop']
 }
 
-final def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle')
-if (checkstyleEnabled) {
-    task lint(type: YarnTask) {
-        dependsOn tasks.prepare
+final def lintEnabled = !rootProject.hasProperty('noLint')
+if (lintEnabled) {
+    task eslint(type: NpmTask) {
+        dependsOn tasks.generateSources
         args = ['run', 'lint']
         inputs.dir('src')
         inputs.file('.eslintrc.js')
         inputs.file('package.json')
-        inputs.file('yarn.lock')
+        inputs.file('package-lock.json')
+    }
+
+    project.ext.getLintTask().configure {
+        dependsOn tasks.eslint
     }
 }
 
 // Note that this task is not triggered by the 'build' task
 // because it takes long to build a site.
-task site(type: YarnTask) {
-    dependsOn tasks.prepare
-    dependsOn 'yarn'
-
-    if (checkstyleEnabled) {
-        dependsOn 'lint'
+task site(type: NpmTask) {
+    dependsOn tasks.generateSources
+    if (lintEnabled) {
+        dependsOn tasks.lint
     }
     args = ['run', 'build']
     inputs.dir('src')
     inputs.file('gatsby-config.js')
     inputs.file('package.json')
+    inputs.file('package-lock.json')
     inputs.file('tsconfig.json')
-    inputs.file('yarn.lock')
     outputs.dir('.cache')
     outputs.dir('public')
 }

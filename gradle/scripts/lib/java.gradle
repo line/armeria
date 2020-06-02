@@ -1,8 +1,9 @@
 // Enable checkstyle if the rule file exists.
 def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
 def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
-                        new File(checkstyleConfigDir).isDirectory() &&
-                        new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
+        !rootProject.hasProperty('noLint') &&
+        new File(checkstyleConfigDir).isDirectory() &&
+        new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
 
 configure(rootProject) {
     apply plugin: 'eclipse'
@@ -100,8 +101,10 @@ configure(projectsWithFlags('java')) {
             }
         }
 
+        project.ext.getLintTask().dependsOn tasks.checkstyle
+
         test {
-            dependsOn tasks.checkstyle
+            dependsOn tasks.lint
         }
     }
 }

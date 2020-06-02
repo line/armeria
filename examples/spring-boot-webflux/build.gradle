@@ -9,10 +9,6 @@ buildscript {
 
 apply plugin: 'org.springframework.boot'
 
-springBoot {
-    mainClassName = 'example.springframework.boot.webflux.Main'
-}
-
 dependencies {
     implementation project(':spring:boot-webflux-starter')
 

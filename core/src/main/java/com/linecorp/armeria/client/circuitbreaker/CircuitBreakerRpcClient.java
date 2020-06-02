@@ -34,7 +34,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -42,25 +42,28 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * @param circuitBreaker The {@link CircuitBreaker} instance to be used
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
-        return newDecorator((ctx, req) -> circuitBreaker, strategy);
+    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        requireNonNull(circuitBreaker, "circuitBreaker");
+        return newDecorator((ctx, req) -> circuitBreaker, ruleWithContent);
     }
 
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerMapping} and
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
-        return delegate -> new CircuitBreakerRpcClient(delegate, mapping, strategy);
+    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        requireNonNull(mapping, "mapping");
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return delegate -> new CircuitBreakerRpcClient(delegate, mapping, ruleWithContent);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per RPC method name with the specified
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -69,13 +72,13 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,
-                          CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
-        return newDecorator(CircuitBreakerMapping.perMethod(factory), strategy);
+                          CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perMethod(factory), ruleWithContent);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host with the specified
-     * {@link CircuitBreakerStrategy}.
+     * {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -84,13 +87,13 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
-                        CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
-        return newDecorator(CircuitBreakerMapping.perHost(factory), strategy);
+                        CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHost(factory), ruleWithContent);
     }
 
     /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host and RPC method name with
-     * the specified {@link CircuitBreakerStrategy}.
+     * the specified {@link CircuitBreakerRuleWithContent}.
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
@@ -99,25 +102,25 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
-                                 CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
-        return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
+                                 CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
     }
 
     /**
      * Returns a new {@link CircuitBreakerRpcClientBuilder} with
-     * the specified {@link CircuitBreakerStrategyWithContent}.
+     * the specified {@link CircuitBreakerRuleWithContent}.
      */
     public static CircuitBreakerRpcClientBuilder builder(
-            CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
-        return new CircuitBreakerRpcClientBuilder(strategyWithContent);
+            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        return new CircuitBreakerRpcClientBuilder(ruleWithContent);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
     CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerMapping mapping,
-                            CircuitBreakerStrategyWithContent<RpcResponse> strategy) {
-        super(delegate, mapping, requireNonNull(strategy, "strategy"));
+                            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        super(delegate, mapping, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     @Override
@@ -127,13 +130,14 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
         try {
             response = delegate().execute(ctx, req);
         } catch (Throwable cause) {
-            reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
-                    ctx, RpcResponse.ofFailure(cause)));
+            reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
+                    ctx, null, cause));
             throw cause;
         }
 
-        response.handle((unused1, unused2) -> {
-            reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(ctx, response));
+        response.handle((unused1, cause) -> {
+            reportSuccessOrFailure(circuitBreaker,
+                                   ruleWithContent().shouldReportAsSuccess(ctx, response, cause));
             return null;
         });
         return response;
