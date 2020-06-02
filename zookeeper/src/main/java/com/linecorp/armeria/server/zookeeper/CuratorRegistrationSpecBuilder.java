@@ -27,7 +27,7 @@ import org.apache.curator.x.discovery.ServiceType;
 import org.apache.curator.x.discovery.UriSpec;
 
 /**
- * Builds an {@link ZookeeperRegistrationSpec} for
+ * Builds a {@link ZookeeperRegistrationSpec} for
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
  */
 public final class CuratorRegistrationSpecBuilder {

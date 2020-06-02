@@ -87,7 +87,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
             CuratorFramework client, String zNodePath, ZookeeperRegistrationSpec spec) {
-        return new ZooKeeperUpdatingListenerBuilder(client, zNodePath, requireNonNull(spec, "spec"));
+        return new ZooKeeperUpdatingListenerBuilder(client, zNodePath, spec);
     }
 
     /**
@@ -99,7 +99,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
             String zkConnectionStr, String zNodePath, ZookeeperRegistrationSpec spec) {
-        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath, requireNonNull(spec, "spec"));
+        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath, spec);
     }
 
     private final CuratorFramework client;

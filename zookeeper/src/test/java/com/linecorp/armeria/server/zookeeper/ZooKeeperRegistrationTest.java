@@ -50,7 +50,7 @@ class ZooKeeperRegistrationTest {
     static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
 
     @Test
-    void endpointRegistrationSpec() throws Throwable {
+    void legacyZookeeperRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(true);
         //all servers start and with zNode created
         await().untilAsserted(() -> sampleEndpoints.forEach(
@@ -121,7 +121,7 @@ class ZooKeeperRegistrationTest {
     }
 
     @Test
-    void curatorXRegistrationSpec() throws Throwable {
+    void curatorRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(false);
         //all servers start and with zNode created
         await().untilAsserted(() -> {

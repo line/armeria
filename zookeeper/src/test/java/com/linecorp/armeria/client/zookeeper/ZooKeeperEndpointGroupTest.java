@@ -50,7 +50,7 @@ class ZooKeeperEndpointGroupTest {
     static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
 
     @Test
-    void legacySpec() throws Throwable {
+    void legacyDiscoverySpec() throws Throwable {
         final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
         setLegacySpecNodeChildren(sampleEndpoints);
         final ZooKeeperEndpointGroup endpointGroup = endpointGroup(ZookeeperDiscoverySpec.legacy());
@@ -108,7 +108,7 @@ class ZooKeeperEndpointGroupTest {
     }
 
     @Test
-    void curatorXDiscovery() throws Throwable {
+    void curatorDiscovery() throws Throwable {
         final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
         setCuratorXNodeChildren(sampleEndpoints, 0);
         final ZookeeperDiscoverySpec spec = ZookeeperDiscoverySpec.builderForCurator(CURATOR_X_SERVICE_NAME)
