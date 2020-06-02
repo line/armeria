@@ -31,12 +31,12 @@ public final class ZookeeperPathUtil {
         requireNonNull(path, name);
         try {
             if (path.indexOf('/') > 0) {
-                throw new RuntimeException(name + " cannot have '/'. " + name + ": " + path);
+                throw new IllegalArgumentException(name + " cannot have '/'. " + name + ": " + path);
             }
             // Simply prepend '/' to validate the serviceName as a path.
             PathUtils.validatePath('/' + path);
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException(name + " is invalid.", e);
+            throw new IllegalArgumentException(name + " is invalid.", e);
         }
         return path;
     }
