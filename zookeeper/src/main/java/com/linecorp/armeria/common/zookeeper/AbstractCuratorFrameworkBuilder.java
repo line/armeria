@@ -29,6 +29,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.zookeeper.common.PathUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -83,9 +84,11 @@ public class AbstractCuratorFrameworkBuilder {
     }
 
     private static void validateZNodePath(String zNodePath) {
-        checkArgument(!requireNonNull(zNodePath, "zNodePath").isEmpty(), "zNodePath can't be empty.");
-        checkArgument(zNodePath.charAt(zNodePath.length() - 1) != '/',
-                      "zNodePath must not end with /. zNodePath: %s", zNodePath);
+        try {
+            PathUtils.validatePath(zNodePath);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("zNodePath is invalid.", e);
+        }
     }
 
     /**
@@ -173,7 +176,7 @@ public class AbstractCuratorFrameworkBuilder {
 
     /**
      * Returns {@code true} if this builder is created with
-     * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework)}.
+     * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework, String)}.
      */
     protected final boolean isUserSpecifiedCuratorFramework() {
        return client != null;

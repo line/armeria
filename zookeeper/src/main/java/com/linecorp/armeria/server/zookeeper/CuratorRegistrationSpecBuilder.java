@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.zookeeper;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.zookeeper.ZookeeperPathUtil.validatePath;
 import static java.util.Objects.requireNonNull;
 
 import java.util.UUID;
@@ -51,7 +52,7 @@ public final class CuratorRegistrationSpecBuilder {
      * Creates a new instance.
      */
     CuratorRegistrationSpecBuilder(String serviceName) {
-        this.serviceName = requireNonNull(serviceName, "serviceName");
+        this.serviceName = validatePath(serviceName, "serviceName");
     }
 
     /**
@@ -84,7 +85,7 @@ public final class CuratorRegistrationSpecBuilder {
      * Sets the service ID.
      */
     public CuratorRegistrationSpecBuilder serviceId(String serviceId) {
-        this.serviceId = requireNonNull(serviceId, "serviceId");
+        this.serviceId = validatePath(serviceId, "serviceId");
         return this;
     }
 

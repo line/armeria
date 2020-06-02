@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static com.linecorp.armeria.internal.common.zookeeper.ZookeeperPathUtil.validatePath;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
@@ -29,6 +30,7 @@ final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec
 
     LegacyZookeeperRegistrationSpec(Endpoint endpoint) {
         this.endpoint = requireNonNull(endpoint, "endpoint");
+        validatePath(endpoint.host(), "endpoint.host()");
         path = '/' + endpoint.host() + '_' + endpoint.port();
     }
 
