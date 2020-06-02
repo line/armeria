@@ -77,7 +77,7 @@ class HttpClientRequestPathTest {
         final HttpResponse response = WebClient.of().execute(request);
         assertThatThrownBy(() -> response.aggregate().join())
                 .hasCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("no authority");
+                .hasMessageContaining("Scheme and authority must be specified");
     }
 
     @Test

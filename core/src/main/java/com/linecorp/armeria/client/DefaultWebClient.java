@@ -52,7 +52,9 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 uri = req.uri();
             } else {
                 return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
-                        "A URI with scheme and authority must be specified. path: " + req.path()));
+                        "Scheme and authority must be specified in \":path\" or " +
+                        "in \":scheme\" and \":authority\". :path=" +
+                        req.path() + ", :scheme=" + req.scheme() + ", :authority=" + req.authority()));
             }
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
