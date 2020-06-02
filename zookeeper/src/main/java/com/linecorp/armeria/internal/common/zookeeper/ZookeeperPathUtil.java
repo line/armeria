@@ -33,7 +33,7 @@ public final class ZookeeperPathUtil {
             if (path.indexOf('/') > 0) {
                 throw new IllegalArgumentException(name + " cannot have '/'. " + name + ": " + path);
             }
-            // Simply prepend '/' to validate the serviceName as a path.
+            // Simply prepend '/' to validate the path.
             PathUtils.validatePath('/' + path);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(name + " is invalid.", e);
