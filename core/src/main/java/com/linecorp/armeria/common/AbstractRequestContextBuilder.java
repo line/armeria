@@ -491,7 +491,7 @@ public abstract class AbstractRequestContextBuilder {
     /**
      * Returns whether a timeout is set.
      */
-    protected final boolean isTimedOut() {
+    protected final boolean timedOut() {
         return timeout;
     }
 
@@ -501,7 +501,7 @@ public abstract class AbstractRequestContextBuilder {
      * This is useful for checking the behavior of a {@link Service} and {@link Client}
      * when a request exceeds a deadline.
      */
-    public AbstractRequestContextBuilder isTimedOut(boolean timeout) {
+    public AbstractRequestContextBuilder timedOut(boolean timeout) {
         this.timeout = timeout;
         return this;
     }

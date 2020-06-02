@@ -154,7 +154,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         if (enableTimeout) {
             final DefaultTimeoutController timeoutController;
-            if (isTimedOut()) {
+            if (timedOut()) {
                 timeoutController = noopTimedOutController;
             } else {
                 timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
@@ -215,7 +215,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @Override
-    public ClientRequestContextBuilder isTimedOut(boolean timeout) {
-        return (ClientRequestContextBuilder) super.isTimedOut(timeout);
+    public ClientRequestContextBuilder timedOut(boolean timeout) {
+        return (ClientRequestContextBuilder) super.timedOut(timeout);
     }
 }

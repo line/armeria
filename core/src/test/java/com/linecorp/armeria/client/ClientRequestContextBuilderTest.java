@@ -28,7 +28,7 @@ class ClientRequestContextBuilderTest {
     @Test
     void testTimeout() {
         final ClientRequestContext ctx1 = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                                              .isTimedOut(true)
+                                                              .timedOut(true)
                                                               .build();
         assertThat(ctx1.isTimedOut()).isTrue();
 

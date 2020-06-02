@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -42,6 +41,7 @@ import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Builds a new {@link ServiceRequestContext}. Note that it is not usually required to create a new context by
@@ -79,7 +79,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * A timeout controller that has been timed-out.
      */
     private static final DefaultTimeoutController noopTimedOutController =
-            new DefaultTimeoutController(noopTimeoutTask, CommonPools.workerGroup().next());
+            new DefaultTimeoutController(noopTimeoutTask, ImmediateEventExecutor.INSTANCE);
 
     static {
         noopTimedOutController.timeoutNow();
@@ -212,7 +212,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                                                 .getAddress();
 
         final DefaultTimeoutController timeoutController;
-        if (isTimedOut()) {
+        if (timedOut()) {
             timeoutController = noopTimedOutController;
         } else {
             timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
@@ -290,7 +290,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     @Override
-    public ServiceRequestContextBuilder isTimedOut(boolean timeout) {
-        return (ServiceRequestContextBuilder) super.isTimedOut(timeout);
+    public ServiceRequestContextBuilder timedOut(boolean timeout) {
+        return (ServiceRequestContextBuilder) super.timedOut(timeout);
     }
 }
