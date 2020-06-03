@@ -290,7 +290,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     @Override
-    public ServiceRequestContextBuilder timedOut(boolean timeout) {
-        return (ServiceRequestContextBuilder) super.timedOut(timeout);
+    public ServiceRequestContextBuilder timedOut(boolean timedOut) {
+        return (ServiceRequestContextBuilder) super.timedOut(timedOut);
     }
 }

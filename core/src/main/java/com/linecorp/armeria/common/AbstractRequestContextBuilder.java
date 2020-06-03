@@ -90,7 +90,7 @@ public abstract class AbstractRequestContextBuilder {
     private long requestStartTimeMicros;
     @Nullable
     private Channel channel;
-    private boolean timeout;
+    private boolean timedOut;
 
     /**
      * Creates a new builder with the specified {@link HttpRequest}.
@@ -492,17 +492,17 @@ public abstract class AbstractRequestContextBuilder {
      * Returns whether a timeout is set.
      */
     protected final boolean timedOut() {
-        return timeout;
+        return timedOut;
     }
 
     /**
-     * Sets the specified {@code timeout}. If the specified {@code timeout} is {@code true},
+     * Sets the specified {@code timedOut}. If the specified {@code timedOut} is {@code true},
      * {@link RequestContext#isTimedOut()} will always return {@code true}.
      * This is useful for checking the behavior of a {@link Service} and {@link Client}
      * when a request exceeds a deadline.
      */
-    public AbstractRequestContextBuilder timedOut(boolean timeout) {
-        this.timeout = timeout;
+    public AbstractRequestContextBuilder timedOut(boolean timedOut) {
+        this.timedOut = timedOut;
         return this;
     }
 

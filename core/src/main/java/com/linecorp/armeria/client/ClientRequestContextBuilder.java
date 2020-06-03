@@ -26,7 +26,6 @@ import javax.net.ssl.SSLSession;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Builds a new {@link ClientRequestContext}. Note that it is not usually required to create a new context by
@@ -62,7 +62,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
      * A timeout controller that has been timed-out.
      */
     private static final DefaultTimeoutController noopTimedOutController =
-            new DefaultTimeoutController(noopTimeoutTask, CommonPools.workerGroup().next());
+            new DefaultTimeoutController(noopTimeoutTask, ImmediateEventExecutor.INSTANCE);
 
     static {
         noopTimedOutController.timeoutNow();
@@ -76,7 +76,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Nullable
     private ClientConnectionTimings connectionTimings;
 
-    private boolean enableTimeout = true;
+    private boolean initTimeoutController = true;
 
     ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
@@ -119,8 +119,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @VisibleForTesting
-    ClientRequestContextBuilder enableTimeout(boolean enableTimeout) {
-        this.enableTimeout = enableTimeout;
+    ClientRequestContextBuilder noTimeoutController() {
+        initTimeoutController = false;
         return this;
     }
 
@@ -152,7 +152,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             ctx.logBuilder().requestContent(rpcRequest(), null);
         }
 
-        if (enableTimeout) {
+        if (initTimeoutController) {
             final DefaultTimeoutController timeoutController;
             if (timedOut()) {
                 timeoutController = noopTimedOutController;
@@ -215,7 +215,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @Override
-    public ClientRequestContextBuilder timedOut(boolean timeout) {
-        return (ClientRequestContextBuilder) super.timedOut(timeout);
+    public ClientRequestContextBuilder timedOut(boolean timedOut) {
+        return (ClientRequestContextBuilder) super.timedOut(timedOut);
     }
 }

@@ -344,7 +344,7 @@ class DefaultClientRequestContextTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx =
                 (DefaultClientRequestContext) ClientRequestContext.builder(req)
-                                                                  .enableTimeout(false)
+                                                                  .noTimeoutController()
                                                                   .build();
 
         ctx.clearResponseTimeout();
