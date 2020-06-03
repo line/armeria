@@ -167,9 +167,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (!protocol.isMultiplex()) {
             // When HTTP/1.1 is used:
             // If pipelining is enabled, return as soon as the request is fully sent.
-            // If pipelining is disabled, return after the response is fully received.
+            // If pipelining is disabled,
+            // return after the response is fully received and the request is fully sent.
             final CompletableFuture<Void> completionFuture =
-                    useHttp1Pipelining ? req.whenComplete() : res.whenComplete();
+                    useHttp1Pipelining ? req.whenComplete()
+                                       : req.whenComplete().thenCombine(res.whenComplete(), (a, b) -> null);
             completionFuture.handle((ret, cause) -> {
                 if (!responseDecoder.needsToDisconnectWhenFinished()) {
                     pooledChannel.release();
