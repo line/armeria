@@ -223,14 +223,20 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                                ArmeriaSettings armeriaSettings) {
         return sb -> {
             final Port port = obtainManagementServerPort(serverProperties.getPort());
-            configurePorts(sb, ImmutableList.of(port));
-            addLocalManagementPortPropertyAlias(environment, port);
-            configureSecureDecorator(sb, port, properties.getBasePath(), armeriaSettings);
+            if (port != null) {
+                configurePorts(sb, ImmutableList.of(port));
+                addLocalManagementPortPropertyAlias(environment, port);
+                configureSecureDecorator(sb, port, properties.getBasePath(), armeriaSettings);
+            }
         };
     }
 
+    @Nullable
     private static Port obtainManagementServerPort(Integer port) {
         int actualPort = requireNonNull(port, "port");
+        if (actualPort < 0) {
+            return null;
+        }
         if (actualPort == 0) {
             actualPort = SocketUtils.findAvailableTcpPort();
         }
