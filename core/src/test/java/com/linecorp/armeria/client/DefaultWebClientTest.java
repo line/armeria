@@ -55,12 +55,12 @@ class DefaultWebClientTest {
 
     @Test
     void testRequestParamsUndefinedEndPoint() throws Exception {
-        final String clientUriPath = "http://127.0.0.1/helloWorld/test?q1=foo";
+        final String path = "http://127.0.0.1/helloWorld/test?q1=foo";
         final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate
-        );
+        final DefaultWebClient defaultWebClient =
+                createDefaultWebClient(AbstractWebClientBuilder.UNDEFINED_URI, mockClientDelegate);
 
-        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, clientUriPath)));
+        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path)));
 
         final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
@@ -71,12 +71,12 @@ class DefaultWebClientTest {
 
     @Test
     void testWithoutRequestParamsUndefinedEndPoint() throws Exception {
-        final String clientUriPath = "http://127.0.0.1/helloWorld/test";
+        final String path = "http://127.0.0.1/helloWorld/test";
         final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate
-        );
+        final DefaultWebClient defaultWebClient =
+                createDefaultWebClient(AbstractWebClientBuilder.UNDEFINED_URI, mockClientDelegate);
 
-        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, clientUriPath)));
+        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path)));
 
         final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
@@ -87,8 +87,13 @@ class DefaultWebClientTest {
 
     private static DefaultWebClient createDefaultWebClient(
             String clientUriPath, HttpClient mockClientDelegate) throws URISyntaxException {
+        return createDefaultWebClient(new URI(clientUriPath), mockClientDelegate);
+    }
+
+    private static DefaultWebClient createDefaultWebClient(
+            URI clientUriPath, HttpClient mockClientDelegate) throws URISyntaxException {
         final ClientBuilderParams clientBuilderParams = ClientBuilderParams.of(
-                new URI(clientUriPath), WebClient.class, ClientOptions.of());
+                clientUriPath, WebClient.class, ClientOptions.of());
         return new DefaultWebClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get());
     }
