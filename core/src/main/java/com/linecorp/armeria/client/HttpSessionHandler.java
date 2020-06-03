@@ -171,7 +171,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             // return after the response is fully received and the request is fully sent.
             final CompletableFuture<Void> completionFuture =
                     useHttp1Pipelining ? req.whenComplete()
-                                       : req.whenComplete().thenCombine(res.whenComplete(), (a, b) -> null);
+                                       : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
                 if (!responseDecoder.needsToDisconnectWhenFinished()) {
                     pooledChannel.release();
