@@ -94,9 +94,7 @@ class Http1ConnectionReuseTest {
             }
 
             @Override
-            public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
-
-            }
+            public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {}
 
             @Override
             public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
