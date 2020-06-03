@@ -31,7 +31,7 @@ export default abstract class Transport {
     queries?: string,
   ): Promise<string> {
     const providedHeaders = await Promise.all(
-      providers.map(provider => provider()),
+      providers.map((provider) => provider()),
     );
     let filledHeaders = {};
     if (process.env.WEBPACK_DEV === 'true') {
@@ -52,7 +52,7 @@ export default abstract class Transport {
   }
 
   public findDebugMimeTypeEndpoint(method: Method): Endpoint {
-    const endpoint = method.endpoints.find(ep =>
+    const endpoint = method.endpoints.find((ep) =>
       ep.availableMimeTypes.includes(this.getDebugMimeType()),
     );
     if (!endpoint) {

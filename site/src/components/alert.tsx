@@ -10,7 +10,7 @@ interface AlertProps {
   icon?: React.ReactNode;
 }
 
-const Alert: React.FC<AlertProps> = props => (
+const Alert: React.FC<AlertProps> = (props) => (
   <AntdAlert
     type={props.type}
     showIcon={props.showIcon}

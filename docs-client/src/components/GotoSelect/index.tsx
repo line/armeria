@@ -288,9 +288,9 @@ function makeSuggestions(
   if (specification.getServices().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Services',
-      options: specification.getServices().flatMap(service => {
+      options: specification.getServices().flatMap((service) => {
         return service.methods
-          .map(method => {
+          .map((method) => {
             return {
               label: `${service.name}#${method.name}|${method.httpMethod}`,
               value: `/methods/${service.name}/${method.name}/${method.httpMethod}`,
@@ -306,7 +306,7 @@ function makeSuggestions(
       label: 'Enums',
       options: specification
         .getEnums()
-        .map(enm => {
+        .map((enm) => {
           return {
             label: `${enm.name}`,
             value: `/enums/${enm.name}/`,
@@ -321,7 +321,7 @@ function makeSuggestions(
       label: 'Structs',
       options: specification
         .getStructs()
-        .map(struct => {
+        .map((struct) => {
           return {
             label: `${struct.name}`,
             value: `/structs/${struct.name}/`,
@@ -336,7 +336,7 @@ function makeSuggestions(
       label: 'Exceptions',
       options: specification
         .getExceptions()
-        .map(exception => {
+        .map((exception) => {
           return {
             label: `${exception.name}`,
             value: `/structs/${exception.name}/`,
@@ -389,7 +389,7 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
   const filterSuggestion = useCallback(
     (inputValue: string, callback: (n: GroupType[]) => void): void => {
       callback(
-        makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, suggestion =>
+        makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>
           suggestion.toLowerCase().includes(inputValue.toLowerCase()),
         ),
       );

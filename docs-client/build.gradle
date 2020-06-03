@@ -15,42 +15,21 @@ if (rootProject.hasProperty('noWeb')) {
 apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
-tasks.yarn {
-    args += ['--frozen-lockfile']
-
-    // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
-    // This makes sense in principal but Gradle often handles up-to-date checking much more
-    // slowly than yarn itself for a large node_modules, so we go ahead and remove it all
-    // from up-to-date checking.
-    nodeModulesOutputFilter = {
-        it.exclude("**/*")
-    }
+node {
+    version = '12.17.0'
+    npmVersion = '6.14.5'
+    download = true
 }
 
-task yarnUpdate(type: YarnTask) {
-    args = ['install']
-}
-
-task buildWeb(type: YarnTask) {
-    dependsOn 'yarn'
+task buildWeb(type: NpmTask) {
+    dependsOn tasks.npmInstall
 
     args = ['run', 'build']
 
     inputs.dir('src')
     inputs.file('package.json')
-    inputs.file('yarn.lock')
+    inputs.file('package-lock.json')
     outputs.dir('build/web')
-}
-
-task checkWeb(type: YarnTask) {
-    dependsOn 'yarn'
-
-    args = ['run', 'check']
-
-    inputs.dir('src')
-    inputs.file('package.json')
-    inputs.file('yarn.lock')
-    outputs.upToDateWhen { true }
 }
 
 task copyWeb(type: Copy) {
@@ -60,11 +39,21 @@ task copyWeb(type: Copy) {
     into 'build/javaweb/com/linecorp/armeria/server/docs'
 }
 
-tasks.assemble.dependsOn copyWeb
-tasks.check.dependsOn checkWeb
+tasks.assemble.dependsOn tasks.copyWeb
 
-node {
-    version = '12.16.3'
-    yarnVersion = '1.22.4'
-    download = true
+if (!rootProject.hasProperty('noLint')) {
+    task eslint(type: NpmTask) {
+        dependsOn tasks.npmInstall
+
+        args = ['run', 'lint']
+
+        inputs.dir('src')
+        inputs.file('package.json')
+        inputs.file('package-lock.json')
+        outputs.upToDateWhen { true }
+    }
+
+    Task lintTask = project.ext.getLintTask()
+    lintTask.dependsOn(tasks.eslint)
+    tasks.buildWeb.dependsOn(lintTask)
 }

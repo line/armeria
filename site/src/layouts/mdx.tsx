@@ -163,7 +163,7 @@ function filterTableCellProps(props: any) {
   return newProps;
 }
 
-const MdxLayout: React.FC<MdxLayoutProps> = props => {
+const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   useLayoutEffect(() => {
     tocbot.init({
       tocSelector: `.${styles.pageToc}`,
@@ -388,7 +388,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
                 {Object.entries(groupToMdxNodes).map(
                   ([group, groupedMdxNodes]) => {
                     function renderMdxNodes() {
-                      return groupedMdxNodes.flatMap(mdxNode => {
+                      return groupedMdxNodes.flatMap((mdxNode) => {
                         return mdxNode.tableOfContents.items.map(
                           (tocItem: any, i: number) => {
                             const href = `${mdxNode.href}${
@@ -515,7 +515,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
                 <Select
                   showSearch={showSearch}
                   placeholder="Jump to other page"
-                  onChange={useCallback(href => {
+                  onChange={useCallback((href) => {
                     const hrefStr = `${href}`;
                     if (hrefStr.includes('://')) {
                       globalHistory.navigate(hrefStr);
@@ -534,7 +534,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = props => {
                   {Object.entries(groupToMdxNodes).map(
                     ([group, groupedMdxNodes]) => {
                       function renderMdxNodes() {
-                        return groupedMdxNodes.map(mdxNode => (
+                        return groupedMdxNodes.map((mdxNode) => (
                           <Select.Option
                             key={mdxNode.href}
                             value={mdxNode.href}

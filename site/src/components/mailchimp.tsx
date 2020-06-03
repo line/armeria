@@ -12,7 +12,7 @@ interface MailchimpProps {
   botCode?: string;
 }
 
-const Mailchimp: React.FC<MailchimpProps> = givenProps => {
+const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
   let props: MailchimpProps;
   if (!givenProps.url) {
     props = {
@@ -38,7 +38,7 @@ const Mailchimp: React.FC<MailchimpProps> = givenProps => {
       aria-required
       value={email}
       loading={sending}
-      onChange={useCallback(e => setEmail(e.target.value), [])}
+      onChange={useCallback((e) => setEmail(e.target.value), [])}
       onSearch={useCallback(
         (
           value: string,

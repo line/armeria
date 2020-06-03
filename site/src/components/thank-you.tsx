@@ -14,7 +14,7 @@ interface ThankYouProps {
   size?: number;
 }
 
-const ThankYou: React.FC<ThankYouProps> = props => {
+const ThankYou: React.FC<ThankYouProps> = (props) => {
   const wrapperRef = useRef(null);
   const lastConfettiFireTime = useRef(0);
   const [seed, setSeed] = useState(currentSeed());
@@ -140,7 +140,7 @@ const ThankYou: React.FC<ThankYouProps> = props => {
         <ReactMixitup
           ref={wrapperRef}
           items={usernames}
-          renderCells={items =>
+          renderCells={(items) =>
             items.map(({ key, ref, style }) => {
               return (
                 <span

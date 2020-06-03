@@ -10,7 +10,7 @@ interface DocsLayoutProps extends RouteComponentProps {
   pageTitle: string;
 }
 
-const DocsLayout: React.FC<DocsLayoutProps> = props => {
+const DocsLayout: React.FC<DocsLayoutProps> = (props) => {
   const {
     allMdx: { nodes: candidateMdxNodes },
   } = useStaticQuery(graphql`

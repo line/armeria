@@ -6,38 +6,43 @@ A webapp that shows the Armeria Docs page.
 
 To develop, start the dev server using 
 
-```bash
-$ yarn
-$ yarn run start
+```console
+$ npm install
+$ npm run develop
 ```
 
 or with Gradle (NodeJS will be downloaded automatically)
 
-```bash
-$ ./gradlew :docs-client:yarn_run_start --no-daemon
+```console
+$ ./gradlew :docs-client:npm_run_develop --no-daemon
 ```
 
 This will usually not be useful since without a server running, the client does not have any spec it can render.
 You can have server calls proxied to a running Armeria server by specifying the `ARMERIA_PORT` environment
 variable, e.g.,
 
-```bash
-$ ARMERIA_PORT=51234 yarn run start
+```console
+$ ARMERIA_PORT=51234 npm run develop
 ```
 
 or with Gradle
 
-```bash
-$ ARMERIA_PORT=51234 ./gradlew :docs-client:yarn_run_start --no-daemon
+```console
+$ ARMERIA_PORT=51234 ./gradlew :docs-client:npm_run_start --no-daemon
 ```
 
-Replacing the port of a docs page in the running server with `3000` will use the dev server to render while
+Replacing the port of the docs page in the running server with `3000` will use the dev server to render while
 proxying all server calls to the actual Armeria server.
+
+## Checking for dependency updates
+
+Use [npm-check-updates](https://www.npmjs.com/package/npm-check-updates)
+
+```console
+$ npx npm-check-updates --semverLevel major
+```
 
 ## Updating licenses
 
-When changing a dependency (i.e., when the `yarn.lock` file changes), refresh license information by running
-
-```bash
-$ yarn licenses generate-disclaimer --prod > ../licenses/web-licenses.txt
-```
+Make sure to include the `../licenses/web-licenses.txt` file in your commit if it is updated automatically
+during the build process (`npm run build`).

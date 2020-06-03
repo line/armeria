@@ -18,13 +18,13 @@ interface MarketingBlockProps {
   noreveal?: boolean;
 }
 
-const Highlight: React.FC<HighlightProps> = props => (
+const Highlight: React.FC<HighlightProps> = (props) => (
   <span className={props.nowrap ? styles.highlightNoWrap : styles.highlight}>
     {props.children}
   </span>
 );
 
-const Marketing: React.FC<MarketingProps> = props => {
+const Marketing: React.FC<MarketingProps> = (props) => {
   return (
     <div className={`${styles.wrapper} ${props.className || ''}`}>
       <div
@@ -36,7 +36,7 @@ const Marketing: React.FC<MarketingProps> = props => {
   );
 };
 
-const MarketingBlock: React.FC<MarketingBlockProps> = props => {
+const MarketingBlock: React.FC<MarketingBlockProps> = (props) => {
   return (
     <div className={`${styles.block} ${props.className || ''}`}>
       {props.noreveal ? props.children : <Reveal>{props.children}</Reveal>}
