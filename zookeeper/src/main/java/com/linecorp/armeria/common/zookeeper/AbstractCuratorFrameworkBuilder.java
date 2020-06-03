@@ -61,9 +61,8 @@ public class AbstractCuratorFrameworkBuilder {
     protected AbstractCuratorFrameworkBuilder(String zkConnectionStr, String zNodePath) {
         requireNonNull(zkConnectionStr, "zkConnectionStr");
         checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty.");
-        validateZNodePath(zNodePath);
         client = null;
-        this.zNodePath = zNodePath;
+        this.zNodePath = validateZNodePath(zNodePath);
         clientBuilder = CuratorFrameworkFactory.builder()
                                                .connectString(zkConnectionStr)
                                                .connectionTimeoutMs(DEFAULT_CONNECT_TIMEOUT_MILLIS)
@@ -77,19 +76,19 @@ public class AbstractCuratorFrameworkBuilder {
      */
     protected AbstractCuratorFrameworkBuilder(CuratorFramework client, String zNodePath) {
         this.client = requireNonNull(client, "client");
-        validateZNodePath(zNodePath);
-        this.zNodePath = zNodePath;
+        this.zNodePath = validateZNodePath(zNodePath);
         clientBuilder = null;
         customizers = null;
     }
 
-    private static void validateZNodePath(String zNodePath) {
+    private static String validateZNodePath(String zNodePath) {
         try {
             PathUtils.validatePath(zNodePath);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("zNodePath: " + zNodePath +
                                                " (reason: " + e.getMessage() + ')');
         }
+        return zNodePath;
     }
 
     /**

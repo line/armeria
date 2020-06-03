@@ -43,7 +43,6 @@ class ZooKeeperEndpointGroupTest {
 
     private static final String Z_NODE = "/testEndPoints";
     private static final String CURATOR_X_SERVICE_NAME = "foo";
-    private static final String CURATOR_X_ADDRESS = "foo.com";
     private static final int SESSION_TIMEOUT_MILLIS = 20000;
 
     @RegisterExtension
@@ -64,8 +63,7 @@ class ZooKeeperEndpointGroupTest {
         final Builder<Endpoint> builder = ImmutableSet.builder();
         builder.addAll(sampleEndpoints).addAll(extraEndpoints);
         try (CloseableZooKeeper zk = zkInstance.connection()) {
-            zk.sync(Z_NODE, (rc, path, ctx) -> {
-            }, null);
+            zk.sync(Z_NODE, (rc, path, ctx) -> {}, null);
         }
 
         final Set<Endpoint> expected = builder.build();

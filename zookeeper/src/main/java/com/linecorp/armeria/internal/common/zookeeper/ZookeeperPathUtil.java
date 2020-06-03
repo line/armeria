@@ -29,10 +29,10 @@ public final class ZookeeperPathUtil {
      */
     public static String validatePath(String path, String name) {
         requireNonNull(path, name);
+        if (path.indexOf('/') > 0) {
+            throw new IllegalArgumentException(name + " cannot have '/'. " + name + ": " + path);
+        }
         try {
-            if (path.indexOf('/') > 0) {
-                throw new IllegalArgumentException(name + " cannot have '/'. " + name + ": " + path);
-            }
             // Simply prepend '/' to validate the path.
             PathUtils.validatePath('/' + path);
         } catch (IllegalArgumentException e) {
