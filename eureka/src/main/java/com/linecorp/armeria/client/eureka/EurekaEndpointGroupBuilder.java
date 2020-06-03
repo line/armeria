@@ -44,6 +44,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
@@ -58,6 +59,8 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
 public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
 
     private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS = 30;
+
+    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     @Nullable
     private String appName;
@@ -89,6 +92,14 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     EurekaEndpointGroupBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                @Nullable String path) {
         super(sessionProtocol, endpointGroup, path);
+    }
+
+    /**
+     * Sets the {@link EndpointSelectionStrategy} of the {@link EurekaEndpointGroup}.
+     */
+    public EurekaEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        return this;
     }
 
     /**
@@ -216,8 +227,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
             final ClientFactory factory = options.factory();
             client = (WebClient) factory.newClient(params);
         }
-        return new EurekaEndpointGroup(client, registryFetchIntervalSeconds, appName, instanceId,
-                                       vipAddress, secureVipAddress, regions);
+        return new EurekaEndpointGroup(selectionStrategy, client, registryFetchIntervalSeconds, appName,
+                                       instanceId, vipAddress, secureVipAddress, regions);
     }
 
     // Override the return type of the chaining methods in the superclass.
