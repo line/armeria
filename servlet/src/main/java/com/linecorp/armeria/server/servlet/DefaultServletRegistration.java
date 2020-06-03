@@ -21,11 +21,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
 import javax.servlet.MultipartConfigElement;
@@ -38,44 +36,23 @@ import javax.servlet.ServletSecurityElement;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.server.servlet.util.UrlMapper;
-
 /**
  * The servlet supportPipeline.
  */
-public class ServletRegistration implements Dynamic {
+final class DefaultServletRegistration implements Dynamic {
     private final String servletName;
     private final Servlet servlet;
     private final ServletConfig servletConfig;
-    private final DefaultServletContext servletContext;
-    private final UrlMapper<ServletRegistration> urlMapper;
+    private final UrlMapper<DefaultServletRegistration> urlMapper;
     private final Set<String> mappingSet = new HashSet<>();
     private final Map<String, String> initParameterMap;
 
-    private boolean asyncSupported = true;
-    private int loadOnStartup = -1;
-    private AtomicBoolean initServlet = new AtomicBoolean();
-
-    @Nullable
-    private MultipartConfigElement multipartConfigElement;
-    @Nullable
-    private ServletSecurityElement servletSecurityElement;
-    @Nullable
-    private String roleName;
-
     /**
      * Creates a new instance.
      */
-    public ServletRegistration(String servletName, Servlet servlet, DefaultServletContext servletContext,
-                               UrlMapper<ServletRegistration> urlMapper) {
-        this(servletName, servlet, servletContext, urlMapper, ImmutableMap.copyOf(new HashMap<>()));
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public ServletRegistration(String servletName, Servlet servlet, DefaultServletContext servletContext,
-                               UrlMapper<ServletRegistration> urlMapper, Map<String, String> initParameterMap) {
+    DefaultServletRegistration(String servletName, Servlet servlet, DefaultServletContext servletContext,
+                               UrlMapper<DefaultServletRegistration> urlMapper,
+                               Map<String, String> initParameterMap) {
         requireNonNull(servletName, "servletName");
         requireNonNull(servlet, "servlet");
         requireNonNull(servletContext, "servletContext");
@@ -83,24 +60,23 @@ public class ServletRegistration implements Dynamic {
 
         this.servletName = servletName;
         this.servlet = servlet;
-        this.servletContext = servletContext;
         this.urlMapper = urlMapper;
         this.initParameterMap = ImmutableMap.copyOf(initParameterMap);
         servletConfig = new ServletConfig() {
             @Override
             public String getServletName() {
-                return ServletRegistration.this.servletName;
+                return servletName;
             }
 
             @Override
             public ServletContext getServletContext() {
-                return ServletRegistration.this.servletContext;
+                return servletContext;
             }
 
             @Override
             @Nullable
             public String getInitParameter(String name) {
-                return ServletRegistration.this.getInitParameter(name);
+                return initParameterMap.get(name);
             }
 
             @Override
@@ -108,64 +84,21 @@ public class ServletRegistration implements Dynamic {
                 return Collections.enumeration(ImmutableSet.copyOf(getInitParameters().keySet()));
             }
         };
-    }
-
-    /**
-     * Get servlet security element.
-     */
-    @Nullable
-    public ServletSecurityElement getServletSecurityElement() {
-        return servletSecurityElement;
-    }
-
-    /**
-     * Get multipart config element.
-     */
-    @Nullable
-    public MultipartConfigElement getMultipartConfigElement() {
-        return multipartConfigElement;
+        addMapping(servletName);
     }
 
     /**
      * Get servlet config.
      */
-    public ServletConfig getServletConfig() {
+    ServletConfig getServletConfig() {
         return servletConfig;
     }
 
     /**
      * Get servlet.
      */
-    public Servlet getServlet() {
+    Servlet getServlet() {
         return servlet;
-    }
-
-    /**
-     * Is async supported.
-     */
-    public Boolean isAsyncSupported() {
-        return asyncSupported;
-    }
-
-    /**
-     * Get load on startup.
-     */
-    public int getLoadOnStartup() {
-        return loadOnStartup;
-    }
-
-    /**
-     * Is initialization servlet cas.
-     */
-    public boolean isInitServletCas(boolean expect, boolean update) {
-        return initServlet.compareAndSet(expect, update);
-    }
-
-    /**
-     * Is initialization servlet.
-     */
-    public boolean isInitServlet() {
-        return initServlet.get();
     }
 
     @Override
@@ -186,7 +119,7 @@ public class ServletRegistration implements Dynamic {
     @Override
     @Nullable
     public String getRunAsRole() {
-        return roleName;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
@@ -223,30 +156,26 @@ public class ServletRegistration implements Dynamic {
 
     @Override
     public void setLoadOnStartup(int loadOnStartup) {
-        this.loadOnStartup = loadOnStartup;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public Set<String> setServletSecurity(ServletSecurityElement constraint) {
-        requireNonNull(constraint, "constraint");
-        servletSecurityElement = constraint;
-        return new HashSet<>(servletSecurityElement.getMethodNames());
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void setMultipartConfig(MultipartConfigElement multipartConfig) {
-        requireNonNull(multipartConfig, "multipartConfig");
-        multipartConfigElement = multipartConfig;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void setRunAsRole(String roleName) {
-        requireNonNull(roleName, "roleName");
-        this.roleName = roleName;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void setAsyncSupported(boolean isAsyncSupported) {
-        asyncSupported = isAsyncSupported;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

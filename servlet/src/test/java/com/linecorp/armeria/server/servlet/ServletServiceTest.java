@@ -59,15 +59,12 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.servlet.util.LinkedMultiValueMap;
-import com.linecorp.armeria.server.servlet.util.MimeMappings;
-import com.linecorp.armeria.server.servlet.util.ServletUtil;
-import com.linecorp.armeria.server.servlet.util.StringUtil;
-import com.linecorp.armeria.server.servlet.util.UrlMapper;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.buffer.Unpooled;
@@ -220,7 +217,7 @@ public class ServletServiceTest {
                 assertThat(request.getRequestURI()).isEqualTo("/home");
                 assertThat(request.getRequestURL().toString()).isEqualTo("http://127.0.0.1:" +
                                                                          request.getServerPort() + "/home");
-                assertThat(request.getPathInfo()).isEqualTo(null);
+                assertThat(request.getPathInfo()).isEqualTo("");
                 assertThat(request.getQueryString()).isEqualTo("test=1&array=abc&array=a%20bc");
                 assertThat(request.getServletPath()).isEqualTo("/home");
                 assertThat(
@@ -228,8 +225,8 @@ public class ServletServiceTest {
                 assertThat(
                         Collections.list(request.getHeaders("start_date")).size()).isEqualTo(1);
                 assertThat(request.getContextPath()).isEqualTo("");
-                assertThat(request.isRequestedSessionIdValid()).isEqualTo(false);
-                assertThat(request.isRequestedSessionIdFromCookie()).isEqualTo(false);
+                assertThat(request.isRequestedSessionIdValid()).isEqualTo(true);
+                assertThat(request.isRequestedSessionIdFromCookie()).isEqualTo(true);
                 assertThat(request.isRequestedSessionIdFromURL()).isEqualTo(false);
                 request.setAttribute("attribute1", "value1");
                 request.setAttribute("attribute2", "value2");
@@ -254,9 +251,8 @@ public class ServletServiceTest {
                 request.getLocalName();
                 assertThat(request.getLocalPort()).isEqualTo(request.getServerPort());
                 assertThat(request.isAsyncStarted()).isEqualTo(false);
-                assertThat(request.isAsyncSupported()).isEqualTo(true);
+                assertThat(request.isAsyncSupported()).isEqualTo(false);
                 assertThat(request.getDispatcherType()).isEqualTo(DispatcherType.REQUEST);
-                assertThat(request.getPathTranslated()).isEqualTo(null);
                 assertThat(request.getParts().size()).isEqualTo(0);
                 assertThat(request.getPart("file1")).isEqualTo(null);
                 assertThat(request.getServletContext().getMimeType("profile.bmp")).isEqualTo("image/bmp");
@@ -284,7 +280,6 @@ public class ServletServiceTest {
                 request.getServletContext().removeAttribute("attribute1");
                 assertThat(request.getServletContext().getAttribute("attribute1")).isEqualTo(null);
                 assertThat(request.getServletContext().getServletContextName()).isEqualTo("");
-                request.setCharacterEncoding(HttpConstants.DEFAULT_CHARSET.name());
                 assertThat(request.getCharacterEncoding()).isEqualTo(
                         HttpConstants.DEFAULT_CHARSET.name());
                 assertThat(request.getServletContext().getResponseCharacterEncoding()).isEqualTo(
@@ -298,9 +293,10 @@ public class ServletServiceTest {
                 assertThat(Objects.isNull(request.getServletContext().getFilterRegistration(
                         "authenticate"))).isEqualTo(true);
 
-                final FilterRegistration filterRegistration =
-                        new FilterRegistration("authenticate",
-                                               new AuthenFilter(), new UrlMapper<>(false));
+                final DefaultFilterRegistration filterRegistration =
+                        new DefaultFilterRegistration("authenticate", new AuthenFilter(),
+                                                      new UrlMapper<>(false),
+                                                      ImmutableMap.copyOf(new HashMap<>()));
                 assertThat(filterRegistration.getInitParameters().size()).isEqualTo(0);
                 assertThat(filterRegistration.getInitParameter("param1")).isEqualTo(null);
                 assertThat(Objects.isNull(filterRegistration.getFilter())).isEqualTo(false);
@@ -309,7 +305,6 @@ public class ServletServiceTest {
                         "com.linecorp.armeria.server.servlet.ServletServiceTest$AuthenFilter");
                 assertThat(Objects.isNull(filterRegistration.getServletNameMappings())).isEqualTo(false);
                 assertThat(Objects.isNull(filterRegistration.getUrlPatternMappings())).isEqualTo(false);
-                filterRegistration.setAsyncSupported(true);
                 final List dispatchers = new ArrayList();
                 dispatchers.add(DispatcherType.REQUEST);
                 filterRegistration.addMappingForServletNames(EnumSet.copyOf(dispatchers),
@@ -317,7 +312,7 @@ public class ServletServiceTest {
                 filterRegistration.addMappingForUrlPatterns(EnumSet.copyOf(dispatchers),
                                                             true, "/home", "/");
 
-                final ServletRegistration servletRegistration = (ServletRegistration) request
+                final DefaultServletRegistration servletRegistration = (DefaultServletRegistration) request
                         .getServletContext().getServletRegistration("/home");
                 assertThat(servletRegistration.getInitParameters().size()).isEqualTo(0);
                 assertThat(servletRegistration.getInitParameter("param1")).isEqualTo(null);
@@ -325,16 +320,7 @@ public class ServletServiceTest {
                 assertThat(servletRegistration.getName()).isEqualTo("/home");
                 assertThat(servletRegistration.getClassName()).isEqualTo(
                         "com.linecorp.armeria.server.servlet.ServletServiceTest$HomeServlet");
-                assertThat(servletRegistration.isAsyncSupported()).isEqualTo(true);
-                assertThat(servletRegistration.isInitServlet()).isEqualTo(true);
-                assertThat(servletRegistration.getLoadOnStartup()).isEqualTo(-1);
                 assertThat(servletRegistration.getMappings().size()).isEqualTo(1);
-                assertThat(servletRegistration.isInitServlet()).isEqualTo(true);
-                servletRegistration.setRunAsRole("user");
-                assertThat(servletRegistration.getRunAsRole()).isEqualTo("user");
-                servletRegistration.setAsyncSupported(true);
-                servletRegistration.setLoadOnStartup(1);
-
                 request.getServletContext().log(new Exception("Test log"), "Test log exception");
                 request.getServletContext().log("Test log", new Exception("Test log exception"));
                 request.getServletContext().setAttribute("attribute1", null);
@@ -346,8 +332,6 @@ public class ServletServiceTest {
                                                           .getRequestDispatcher(request.getRequestURI());
                 assertThat(dispatcher.getPath()).isEqualTo("/home");
                 assertThat(dispatcher.getName()).isEqualTo("/home");
-
-                request.setCharacterEncoding(HttpConstants.DEFAULT_CHARSET.name());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().write("welcome");
@@ -373,7 +357,8 @@ public class ServletServiceTest {
                 assertThat(request.getParameterMap().get("app")).isEqualTo(null);
                 assertThat(request.getParameterMap().containsValue("Armeria Servlet")).isEqualTo(true);
                 assertThat(request.getParameterMap().containsKey("null")).isEqualTo(false);
-                assertThat(Objects.isNull(((ServletHttpRequest) request).getHttpRequest())).isEqualTo(false);
+                assertThat(Objects.isNull(
+                        ((DefaultServletHttpRequest) request).getHttpRequest())).isEqualTo(false);
                 assertThat(
                         Collections.list(request.getParameterNames()).contains("application")).isEqualTo(true);
                 assertThat(request.getParameterValues("application")[0]).isEqualTo("Armeria Servlet");
@@ -391,7 +376,7 @@ public class ServletServiceTest {
                 response.setHeader("header1", "value1");
                 assertThat(response.getHeader("header1")).isEqualTo("value1");
                 response.setIntHeader("header2", 2);
-                assertThat(response.getHeaderNames().size()).isEqualTo(3);
+                assertThat(response.getHeaderNames().size()).isEqualTo(4);
                 assertThat(response.getHeaders("header2").size()).isEqualTo(1);
                 response.addDateHeader("end_date", new Date().getTime());
                 response.addHeader("header1", "value1");
@@ -422,7 +407,6 @@ public class ServletServiceTest {
             try {
                 assertThat(request.getParameterMap().entrySet().size()).isEqualTo(0);
                 assertThat(request.getDateHeader("test")).isEqualTo(-1);
-                assertThat(request.getIntHeader("test")).isEqualTo(-1);
                 assertThat(request.getParameter("test")).isEqualTo(null);
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
@@ -438,9 +422,9 @@ public class ServletServiceTest {
                 throws ServletException, IOException {
             logger.info("DELETE: {}", request.getRequestURI());
             try {
-                final DefaultServletInputStream inputStream = new DefaultServletInputStream();
-                inputStream.setContent(Unpooled.wrappedBuffer(
-                        ((ServletHttpRequest) request).getHttpRequest().content().array()));
+                final DefaultServletInputStream inputStream = new DefaultServletInputStream(
+                        Unpooled.wrappedBuffer(
+                                ((DefaultServletHttpRequest) request).getHttpRequest().content().array()));
                 assertThat(inputStream.isFinished()).isEqualTo(true);
                 assertThat(inputStream.isReady()).isEqualTo(false);
                 assertThat(inputStream.skip(1)).isEqualTo(0L);
@@ -461,10 +445,6 @@ public class ServletServiceTest {
                 assertThat(inputStream.read()).isEqualTo(-1);
                 inputStream.close();
 
-                final DefaultServletOutputStream outputStream = new DefaultServletOutputStream();
-                outputStream.getResponse();
-
-                ((DefaultServletOutputStream) response.getOutputStream()).getResponse();
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
@@ -492,7 +472,6 @@ public class ServletServiceTest {
                 map.hashCode();
                 map.toString();
 
-                ((ServletPrintWriter) response.getWriter()).getResponse();
                 ((ServletPrintWriter) response.getWriter()).setError();
                 ((ServletPrintWriter) response.getWriter()).clearError();
 
@@ -532,7 +511,8 @@ public class ServletServiceTest {
                 c[0] = 'c';
                 newWriter.write(c, 0, 1);
 
-                final DefaultServletInputStream d = new DefaultServletInputStream();
+                final DefaultServletInputStream d = new DefaultServletInputStream(Unpooled.wrappedBuffer(
+                        new byte[1]));
                 try {
                     d.skip(1);
                     d.readLine(new byte[1], 0, 0);

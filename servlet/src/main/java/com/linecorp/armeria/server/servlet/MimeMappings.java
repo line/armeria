@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.servlet.util;
+package com.linecorp.armeria.server.servlet;
 
 import static java.util.Objects.requireNonNull;
 
@@ -24,13 +24,13 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.server.servlet.util.MimeMappings.Mapping;
+import com.linecorp.armeria.server.servlet.MimeMappings.Mapping;
 
 /**
  * Simple container-independent abstraction for servlet mime mappings. Roughly equivalent
  * to the mime-mapping element traditionally found in web.xml.
  */
-public class MimeMappings implements Iterable<Mapping> {
+final class MimeMappings implements Iterable<Mapping> {
 
     // Forked from https://github.com/spring-projects/spring-boot/blob/master/spring-boot-project/
     // spring-boot/src/main/java/org/springframework/boot/web/server/MimeMappings.java
@@ -46,7 +46,7 @@ public class MimeMappings implements Iterable<Mapping> {
      * Returns all defined mappings.
      * @return the mappings.
      */
-    public Collection<Mapping> getAll() {
+    Collection<Mapping> getAll() {
         return map.values();
     }
 
@@ -57,7 +57,7 @@ public class MimeMappings implements Iterable<Mapping> {
      * @return any previous mapping or {@code null}
      */
     @Nullable
-    public String add(String extension, String mimeType) {
+    String add(String extension, String mimeType) {
         requireNonNull(extension, "extension");
         requireNonNull(mimeType, "mimeType");
         final Mapping previous = map.put(extension, new Mapping(extension, mimeType));
@@ -70,7 +70,7 @@ public class MimeMappings implements Iterable<Mapping> {
      * @return a mime mapping or {@code null}
      */
     @Nullable
-    public String get(String extension) {
+    String get(String extension) {
         requireNonNull(extension, "extension");
         final Mapping mapping = map.get(extension);
         return mapping == null ? null : mapping.getMimeType();
@@ -82,7 +82,7 @@ public class MimeMappings implements Iterable<Mapping> {
      * @return the removed mime mapping or {@code null} if no item was removed
      */
     @Nullable
-    public String remove(String extension) {
+    String remove(String extension) {
         requireNonNull(extension, "extension");
         final Mapping previous = map.remove(extension);
         return previous == null ? null : previous.getMimeType();
@@ -111,7 +111,7 @@ public class MimeMappings implements Iterable<Mapping> {
     /**
      * A single mime mapping.
      */
-    public final class Mapping {
+    static final class Mapping {
 
         private final String extension;
 
@@ -120,7 +120,7 @@ public class MimeMappings implements Iterable<Mapping> {
         /**
          * Mapping.
          */
-        public Mapping(String extension, String mimeType) {
+        Mapping(String extension, String mimeType) {
             requireNonNull(extension, "extension");
             requireNonNull(mimeType, "mimeType");
             this.extension = extension;
@@ -130,14 +130,14 @@ public class MimeMappings implements Iterable<Mapping> {
         /**
          * Get extension.
          */
-        public String getExtension() {
+        String getExtension() {
             return extension;
         }
 
         /**
          * Get mime type.
          */
-        public String getMimeType() {
+        String getMimeType() {
             return mimeType;
         }
 

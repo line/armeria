@@ -63,23 +63,17 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.servlet.util.LinkedMultiValueMap;
-import com.linecorp.armeria.server.servlet.util.ServletUtil;
 
 import io.netty.buffer.Unpooled;
 
 /**
  * The servlet request.
  */
-public class ServletHttpRequest implements HttpServletRequest {
-    private static final int HTTPS_PORT = 443;
-    private static final int HTTP_PORT = 80;
-    private static final String HTTPS = "https";
-    private static final String HTTP = "http";
-    private static final String POST = "POST";
-
-    private static final Logger logger = LoggerFactory.getLogger(ServletHttpRequest.class);
+final class DefaultServletHttpRequest implements HttpServletRequest {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultServletHttpRequest.class);
     private static final Locale[] DEFAULT_LOCALS = { Locale.getDefault() };
     private static final String RFC1123_DATE = "EEE, dd MMM yyyy HH:mm:ss zzz";
     private static final SimpleDateFormat[] FORMATS_TEMPLATE = {
@@ -91,34 +85,25 @@ public class ServletHttpRequest implements HttpServletRequest {
     private final ServiceRequestContext serviceRequestContext;
     private final DefaultServletContext servletContext;
     private final AggregatedHttpRequest httpRequest;
-    private final DefaultServletInputStream inputStream = new DefaultServletInputStream();
+    private final DefaultServletInputStream inputStream;
     private final Map<String, Object> attributeMap = new ConcurrentHashMap<>(16);
+    private final SessionTrackingMode sessionIdSource = SessionTrackingMode.COOKIE;
 
-    private LinkedMultiValueMap<String, String> parameterMap = new LinkedMultiValueMap<>();
-    private List<Part> fileUploadList = new ArrayList<>();
-    private Boolean asyncSupportedFlag = true;
+    private final LinkedMultiValueMap<String, String> parameterMap = new LinkedMultiValueMap<>();
+    private final List<Part> fileUploadList = new ArrayList<>();
+    private final String servletPath;
+    private final String pathInfo;
+    private final String requestURI;
+    private final String characterEncoding;
+    private final Locale[] locales;
+    private final String queryString;
 
     @Nullable
-    private String servletPath;
-    @Nullable
-    private String queryString;
-    @Nullable
-    private String pathInfo;
-    @Nullable
-    private String requestURI;
-    @Nullable
-    private String characterEncoding;
-    @Nullable
-    private SessionTrackingMode sessionIdSource;
-    private boolean usingInputStreamFlag;
+    private final Cookie[] cookies;
+
+    //Can't be final because user will decide reader or inputStream is initialize.
     @Nullable
     private BufferedReader reader;
-    @Nullable
-    private Cookie[] cookies;
-    @Nullable
-    private Locale[] locales;
-    @Nullable
-    private ServletRequestDispatcher dispatcher;
 
     private final Map<String, String[]> unmodifiableParameterMap = new AbstractMap<String, String[]>() {
         @Override
@@ -130,8 +115,7 @@ public class ServletHttpRequest implements HttpServletRequest {
                                .stream()
                                .map(x -> new SimpleImmutableEntry<>(
                                        x.getKey(),
-                                       x.getValue() != null ? x.getValue().toArray(
-                                               new String[x.getValue().size()]) : null))
+                                       x.getValue() != null ? x.getValue().toArray(new String[0]) : null))
                                .collect(Collectors.toSet());
         }
 
@@ -142,7 +126,7 @@ public class ServletHttpRequest implements HttpServletRequest {
             if (value == null) {
                 return null;
             } else {
-                return value.toArray(new String[value.size()]);
+                return value.toArray(new String[0]);
             }
         }
 
@@ -164,39 +148,38 @@ public class ServletHttpRequest implements HttpServletRequest {
         }
     };
 
-    protected ServletHttpRequest(ServiceRequestContext serviceRequestContext,
-                                 DefaultServletContext servletContext,
-                                 AggregatedHttpRequest request) {
+    DefaultServletHttpRequest(ServiceRequestContext serviceRequestContext,
+                              DefaultServletContext servletContext,
+                              AggregatedHttpRequest httpRequest) {
         requireNonNull(serviceRequestContext, "serviceRequestContext");
         requireNonNull(servletContext, "servletContext");
-        requireNonNull(request, "request");
+        requireNonNull(httpRequest, "request");
 
         this.serviceRequestContext = serviceRequestContext;
         this.servletContext = servletContext;
-        httpRequest = request;
-        inputStream.setContent(Unpooled.wrappedBuffer(request.content().array()));
+        this.httpRequest = httpRequest;
+        inputStream = new DefaultServletInputStream(Unpooled.wrappedBuffer(httpRequest.content().array()));
+
+        final String encoding = ServletUtil.decodeCharacterEncoding(getContentType());
+        characterEncoding = encoding != null ? encoding : servletContext.getRequestCharacterEncoding();
+
+        requestURI = decodeRequestURI();
         decodeUrlParameter();
         decodeBody();
-        decodeCookie();
-        decodeLocale();
+        cookies = decodeCookie();
+        locales = decodeLocale();
         getProtocol();
         getScheme();
-        decodePaths();
-    }
-
-    void setDispatcher(ServletRequestDispatcher dispatcher) {
-        requireNonNull(dispatcher, "dispatcher");
-        this.dispatcher = dispatcher;
-    }
-
-    void setAsyncSupportedFlag(boolean asyncSupportedFlag) {
-        this.asyncSupportedFlag = asyncSupportedFlag;
+        queryString = decodeQuery();
+        servletPath = servletContext.getServletPath(requestURI).replaceFirst(
+                servletContext.getContextPath(), "");
+        pathInfo = decodePathInfo();
     }
 
     /**
      * Get netty request.
      */
-    public AggregatedHttpRequest getHttpRequest() {
+    AggregatedHttpRequest getHttpRequest() {
         return httpRequest;
     }
 
@@ -207,26 +190,16 @@ public class ServletHttpRequest implements HttpServletRequest {
     /**
      * Parse area.
      */
-    private void decodeLocale() {
+    private Locale[] decodeLocale() {
         final String headerValue = getHeader(HttpHeaderNames.ACCEPT_LANGUAGE.toString());
-        if (headerValue == null) {
-            locales = DEFAULT_LOCALS;
+        if (headerValue.isEmpty()) {
+            return DEFAULT_LOCALS;
         } else {
-            locales = Arrays.stream(getHeader(HttpHeaderNames.ACCEPT_LANGUAGE.toString()).split(","))
-                            .map(x -> x.split(";").length > 0 ?
-                                      Locale.forLanguageTag(x.split(";")[0].trim())
-                                                              : Locale.forLanguageTag(x.trim())
-                            ).toArray(Locale[]::new);
-        }
-    }
-
-    /**
-     * Parsing coding.
-     */
-    private void decodeCharacterEncoding() {
-        characterEncoding = ServletUtil.decodeCharacterEncoding(getContentType());
-        if (characterEncoding == null) {
-            characterEncoding = servletContext.getRequestCharacterEncoding();
+            return Arrays.stream(headerValue.split(","))
+                         .map(x -> x.split(";").length > 0 ?
+                                   Locale.forLanguageTag(x.split(";")[0].trim())
+                                                           : Locale.forLanguageTag(x.trim())
+                         ).toArray(Locale[]::new);
         }
     }
 
@@ -234,7 +207,7 @@ public class ServletHttpRequest implements HttpServletRequest {
      * parse parameter specification.
      */
     private void decodeBody() {
-        if (POST.equalsIgnoreCase(getMethod()) && getContentLength() > 0) {
+        if (HttpMethod.POST.toString().equalsIgnoreCase(getMethod()) && getContentLength() > 0) {
             ServletUtil.decodeBody(parameterMap, httpRequest.content().array(), getContentType());
         }
     }
@@ -250,35 +223,44 @@ public class ServletHttpRequest implements HttpServletRequest {
     /**
      * Parsing the cookie.
      */
-    private void decodeCookie() {
+    @Nullable
+    private Cookie[] decodeCookie() {
         final String value = getHeader(HttpHeaderNames.COOKIE.toString());
         if (!isNullOrEmpty(value)) {
             final Collection<Cookie> cookieSet = ServletUtil.decodeCookie(value);
             if (!cookieSet.isEmpty()) {
-                cookies = cookieSet.toArray(new Cookie[0]);
+                return cookieSet.toArray(new Cookie[0]);
             }
         }
+        return null;
     }
 
     /**
      * Parsing path.
      */
-    private void decodePaths() {
-        String requestURI = httpRequest.path();
-        final String queryString;
-        final int queryInx = requestURI.indexOf('?');
-        if (queryInx > -1) {
-            queryString = requestURI.substring(queryInx + 1);
-            requestURI = requestURI.substring(0, queryInx);
-        } else {
-            queryString = null;
-        }
-        if (requestURI.length() > 1 && requestURI.charAt(0) == '/' && requestURI.charAt(1) == '/') {
-            requestURI = requestURI.substring(1);
-        }
+    private String decodePathInfo() {
+        return requestURI.replaceFirst(getContextPath(), "")
+                         .replaceFirst(servletPath, "");
+    }
 
-        this.requestURI = requestURI;
-        this.queryString = queryString;
+    /**
+     * Parsing path.
+     */
+    private String decodeRequestURI() {
+        final String path = httpRequest.path();
+        int queryInx = path.indexOf('?');
+        if (queryInx == -1) {
+            queryInx = path.indexOf('#');
+        }
+        return queryInx > -1 ? path.substring(0, queryInx) : path;
+    }
+
+    /**
+     * Parsing path.
+     */
+    private String decodeQuery() {
+        final int queryInx = httpRequest.path().indexOf('?');
+        return queryInx > -1 ? httpRequest.path().substring(queryInx + 1) : "";
     }
 
     @Override
@@ -312,11 +294,10 @@ public class ServletHttpRequest implements HttpServletRequest {
      * @return header value.
      */
     @Override
-    @Nullable
     public String getHeader(String name) {
         requireNonNull(name, "name");
         final Object value = httpRequest.headers().get(name);
-        return value == null ? null : String.valueOf(value);
+        return value == null ? "" : String.valueOf(value);
     }
 
     @Override
@@ -336,14 +317,14 @@ public class ServletHttpRequest implements HttpServletRequest {
         final String scheme = getScheme();
         int port = getServerPort();
         if (port < 0) {
-            port = HTTP_PORT;
+            port = SessionProtocol.HTTP.defaultPort();
         }
 
         url.append(scheme);
         url.append("://");
         url.append(getServerName());
-        if ((HTTP.equals(scheme) && (port != HTTP_PORT)) ||
-            (HTTPS.equals(scheme) && (port != HTTPS_PORT))) {
+        if ((SessionProtocol.HTTP.uriText().equals(scheme) && (port != SessionProtocol.HTTP.defaultPort())) ||
+            (SessionProtocol.HTTPS.uriText().equals(scheme) && (port != SessionProtocol.HTTPS.defaultPort()))) {
             url.append(':');
             url.append(port);
         }
@@ -382,10 +363,6 @@ public class ServletHttpRequest implements HttpServletRequest {
      */
     @Override
     public String getServletPath() {
-        if (servletPath == null) {
-            servletPath = servletContext.getServletPath(requestURI).replaceFirst(
-                    servletContext.getContextPath(), "");
-        }
         return servletPath;
     }
 
@@ -425,9 +402,6 @@ public class ServletHttpRequest implements HttpServletRequest {
     public int getIntHeader(String name) {
         requireNonNull(name, "name");
         final String headerStringValue = getHeader(name);
-        if (headerStringValue == null) {
-            return -1;
-        }
         return Integer.parseInt(headerStringValue);
     }
 
@@ -444,7 +418,7 @@ public class ServletHttpRequest implements HttpServletRequest {
      */
     @Override
     public String getContextPath() {
-        return getServletContext().getContextPath();
+        return servletContext.getContextPath();
     }
 
     @Override
@@ -488,16 +462,12 @@ public class ServletHttpRequest implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
-        if (characterEncoding == null) {
-            decodeCharacterEncoding();
-        }
         return characterEncoding;
     }
 
     @Override
     public void setCharacterEncoding(String env) throws UnsupportedEncodingException {
-        requireNonNull(env, "env");
-        characterEncoding = env;
+        throw new IllegalStateException("Can't set character encoding after request is initialized");
     }
 
     @Override
@@ -507,12 +477,11 @@ public class ServletHttpRequest implements HttpServletRequest {
 
     @Override
     public long getContentLengthLong() {
-        return Integer.parseInt(httpRequest.headers().get(HttpHeaderNames.CONTENT_LENGTH)
-                                           .replaceAll("\\[|\\]", ""));
+        return Integer.parseInt(getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())
+                                        .replaceAll("[\\[\\]]", ""));
     }
 
     @Override
-    @Nullable
     public String getContentType() {
         return getHeader(HttpHeaderNames.CONTENT_TYPE.toString());
     }
@@ -522,7 +491,6 @@ public class ServletHttpRequest implements HttpServletRequest {
         if (reader != null) {
             throw new IllegalStateException("getReader() has already been called for this request");
         }
-        usingInputStreamFlag = true;
         return inputStream;
     }
 
@@ -578,17 +546,11 @@ public class ServletHttpRequest implements HttpServletRequest {
 
     @Override
     public BufferedReader getReader() throws IOException {
-        if (usingInputStreamFlag) {
-            throw new IllegalStateException("getInputStream() has already been called for this request");
-        }
         if (reader == null) {
             synchronized (this) {
                 if (reader == null) {
-                    String charset = getCharacterEncoding();
-                    if (charset == null) {
-                        charset = getServletContext().getRequestCharacterEncoding();
-                    }
-                    reader = new BufferedReader(new InputStreamReader(getInputStream(), charset));
+                    reader = new BufferedReader(
+                            new InputStreamReader(getInputStream(), getCharacterEncoding()));
                 }
             }
         }
@@ -638,10 +600,11 @@ public class ServletHttpRequest implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        return HTTPS.equals(getScheme());
+        return SessionProtocol.HTTPS.uriText().equals(getScheme());
     }
 
     @Override
+    @Nullable
     public ServletRequestDispatcher getRequestDispatcher(String path) {
         return servletContext.getRequestDispatcher(path);
     }
@@ -688,7 +651,7 @@ public class ServletHttpRequest implements HttpServletRequest {
 
     @Override
     public boolean isAsyncSupported() {
-        return asyncSupportedFlag;
+        return false;
     }
 
     @Override
@@ -702,12 +665,8 @@ public class ServletHttpRequest implements HttpServletRequest {
     }
 
     @Override
-    @Nullable
     public String getPathTranslated() {
-        if (isNullOrEmpty(servletContext.getContextPath())) {
-            return null;
-        }
-        return pathInfo == null ? null : servletContext.getRealPath(pathInfo);
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     /**

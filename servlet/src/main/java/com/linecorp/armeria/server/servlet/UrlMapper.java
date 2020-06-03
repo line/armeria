@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.servlet.util;
+package com.linecorp.armeria.server.servlet;
 
 import static java.util.Objects.requireNonNull;
 
@@ -29,9 +29,7 @@ import javax.annotation.Nullable;
  * Mapping specification
  * In the web application deployment descriptor.
  */
-public class UrlMapper<T> {
-    @Nullable
-    private String rootPath;
+final class UrlMapper<T> {
     private final boolean singlePattern;
     private final List<Element<T>> elementList = new ArrayList<>();
     private final StringUtil stringUtil = new StringUtil();
@@ -39,7 +37,7 @@ public class UrlMapper<T> {
     /**
      * Creates a new instance.
      */
-    public UrlMapper(boolean singlePattern) {
+    UrlMapper(boolean singlePattern) {
         this.singlePattern = singlePattern;
     }
 
@@ -49,7 +47,7 @@ public class UrlMapper<T> {
      * @param object     object.
      * @param objectName objectName.
      */
-    public void addMapping(String urlPattern, T object, String objectName) {
+    void addMapping(String urlPattern, T object, String objectName) {
         requireNonNull(urlPattern, "urlPattern");
         requireNonNull(object, "object");
         requireNonNull(objectName, "objectName");
@@ -66,7 +64,7 @@ public class UrlMapper<T> {
             element.objectName = objectName;
             element.object = object;
         } else {
-            elementList.add(new Element<>(rootPath, urlPattern, object, objectName));
+            elementList.add(new Element<>(null, urlPattern, object, objectName));
         }
     }
 
@@ -75,7 +73,7 @@ public class UrlMapper<T> {
      * @param absoluteUri An absolute path.
      * @return servlet path.
      */
-    public String getServletPath(String absoluteUri) {
+    String getServletPath(String absoluteUri) {
         requireNonNull(absoluteUri, "absoluteUri");
         return elementList.stream()
                           .filter(x -> stringUtil.match(x.pattern, absoluteUri, "*"))
@@ -90,7 +88,7 @@ public class UrlMapper<T> {
      * @return T object.
      */
     @Nullable
-    public Element<T> getMappingObjectByUri(String absoluteUri) {
+    Element<T> getMappingObjectByUri(String absoluteUri) {
         requireNonNull(absoluteUri, "absoluteUri");
         return elementList.stream()
                           .filter(x -> stringUtil.match(x.pattern, absoluteUri, "*"))
@@ -117,7 +115,7 @@ public class UrlMapper<T> {
      * @param list add in list.
      * @param absoluteUri An absolute path.
      */
-    public void addMappingObjectsByUri(String absoluteUri, List<T> list) {
+    void addMappingObjectsByUri(String absoluteUri, List<T> list) {
         requireNonNull(absoluteUri, "absoluteUri");
         requireNonNull(list, "list");
         elementList.stream()
@@ -132,7 +130,7 @@ public class UrlMapper<T> {
     /**
      * Class element.
      */
-    public static class Element<T> {
+    static class Element<T> {
         String pattern;
         String originalPattern;
         T object;
@@ -145,7 +143,7 @@ public class UrlMapper<T> {
             requireNonNull(objectName, "objectName");
             requireNonNull(object, "object");
             if (rootPath != null) {
-                pattern = rootPath.concat(originalPattern);
+                pattern = rootPath + originalPattern;
             } else {
                 pattern = originalPattern;
             }
@@ -170,7 +168,7 @@ public class UrlMapper<T> {
         /**
          * Get object.
          */
-        public T getObject() {
+        T getObject() {
             return object;
         }
     }

@@ -16,13 +16,12 @@
 package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -37,63 +36,48 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-
-import io.netty.handler.codec.http.HttpConstants;
 
 /**
  * Servlet response.
  */
-public class ServletHttpResponse implements HttpServletResponse {
-    private final DefaultServletContext servletContext;
+final class DefaultServletHttpResponse implements HttpServletResponse {
     private final List<Cookie> cookies = new ArrayList<>();
-    private final DefaultServletOutputStream outputStream = new DefaultServletOutputStream();
+    private final DefaultServletOutputStream outputStream;
     private final ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
+    private final PrintWriter writer;
+    private final HttpResponseWriter responseWriter;
 
-    private String characterEncoding = HttpConstants.DEFAULT_CHARSET.name();
-    private Locale locale = Locale.getDefault();
-
-    @Nullable
-    private PrintWriter writer;
-    @Nullable
-    private String contentType;
-    @Nullable
-    private HttpResponseWriter responseWriter;
-
-    protected ServletHttpResponse(DefaultServletContext servletContext) {
+    DefaultServletHttpResponse(DefaultServletContext servletContext, HttpResponseWriter responseWriter) {
         requireNonNull(servletContext, "servletContext");
-        this.servletContext = servletContext;
-    }
-
-    /**
-     * Get response writer.
-     */
-    @Nullable
-    public HttpResponseWriter getResponseWriter() {
-        return responseWriter;
-    }
-
-    /**
-     * Get response writer.
-     */
-    public void setResponseWriter(HttpResponseWriter responseWriter) {
         requireNonNull(responseWriter, "responseWriter");
         this.responseWriter = responseWriter;
+        outputStream = new DefaultServletOutputStream(this);
+        writer = new ServletPrintWriter(this, outputStream);
+        headersBuilder.set(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8.toString());
+        setCharacterEncoding(servletContext.getRequestCharacterEncoding());
+    }
+
+    /**
+     * Get response writer.
+     */
+    HttpResponseWriter getResponseWriter() {
+        return responseWriter;
     }
 
     /**
      * Get header builder.
      */
-    public ResponseHeadersBuilder getHeadersBuilder() {
+    ResponseHeadersBuilder getHeadersBuilder() {
         return headersBuilder;
     }
 
     /**
      * Get cookie.
      */
-    @Nullable
-    public List<Cookie> getCookies() {
+    List<Cookie> getCookies() {
         return cookies;
     }
 
@@ -137,9 +121,6 @@ public class ServletHttpResponse implements HttpServletResponse {
 
     @Override
     public void sendError(int sc, @Nullable String msg) throws IOException {
-        if (responseWriter == null) {
-            return;
-        }
         if (msg == null) {
             msg = "";
         }
@@ -157,9 +138,6 @@ public class ServletHttpResponse implements HttpServletResponse {
     @Override
     public void sendRedirect(String location) throws IOException {
         requireNonNull(location, "location");
-        if (responseWriter == null) {
-            return;
-        }
         responseWriter.tryWrite(
                 ResponseHeaders.of(HttpStatus.SEE_OTHER, HttpHeaderNames.LOCATION.toString(), location));
         responseWriter.close();
@@ -208,16 +186,15 @@ public class ServletHttpResponse implements HttpServletResponse {
     }
 
     @Override
-    public void setContentType(String type) {
-        requireNonNull(type, "type");
-        contentType = type;
-        setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), type);
+    public void setContentType(String contentType) {
+        requireNonNull(contentType, "contentType");
+        setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), contentType);
     }
 
     @Override
-    @Nullable
     public String getContentType() {
-        return contentType;
+        final String contentType = getHeader(HttpHeaderNames.CONTENT_TYPE.toString());
+        return contentType == null ? "" : contentType;
     }
 
     @Override
@@ -259,36 +236,24 @@ public class ServletHttpResponse implements HttpServletResponse {
 
     @Override
     public String getCharacterEncoding() {
-        return characterEncoding;
+        return getContentType().split(";")[1].trim();
     }
 
     @Override
     public DefaultServletOutputStream getOutputStream() throws IOException {
-        outputStream.setResponse(this);
         return outputStream;
     }
 
     @Override
     public PrintWriter getWriter() throws IOException {
-        if (writer != null) {
-            return writer;
-        }
-
-        String characterEncoding = getCharacterEncoding();
-        if (isNullOrEmpty(characterEncoding)) {
-            characterEncoding = servletContext.getResponseCharacterEncoding();
-            setCharacterEncoding(characterEncoding);
-        }
-
-        writer = new ServletPrintWriter(getOutputStream(), Charset.forName(characterEncoding));
-        ((ServletPrintWriter) writer).setResponse(this);
         return writer;
     }
 
     @Override
     public void setCharacterEncoding(String charset) {
         requireNonNull(charset, "charset");
-        characterEncoding = charset;
+        headersBuilder.set(HttpHeaderNames.CONTENT_TYPE,
+                           getContentType().split(";")[0].trim() + "; " + charset);
     }
 
     @Override
@@ -337,23 +302,24 @@ public class ServletHttpResponse implements HttpServletResponse {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * Whether to reset the print stream.
-     * @param resetWriterStreamFlags True = resets the print stream, false= does not reset the print stream.
-     */
-    public void resetBuffer(boolean resetWriterStreamFlags) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     @Override
-    public void setLocale(Locale loc) {
-        requireNonNull(loc, "loc");
-        locale = loc;
+    public void setLocale(Locale locale) {
+        requireNonNull(locale, "locale");
+        headersBuilder.set(HttpHeaderNames.CONTENT_LANGUAGE, locale.toLanguageTag());
     }
 
     @Override
     @Nullable
     public Locale getLocale() {
-        return locale;
+        final String headerValue = headersBuilder.get(HttpHeaderNames.CONTENT_LANGUAGE);
+        if (headerValue == null) {
+            return Locale.ENGLISH;
+        } else {
+            return Arrays.stream(headerValue.split(","))
+                         .map(x -> x.split(";").length > 0 ?
+                                   Locale.forLanguageTag(x.split(";")[0].trim())
+                                                           : Locale.forLanguageTag(x.trim())
+                         ).toArray(Locale[]::new)[0];
+        }
     }
 }

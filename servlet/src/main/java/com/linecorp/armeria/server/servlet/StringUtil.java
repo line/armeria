@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.servlet.util;
+package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 /**
  * String util.
  */
-public class StringUtil {
+final class StringUtil {
 
     // Forked from https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/main/java/
     // org/springframework/util/AntPathMatcher.java
@@ -40,8 +40,8 @@ public class StringUtil {
     private static final String DEFAULT_PATH_SEPARATOR = "/";
     private static final int CACHE_TURNOFF_THRESHOLD = 65536;
     private static final char[] WILDCARD_CHARS = { '*', '?', '{' };
-    private final String pathSeparator = DEFAULT_PATH_SEPARATOR;
-    private final boolean caseSensitive = true;
+    private static final String pathSeparator = DEFAULT_PATH_SEPARATOR;
+    private static final boolean caseSensitive = true;
 
     @Nullable
     private volatile Boolean cachePatterns;
@@ -60,7 +60,7 @@ public class StringUtil {
     /**
      * Match pattern.
      */
-    public boolean match(String pattern, String path, String allToken) {
+    boolean match(String pattern, String path, String allToken) {
         requireNonNull(pattern, "pattern");
         requireNonNull(path, "path");
         requireNonNull(allToken, "allToken");
@@ -74,8 +74,8 @@ public class StringUtil {
      * @param fullMatch whether a full pattern match is required.
      * @return {@code true} if the supplied {@code path} matched, {@code false} if it didn't.
      */
-    protected boolean doMatch(String pattern, String path, boolean fullMatch,
-                              @Nullable Map<String, String> uriTemplateVariables, String allToken) {
+    boolean doMatch(String pattern, String path, boolean fullMatch,
+                    @Nullable Map<String, String> uriTemplateVariables, String allToken) {
         requireNonNull(pattern, "pattern");
         requireNonNull(path, "path");
         requireNonNull(allToken, "allToken");
@@ -202,7 +202,7 @@ public class StringUtil {
         return true;
     }
 
-    private boolean isPotentialMatch(String path, String[] pattDirs) {
+    private static boolean isPotentialMatch(String path, String[] pattDirs) {
         requireNonNull(path, "path");
         requireNonNull(pattDirs, "pattDirs");
         int pos = 0;
@@ -218,7 +218,7 @@ public class StringUtil {
         return true;
     }
 
-    private int skipSegment(String path, int pos, String prefix) {
+    private static int skipSegment(String path, int pos, String prefix) {
         requireNonNull(path, "path");
         requireNonNull(prefix, "prefix");
         checkArgument(pos >= 0, "pos: %s (expected: >= 0)", pos);
@@ -239,7 +239,7 @@ public class StringUtil {
         return skipped;
     }
 
-    private int skipSeparator(String path, int pos, String separator) {
+    private static int skipSeparator(String path, int pos, String separator) {
         requireNonNull(path, "path");
         requireNonNull(separator, "separator");
         checkArgument(pos >= 0, "pos: %s (expected: >= 0)", pos);
@@ -250,7 +250,7 @@ public class StringUtil {
         return skipped;
     }
 
-    private boolean isWildcardChar(char c) {
+    private static boolean isWildcardChar(char c) {
         for (char candidate : WILDCARD_CHARS) {
             if (c == candidate) {
                 return true;
@@ -262,7 +262,7 @@ public class StringUtil {
     /**
      * Tokenize the given path pattern into parts, based on this matcher's settings.
      */
-    protected String[] tokenizePattern(String pattern) {
+    String[] tokenizePattern(String pattern) {
         requireNonNull(pattern, "pattern");
         String[] tokenized = null;
         final Boolean cachePatterns = this.cachePatterns;
@@ -290,7 +290,7 @@ public class StringUtil {
      * @param path the path to tokenize.
      * @return the tokenized path parts.
      */
-    protected String[] tokenizePath(String path) {
+    String[] tokenizePath(String path) {
         requireNonNull(path, "path");
         return tokenizeToStringArray(path, pathSeparator, false, true);
     }
@@ -311,7 +311,7 @@ public class StringUtil {
     /**
      * Build or retrieve an {@link AntPathStringMatcher} for the given pattern.
      */
-    protected AntPathStringMatcher getStringMatcher(String pattern) {
+    AntPathStringMatcher getStringMatcher(String pattern) {
         requireNonNull(pattern, "pattern");
         AntPathStringMatcher matcher = null;
         final Boolean cachePatterns = this.cachePatterns;
@@ -339,7 +339,7 @@ public class StringUtil {
      * The pattern may contain special characters: '*' means zero or more characters; '?' means one and
      * only one character; '{' and '}' indicate a URI template pattern. For example <tt>/users/{user}</tt>.
      */
-    protected static class AntPathStringMatcher {
+    static class AntPathStringMatcher {
 
         private static final Pattern GLOB_PATTERN =
                 Pattern.compile("\\?|\\*|\\{((?:\\{[^/]+?\\}|[^/{}]|\\\\[{}])+?)\\}");
@@ -350,7 +350,7 @@ public class StringUtil {
 
         private final List<String> variableNames = new LinkedList<String>();
 
-        public AntPathStringMatcher(String pattern, boolean caseSensitive) {
+        AntPathStringMatcher(String pattern, boolean caseSensitive) {
             requireNonNull(pattern, "pattern");
             final StringBuilder patternBuilder = new StringBuilder();
             final Matcher matcher = GLOB_PATTERN.matcher(pattern);
@@ -398,7 +398,7 @@ public class StringUtil {
          * Main entry point.
          * @return {@code true} if the string matches against the pattern, or {@code false} otherwise.
          */
-        public boolean matchStrings(String str, @Nullable Map<String, String> uriTemplateVariables) {
+        boolean matchStrings(String str, @Nullable Map<String, String> uriTemplateVariables) {
             requireNonNull(str, "str");
             final Matcher matcher = pattern.matcher(str);
             if (matcher.matches()) {
@@ -427,8 +427,8 @@ public class StringUtil {
     /**
      * Tokenize string by delimiters to string array.
      */
-    public static String[] tokenizeToStringArray(String str, String delimiters, boolean trimTokens,
-                                                 boolean ignoreEmptyTokens) {
+    static String[] tokenizeToStringArray(String str, String delimiters, boolean trimTokens,
+                                          boolean ignoreEmptyTokens) {
         requireNonNull(str, "str");
         requireNonNull(delimiters, "delimiters");
         final StringTokenizer st = new StringTokenizer(str, delimiters);
@@ -438,7 +438,7 @@ public class StringUtil {
             String token;
             do {
                 if (!st.hasMoreTokens()) {
-                    return tokens.toArray(new String[tokens.size()]);
+                    return tokens.toArray(new String[0]);
                 }
 
                 token = st.nextToken();

@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 
-import javax.annotation.Nullable;
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
@@ -28,14 +27,14 @@ import io.netty.buffer.ByteBuf;
 /**
  * The servlet input stream.
  */
-public class DefaultServletInputStream extends ServletInputStream {
-    @Nullable
-    private ByteBuf source;
+final class DefaultServletInputStream extends ServletInputStream {
+    private final ByteBuf source;
 
     /**
-     * Set content.
+     * Creates a new instance.
      */
-    public void setContent(ByteBuf source) {
+    DefaultServletInputStream(ByteBuf source) {
+        requireNonNull(source, "source");
         this.source = source;
     }
 
@@ -50,7 +49,7 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public boolean isFinished() {
-        return source == null || source.readableBytes() == 0;
+        return source.readableBytes() == 0;
     }
 
     /**
@@ -59,7 +58,7 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public boolean isReady() {
-        return source != null && source.readableBytes() != 0;
+        return source.readableBytes() != 0;
     }
 
     @Override
@@ -72,9 +71,6 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public long skip(long n) throws IOException {
-        if (source == null) {
-            return 0;
-        }
         final long skipLen = Math.min(source.readableBytes(), n);
         source.skipBytes((int) skipLen);
         return skipLen;
@@ -86,12 +82,11 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public int available() throws IOException {
-        return null == source ? 0 : source.readableBytes();
+        return source.readableBytes();
     }
 
     @Override
     public void close() throws IOException {
-        source = null;
     }
 
     /**
@@ -109,7 +104,7 @@ public class DefaultServletInputStream extends ServletInputStream {
      */
     @Override
     public int read() throws IOException {
-        if (isFinished() || source == null) {
+        if (isFinished()) {
             return -1;
         }
         return source.readByte();

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.servlet.util;
+package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -48,7 +48,7 @@ import io.netty.util.CharsetUtil;
 /**
  * Servlet Util.
  */
-public abstract class ServletUtil {
+final class ServletUtil {
 
     // Forked from https://github.com/netty/netty/tree/4.1/codec-http/src/main/java/io/netty/handler/codec/http
 
@@ -58,11 +58,13 @@ public abstract class ServletUtil {
     private static final int NONE = 0;
     private static final int DATAHEADER = 1;
 
+    private ServletUtil() {}
+
     /**
      * Decode by URL.
      */
-    public static void decodeByUrl(LinkedMultiValueMap<String, String> parameterMap, String uri,
-                                   Charset charset) {
+    static void decodeByUrl(LinkedMultiValueMap<String, String> parameterMap, String uri,
+                            Charset charset) {
         requireNonNull(parameterMap, "parameterMap");
         requireNonNull(uri, "uri");
         requireNonNull(charset, "charset");
@@ -73,7 +75,7 @@ public abstract class ServletUtil {
      * Decode character encoding.
      */
     @Nullable
-    public static String decodeCharacterEncoding(@Nullable String contentType) {
+    static String decodeCharacterEncoding(@Nullable String contentType) {
         if (contentType == null) {
             return null;
         }
@@ -98,7 +100,7 @@ public abstract class ServletUtil {
      * @param header header.
      * @return the decoded {@link Cookie}.
      */
-    public static Collection<Cookie> decodeCookie(String header) {
+    static Collection<Cookie> decodeCookie(String header) {
         requireNonNull(header, "header");
         final int headerLen = header.length();
 
@@ -286,7 +288,7 @@ public abstract class ServletUtil {
     /**
      * Decode post parameter.
      */
-    public static LinkedMultiValueMap<String, String> decodeBody(
+    static LinkedMultiValueMap<String, String> decodeBody(
             LinkedMultiValueMap<String, String> parammeters, byte[] data, String contentType) {
         requireNonNull(parammeters, "parammeters");
         requireNonNull(data, "data");
@@ -493,7 +495,7 @@ public abstract class ServletUtil {
     /**
      * Get server information.
      */
-    public static String getServerInfo() {
+    static String getServerInfo() {
         return ArmeriaHttpUtil.SERVER_HEADER +
                " (JDK " + SystemInfo.javaVersion() + ";" + SystemInfo.osType().name() + ")";
     }

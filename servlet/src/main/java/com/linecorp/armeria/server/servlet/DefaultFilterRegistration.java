@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -34,33 +33,22 @@ import javax.servlet.FilterRegistration.Dynamic;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.server.servlet.util.UrlMapper;
-
 /**
  * servlet Filter registration.
  */
-public class FilterRegistration implements Dynamic {
+final class DefaultFilterRegistration implements Dynamic {
 
     private final String filterName;
     private final Filter filter;
-    private final UrlMapper<FilterRegistration> urlMapper;
+    private final UrlMapper<DefaultFilterRegistration> urlMapper;
     private final Set<String> mappingSet = new HashSet<>();
     private final Set<String> servletNameMappingSet = new HashSet<>();
     private final Map<String, String> initParameterMap;
 
-    private boolean asyncSupported = true;
-
     /**
      * Creates a new instance.
      */
-    public FilterRegistration(String filterName, Filter filter, UrlMapper<FilterRegistration> urlMapper) {
-        this(filterName, filter, urlMapper, ImmutableMap.copyOf(new HashMap<>()));
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public FilterRegistration(String filterName, Filter filter, UrlMapper<FilterRegistration> urlMapper,
+    DefaultFilterRegistration(String filterName, Filter filter, UrlMapper<DefaultFilterRegistration> urlMapper,
                               Map<String, String> initParameterMap) {
         checkArgument(!isNullOrEmpty(filterName), "filterName: %s (expected: not null and empty)", filterName);
         requireNonNull(filter, "filter");
@@ -75,7 +63,7 @@ public class FilterRegistration implements Dynamic {
     /**
      * Get filter.
      */
-    public Filter getFilter() {
+    Filter getFilter() {
         return filter;
     }
 
@@ -113,7 +101,7 @@ public class FilterRegistration implements Dynamic {
 
     @Override
     public void setAsyncSupported(boolean isAsyncSupported) {
-        asyncSupported = isAsyncSupported;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override

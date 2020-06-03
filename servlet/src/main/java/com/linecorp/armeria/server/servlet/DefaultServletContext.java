@@ -51,9 +51,6 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.server.servlet.util.MimeMappings;
-import com.linecorp.armeria.server.servlet.util.ServletUtil;
-import com.linecorp.armeria.server.servlet.util.UrlMapper;
 
 /**
  * Servlet context (lifetime same as server).
@@ -64,8 +61,8 @@ final class DefaultServletContext implements ServletContext {
             Sets.immutableEnumSet(SessionTrackingMode.COOKIE, SessionTrackingMode.URL);
 
     private final LogLevel level;
-    private final UrlMapper<ServletRegistration> servletUrlMapper = new UrlMapper<>(true);
-    private final UrlMapper<FilterRegistration> filterUrlMapper = new UrlMapper<>(false);
+    private final UrlMapper<DefaultServletRegistration> servletUrlMapper = new UrlMapper<>(true);
+    private final UrlMapper<DefaultFilterRegistration> filterUrlMapper = new UrlMapper<>(false);
     private final Map<String, Object> attributeMap = new HashMap<>();
     private final String contextPath;
     private final String servletContextName;
@@ -73,8 +70,8 @@ final class DefaultServletContext implements ServletContext {
     private int sessionTimeout = 30; // unit: minutes
     private boolean initialized;
     private Map<String, String> initParamMap = new HashMap<>();
-    private Map<String, ServletRegistration> servletRegistrationMap = new HashMap<>();
-    private Map<String, FilterRegistration> filterRegistrationMap = new HashMap<>();
+    private Map<String, DefaultServletRegistration> servletRegistrationMap = new HashMap<>();
+    private Map<String, DefaultFilterRegistration> filterRegistrationMap = new HashMap<>();
     private MimeMappings mimeMappings = new MimeMappings();
     private Set<SessionTrackingMode> sessionTrackingModeSet = defaultSessionTrackingModeSet;
     private String requestCharacterEncoding = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
@@ -105,17 +102,18 @@ final class DefaultServletContext implements ServletContext {
     /**
      * Set server started.
      */
-    public void init() {
+    void init() {
         initialized = true;
         initParamMap = ImmutableMap.copyOf(initParamMap);
         servletRegistrationMap = ImmutableMap.copyOf(servletRegistrationMap);
         filterRegistrationMap = ImmutableMap.copyOf(filterRegistrationMap);
+        sessionTrackingModeSet = ImmutableSet.copyOf(sessionTrackingModeSet);
     }
 
     /**
      * Add a new mime mapping.
      */
-    public void setMimeMapping(MimeMappings mimeMappings) {
+    void setMimeMapping(MimeMappings mimeMappings) {
         requireNonNull(mimeMappings, "mimeMappings");
         this.mimeMappings = mimeMappings;
     }
@@ -123,7 +121,7 @@ final class DefaultServletContext implements ServletContext {
     /**
      * Get servlet path.
      */
-    public String getServletPath(String absoluteUri) {
+    String getServletPath(String absoluteUri) {
         requireNonNull(absoluteUri, "absoluteUri");
         return servletUrlMapper.getServletPath(absoluteUri);
     }
@@ -208,9 +206,14 @@ final class DefaultServletContext implements ServletContext {
     }
 
     @Override
+    @Nullable
     public ServletRequestDispatcher getRequestDispatcher(String path) {
         requireNonNull(path, "path");
-        final UrlMapper.Element<ServletRegistration> element = servletUrlMapper.getMappingObjectByUri(path);
+        final UrlMapper.Element<DefaultServletRegistration> element =
+                servletUrlMapper.getMappingObjectByUri(path);
+        if (element == null) {
+            return null;
+        }
         return new ServletRequestDispatcher(new ServletFilterChain(element.getObject()), path, element);
     }
 
@@ -221,7 +224,7 @@ final class DefaultServletContext implements ServletContext {
         if (!name.isEmpty() && name.charAt(name.length() - 1) == '/') {
             name = name.substring(0, name.length() - 1);
         }
-        final ServletRegistration servletRegistration = getServletRegistration(name);
+        final DefaultServletRegistration servletRegistration = getServletRegistration(name);
         if (servletRegistration == null) {
             return null;
         }
@@ -232,7 +235,7 @@ final class DefaultServletContext implements ServletContext {
     @Nullable
     public Servlet getServlet(String name) throws ServletException {
         requireNonNull(name, "name");
-        final ServletRegistration registration = servletRegistrationMap.get(name);
+        final DefaultServletRegistration registration = servletRegistrationMap.get(name);
         if (registration == null) {
             return null;
         }
@@ -243,7 +246,7 @@ final class DefaultServletContext implements ServletContext {
     public Enumeration<Servlet> getServlets() {
         return Collections.enumeration(servletRegistrationMap.values()
                                                              .stream()
-                                                             .map(ServletRegistration::getServlet)
+                                                             .map(DefaultServletRegistration::getServlet)
                                                              .collect(ImmutableList.toImmutableList()));
     }
 
@@ -251,7 +254,7 @@ final class DefaultServletContext implements ServletContext {
     public Enumeration<String> getServletNames() {
         return Collections.enumeration(servletRegistrationMap.values()
                                                              .stream()
-                                                             .map(ServletRegistration::getName)
+                                                             .map(DefaultServletRegistration::getName)
                                                              .collect(ImmutableList.toImmutableList()));
     }
 
@@ -331,10 +334,9 @@ final class DefaultServletContext implements ServletContext {
     }
 
     @Override
-    public ServletRegistration addServlet(String servletName, String className) {
+    public DefaultServletRegistration addServlet(String servletName, String className) {
         ensureUninitialized("addServlet");
-        checkArgument(!isNullOrEmpty(servletName),
-                      "servletName: %s (expected: not null and empty)", servletName);
+        checkArgument(!isNullOrEmpty(servletName), "servletName is empty)", servletName);
         requireNonNull(className, "className");
         try {
             //noinspection unchecked
@@ -345,7 +347,7 @@ final class DefaultServletContext implements ServletContext {
     }
 
     @Override
-    public ServletRegistration addServlet(String servletName, Servlet servlet) {
+    public DefaultServletRegistration addServlet(String servletName, Servlet servlet) {
         ensureUninitialized("addServlet");
         checkArgument(!isNullOrEmpty(servletName),
                       "servletName: %s (expected: not null and empty)", servletName);
@@ -354,15 +356,14 @@ final class DefaultServletContext implements ServletContext {
             servletName = servletName.substring(0, servletName.length() - 1);
         }
         servletName = servletName.trim();
-        final ServletRegistration servletRegistration =
-                new ServletRegistration(servletName, servlet, this, servletUrlMapper);
+        final DefaultServletRegistration servletRegistration =
+                new DefaultServletRegistration(servletName, servlet, this, servletUrlMapper, initParamMap);
         servletRegistrationMap.put(servletName, servletRegistration);
-        servletRegistration.addMapping(servletName);
         return servletRegistration;
     }
 
     @Override
-    public ServletRegistration addServlet(String servletName, Class<? extends Servlet> servletClass) {
+    public DefaultServletRegistration addServlet(String servletName, Class<? extends Servlet> servletClass) {
         ensureUninitialized("addServlet");
         checkArgument(!isNullOrEmpty(servletName),
                       "servletName: %s (expected: not null and empty)", servletName);
@@ -386,28 +387,28 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     @Nullable
-    public ServletRegistration getServletRegistration(String servletName) {
+    public DefaultServletRegistration getServletRegistration(String servletName) {
         requireNonNull(servletName, "servletName");
         return servletRegistrationMap.get(servletName);
     }
 
     @Override
-    public Map<String, ServletRegistration> getServletRegistrations() {
+    public Map<String, DefaultServletRegistration> getServletRegistrations() {
         return servletRegistrationMap;
     }
 
     @Override
-    public FilterRegistration addFilter(String filterName, String className) {
+    public DefaultFilterRegistration addFilter(String filterName, String className) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public FilterRegistration addFilter(String filterName, Filter filter) {
+    public DefaultFilterRegistration addFilter(String filterName, Filter filter) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public FilterRegistration addFilter(String filterName, Class<? extends Filter> filterClass) {
+    public DefaultFilterRegistration addFilter(String filterName, Class<? extends Filter> filterClass) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -423,7 +424,7 @@ final class DefaultServletContext implements ServletContext {
     }
 
     @Override
-    public Map<String, FilterRegistration> getFilterRegistrations() {
+    public Map<String, DefaultFilterRegistration> getFilterRegistrations() {
         return filterRegistrationMap;
     }
 

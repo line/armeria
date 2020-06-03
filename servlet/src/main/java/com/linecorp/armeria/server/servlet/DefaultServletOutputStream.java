@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
@@ -34,22 +33,10 @@ import com.linecorp.armeria.common.HttpStatus;
 /**
  * Servlets output streams (wrapper classes) that control access to the flow.
  */
-public class DefaultServletOutputStream extends ServletOutputStream {
-    @Nullable
-    private ServletHttpResponse response;
+final class DefaultServletOutputStream extends ServletOutputStream {
+    private final DefaultServletHttpResponse response;
 
-    /**
-     *  Get servlet response.
-     */
-    @Nullable
-    public ServletHttpResponse getResponse() {
-        return response;
-    }
-
-    /**
-     *  Set servlet response.
-     */
-    public void setResponse(ServletHttpResponse response) {
+    DefaultServletOutputStream(DefaultServletHttpResponse response) {
         requireNonNull(response, "response");
         this.response = response;
     }
@@ -66,7 +53,6 @@ public class DefaultServletOutputStream extends ServletOutputStream {
 
     @Override
     public void close() throws IOException {
-        response = null;
     }
 
     @Override
@@ -86,9 +72,6 @@ public class DefaultServletOutputStream extends ServletOutputStream {
         requireNonNull(b, "b");
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
-        if (response == null) {
-            return;
-        }
         response.getHeadersBuilder().setObject(
                 HttpHeaderNames.SET_COOKIE,
                 response.getCookies().stream().map(x ->

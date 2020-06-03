@@ -20,9 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.nio.charset.Charset;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -37,38 +34,16 @@ import com.linecorp.armeria.common.HttpStatus;
 /**
  *  Printing flow.
  */
-public class ServletPrintWriter extends PrintWriter {
-    private static final Writer EMPTY_WRITER = new StringWriter(0);
-
-    private final OutputStream out;
-    private final Charset charset;
+final class ServletPrintWriter extends PrintWriter {
     private final String lineSeparator = System.lineSeparator();
+    private final DefaultServletHttpResponse response;
 
     private boolean error;
 
-    @Nullable
-    private ServletHttpResponse response;
-
-    /**
-     *  Get servlet response.
-     */
-    public ServletHttpResponse getResponse() {
-        return response;
-    }
-
-    /**
-     *  Set servlet response.
-     */
-    public void setResponse(ServletHttpResponse response) {
+    ServletPrintWriter(DefaultServletHttpResponse response, OutputStream out) {
+        super(out);
+        requireNonNull(response, "response");
         this.response = response;
-    }
-
-    ServletPrintWriter(OutputStream out, Charset charset) {
-        super(EMPTY_WRITER, false);
-        requireNonNull(out, "out");
-        requireNonNull(charset, "charset");
-        this.out = out;
-        this.charset = charset;
     }
 
     @Override
@@ -120,9 +95,6 @@ public class ServletPrintWriter extends PrintWriter {
         requireNonNull(s, "s");
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
-        if (response == null) {
-            return;
-        }
         final String writeStr;
         if (off == 0 && s.length() == len) {
             writeStr = s;

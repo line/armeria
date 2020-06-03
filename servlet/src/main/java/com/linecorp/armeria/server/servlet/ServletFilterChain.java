@@ -29,21 +29,21 @@ import javax.servlet.ServletResponse;
 /**
  * The servlet filter chain.
  */
-public class ServletFilterChain implements FilterChain {
+final class ServletFilterChain implements FilterChain {
 
     /**
      * Consider that each request is handled by only one thread, and that the ServletContext will create a new
      * SimpleFilterChain object on each request therefore, the FilterChain's Iterator is used as a private
      * variable of the FilterChain, without thread safety problems.
      */
-    private final List<FilterRegistration> filterRegistrationList = new ArrayList<>();
-    private final ServletRegistration servletRegistration;
+    private final List<DefaultFilterRegistration> filterRegistrationList = new ArrayList<>();
+    private final DefaultServletRegistration servletRegistration;
     private int pos;
 
     /**
      * Get new instance.
      */
-    public ServletFilterChain(ServletRegistration servletRegistration) {
+    ServletFilterChain(DefaultServletRegistration servletRegistration) {
         requireNonNull(servletRegistration, "servletRegistration");
         this.servletRegistration = servletRegistration;
     }
@@ -60,9 +60,7 @@ public class ServletFilterChain implements FilterChain {
         requireNonNull(response, "response");
 
         if (pos == 0) {
-            if (servletRegistration.isInitServletCas(false, true)) {
-                servletRegistration.getServlet().init(servletRegistration.getServletConfig());
-            }
+            servletRegistration.getServlet().init(servletRegistration.getServletConfig());
         }
 
         if (pos < filterRegistrationList.size()) {
@@ -76,14 +74,14 @@ public class ServletFilterChain implements FilterChain {
     /**
      * Get servlet registration.
      */
-    public ServletRegistration getServletRegistration() {
+    DefaultServletRegistration getServletRegistration() {
         return servletRegistration;
     }
 
     /**
      * Get filter registration list.
      */
-    public List<FilterRegistration> getFilterRegistrationList() {
+    List<DefaultFilterRegistration> getFilterRegistrationList() {
         return filterRegistrationList;
     }
 }

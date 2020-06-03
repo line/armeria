@@ -24,7 +24,6 @@ import javax.servlet.http.HttpServlet;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.servlet.util.MimeMappings;
 
 /**
  * A builder class which creates a new {@link DefaultServletContext} instance.

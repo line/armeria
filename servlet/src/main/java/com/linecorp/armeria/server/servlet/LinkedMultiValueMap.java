@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.servlet.util;
+package com.linecorp.armeria.server.servlet;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
  * @param <K> the key type
  * @param <V> the value element type
  */
-public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
+final class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     private static final long serialVersionUID = 5338250261420072687L;
 
     // Forked from https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/main/
@@ -45,14 +45,14 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Create a new LinkedMultiValueMap that wraps a {@link LinkedHashMap}.
      */
-    public LinkedMultiValueMap() {
+    LinkedMultiValueMap() {
         targetMap = new LinkedHashMap<>();
     }
 
     /**
      * Creates a new instance.
      */
-    public LinkedMultiValueMap(Map<K, List<V>> otherMap) {
+    LinkedMultiValueMap(Map<K, List<V>> otherMap) {
         targetMap = new LinkedHashMap<>(otherMap);
     }
 
@@ -60,7 +60,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
      * Get first value.
      */
     @Nullable
-    public V getFirst(K key) {
+    V getFirst(K key) {
         requireNonNull(key, "key");
         final List<V> values = targetMap.get(key);
         return values != null ? values.get(0) : null;
@@ -69,7 +69,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Add item.
      */
-    public void add(K key, V value) {
+    void add(K key, V value) {
         requireNonNull(key, "key");
         requireNonNull(value, "value");
         final List<V> values = targetMap.computeIfAbsent(key, k -> new LinkedList<>());
@@ -79,7 +79,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Add all items.
      */
-    public void addAll(K key, List<? extends V> values) {
+    void addAll(K key, List<? extends V> values) {
         requireNonNull(key, "key");
         requireNonNull(values, "values");
         final List<V> currentValues = targetMap.computeIfAbsent(key, k -> new LinkedList<>());
@@ -89,7 +89,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Set value.
      */
-    public void set(K key, V value) {
+    void set(K key, V value) {
         requireNonNull(key, "key");
         requireNonNull(value, "value");
         final List<V> values = new LinkedList<>();
@@ -100,7 +100,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Set all values.
      */
-    public void setAll(Map<K, V> values) {
+    void setAll(Map<K, V> values) {
         requireNonNull(values, "values");
         values.forEach(this::set);
     }
@@ -108,7 +108,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Convert to single value map.
      */
-    public Map<K, V> toSingleValueMap() {
+    Map<K, V> toSingleValueMap() {
         final LinkedHashMap<K, V> singleValueMap = new LinkedHashMap<>(targetMap.size());
         targetMap.forEach((key, value) -> singleValueMap.put(key, value.get(0)));
         return singleValueMap;
@@ -117,21 +117,21 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Get size.
      */
-    public int size() {
+    int size() {
         return targetMap.size();
     }
 
     /**
      * Check is empty.
      */
-    public boolean isEmpty() {
+    boolean isEmpty() {
         return targetMap.isEmpty();
     }
 
     /**
      * Check contains key.
      */
-    public boolean containsKey(Object key) {
+    boolean containsKey(Object key) {
         requireNonNull(key, "key");
         return targetMap.containsKey(key);
     }
@@ -139,7 +139,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Creates a new instance.
      */
-    public boolean containsValue(Object value) {
+    boolean containsValue(Object value) {
         requireNonNull(value, "value");
         return targetMap.containsValue(value);
     }
@@ -148,7 +148,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
      * Get by key.
      */
     @Nullable
-    public List<V> get(Object key) {
+    List<V> get(Object key) {
         requireNonNull(key, "key");
         return targetMap.get(key);
     }
@@ -156,7 +156,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Put value.
      */
-    public List<V> put(K key, List<V> value) {
+    List<V> put(K key, List<V> value) {
         requireNonNull(key, "key");
         requireNonNull(value, "value");
         return requireNonNull(targetMap.put(key, value));
@@ -165,7 +165,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Remove by key.
      */
-    public List<V> remove(Object key) {
+    List<V> remove(Object key) {
         requireNonNull(key, "key");
         return targetMap.remove(key);
     }
@@ -173,7 +173,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Put all values.
      */
-    public void putAll(Map<? extends K, ? extends List<V>> map) {
+    void putAll(Map<? extends K, ? extends List<V>> map) {
         requireNonNull(map, "map");
         targetMap.putAll(map);
     }
@@ -181,28 +181,28 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     /**
      * Clear map.
      */
-    public void clear() {
+    void clear() {
         targetMap.clear();
     }
 
     /**
      * Get key set.
      */
-    public Set<K> keySet() {
+    Set<K> keySet() {
         return targetMap.keySet();
     }
 
     /**
      * Get all values.
      */
-    public Collection<List<V>> values() {
+    Collection<List<V>> values() {
         return targetMap.values();
     }
 
     /**
      * Get entry set.
      */
-    public Set<Map.Entry<K, List<V>>> entrySet() {
+    Set<Map.Entry<K, List<V>>> entrySet() {
         return targetMap.entrySet();
     }
 
@@ -223,7 +223,7 @@ public class LinkedMultiValueMap<K, V> implements Serializable, Cloneable {
     }
 
     @Override
-    public LinkedMultiValueMap<K, V> clone() throws CloneNotSupportedException {
+    public LinkedMultiValueMap clone() throws CloneNotSupportedException {
         return (LinkedMultiValueMap) super.clone();
     }
 }

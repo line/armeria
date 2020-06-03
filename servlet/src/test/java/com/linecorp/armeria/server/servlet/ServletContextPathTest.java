@@ -101,7 +101,6 @@ class ServletContextPathTest {
                         .getServletContext().getNamedDispatcher("/foo")).getName()).isEqualTo("/foo");
                 assertThat(((ServletRequestDispatcher) request
                         .getServletContext().getNamedDispatcher("/foo/")).getName()).isEqualTo("/foo");
-                assertThat(request.getPathTranslated()).isEqualTo(null);
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get home");

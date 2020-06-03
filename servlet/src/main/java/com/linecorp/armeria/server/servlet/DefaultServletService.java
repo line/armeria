@@ -35,14 +35,14 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * An {@link HttpService} which handles {@link HttpRequest} and forward to Servlet APIs,
  * and write {@link HttpResponse} to client.
  */
-public class DefaultServletService implements HttpService {
+final class DefaultServletService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletService.class);
     private final DefaultServletContext servletContext;
 
     /**
      * A class which helps a {@link DefaultServletService} have a {@link HttpServlet}.
      */
-    public DefaultServletService(DefaultServletContext servletContext) {
+    DefaultServletService(DefaultServletContext servletContext) {
         requireNonNull(servletContext, "servletContext");
         this.servletContext = servletContext;
     }
@@ -71,8 +71,8 @@ public class DefaultServletService implements HttpService {
 
     private void process(ServiceRequestContext ctx, HttpResponseWriter res, AggregatedHttpRequest req) {
         requireNonNull(res, "res");
-        final ServletHttpRequest request = new ServletHttpRequest(ctx, servletContext, req);
-        final ServletHttpResponse response = new ServletHttpResponse(servletContext);
+        final DefaultServletHttpRequest request = new DefaultServletHttpRequest(ctx, servletContext, req);
+        final DefaultServletHttpResponse response = new DefaultServletHttpResponse(servletContext, res);
         try {
             final ServletRequestDispatcher dispatcher =
                     servletContext.getNamedDispatcher(request.getRequestURI());
@@ -80,8 +80,6 @@ public class DefaultServletService implements HttpService {
                 res.tryWrite(ResponseHeaders.of(HttpStatus.NOT_FOUND));
                 return;
             }
-            request.setDispatcher(dispatcher);
-            response.setResponseWriter(res);
             dispatcher.dispatch(request, response);
         } catch (Throwable throwable) {
             logger.error("Servlet process failed: ", throwable);

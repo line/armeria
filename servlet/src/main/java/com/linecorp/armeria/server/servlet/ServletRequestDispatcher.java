@@ -25,40 +25,38 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import com.linecorp.armeria.server.servlet.util.UrlMapper;
-
 /**
  * Servlet request scheduling.
  */
-public final class ServletRequestDispatcher implements RequestDispatcher {
+final class ServletRequestDispatcher implements RequestDispatcher {
     private final String path;
     private final String name;
     private final ServletFilterChain filterChain;
     /**
      * Match mapping.
      */
-    final UrlMapper.Element<ServletRegistration> mapperElement;
+    final UrlMapper.Element<DefaultServletRegistration> mapperElement;
 
     /**
      * Creates a new instance.
      */
-    public ServletRequestDispatcher(ServletFilterChain filterChain, String path,
-                                    @Nullable UrlMapper.Element<ServletRegistration> element) {
+    ServletRequestDispatcher(ServletFilterChain filterChain, String path,
+                             @Nullable UrlMapper.Element<DefaultServletRegistration> element) {
         this(filterChain, path, path, element);
     }
 
     /**
      * Creates a new instance.
      */
-    public ServletRequestDispatcher(ServletFilterChain filterChain, String name) {
+    ServletRequestDispatcher(ServletFilterChain filterChain, String name) {
         this(filterChain, name, name, null);
     }
 
     /**
      * Creates a new instance.
      */
-    public ServletRequestDispatcher(ServletFilterChain filterChain, String path, String name,
-                                    @Nullable UrlMapper.Element<ServletRegistration> element) {
+    ServletRequestDispatcher(ServletFilterChain filterChain, String path, String name,
+                             @Nullable UrlMapper.Element<DefaultServletRegistration> element) {
         requireNonNull(filterChain, "filterChain");
         requireNonNull(path, "path");
         requireNonNull(name, "name");
@@ -101,28 +99,24 @@ public final class ServletRequestDispatcher implements RequestDispatcher {
      * @throws ServletException ServletException.
      * @throws IOException IOException.
      */
-    public void dispatch(ServletRequest request, ServletResponse response)
+    void dispatch(ServletRequest request, ServletResponse response)
             throws ServletException, IOException {
         requireNonNull(request, "request");
         requireNonNull(response, "response");
-        if (request instanceof ServletHttpRequest) {
-            ((ServletHttpRequest) request).setAsyncSupportedFlag(
-                    filterChain.getServletRegistration().isAsyncSupported());
-        }
         filterChain.doFilter(request, response);
     }
 
     /**
      * Get path.
      */
-    public String getPath() {
+    String getPath() {
         return path;
     }
 
     /**
      * Get name.
      */
-    public String getName() {
+    String getName() {
         return filterChain.getServletRegistration().getName();
     }
 
