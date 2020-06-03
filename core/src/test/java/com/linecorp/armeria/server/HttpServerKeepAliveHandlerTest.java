@@ -97,6 +97,7 @@ class HttpServerKeepAliveHandlerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.idleTimeoutMillis(0);
             sb.pingIntervalMillis(0);
+            sb.requestTimeoutMillis(1000);
             sb.service("/", (ctx, req) -> HttpResponse.of("OK"));
             sb.service("/streaming", (ctx, req) -> HttpResponse.streaming());
         }
