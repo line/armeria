@@ -506,7 +506,7 @@ public final class ServerBuilder {
      * after the specified {@code maxConnectionAgeMillis} since the connection was established.
      *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
-     * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
      *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} second.
      */
     public ServerBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
@@ -523,7 +523,7 @@ public final class ServerBuilder {
      *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
-     *                                  {@code 1} second.
+     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} second.
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
