@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -50,6 +51,7 @@ final class AnnotatedServiceTypeUtil {
                     .put(Double.class, Double::valueOf)
                     .put(String.class, Function.identity())
                     .put(UUID.class, UUID::fromString)
+                    .put(Period.class, Period::parse)
                     .build();
 
     private static final Map<String, Boolean> stringToBooleanMap =
