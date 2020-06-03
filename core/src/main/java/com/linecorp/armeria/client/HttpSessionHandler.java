@@ -135,7 +135,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean hasUnfinishedResponses() {
-        assert responseDecoder != null;
+        // This method can be called from KeepAliveHandler before HTTP/2 connection receives
+        // a settings frame which triggers to initialize responseDecoder.
+        // So we just return false because it does not have any unfinished responses.
+        if (responseDecoder == null) {
+            return false;
+        }
         return responseDecoder.hasUnfinishedResponses();
     }
 
