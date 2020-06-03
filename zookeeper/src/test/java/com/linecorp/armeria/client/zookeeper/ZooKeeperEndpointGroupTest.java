@@ -122,8 +122,7 @@ class ZooKeeperEndpointGroupTest {
         final Builder<Endpoint> builder = ImmutableSet.builder();
         builder.addAll(sampleEndpoints).addAll(extraEndpoints);
         try (CloseableZooKeeper zk = zkInstance.connection()) {
-            zk.sync(Z_NODE, (rc, path, ctx) -> {
-            }, null);
+            zk.sync(Z_NODE, (rc, path, ctx) -> {}, null);
         }
 
         final Set<Endpoint> expected = builder.build();
