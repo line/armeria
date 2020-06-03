@@ -46,7 +46,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
-    private boolean isClosedConnection;
+    private boolean sentConnectionCloseHeader;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
                              @Nullable KeepAliveHandler keepAliveHandler,
@@ -71,7 +71,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
         if (keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
             converted.headers().set(HttpHeaderNames.CONNECTION, "close");
-            isClosedConnection = true;
+            sentConnectionCloseHeader = true;
         }
         return writeNonInformationalHeaders(id, converted, endStream);
     }
@@ -160,7 +160,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return false;
     }
 
-    boolean isClosedConnection() {
-        return isClosedConnection;
+    boolean isSentConnectionCloseHeader() {
+        return sentConnectionCloseHeader;
     }
 }

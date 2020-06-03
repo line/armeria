@@ -138,7 +138,10 @@ public abstract class KeepAliveHandler {
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
         if (maxConnectionAgeNanos > 0) {
-            maxConnectionAgeFuture = executor().schedule(() -> isMaxConnectionAgeExceeded = true,
+            maxConnectionAgeFuture = executor().schedule(() -> {
+                                                             logger.info("make isMaxConnectionAgeExceeded true");
+                                                             isMaxConnectionAgeExceeded = true;
+                                                         },
                                                          maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
         }
     }
@@ -158,6 +161,7 @@ public abstract class KeepAliveHandler {
             maxConnectionAgeFuture = null;
         }
         pingState = PingState.SHUTDOWN;
+        isMaxConnectionAgeExceeded = true;
         cancelFutures();
     }
 

@@ -17,16 +17,18 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.common.HttpStatus.INTERNAL_SERVER_ERROR;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.withinPercentage;
 import static org.awaitility.Awaitility.await;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,13 +43,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.GoAwayReceivedException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -55,9 +52,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.util.AttributeMap;
@@ -75,7 +69,8 @@ class ServerMaxConnectionAgeTest {
             sb.maxConnectionAgeMillis(MAX_CONNECTION_AGE);
             sb.service("/", (ctx, req) -> HttpResponse.of(OK));
             sb.service("/slow", (ctx, req) ->
-                    HttpResponse.delayed(HttpResponse.of(OK), Duration.ofMillis(400)));
+                    HttpResponse.delayed(HttpResponse.of("Disconnect"),
+                                         Duration.ofMillis(MAX_CONNECTION_AGE + 100)));
         }
 
         @Override
@@ -95,14 +90,12 @@ class ServerMaxConnectionAgeTest {
         }
     };
 
-    private List<HttpResponse> responses;
     private AtomicInteger opened;
     private AtomicInteger closed;
     private ConnectionPoolListener connectionPoolListener;
 
     @BeforeEach
     void setUp() {
-        responses = new ArrayList<>();
         opened = new AtomicInteger();
         closed = new AtomicInteger();
         connectionPoolListener = new ConnectionPoolListener() {
@@ -143,36 +136,40 @@ class ServerMaxConnectionAgeTest {
         }
     }
 
-    // TODO(ikhoon): This is a flaky test. Needs a idea to fix it.
     @Test
-    void http1WithPipeliningMaxConnectionAge() {
-        final String largePayLoad = Strings.repeat("a", 8_000_000);
-        final WebClient client = newWebClient(server.uri(SessionProtocol.H1C), true);
+    void http1WithPipeliningMaxConnectionAge() throws Exception {
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
+            final PrintWriter writer = new PrintWriter(socket.getOutputStream());
+            writer.print("POST /slow HTTP/1.1\r\n");
+            writer.print("Content-Length: 0\r\n");
+            writer.print("\r\n");
+            writer.flush();
 
-        await().untilAsserted(() -> {
-            final ClientRequestContext ctx;
-            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                responses.add(client.post("/slow", largePayLoad));
-                ctx = captor.get();
+            boolean closedConnection = false;
+            final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            // Read response headers
+            while (true) {
+                final String line = in.readLine();
+                if (line.isEmpty()) {
+                    break;
+                }
+                // Make sure that the max connection age is exceeded
+                if ("connection: close".equals(line)) {
+                    closedConnection = true;
+                }
             }
+            assertThat(closedConnection).isTrue();
 
-            final RequestLog second =
-                    ctx.log().whenAvailable(RequestLogProperty.REQUEST_END_TIME)
-                       .thenApply(unused -> {
-                           try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                               responses.add(client.post("/slow", largePayLoad));
-                               return captor.get();
-                           }
-                       })
-                       .thenCompose(ctx0 -> ctx0.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS))
-                       .join();
-            final RequestLog first = ctx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).join()
-                                        .partial();
+            // Send a second request before fully receiving the previous request.
+            writer.print("GET / HTTP/1.1\r\n\r\n");
+            writer.flush();
 
-            assertThat(ImmutableList.of(first.responseHeaders().status(), second.responseHeaders().status()))
-                    .contains(INTERNAL_SERVER_ERROR);
-        });
-        responses.forEach(StreamMessage::abort);
+            assertThat(in.readLine()).isEqualTo("Disconnect");
+
+            // The second request is closed before receiving any response.
+            assertThat(in.readLine()).isNull();
+        }
     }
 
     @Test
@@ -241,6 +238,7 @@ class ServerMaxConnectionAgeTest {
                                                          .build();
         return WebClient.builder(uri)
                         .factory(clientFactory)
+                        //                        .decorator(LoggingClient.newDecorator())
                         .responseTimeoutMillis(0)
                         .build();
     }

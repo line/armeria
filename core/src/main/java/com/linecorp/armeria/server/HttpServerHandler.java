@@ -317,12 +317,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
         // Handle max connection age for HTTP/1.
-        if (responseEncoder instanceof ServerHttp1ObjectEncoder &&
-            ((ServerHttp1ObjectEncoder) responseEncoder).isClosedConnection()) {
-            final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
-                                                     proxiedAddresses, clientAddress, null);
-            respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, null, ClosedSessionException.get());
+        if (!protocol.isMultiplex() &&
+            ((ServerHttp1ObjectEncoder) responseEncoder).isSentConnectionCloseHeader()) {
+            channel.close();
             return;
         }
 
