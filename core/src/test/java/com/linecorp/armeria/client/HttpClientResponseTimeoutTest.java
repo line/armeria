@@ -62,7 +62,7 @@ class HttpClientResponseTimeoutTest {
                     return delegate.execute(ctx, req);
                 })
                 .build();
-        assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout").aggregate().join())
+        assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
     }
@@ -79,7 +79,7 @@ class HttpClientResponseTimeoutTest {
                 })
                 .build();
         await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout")
+            assertThatThrownBy(() -> client.get("/no-timeout")
                                            .aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
@@ -99,7 +99,7 @@ class HttpClientResponseTimeoutTest {
                 })
                 .build();
         await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout")
+            assertThatThrownBy(() -> client.get("/no-timeout")
                                            .aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);

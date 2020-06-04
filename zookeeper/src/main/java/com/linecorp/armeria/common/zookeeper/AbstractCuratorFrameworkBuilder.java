@@ -29,6 +29,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.zookeeper.common.PathUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -48,6 +49,7 @@ public class AbstractCuratorFrameworkBuilder {
 
     @Nullable
     private final CuratorFramework client;
+    private final String zNodePath;
     @Nullable
     private final CuratorFrameworkFactory.Builder clientBuilder;
     @Nullable
@@ -56,9 +58,11 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Creates a new instance with the specified {@code zkConnectionStr}.
      */
-    protected AbstractCuratorFrameworkBuilder(String zkConnectionStr) {
+    protected AbstractCuratorFrameworkBuilder(String zkConnectionStr, String zNodePath) {
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
         checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty.");
         client = null;
+        this.zNodePath = validateZNodePath(zNodePath);
         clientBuilder = CuratorFrameworkFactory.builder()
                                                .connectString(zkConnectionStr)
                                                .connectionTimeoutMs(DEFAULT_CONNECT_TIMEOUT_MILLIS)
@@ -70,10 +74,28 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Creates a new instance with the specified {@link CuratorFramework}.
      */
-    protected AbstractCuratorFrameworkBuilder(CuratorFramework client) {
-        this.client = client;
+    protected AbstractCuratorFrameworkBuilder(CuratorFramework client, String zNodePath) {
+        this.client = requireNonNull(client, "client");
+        this.zNodePath = validateZNodePath(zNodePath);
         clientBuilder = null;
         customizers = null;
+    }
+
+    private static String validateZNodePath(String zNodePath) {
+        try {
+            PathUtils.validatePath(zNodePath);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("zNodePath: " + zNodePath +
+                                               " (reason: " + e.getMessage() + ')');
+        }
+        return zNodePath;
+    }
+
+    /**
+     * Returns the zNode Path.
+     */
+    protected String zNodePath() {
+        return zNodePath;
     }
 
     /**
@@ -154,7 +176,7 @@ public class AbstractCuratorFrameworkBuilder {
 
     /**
      * Returns {@code true} if this builder is created with
-     * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework)}.
+     * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework, String)}.
      */
     protected final boolean isUserSpecifiedCuratorFramework() {
        return client != null;

@@ -77,15 +77,15 @@ class HttpClientRequestPathTest {
         final HttpResponse response = WebClient.of().execute(request);
         assertThatThrownBy(() -> response.aggregate().join())
                 .hasCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("no authority");
+                .hasMessageContaining("Scheme and authority must be specified");
     }
 
     @Test
     void custom_withAbsolutePath() {
         final WebClient client = WebClient.of(server1.httpUri());
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.httpUri() + "/simple-client");
-        final HttpResponse response = client.execute(request);
-        assertThat(response.aggregate().join().status()).isEqualTo(OK);
+        assertThatThrownBy(() -> client.execute(request).aggregate().join()).hasCauseInstanceOf(
+                IllegalArgumentException.class);
     }
 
     @Test
@@ -102,7 +102,8 @@ class HttpClientRequestPathTest {
         final AggregatedHttpResponse redirected = client.get("/redirect").aggregate().join();
         final String location = redirected.headers().get(LOCATION);
         assertThat(location).isNotNull();
-        final AggregatedHttpResponse actual = client.get(location).aggregate().join();
+        // Should use the default WebClient or a different WebClient to send a request to another endpoint.
+        final AggregatedHttpResponse actual = WebClient.of().get(location).aggregate().join();
         assertThat(actual.status()).isEqualTo(OK);
     }
 }
