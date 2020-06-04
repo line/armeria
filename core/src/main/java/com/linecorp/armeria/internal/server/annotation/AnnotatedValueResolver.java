@@ -25,7 +25,6 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTy
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.validateElementType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
-import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
