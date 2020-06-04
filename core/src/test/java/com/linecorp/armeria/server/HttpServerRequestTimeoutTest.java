@@ -199,7 +199,7 @@ class HttpServerRequestTimeoutTest {
     @Test
     void timeoutNow() {
         final AggregatedHttpResponse response =
-                clientWithoutTimeout.get(serverWithoutTimeout.httpUri() + "/timeout-now").aggregate().join();
+                withoutTimeoutServerClient.get("/timeout-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
     }
 }
