@@ -27,7 +27,10 @@ import com.linecorp.armeria.server.RpcService;
 /**
  * A general purpose {@link AbstractCompositeService} implementation. Useful when you do not want to define
  * a new dedicated {@link RpcService} type.
+ *
+ * @deprecated This class will be removed without a replacement.
  */
+@Deprecated
 public final class SimpleCompositeRpcService
         extends AbstractCompositeService<RpcService, RpcRequest, RpcResponse> implements RpcService {
 

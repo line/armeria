@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.math.LongMath;
 
-import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Default {@link TimeoutController} implementation.
@@ -43,7 +43,7 @@ public class DefaultTimeoutController implements TimeoutController {
 
     @Nullable
     private TimeoutTask timeoutTask;
-    private final EventLoop eventLoop;
+    private final EventExecutor executor;
 
     private long timeoutMillis;
     private long firstExecutionTimeNanos;
@@ -54,21 +54,21 @@ public class DefaultTimeoutController implements TimeoutController {
     private State state = State.INIT;
 
     /**
-     * Creates a new instance with the specified {@link TimeoutTask} and {@link EventLoop}.
+     * Creates a new instance with the specified {@link TimeoutTask} and {@link EventExecutor}.
      */
-    public DefaultTimeoutController(TimeoutTask timeoutTask, EventLoop eventLoop) {
+    public DefaultTimeoutController(TimeoutTask timeoutTask, EventExecutor executor) {
         requireNonNull(timeoutTask, "timeoutTask");
-        requireNonNull(eventLoop, "eventLoop");
+        requireNonNull(executor, "executor");
         this.timeoutTask = timeoutTask;
-        this.eventLoop = eventLoop;
+        this.executor = executor;
     }
 
     /**
-     * Creates a new instance with the specified {@link EventLoop}.
+     * Creates a new instance with the specified {@link EventExecutor}.
      */
-    public DefaultTimeoutController(EventLoop eventLoop) {
-        requireNonNull(eventLoop, "eventLoop");
-        this.eventLoop = eventLoop;
+    public DefaultTimeoutController(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        this.executor = executor;
     }
 
     /**
@@ -82,7 +82,7 @@ public class DefaultTimeoutController implements TimeoutController {
      * {@inheritDoc}
      *
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
-     * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     * the {@link #DefaultTimeoutController(TimeoutTask, EventExecutor)} before calling this method.
      *
      * @return {@code true} if the timeout is scheduled.
      *         {@code false} if the timeout has been scheduled, the timeout has been triggered already
@@ -100,7 +100,7 @@ public class DefaultTimeoutController implements TimeoutController {
         cancelTimeout();
         this.timeoutMillis = timeoutMillis;
         state = State.SCHEDULED;
-        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
+        timeoutFuture = executor.schedule(this::invokeTimeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -108,7 +108,7 @@ public class DefaultTimeoutController implements TimeoutController {
      * {@inheritDoc}
      *
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
-     * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     * the {@link #DefaultTimeoutController(TimeoutTask, EventExecutor)} before calling this method.
      *
      * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
      *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
@@ -142,7 +142,7 @@ public class DefaultTimeoutController implements TimeoutController {
         }
 
         state = State.SCHEDULED;
-        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        timeoutFuture = executor.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -150,7 +150,7 @@ public class DefaultTimeoutController implements TimeoutController {
      * {@inheritDoc}
      *
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
-     * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     * the {@link #DefaultTimeoutController(TimeoutTask, EventExecutor)} before calling this method.
      *
      * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
      *         {@code false} if the timeout has been triggered already
@@ -172,7 +172,7 @@ public class DefaultTimeoutController implements TimeoutController {
         cancelTimeout();
         timeoutMillis = newTimeoutMillis;
         state = State.SCHEDULED;
-        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        timeoutFuture = executor.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
 

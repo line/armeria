@@ -28,7 +28,10 @@ import com.linecorp.armeria.server.Service;
  * A pair of a {@link Route} and an {@link Service} bound to it.
  *
  * @param <T> the {@link Service} type
+ *
+ * @deprecated This class will be removed without a replacement.
  */
+@Deprecated
 public final class CompositeServiceEntry<T extends Service<?, ?>> {
 
     /**

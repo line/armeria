@@ -230,6 +230,7 @@ public interface ServiceRequestContext extends RequestContext {
         throw newIllegalContextPushingException(this, oldCtx);
     }
 
+    @Deprecated
     @Override
     ServiceRequestContext newDerivedContext(RequestId id,
                                             @Nullable HttpRequest req,
@@ -629,12 +630,6 @@ public interface ServiceRequestContext extends RequestContext {
      * }</pre>
      */
     void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
-
-    /**
-     * Returns whether this {@link ServiceRequestContext} has been timed-out (e.g., when the
-     * corresponding request passes a deadline).
-     */
-    boolean isTimedOut();
 
     /**
      * Returns the maximum length of the current {@link Request}.
