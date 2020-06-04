@@ -261,8 +261,8 @@ public class MyAnnotatedService {
         // ...
     }
 
-    @Get("/hello3")
-    public HttpResponse hello3(@Param("name") Optional<String> name) {
+    @Get("/hello4")
+    public HttpResponse hello4(@Param("name") Optional<String> name) {
         String clientName = name.orElse("armeria");
         // ...
     }
@@ -271,7 +271,7 @@ public class MyAnnotatedService {
 
 <Tip>
 
-`@Nullable` annotation can be from *any* packages as long as its simple name is `Nullable`.
+`@Nullable` annotation can be from *any* package as long as its simple name is `Nullable`.
  For example, it can be `@javax.annotation.Nullable`, `@org.checkerframework.checker.nullness.qual.Nullable` or
  `@io.reactivex.annotations.Nullable`.
 
