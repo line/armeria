@@ -16,13 +16,25 @@
 package com.linecorp.armeria.common.auth;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_CONSUMER_KEY;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_NONCE;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_SIGNATURE;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_SIGNATURE_METHOD;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_TIMESTAMP;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_TOKEN;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.OAUTH_VERSION;
+import static com.linecorp.armeria.common.auth.OAuth1aToken.REALM;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 /**
  * Builds a new {@link OAuth1aToken}.
@@ -125,11 +137,58 @@ public final class OAuth1aTokenBuilder {
     }
 
     /**
-     * Sets additional (or user-defined) parameters.
+     * Sets additional parameters. If the specified {@code additionals} has pre-defined parameters,
+     * the parameters are set automatically to this builder and removed from the {@code additionals}.
      */
     public OAuth1aTokenBuilder additionals(Map<String, String> additionals) {
-        this.additionals = ImmutableMap.copyOf(requireNonNull(additionals, "additionals"));
+        setParameters(this, requireNonNull(additionals, "additionals"));
         return this;
+    }
+
+    private void additionals0(ImmutableMap<String, String> additionals) {
+        this.additionals = additionals;
+    }
+
+    static void setParameters(OAuth1aTokenBuilder builder, Map<String, String> parameters) {
+        final Builder<String, String> additionals = ImmutableMap.builder();
+        for (Entry<String, String> param : parameters.entrySet()) {
+            final String key = param.getKey();
+            final String value = param.getValue();
+
+            // Empty values are ignored.
+            if (!isNullOrEmpty(key) && !isNullOrEmpty(value)) {
+                final String lowerCased = Ascii.toLowerCase(key);
+                switch (lowerCased) {
+                    case REALM:
+                        builder.realm(value);
+                        break;
+                    case OAUTH_CONSUMER_KEY:
+                        builder.consumerKey(value);
+                        break;
+                    case OAUTH_TOKEN:
+                        builder.token(value);
+                        break;
+                    case OAUTH_SIGNATURE_METHOD:
+                        builder.signatureMethod(value);
+                        break;
+                    case OAUTH_SIGNATURE:
+                        builder.signature(value);
+                        break;
+                    case OAUTH_TIMESTAMP:
+                        builder.timestamp(value);
+                        break;
+                    case OAUTH_NONCE:
+                        builder.nonce(value);
+                        break;
+                    case OAUTH_VERSION:
+                        builder.version(value);
+                        break;
+                    default:
+                        additionals.put(key, value);
+                }
+            }
+        }
+        builder.additionals0(additionals.build());
     }
 
     /**

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.auth;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.linecorp.armeria.common.auth.OAuth1aTokenBuilder.setParameters;
 import static com.linecorp.armeria.internal.common.PercentEncoder.encodeComponent;
 
 import java.util.Map;
@@ -25,10 +26,7 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -41,42 +39,42 @@ public final class OAuth1aToken {
     /**
      * The realm parameter. (optional)
      */
-    private static final String REALM = "realm";
+    static final String REALM = "realm";
 
     /**
      * The oauth_consumer_key parameter.
      */
-    private static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
+    static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
 
     /**
      * The oauth_token parameter.
      */
-    private static final String OAUTH_TOKEN = "oauth_token";
+    static final String OAUTH_TOKEN = "oauth_token";
 
     /**
      * The oauth_signature_method parameter.
      */
-    private static final String OAUTH_SIGNATURE_METHOD = "oauth_signature_method";
+    static final String OAUTH_SIGNATURE_METHOD = "oauth_signature_method";
 
     /**
      * The oauth_signature parameter.
      */
-    private static final String OAUTH_SIGNATURE = "oauth_signature";
+    static final String OAUTH_SIGNATURE = "oauth_signature";
 
     /**
      * The oauth_timestamp parameter.
      */
-    private static final String OAUTH_TIMESTAMP = "oauth_timestamp";
+    static final String OAUTH_TIMESTAMP = "oauth_timestamp";
 
     /**
      * The oauth_nonce parameter.
      */
-    private static final String OAUTH_NONCE = "oauth_nonce";
+    static final String OAUTH_NONCE = "oauth_nonce";
 
     /**
      * The version parameter.
      */
-    private static final String OAUTH_VERSION = "version";
+    static final String OAUTH_VERSION = "version";
 
     /**
      * Creates a new {@link OAuth1aToken} from the given arguments.
@@ -86,46 +84,8 @@ public final class OAuth1aToken {
     @Deprecated
     public static OAuth1aToken of(Map<String, String> params) {
         final OAuth1aTokenBuilder builder = builder();
-        final Builder<String, String> additionals = ImmutableMap.builder();
-
-        for (Entry<String, String> param : params.entrySet()) {
-            final String key = param.getKey();
-            final String value = param.getValue();
-
-            // Empty values are ignored.
-            if (!isNullOrEmpty(key) && !isNullOrEmpty(value)) {
-                final String lowerCased = Ascii.toLowerCase(key);
-                switch (lowerCased) {
-                    case REALM:
-                        builder.realm(value);
-                        break;
-                    case OAUTH_CONSUMER_KEY:
-                        builder.consumerKey(value);
-                        break;
-                    case OAUTH_TOKEN:
-                        builder.token(value);
-                        break;
-                    case OAUTH_SIGNATURE_METHOD:
-                        builder.signatureMethod(value);
-                        break;
-                    case OAUTH_SIGNATURE:
-                        builder.signature(value);
-                        break;
-                    case OAUTH_TIMESTAMP:
-                        builder.timestamp(value);
-                        break;
-                    case OAUTH_NONCE:
-                        builder.nonce(value);
-                        break;
-                    case OAUTH_VERSION:
-                        builder.version(value);
-                        break;
-                    default:
-                        additionals.put(key, value);
-                }
-            }
-        }
-        return builder.additionals(additionals.build()).build();
+        setParameters(builder, params);
+        return builder.build();
     }
 
     /**
@@ -238,36 +198,33 @@ public final class OAuth1aToken {
         final StringBuilder builder = TemporaryThreadLocals.get().stringBuilder();
         builder.append("OAuth ");
         if (!isNullOrEmpty(realm)) {
-            appendValue(builder, REALM, realm);
-            builder.append(',');
+            appendValue(builder, REALM, realm, true);
         }
 
-        appendValue(builder, OAUTH_CONSUMER_KEY, consumerKey);
-        builder.append(',');
-        appendValue(builder, OAUTH_TOKEN, token);
-        builder.append(',');
-        appendValue(builder, OAUTH_SIGNATURE_METHOD, signatureMethod);
-        builder.append(',');
-        appendValue(builder, OAUTH_SIGNATURE, signature);
-        builder.append(',');
-        appendValue(builder, OAUTH_TIMESTAMP, timestamp);
-        builder.append(',');
-        appendValue(builder, OAUTH_NONCE, nonce);
-        builder.append(',');
-        appendValue(builder, OAUTH_VERSION, version);
+        appendValue(builder, OAUTH_CONSUMER_KEY, consumerKey, true);
+        appendValue(builder, OAUTH_TOKEN, token, true);
+        appendValue(builder, OAUTH_SIGNATURE_METHOD, signatureMethod, true);
+        appendValue(builder, OAUTH_SIGNATURE, signature, true);
+        appendValue(builder, OAUTH_TIMESTAMP, timestamp, true);
+        appendValue(builder, OAUTH_NONCE, nonce, true);
+        appendValue(builder, OAUTH_VERSION, version, false);
         for (Entry<String, String> entry : additionals.entrySet()) {
             builder.append(',');
-            appendValue(builder, entry.getKey(), entry.getValue());
+            appendValue(builder, entry.getKey(), entry.getValue(), false);
         }
 
         return headerValue = builder.toString();
     }
 
-    private static void appendValue(StringBuilder builder, String key, String value) {
+    private static void appendValue(StringBuilder builder, String key, String value, boolean addComma) {
         builder.append(key);
         builder.append("=\"");
         encodeComponent(builder, value);
-        builder.append('"');
+        if (addComma) {
+            builder.append("\",");
+        } else {
+            builder.append('"');
+        }
     }
 
     @Override
