@@ -25,6 +25,7 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTy
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.validateElementType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
+import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
@@ -823,7 +824,7 @@ final class AnnotatedValueResolver {
             // May return 'null' if no default value is specified.
             return defaultValue;
         }
-        throw new IllegalArgumentException("Mandatory parameter is missing: " + httpElementName);
+        throw new IllegalArgumentException("Mandatory parameter/header is missing: " + httpElementName);
     }
 
     @Override
@@ -1045,14 +1046,30 @@ final class AnnotatedValueResolver {
                     defaultValue = null;
                 }
             } else {
-                shouldExist = !shouldWrapValueAsOptional;
                 // Set the default value to null if it was not specified.
                 defaultValue = null;
+
+                if (shouldWrapValueAsOptional) {
+                    shouldExist = false;
+                } else {
+                    // Allow `null` if annotated with `@Nullable`.
+                    boolean isNonNull = true;
+                    for (Annotation a : annotatedElement.getAnnotations()) {
+                        final String annotationTypeName = a.annotationType().getName();
+                        System.err.println(annotationTypeName);
+                        if (annotationTypeName.endsWith(".Nullable")) {
+                            isNonNull = false;
+                            break;
+                        }
+                    }
+
+                    shouldExist = isNonNull;
+                }
             }
 
             if (pathVariable && !shouldExist) {
-                logger.warn("Optional is redundant for path variable '{}' because the value is always present.",
-                            httpElementName);
+                logger.warn("Optional or @Nullable is redundant for path variable '{}' " +
+                            "because the value is always present.", httpElementName);
             }
 
             final Entry<Class<?>, Class<?>> types;

@@ -238,18 +238,28 @@ public class MyAnnotatedService {
 When the value of <type://@Param> annotation is not shown in the path pattern, it will be handled as a
 parameter name of the query string of the request. If you have a service class like the example below and
 a user sends an HTTP `GET` request with URI of `/hello1?name=armeria`, the service method will get `armeria`
-as the value of parameter `name`. If there is no parameter named `name` in the query string, the parameter
-`name` of the method would be `null`. If you want to avoid `null` in this case, you can use
-<type://@Default> annotation or `Optional<?>` class, e.g. `hello2` and `hello3` methods below, respectively.
+as the value of parameter `name`.
+
+If there is no parameter named `name` in the query string, the service method that requires it will not be
+invoked, but the client will get a `400 Bad Request` response.  If you want to allow `null` to be injected,
+you can use <type://@Default> or `@Nullable` annotation or `Optional<?>` class, like `hello2()`, `hello3()`
+and `hello4()` methods below.
 
 ```java
 public class MyAnnotatedService {
 
     @Get("/hello1")
+    // Not invoked when 'name' parameter is missing.
     public HttpResponse hello1(@Param("name") String name) { ... }
 
     @Get("/hello2")
     public HttpResponse hello2(@Param("name") @Default("armeria") String name) { ... }
+
+    @Get("/hello3")
+    public HttpResponse hello3(@Param("name") @Nullable String name) {
+        String clientName = name != null ? name : "armeria";
+        // ...
+    }
 
     @Get("/hello3")
     public HttpResponse hello3(@Param("name") Optional<String> name) {
@@ -258,6 +268,14 @@ public class MyAnnotatedService {
     }
 }
 ```
+
+<Tip>
+
+`@Nullable` annotation can be from *any* packages as long as its simple name is `Nullable`.
+ For example, it can be `@javax.annotation.Nullable`, `@org.checkerframework.checker.nullness.qual.Nullable` or
+ `@io.reactivex.annotations.Nullable`.
+
+</Tip>
 
 If multiple parameters exist with the same name in a query string, they can be injected as a `List<?>`
 or `Set<?>`, e.g. `/hello1?number=1&number=2&number=3`. You can use <type://@Default> annotation
