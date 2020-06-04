@@ -86,7 +86,8 @@ public class MyAnnotatedService {
     public HttpResponse regex(@Param("name") String name) { ... }
 
     @Get("glob:/*/hello/**")
-    public HttpResponse glob(@Param("0") String prefix, @Param("1") String name) { ... }
+    public HttpResponse glob(@Param("0") String prefix,
+                             @Param("1") String name) { ... }
 }
 ```
 
@@ -140,7 +141,8 @@ public class MyAnnotatedService {
     @ConditionalHeader("client-type=android")
     public User getUsers1() { ... }
 
-    // Handles a request which contains 'client-type' header. Any values of the 'client-type' header are accepted.
+    // Handles a request which contains 'client-type' header.
+    // Any values of the 'client-type' header are accepted.
     @Get("/users")
     @ConditionalHeader("client-type")
     public User getUsers2() { ... }
@@ -165,7 +167,8 @@ public class MyAnnotatedService {
     public HttpResponse regex(@Param("name") String name) { ... }
 
     @Get("glob:/*/hello/**")
-    public HttpResponse glob(@Param("0") String prefix, @Param("1") String name) { ... }
+    public HttpResponse glob(@Param("0") String prefix,
+                             @Param("1") String name) { ... }
 }
 ```
 
@@ -242,14 +245,14 @@ as the value of parameter `name`.
 
 If there is no parameter named `name` in the query string, the service method that requires it will not be
 invoked, but the client will get a `400 Bad Request` response.  If you want to allow `null` to be injected,
-you can use <type://@Default> or `@Nullable` annotation or `Optional<?>` class, like `hello2()`, `hello3()`
-and `hello4()` methods below.
+you can use <type://@Default> annotation, `@Nullable` annotation or `Optional<?>` class, like demonstrated
+below in `hello2()`, `hello3()` and `hello4()` methods:
 
 ```java
 public class MyAnnotatedService {
 
     @Get("/hello1")
-    // Not invoked when 'name' parameter is missing.
+    // Will not be invoked but return a 400 status when 'name' parameter is missing.
     public HttpResponse hello1(@Param("name") String name) { ... }
 
     @Get("/hello2")
@@ -286,13 +289,15 @@ public class MyAnnotatedService {
     @Get("/hello1")
     public HttpResponse hello1(@Param("number") List<Integer> numbers) { ... }
 
-    // If there is no 'number' parameter, the default value "1" will be converted to Integer 1,
-    // then it will be added to the 'numbers' list.
+    // If there is no 'number' parameter, the default value "1" will be converted to
+    // Integer 1, then it will be added to the 'numbers' list.
     @Get("/hello2")
-    public HttpResponse hello2(@Param("number") @Default("1") List<Integer> numbers) { ... }
+    public HttpResponse hello2(@Param("number") @Default("1")
+                               List<Integer> numbers) { ... }
 
     @Get("/hello3")
-    public HttpResponse hello3(@Param("number") Optional<List<Integer>> numbers) { ... }
+    public HttpResponse hello3(@Param("number")
+                               Optional<List<Integer>> numbers) { ... }
 }
 ```
 
@@ -304,8 +309,9 @@ decode its body as a URL-encoded form. After that, Armeria will inject the decod
 public class MyAnnotatedService {
     @Post("/hello4")
     public HttpResponse hello4(@Param("name") String name) {
-        // 'x-www-form-urlencoded' request will be aggregated. The other requests may get
-        // a '400 Bad Request' because there is no way to inject a mandatory parameter 'name'.
+        // 'x-www-form-urlencoded' request will be aggregated.
+        // The other requests may get a '400 Bad Request' because
+        // there is no way to inject a mandatory parameter 'name'.
     }
 }
 ```
@@ -330,7 +336,8 @@ public class MyAnnotatedService {
     public HttpResponse hello3(@Header("Forwarded") List<String> forwarded) { ... }
 
     @Post("/hello4")
-    public HttpResponse hello4(@Header("Forwarded") Optional<Set<String>> forwarded) { ... }
+    public HttpResponse hello4(@Header("Forwarded")
+                               Optional<Set<String>> forwarded) { ... }
 }
 ```
 
@@ -368,7 +375,8 @@ public class MyAnnotatedService {
 
     @Post("/hello2")
     public HttpResponse hello2(AggregatedHttpRequest aggregatedRequest) {
-        // Armeria aggregates the received HttpRequest and calls this method with the aggregated request.
+        // Armeria aggregates the received HttpRequest and
+        // calls this method with the aggregated request.
     }
 
     @Get("/hello3")
@@ -378,12 +386,14 @@ public class MyAnnotatedService {
 
     @Post("/hello4")
     public HttpResponse hello4(QueryParams params) {
-        // If a request has a url-encoded form as its body, it can be accessed via 'params'.
+        // If a request has a url-encoded form as its body,
+        // it can be accessed via 'params'.
     }
 
     @Post("/hello5")
     public HttpResponse hello5(Cookies cookies) {
-        // If 'Cookie' header exists, it will be injected into the specified 'cookies' parameter.
+        // If 'Cookie' header exists, it will be injected into
+        // the specified 'cookies' parameter.
     }
 }
 ```
@@ -400,7 +410,8 @@ an exception handler. If your exception handler is not able to handle a given ex
 ```java
 public class MyExceptionHandler implements ExceptionHandlerFunction {
     @Override
-    public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+    public HttpResponse handleException(ServiceRequestContext ctx,
+                                        HttpRequest req, Throwable cause) {
         if (cause instanceof MyServiceException) {
             return HttpResponse.of(HttpStatus.CONFLICT);
         }
@@ -452,7 +463,8 @@ converter is not able to convert the request.
 ```java
 public class ToEnglishConverter implements RequestConverterFunction {
     @Override
-    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
+    public Object convertRequest(ServiceRequestContext ctx,
+                                 AggregatedHttpRequest request,
                                  Class<?> expectedResultType) {
         if (expectedResultType == Greeting.class) {
             // Convert the request to a Java object.
@@ -491,7 +503,8 @@ public class MyAnnotatedService {
     }
 
     @Post("/greet")
-    public HttpResponse greet(RequestConverter(ToGermanConverter.class) Greeting greetingInGerman,
+    public HttpResponse greet(@RequestConverter(ToGermanConverter.class)
+                              Greeting greetingInGerman,
                               Greeting greetingInEnglish) {
         // For the 1st parameter 'greetingInGerman':
         // ToGermanConverter will be tried to convert a request first.
@@ -512,8 +525,8 @@ after your request converters, so you don't have to specify any <type://@Request
 ```java
 public class MyAnnotatedService {
 
-    // JacksonRequestConverterFunction will work for the content type of 'application/json' or
-    // one of '+json' types.
+    // JacksonRequestConverterFunction will work for the content type of
+    // 'application/json' or one of '+json' types.
     @Post("/hello1")
     public HttpResponse hello1(JsonNode body) { ... }
 
@@ -570,11 +583,12 @@ public class MyRequestObject {
     @RequestObject // This field will be injected by another request converter.
     private MyAnotherRequestObject obj;
 
-    // You can omit the value of @Param or @Header if you compiled your code with `-parameters` javac option.
+    // You can omit the value of @Param or @Header if you compiled your code with
+    // `-parameters` javac option.
     @Param         // This field will be injected by the value of parameter "gender".
     private String gender;
 
-    @Header        // This field will be injected by the value of HTTP header "accept-language".
+    @Header        // This field will be injected by the value of "accept-language" header.
     private String acceptLanguage;
 
     @Param("address") // You can annotate a single parameter method with @Param or @Header.
@@ -640,8 +654,9 @@ public class MyAnnotatedService {
     @Post("/hola")
     @ResponseConverter(MySpanishResponseConverter.class)
     public MyObject hola() {
-        // MySpanishResponseConverter will be tried to convert MyObject to a response first.
-        // MyResponseConverter will be used if MySpanishResponseConverter fell through.
+        // MySpanishResponseConverter will be tried to convert MyObject
+        // to a response first, and then MyResponseConverter will be used
+        // if MySpanishResponseConverter fell through.
         // ...
     }
 }
@@ -694,7 +709,8 @@ Let's see the following example about the default response conversion.
 ```java
 public class MyAnnotatedService {
 
-    // JacksonResponseConverterFunction will convert the return values to JSON documents:
+    // JacksonResponseConverterFunction will convert the return values
+    // to JSON documents:
     @Get("/json1")
     @ProducesJson    // the same as @Produces("application/json; charset=utf-8")
     public MyObject json1() { ... }
@@ -710,7 +726,8 @@ public class MyAnnotatedService {
     @Get("/string2")
     public CharSequence string2() { ... }
 
-    // ByteArrayResponseConverterFunction will convert the return values to byte arrays:
+    // ByteArrayResponseConverterFunction will convert the return values
+    // to byte arrays:
     @Get("/byte1")
     @ProducesBinary  // the same as @Produces("application/binary")
     public HttpData byte1() { ... }
@@ -727,7 +744,10 @@ explained in the previous sections:
 
 ```java
 sb.annotatedService(new MyAnnotatedService(),
-                    new MyExceptionHandler(), new MyRequestConverter(), new MyResponseConverter());
+                    // Exception handlers
+                    new MyExceptionHandler(),
+                    // Converters
+                    new MyRequestConverter(), new MyResponseConverter());
 ```
 
 Also, they have a different method signature for conversion and exception handling so you can even write them
@@ -738,7 +758,8 @@ public class MyAllInOneHandler implements RequestConverterFunction,
                                           ResponseConverterFunction,
                                           ExceptionHandlerFunction {
     @Override
-    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
+    public Object convertRequest(ServiceRequestContext ctx,
+                                 AggregatedHttpRequest request,
                                  Class<?> expectedResultType) { ... }
 
     @Override
@@ -748,8 +769,8 @@ public class MyAllInOneHandler implements RequestConverterFunction,
                                  HttpHeaders trailers) throws Exception { ... }
 
     @Override
-    public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req,
-                                        Throwable cause) { ... }
+    public HttpResponse handleException(ServiceRequestContext ctx,
+                                        HttpRequest req, Throwable cause) { ... }
 }
 
 // ...
@@ -801,7 +822,8 @@ more response types which can be used in the annotated service.
           ResponseHeaders headers = ResponseHeaders.builder()
               .status(HttpStatus.OK)
               .add(HttpHeaderNames.LINK,
-                   String.format("<https://example.com/users?start=%s>; rel=\"next\"", start + 10))
+                   String.format("<https://example.com/users?start=%s>; rel=\"next\"",
+                                 start + 10))
               .build();
           return HttpResult.of(headers, users);
       }
@@ -840,7 +862,9 @@ implementing <type://DecoratingHttpServiceFunction> interface as follows.
 ```java
 public class MyDecorator implements DecoratingHttpServiceFunction {
     @Override
-    public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx, HttpRequest req) {
+    public HttpResponse serve(HttpService delegate,
+                              ServiceRequestContext ctx,
+                              HttpRequest req) {
         // ... Do something ...
         return delegate.serve(ctx, req);
     }
@@ -893,15 +917,19 @@ public @interface LoggingDecorator {
     int order() default 0;
 }
 
-public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
+public final class LoggingDecoratorFactoryFunction
+        implements DecoratorFactoryFunction<LoggingDecorator> {
+
     @Override
-    public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {
-        return LoggingService.builder()
-                             .requestLogLevel(parameter.requestLogLevel())
-                             .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
-                             .failureResponseLogLevel(parameter.failureResponseLogLevel())
-                             .samplingRate(parameter.samplingRate())
-                             .newDecorator();
+    public Function<? super HttpService, ? extends HttpService>
+    newDecorator(LoggingDecorator parameter) {
+        return LoggingService
+            .builder()
+            .requestLogLevel(parameter.requestLogLevel())
+            .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+            .failureResponseLogLevel(parameter.failureResponseLogLevel())
+            .samplingRate(parameter.samplingRate())
+            .newDecorator();
     }
 }
 ```
@@ -1041,13 +1069,15 @@ public class MyAnnotatedService {
     @Get("/hello")
     public HttpResponse hello1() {
         // Return a text document to the client.
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Armeria");
+        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                               "Armeria");
     }
 
     @Get("/hello")
     public HttpResponse hello2() {
         // Return a JSON object to the client.
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{ \"name\": \"Armeria\" }");
+        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                               "{ \"name\": \"Armeria\" }");
     }
 }
 ```
@@ -1065,14 +1095,16 @@ public class MyAnnotatedService {
     @Produces("text/plain")
     public HttpResponse helloText() {
         // Return a text document to the client.
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Armeria");
+        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                               "Armeria");
     }
 
     @Get("/hello")
     @Produces("application/json")
     public HttpResponse helloJson() {
         // Return a JSON object to the client.
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{ \"name\": \"Armeria\" }");
+        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                               "{ \"name\": \"Armeria\" }");
     }
 }
 ```
@@ -1116,14 +1148,16 @@ public class MyAnnotatedService {
     @Produces("text/plain")
     public HttpResponse helloText() {
         // Return a text document to the client.
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Armeria");
+        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                               "Armeria");
     }
 
     @Get("/hello")
     @Produces("application/json")
     public HttpResponse helloJson() {
         // Return a JSON object to the client.
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{ \"name\": \"Armeria\" }");
+        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                               "{ \"name\": \"Armeria\" }");
     }
 }
 ```
