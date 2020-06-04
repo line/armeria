@@ -585,17 +585,18 @@ public class MyRequestObject {
 
     // You can omit the value of @Param or @Header if you compiled your code with
     // `-parameters` javac option.
-    @Param         // This field will be injected by the value of parameter "gender".
+    @Param // This field will be injected by the value of parameter "gender".
     private String gender;
 
-    @Header        // This field will be injected by the value of "accept-language" header.
+    @Header // This field will be injected by the value of "accept-language" header.
     private String acceptLanguage;
 
-    @Param("address") // You can annotate a single parameter method with @Param or @Header.
+    @Param("address") // You can annotate a single-parameter method
+                      // with @Param or @Header.
     public void setAddress(String address) { ... }
 
-    @Header("id") // You can annotate a single parameter constructor with @Param or @Header.
-    @Default("0")
+    @Header("id") // You can annotate a single-parameter constructor
+    @Default("0") // with @Param or @Header.
     public MyRequestObject(long id) { ... }
 
     // You can annotate all parameters of method or constructor with @Param or @Header.
@@ -822,7 +823,7 @@ more response types which can be used in the annotated service.
           ResponseHeaders headers = ResponseHeaders.builder()
               .status(HttpStatus.OK)
               .add(HttpHeaderNames.LINK,
-                   String.format("<https://example.com/users?start=%s>; rel=\"next\"",
+                   String.format("<https://example.com/users?from=%s>; rel=\"next\"",
                                  start + 10))
               .build();
           return HttpResult.of(headers, users);
