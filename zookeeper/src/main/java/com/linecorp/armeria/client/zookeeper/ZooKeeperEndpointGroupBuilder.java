@@ -31,15 +31,15 @@ import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
  */
 public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder {
 
-    private final ZookeeperDiscoverySpec spec;
+    private final ZooKeeperDiscoverySpec spec;
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
-    ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String zNodePath, ZookeeperDiscoverySpec spec) {
+    ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String zNodePath, ZooKeeperDiscoverySpec spec) {
         super(zkConnectionStr, zNodePath);
         this.spec = requireNonNull(spec, "spec");
     }
 
-    ZooKeeperEndpointGroupBuilder(CuratorFramework client, String zNodePath, ZookeeperDiscoverySpec spec) {
+    ZooKeeperEndpointGroupBuilder(CuratorFramework client, String zNodePath, ZooKeeperDiscoverySpec spec) {
         super(client, zNodePath);
         this.spec = requireNonNull(spec, "spec");
     }

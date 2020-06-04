@@ -15,27 +15,32 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static java.util.Objects.requireNonNull;
+
+import org.apache.zookeeper.CreateMode;
+
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.zookeeper.ZookeeperDiscoverySpec;
+import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.Server;
 
 /**
  * A registration specification for {@link ZooKeeperUpdatingListener}. The specification is used for encoding
  * and registering the {@link Server} to <a href="https://zookeeper.apache.org/">ZooKeeper</a>.
  *
- * @see ZookeeperDiscoverySpec
+ * @see ZooKeeperDiscoverySpec
  */
-public interface ZookeeperRegistrationSpec {
+public interface ZooKeeperRegistrationSpec {
 
     /**
-     * Returns the {@link ZookeeperRegistrationSpec} that registers the {@link Server} using
+     * Returns the {@link ZooKeeperRegistrationSpec} that registers the {@link Server} using
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
      * This is also compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
-     * @see ZookeeperDiscoverySpec#curator(String)
+     * @see ZooKeeperDiscoverySpec#curator(String)
      */
-    static ZookeeperRegistrationSpec curator(String serviceName) {
+    static ZooKeeperRegistrationSpec curator(String serviceName) {
         return new CuratorRegistrationSpecBuilder(serviceName).build();
     }
 
@@ -44,14 +49,44 @@ public interface ZookeeperRegistrationSpec {
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a> and
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
-     * @see ZookeeperDiscoverySpec#builderForCurator(String)
+     * @see ZooKeeperDiscoverySpec#builderForCurator(String)
      */
     static CuratorRegistrationSpecBuilder builderForCurator(String serviceName) {
         return new CuratorRegistrationSpecBuilder(serviceName);
     }
 
     /**
-     * Returns the {@link ZookeeperRegistrationSpec} that registers the {@link Server} using the specified
+     * Returns a new {@link ServerSetsZooKeeperRegistrationSpecBuilder}. The specification is compatible with
+     * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+     *
+     * @see ZooKeeperDiscoverySpec#serverSets()
+     */
+    static ServerSetsZooKeeperRegistrationSpecBuilder builderForServerSets() {
+        return new ServerSetsZooKeeperRegistrationSpecBuilder();
+    }
+
+    /**
+     * Returns the {@link ZooKeeperRegistrationSpec} that registers the {@link Server} using
+     * {@link SystemInfo#defaultNonLoopbackIpV4Address()} as a {@code host} and
+     * {@link Server#activePort()} as a {@code port_number}.
+     * The {@code host} and {@code port_number} are encoded to a comma-separated string whose format is
+     * {@code <host>[:<port_number>[:weight]]}, such as:
+     * <ul>
+     *   <li>{@code "foo.com"} - default port number, default weight (1000)</li>
+     *   <li>{@code "bar.com:8080} - port number 8080, default weight (1000)</li>
+     *   <li>{@code "10.0.2.15:0:500} - default port number, weight 500</li>
+     *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
+     * </ul>
+     * Note that the port number must be specified when you want to specify the weight.
+     *
+     * @see ZooKeeperDiscoverySpec#legacy()
+     */
+    static ZooKeeperRegistrationSpec legacy() {
+        return new LegacyZooKeeperRegistrationSpec();
+    }
+
+    /**
+     * Returns the {@link ZooKeeperRegistrationSpec} that registers the {@link Server} using the specified
      * {@link Endpoint}. The {@link Endpoint} is encoded to a comma-separated string whose format is
      * {@code <host>[:<port_number>[:weight]]}, such as:
      * <ul>
@@ -62,10 +97,10 @@ public interface ZookeeperRegistrationSpec {
      * </ul>
      * Note that the port number must be specified when you want to specify the weight.
      *
-     * @see ZookeeperDiscoverySpec#legacy()
+     * @see ZooKeeperDiscoverySpec#legacy()
      */
-    static ZookeeperRegistrationSpec legacy(Endpoint endpoint) {
-        return new LegacyZookeeperRegistrationSpec(endpoint);
+    static ZooKeeperRegistrationSpec legacy(Endpoint endpoint) {
+        return new LegacyZooKeeperRegistrationSpec(requireNonNull(endpoint, "endpoint"));
     }
 
     /**
@@ -73,6 +108,11 @@ public interface ZookeeperRegistrationSpec {
      * {@code zNodePath} that is specified when creating {@link ZooKeeperUpdatingListener}.
      */
     String path();
+
+    /**
+     * Tells whether to create the ZooKeeper node using {@link CreateMode#EPHEMERAL_SEQUENTIAL} or not.
+     */
+    boolean isSequential();
 
     /**
      * Returns the byte array representation of the {@link Server}.

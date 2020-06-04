@@ -73,6 +73,7 @@ public enum LegacyNodeValueCodec {
      * Encodes a single {@link Endpoint} into a byte array representation.
      */
     public byte[] encode(Endpoint endpoint) {
+        requireNonNull(endpoint, "endpoint");
         final String endpointStr;
         if (endpoint.hasPort()) {
             endpointStr = endpoint.host() + fieldDelimiter + endpoint.port() +

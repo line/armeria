@@ -15,27 +15,26 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import static com.linecorp.armeria.internal.common.zookeeper.ZookeeperPathUtil.validatePath;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
+import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
-final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec {
+final class ServerSetsZooKeeperRegistrationSpec implements ZooKeeperRegistrationSpec {
 
-    private final Endpoint endpoint;
     private final String path;
+    private final boolean isSequential;
+    private final ServerSetsInstance serverSetsInstance;
 
-    LegacyZookeeperRegistrationSpec(Endpoint endpoint) {
-        this.endpoint = requireNonNull(endpoint, "endpoint");
-        validatePath(endpoint.host(), "endpoint.host()");
-        path = '/' + endpoint.host() + '_' + endpoint.port();
+    ServerSetsZooKeeperRegistrationSpec(String nodeName, boolean isSequential,
+                                        ServerSetsInstance serverSetsInstance) {
+        path = '/' + nodeName;
+        this.isSequential = isSequential;
+        this.serverSetsInstance = serverSetsInstance;
     }
 
-    Endpoint endpoint() {
-        return endpoint;
+    ServerSetsInstance serverSetsInstance() {
+        return serverSetsInstance;
     }
 
     @Override
@@ -44,15 +43,21 @@ final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec
     }
 
     @Override
+    public boolean isSequential() {
+        return isSequential;
+    }
+
+    @Override
     public byte[] encodedInstance() {
-        return LegacyNodeValueCodec.INSTANCE.encode(endpoint);
+        return ServerSetsNodeValueCodec.INSTANCE.encode(serverSetsInstance);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("endpoint", endpoint)
+                          .add("serverSetsInstance", serverSetsInstance)
                           .add("path", path)
+                          .add("isSequential", isSequential())
                           .toString();
     }
 }

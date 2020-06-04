@@ -15,24 +15,40 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import org.apache.curator.x.discovery.ServiceInstance;
+import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperPathUtil.validatePath;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
-final class CuratorRegistrationSpec implements ZooKeeperRegistrationSpec {
+final class LegacyZooKeeperRegistrationSpec implements ZooKeeperRegistrationSpec {
 
-    private final ServiceInstance<?> serviceInstance;
+    private static final byte[] EMPTY_BYTE = new byte[0];
+
+    @Nullable
+    private final Endpoint endpoint;
     private final String path;
 
-    CuratorRegistrationSpec(ServiceInstance<?> serviceInstance) {
-        this.serviceInstance = serviceInstance;
-        path = '/' + serviceInstance.getName() + '/' + serviceInstance.getId();
+    LegacyZooKeeperRegistrationSpec() {
+        this(null);
     }
 
-    ServiceInstance<?> serviceInstance() {
-        return serviceInstance;
+    LegacyZooKeeperRegistrationSpec(@Nullable Endpoint endpoint) {
+        this.endpoint = endpoint;
+        if (endpoint != null) {
+            validatePath(endpoint.host(), "endpoint.host()");
+            path = '/' + endpoint.host() + '_' + endpoint.port();
+        } else {
+            path = "/";
+        }
+    }
+
+    @Nullable
+    Endpoint endpoint() {
+        return endpoint;
     }
 
     @Override
@@ -47,13 +63,16 @@ final class CuratorRegistrationSpec implements ZooKeeperRegistrationSpec {
 
     @Override
     public byte[] encodedInstance() {
-        return CuratorXNodeValueCodec.INSTANCE.encode(serviceInstance);
+        if (endpoint == null) {
+            return EMPTY_BYTE;
+        }
+        return LegacyNodeValueCodec.INSTANCE.encode(endpoint);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("serviceInstance", serviceInstance)
+        return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("endpoint", endpoint)
                           .add("path", path)
                           .add("isSequential", isSequential())
                           .toString();

@@ -24,7 +24,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-final class CuratorDiscoverySpec implements ZookeeperDiscoverySpec {
+final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
 
     private final String path;
     private final Function<? super ServiceInstance<?>, Endpoint> converter;

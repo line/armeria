@@ -15,22 +15,27 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
-import javax.annotation.Nullable;
+import java.util.function.Function;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
+import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
-enum LegacyZookeeperDiscoverySpec implements ZookeeperDiscoverySpec {
-    INSTANCE;
+final class ServerSetsZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
 
-    @Nullable
+    private final Function<? super ServerSetsInstance, Endpoint> converter;
+
+    ServerSetsZooKeeperDiscoverySpec(Function<? super ServerSetsInstance, Endpoint> converter) {
+        this.converter = converter;
+    }
+
     @Override
     public String path() {
         return null;
     }
 
     @Override
-    public Endpoint decode(byte[] zNodeValue) {
-        return LegacyNodeValueCodec.INSTANCE.decode(zNodeValue);
+    public Endpoint decode(byte[] data) {
+        return converter.apply(ServerSetsNodeValueCodec.INSTANCE.decode(data));
     }
 }

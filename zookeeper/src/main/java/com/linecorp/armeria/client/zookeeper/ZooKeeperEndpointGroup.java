@@ -58,10 +58,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      *
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperDiscoverySpec} to find and decode the registered instances
+     * @param spec the {@link ZooKeeperDiscoverySpec} to find and decode the registered instances
      */
     public static ZooKeeperEndpointGroup of(String zkConnectionStr, String zNodePath,
-                                            ZookeeperDiscoverySpec spec) {
+                                            ZooKeeperDiscoverySpec spec) {
         return builder(zkConnectionStr, zNodePath, spec).build();
     }
 
@@ -73,10 +73,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperDiscoverySpec} to find and decode the registered instances
+     * @param spec the {@link ZooKeeperDiscoverySpec} to find and decode the registered instances
      */
     public static ZooKeeperEndpointGroup of(CuratorFramework client, String zNodePath,
-                                            ZookeeperDiscoverySpec spec) {
+                                            ZooKeeperDiscoverySpec spec) {
         return builder(client, zNodePath, spec).build();
     }
 
@@ -88,10 +88,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      *
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperDiscoverySpec} to find and decode the registered instances
+     * @param spec the {@link ZooKeeperDiscoverySpec} to find and decode the registered instances
      */
     public static ZooKeeperEndpointGroupBuilder builder(
-            String zkConnectionStr, String zNodePath, ZookeeperDiscoverySpec spec) {
+            String zkConnectionStr, String zNodePath, ZooKeeperDiscoverySpec spec) {
         return new ZooKeeperEndpointGroupBuilder(zkConnectionStr, zNodePath, spec);
     }
 
@@ -102,10 +102,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperDiscoverySpec} to find and decode the registered instances
+     * @param spec the {@link ZooKeeperDiscoverySpec} to find and decode the registered instances
      */
     public static ZooKeeperEndpointGroupBuilder builder(
-            CuratorFramework client, String zNodePath, ZookeeperDiscoverySpec spec) {
+            CuratorFramework client, String zNodePath, ZooKeeperDiscoverySpec spec) {
         return new ZooKeeperEndpointGroupBuilder(client, zNodePath, spec);
     }
 
@@ -115,7 +115,7 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
     ZooKeeperEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                            CuratorFramework client, String zNodePath,
-                           ZookeeperDiscoverySpec discoverySpec, boolean internalClient) {
+                           ZooKeeperDiscoverySpec discoverySpec, boolean internalClient) {
         super(selectionStrategy);
         this.internalClient = internalClient;
         this.client = requireNonNull(client, "client");
@@ -131,7 +131,7 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
-    private PathChildrenCache pathChildrenCache(String path, ZookeeperDiscoverySpec spec) {
+    private PathChildrenCache pathChildrenCache(String path, ZooKeeperDiscoverySpec spec) {
         final PathChildrenCache pathChildrenCache = new PathChildrenCache(client, path, true);
         pathChildrenCache.getListenable().addListener((c, event) -> {
             switch (event.getType()) {
@@ -155,7 +155,7 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Nullable
-    private static Endpoint endpoint(ZookeeperDiscoverySpec spec, PathChildrenCacheEvent event) {
+    private static Endpoint endpoint(ZooKeeperDiscoverySpec spec, PathChildrenCacheEvent event) {
         return spec.decode(event.getData().getData());
     }
 

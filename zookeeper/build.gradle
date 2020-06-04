@@ -8,4 +8,6 @@ dependencies {
 
     // ZooKeeper JUnit
     testImplementation 'org.dmonix.junit:zookeeper-junit'
+
+    testImplementation 'com.twitter:finagle-serversets_2.13'
 }

@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.Server;
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.
  * <pre>{@code
- * ZookeeperRegistrationSpec spec = ZookeeperRegistrationSpec.curator("myServices");
+ * ZooKeeperRegistrationSpec spec = ZooKeeperRegistrationSpec.curator("myServices");
  * ZooKeeperUpdatingListener listener =
  *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints", spec)
  *                              .sessionTimeoutMillis(10000)
@@ -46,9 +46,9 @@ import com.linecorp.armeria.server.Server;
  * {@link IllegalStateException}.
  *
  * <pre>{@code
+ * ZooKeeperRegistrationSpec spec = ...
  * ZooKeeperUpdatingListener listener =
- *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints")
- *                              .codec(NodeValueCodec.ofDefault())
+ *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints", spec)
  *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
@@ -56,7 +56,7 @@ import com.linecorp.armeria.server.Server;
  * */
 public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
 
-    private final ZookeeperRegistrationSpec spec;
+    private final ZooKeeperRegistrationSpec spec;
 
     /**
      * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
@@ -66,7 +66,7 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param zNodePath the ZooKeeper node to register
      */
     ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath,
-                                     ZookeeperRegistrationSpec spec) {
+                                     ZooKeeperRegistrationSpec spec) {
         super(client, zNodePath);
         this.spec = requireNonNull(spec, "spec");
     }
@@ -78,7 +78,7 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param zNodePath the ZooKeeper node to register
      */
     ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath,
-                                     ZookeeperRegistrationSpec spec) {
+                                     ZooKeeperRegistrationSpec spec) {
         super(zkConnectionStr, zNodePath);
         this.spec = requireNonNull(spec, "spec");
     }

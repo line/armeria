@@ -15,26 +15,33 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.function.Function;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.server.zookeeper.ZookeeperRegistrationSpec;
+import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
+import com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationSpec;
 
 /**
  * A discovery specification for {@link ZooKeeperEndpointGroup}. The specification is used for finding
  * and decoding the registered instances into {@link Endpoint}s.
  *
- * @see ZookeeperRegistrationSpec
+ * @see ZooKeeperRegistrationSpec
  */
-public interface ZookeeperDiscoverySpec {
+public interface ZooKeeperDiscoverySpec {
 
     /**
-     * Returns a {@link ZookeeperDiscoverySpec} that is compatible with
+     * Returns a {@link ZooKeeperDiscoverySpec} that is compatible with
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
      * This is also compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
+     *
+     * @see ZooKeeperRegistrationSpec#curator(String)
      */
-    static ZookeeperDiscoverySpec curator(String serviceName) {
+    static ZooKeeperDiscoverySpec curator(String serviceName) {
         return builderForCurator(serviceName).build();
     }
 
@@ -42,13 +49,43 @@ public interface ZookeeperDiscoverySpec {
      * Returns a new {@link CuratorDiscoverySpecBuilder}. The specification is compatible with
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a> and
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
+     *
+     * @see ZooKeeperRegistrationSpec#builderForCurator(String)
      */
     static CuratorDiscoverySpecBuilder builderForCurator(String serviceName) {
         return new CuratorDiscoverySpecBuilder(serviceName);
     }
 
     /**
-     * Returns the legacy {@link ZookeeperDiscoverySpec} implementation which assumes a zNode value is
+     * Returns a {@link ZooKeeperDiscoverySpec} that is compatible with
+     * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+     *
+     * @see ZooKeeperRegistrationSpec#builderForServerSets()
+     */
+    static ZooKeeperDiscoverySpec serverSets() {
+        return serverSets(serverSetsInstance -> {
+            final Endpoint serviceEndpoint = serverSetsInstance.serviceEndpoint();
+            if (serviceEndpoint == null) {
+                return null;
+            }
+            return Endpoint.of(serviceEndpoint.host(), serviceEndpoint.port());
+        });
+    }
+
+    /**
+     * Returns a {@link ZooKeeperDiscoverySpec} that is compatible with
+     * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+     *
+     * @param converter the converter to convert a {@link ServerSetsInstance} to an {@link Endpoint}
+     *
+     * @see ZooKeeperRegistrationSpec#builderForServerSets()
+     */
+    static ZooKeeperDiscoverySpec serverSets(Function<? super ServerSetsInstance, Endpoint> converter) {
+        return new ServerSetsZooKeeperDiscoverySpec(requireNonNull(converter, "converter"));
+    }
+
+    /**
+     * Returns the legacy {@link ZooKeeperDiscoverySpec} implementation which assumes a zNode value is
      * a comma-separated string. Each element of the zNode value represents an {@link Endpoint} whose format is
      * {@code <host>[:<port_number>[:weight]]}, such as:
      * <ul>
@@ -58,9 +95,11 @@ public interface ZookeeperDiscoverySpec {
      *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
      * </ul>
      * Note that the port number must be specified when you want to specify the weight.
+     *
+     * @see ZooKeeperRegistrationSpec#legacy()
      */
-    static ZookeeperDiscoverySpec legacy() {
-        return LegacyZookeeperDiscoverySpec.INSTANCE;
+    static ZooKeeperDiscoverySpec legacy() {
+        return LegacyZooKeeperDiscoverySpec.INSTANCE;
     }
 
     /**
