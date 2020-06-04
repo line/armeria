@@ -19,8 +19,6 @@ package com.linecorp.armeria.common.stream;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-import javax.annotation.CheckReturnValue;
-
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -96,7 +94,6 @@ public interface StreamWriter<T> {
      * @throws IllegalArgumentException if the publication of the specified object has been rejected
      * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
-    @CheckReturnValue
     boolean tryWrite(T o);
 
     /**
@@ -107,7 +104,6 @@ public interface StreamWriter<T> {
      *         stream has been closed already.
      * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
-    @CheckReturnValue
     default boolean tryWrite(Supplier<? extends T> o) {
         return tryWrite(o.get());
     }
