@@ -238,7 +238,6 @@ class ServerMaxConnectionAgeTest {
                                                          .build();
         return WebClient.builder(uri)
                         .factory(clientFactory)
-                        //                        .decorator(LoggingClient.newDecorator())
                         .responseTimeoutMillis(0)
                         .build();
     }
