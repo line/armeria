@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
 final class AnnotatedServiceTypeUtil {
@@ -37,8 +38,8 @@ final class AnnotatedServiceTypeUtil {
                     .put(Byte.class, Byte::valueOf)
                     .put(Short.TYPE, Short::valueOf)
                     .put(Short.class, Short::valueOf)
-                    .put(Boolean.TYPE, Boolean::valueOf)
-                    .put(Boolean.class, Boolean::valueOf)
+                    .put(Boolean.TYPE, AnnotatedServiceTypeUtil::parseBoolean)
+                    .put(Boolean.class, AnnotatedServiceTypeUtil::parseBoolean)
                     .put(Integer.TYPE, Integer::valueOf)
                     .put(Integer.class, Integer::valueOf)
                     .put(Long.TYPE, Long::valueOf)
@@ -113,6 +114,17 @@ final class AnnotatedServiceTypeUtil {
 
         throw new IllegalArgumentException(
                 "Can't convert '" + str + "' to type '" + clazz.getSimpleName() + "'.");
+    }
+
+    private static Boolean parseBoolean(String s) {
+        switch (Ascii.toLowerCase(s)) {
+            case "true":
+                return true;
+            case "false":
+                return false;
+            default:
+                throw new IllegalArgumentException("must be 'true' or 'false': " + s);
+        }
     }
 
     private AnnotatedServiceTypeUtil() {}
