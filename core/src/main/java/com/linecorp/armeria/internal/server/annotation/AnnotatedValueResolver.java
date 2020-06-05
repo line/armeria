@@ -440,11 +440,10 @@ final class AnnotatedValueResolver {
                                                          AnnotatedElement annotatedElement,
                                                          AnnotatedElement typeElement, Class<?> type,
                                                          @Nullable String description) {
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
-                .supportOptional(true)
                 .pathVariable(true)
                 .description(description)
                 .resolver(resolver(ctx -> ctx.context().pathParam(name)))
@@ -455,11 +454,10 @@ final class AnnotatedValueResolver {
                                                        AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
                                                        @Nullable String description) {
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
-                .supportOptional(true)
                 .supportDefault(true)
                 .supportContainer(true)
                 .description(description)
@@ -473,11 +471,10 @@ final class AnnotatedValueResolver {
                                                    AnnotatedElement annotatedElement,
                                                    AnnotatedElement typeElement, Class<?> type,
                                                    @Nullable String description) {
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(Header.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
-                .supportOptional(true)
                 .supportDefault(true)
                 .supportContainer(true)
                 .description(description)
@@ -495,9 +492,8 @@ final class AnnotatedValueResolver {
         // be passed into the AnnotatedBeanFactoryRegistry#register.
         final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(type, pathParams,
                                                                                   objectResolvers);
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(RequestObject.class)
-                .supportOptional(true)
                 .description(description)
                 .aggregation(AggregationStrategy.ALWAYS)
                 .resolver(resolver(objectResolvers, beanFactoryId))
@@ -527,45 +523,39 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofInjectableTypes0(AnnotatedElement annotatedElement,
                                                              Class<?> type, Type actual) {
         if (actual == RequestContext.class || actual == ServiceRequestContext.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.context())
                     .build();
         }
 
         if (actual == Request.class || actual == HttpRequest.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.request())
                     .build();
         }
 
         if (actual == HttpHeaders.class || actual == RequestHeaders.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.request().headers())
                     .build();
         }
 
         if (actual == AggregatedHttpRequest.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.aggregatedRequest())
                     .aggregation(AggregationStrategy.ALWAYS)
                     .build();
         }
 
         if (actual == QueryParams.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.queryParams())
                     .aggregation(AggregationStrategy.FOR_FORM_DATA)
                     .build();
         }
 
         if (actual == Cookies.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> {
                         final String value = ctx.request().headers().get(HttpHeaderNames.COOKIE);
                         if (value == null) {
@@ -854,10 +844,6 @@ final class AnnotatedValueResolver {
                           .toString();
     }
 
-    private static Builder builder(AnnotatedElement annotatedElement, Type type) {
-        return new Builder(annotatedElement, type);
-    }
-
     private static final class Builder {
         private final AnnotatedElement annotatedElement;
         private final Type type;
@@ -868,7 +854,6 @@ final class AnnotatedValueResolver {
         private String httpElementName;
         private boolean pathVariable;
         private boolean supportContainer;
-        private boolean supportOptional;
         private boolean supportDefault;
         @Nullable
         private String description;
@@ -916,14 +901,6 @@ final class AnnotatedValueResolver {
          */
         private Builder supportContainer(boolean supportContainer) {
             this.supportContainer = supportContainer;
-            return this;
-        }
-
-        /**
-         * Sets whether the value type can be wrapped by {@link Optional}.
-         */
-        private Builder supportOptional(boolean supportOptional) {
-            this.supportOptional = supportOptional;
             return this;
         }
 
@@ -979,13 +956,6 @@ final class AnnotatedValueResolver {
             final Type originalParameterizedType = parameterizedTypeOf(typeElement);
             final Type unwrappedParameterizedType = isOptional ? unwrapOptional(originalParameterizedType)
                                                                : originalParameterizedType;
-
-            if (!supportOptional && isOptional) {
-                throw new IllegalArgumentException(
-                        '@' + Optional.class.getSimpleName() + " is not supported for: " +
-                        (annotationType != null ? annotationType.getSimpleName()
-                                                : unwrappedParameterizedType.getTypeName()));
-            }
 
             final boolean shouldExist;
             final String defaultValue;
