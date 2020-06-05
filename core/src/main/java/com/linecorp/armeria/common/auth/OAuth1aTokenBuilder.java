@@ -152,7 +152,37 @@ public final class OAuth1aTokenBuilder {
      * }</pre>
      */
     public OAuth1aTokenBuilder put(String key, String value) {
-        additionalsBuilder.put(requireNonNull(key, "key"), requireNonNull(value, "value"));
+        requireNonNull(key, "key");
+        requireNonNull(value, "value");
+        final String lowerCased = Ascii.toLowerCase(key);
+        switch (lowerCased) {
+            case REALM:
+                realm(value);
+                break;
+            case OAUTH_CONSUMER_KEY:
+                consumerKey(value);
+                break;
+            case OAUTH_TOKEN:
+                token(value);
+                break;
+            case OAUTH_SIGNATURE_METHOD:
+                signatureMethod(value);
+                break;
+            case OAUTH_SIGNATURE:
+                signature(value);
+                break;
+            case OAUTH_TIMESTAMP:
+                timestamp(value);
+                break;
+            case OAUTH_NONCE:
+                nonce(value);
+                break;
+            case OAUTH_VERSION:
+                version(value);
+                break;
+            default:
+                additionalsBuilder.put(key, value);
+        }
         return this;
     }
 
@@ -178,35 +208,7 @@ public final class OAuth1aTokenBuilder {
 
             // Empty values are ignored.
             if (!isNullOrEmpty(key) && !isNullOrEmpty(value)) {
-                final String lowerCased = Ascii.toLowerCase(key);
-                switch (lowerCased) {
-                    case REALM:
-                        realm(value);
-                        break;
-                    case OAUTH_CONSUMER_KEY:
-                        consumerKey(value);
-                        break;
-                    case OAUTH_TOKEN:
-                        token(value);
-                        break;
-                    case OAUTH_SIGNATURE_METHOD:
-                        signatureMethod(value);
-                        break;
-                    case OAUTH_SIGNATURE:
-                        signature(value);
-                        break;
-                    case OAUTH_TIMESTAMP:
-                        timestamp(value);
-                        break;
-                    case OAUTH_NONCE:
-                        nonce(value);
-                        break;
-                    case OAUTH_VERSION:
-                        version(value);
-                        break;
-                    default:
-                        additionalsBuilder.put(key, value);
-                }
+                put(key, value);
             }
         }
         return this;
