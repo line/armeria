@@ -130,7 +130,7 @@ class PublisherBasedStreamMessageTest {
         });
 
         // We do call onError(t) first before completing the future.
-        await().untilAsserted(() -> assertThat(p.whenComplete().isCompletedExceptionally()));
+        await().untilAsserted(() -> assertThat(p.whenComplete()).isCompletedExceptionally());
     }
 
     private static final class AbortTest {

@@ -376,8 +376,8 @@ class LoggingServiceTest {
                                       Pattern.compile("com")))
                               .newDecorator().apply(delegate);
 
-        assertThat(ctx.logBuilder().toString().contains("trustin"));
-        assertThat(ctx.logBuilder().toString().contains("test.com"));
+        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains("test.com");
         service.serve(ctx, ctx.request());
         assertThat(ctx.logBuilder().toString()).doesNotContain("trustin");
         assertThat(ctx.logBuilder().toString()).doesNotContain("com");

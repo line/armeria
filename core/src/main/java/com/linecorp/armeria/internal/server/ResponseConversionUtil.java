@@ -252,7 +252,9 @@ public final class ResponseConversionUtil {
                 return;
             }
             if (!trailers.isEmpty()) {
-                writer.tryWrite(trailers);
+                if (!writer.tryWrite(trailers)) {
+                    return;
+                }
             }
             writer.close();
         }

@@ -158,7 +158,7 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
         } else {
             final Method valueMethod;
             try {
-                valueMethod = annotation.getClass().getMethod("value");
+                valueMethod = annotation.annotationType().getMethod("value");
                 httpPath = (String) valueMethod.invoke(annotation);
             } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                 // Should never happen on valid Retrofit client.

@@ -38,7 +38,7 @@ public final class TestConverters {
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof Integer) {
-                return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", result)));
+                return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", (Integer) result)));
             }
             return ResponseConverterFunction.fallthrough();
         }
