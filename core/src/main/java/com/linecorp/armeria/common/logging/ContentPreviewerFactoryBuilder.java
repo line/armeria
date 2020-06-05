@@ -56,7 +56,7 @@ public final class ContentPreviewerFactoryBuilder {
      * Sets the maximum length of the produced preview.
      */
     public ContentPreviewerFactoryBuilder maxLength(int maxLength) {
-        checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
+        checkArgument(maxLength > 0, "maxLength : %s (expected: > 0)", maxLength);
         this.maxLength = maxLength;
         return this;
     }

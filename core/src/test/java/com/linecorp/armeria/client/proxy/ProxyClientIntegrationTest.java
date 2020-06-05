@@ -369,7 +369,7 @@ public class ProxyClientIntegrationTest {
         final String username = "username";
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
-                assertThat(username.equals(((DefaultSocks4CommandRequest) msg).userId()));
+                assertThat(username).isEqualTo(((DefaultSocks4CommandRequest) msg).userId());
             }
             ctx.fireChannelRead(msg);
         });

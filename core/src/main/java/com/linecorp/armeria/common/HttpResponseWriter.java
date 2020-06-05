@@ -56,7 +56,8 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
 
             final HttpHeaders trailers = res.trailers();
             if (!trailers.isEmpty()) {
-                tryWrite(trailers);
+                @SuppressWarnings("CheckReturnValue")
+                final boolean ignored = tryWrite(trailers);
             }
         } finally {
             close();

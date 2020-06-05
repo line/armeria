@@ -52,7 +52,9 @@ public class RequestContextAssemblyTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService(new Object() {
+
                 @Get("/foo")
+                @SuppressWarnings("CheckReturnValue")
                 public HttpResponse foo(ServiceRequestContext ctx, HttpRequest req) {
                     final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
                     flowable(10)
@@ -64,22 +66,18 @@ public class RequestContextAssemblyTest {
                             .flatMapMaybe(RequestContextAssemblyTest::maybe)
                             .map(RequestContextAssemblyTest::checkRequestContext)
                             .flatMapCompletable(RequestContextAssemblyTest::completable)
-                            .subscribe(() -> {
-                                res.complete(HttpResponse.of(HttpStatus.OK));
-                            }, e -> {
-                                res.completeExceptionally(e);
-                            });
+                            .subscribe(() -> res.complete(HttpResponse.of(HttpStatus.OK)),
+                                       res::completeExceptionally);
                     return HttpResponse.from(res);
                 }
 
+                @SuppressWarnings("CheckReturnValue")
                 @Get("/single")
                 public HttpResponse single(ServiceRequestContext ctx, HttpRequest req) {
                     final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
                     Single.just("")
                           .flatMap(RequestContextAssemblyTest::single)
-                          .subscribe((s, throwable) -> {
-                              res.complete(HttpResponse.of(HttpStatus.OK));
-                          });
+                          .subscribe((s, throwable) -> res.complete(HttpResponse.of(HttpStatus.OK)));
                     return HttpResponse.from(res);
                 }
             });
