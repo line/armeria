@@ -291,6 +291,7 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("client.ip", "9.10.11.12")
                            .containsEntry("req.direction", "INBOUND")
                            .containsEntry("req.authority", "server.com:8080")
+                           .containsEntry("req.name", "GET")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "name=alice")

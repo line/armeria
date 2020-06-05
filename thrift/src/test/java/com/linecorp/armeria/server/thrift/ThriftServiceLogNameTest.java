@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.thrift;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.thrift.TException;
-import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -42,15 +41,16 @@ class ThriftServiceLogNameTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/thrift", THttpService.builder()
-                                              .addService(HELLO_SERVICE_HANDLER)
-                                              .build());
+                                                         .addService(HELLO_SERVICE_HANDLER)
+                                                         .build());
         }
     };
 
     @Test
     void logName() throws TException {
-        final HelloService.Iface client = Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
-                                                 .build(HelloService.Iface.class);
+        final HelloService.Iface client =
+                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
+                       .build(HelloService.Iface.class);
 
         client.hello("hello");
         final RequestLog log = capturedCtx.log().partial();

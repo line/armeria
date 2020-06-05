@@ -183,7 +183,8 @@ public class GrpcMetricsIntegrationTest {
             String method, String suffix, Statistic type, String... keyValues) {
         final MeterIdPrefix prefix = new MeterIdPrefix(
                 "server." + suffix + '#' + type.getTagValueRepresentation(),
-                "method", "armeria.grpc.testing.TestService/" + method,
+                "service", "armeria.grpc.testing.TestService",
+                "method", method,
                 "hostname.pattern", "*",
                 "route", "exact:/armeria.grpc.testing.TestService/" + method);
         final String meterIdStr = prefix.withTags(keyValues).toString();
@@ -194,7 +195,8 @@ public class GrpcMetricsIntegrationTest {
             String method, String suffix, Statistic type, String... keyValues) {
         final MeterIdPrefix prefix = new MeterIdPrefix(
                 "client." + suffix + '#' + type.getTagValueRepresentation(),
-                "method", "armeria.grpc.testing.TestService/" + method,
+                "service", "armeria.grpc.testing.TestService",
+                "method", method,
                 "http.status", "200");
         final String meterIdStr = prefix.withTags(keyValues).toString();
         return MoreMeters.measureAll(registry).get(meterIdStr);
