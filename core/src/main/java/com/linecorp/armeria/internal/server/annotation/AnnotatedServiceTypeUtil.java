@@ -55,12 +55,8 @@ final class AnnotatedServiceTypeUtil {
     private static final Map<String, Boolean> stringToBooleanMap =
             ImmutableMap.<String, Boolean>builder()
                     .put("true", true)
-                    .put("on", true)
-                    .put("yes", true)
                     .put("1", true)
                     .put("false", false)
-                    .put("off", false)
-                    .put("no", false)
                     .put("0", false)
                     .build();
 
