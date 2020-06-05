@@ -29,6 +29,7 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServic
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
+import static com.linecorp.armeria.server.docs.FieldRequirement.OPTIONAL;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -387,7 +388,7 @@ class AnnotatedDocServicePluginTest {
                                        .build();
         final FieldInfo seqNum = FieldInfo.builder("seqNum", LONG)
                                           .location(QUERY)
-                                          .requirement(REQUIRED)
+                                          .requirement(OPTIONAL)
                                           .build();
         return FieldInfo.builder(RequestBean1.class.getSimpleName(), BEAN, uid, seqNum).build();
     }
