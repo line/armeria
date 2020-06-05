@@ -67,6 +67,10 @@ com.google.dagger:
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
+com.google.errorprone:
+  error_prone_core:
+    version: '2.4.0'
+
 com.google.guava:
   guava:
     version: &GUAVA_VERSION '29.0-jre'
