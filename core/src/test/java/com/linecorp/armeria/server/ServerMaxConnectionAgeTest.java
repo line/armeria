@@ -153,7 +153,7 @@ class ServerMaxConnectionAgeTest {
             assertThat(opened).hasValueBetween(closed, closed + 1);
         }
 
-        for (long elapsed: elapsedTimes) {
+        for (long elapsed : elapsedTimes) {
             assertThat(elapsed).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(35));
         }
         clientFactory.close();
