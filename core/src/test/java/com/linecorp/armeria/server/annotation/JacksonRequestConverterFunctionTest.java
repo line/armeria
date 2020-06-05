@@ -70,12 +70,13 @@ public class JacksonRequestConverterFunctionTest {
         function.convertRequest(ctx, req, String.class, null);
     }
 
+    @Test
     public void jsonTextToTreeNode() throws Exception {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content(StandardCharsets.UTF_8)).thenReturn(JSON_TEXT);
 
         assertThat(function.convertRequest(ctx, req, TreeNode.class, null))
-                .isEqualTo(JsonNodeFactory.instance.textNode(JSON_TEXT));
+                .isEqualTo(new ObjectMapper().readTree(JSON_TEXT));
     }
 
     @Test
