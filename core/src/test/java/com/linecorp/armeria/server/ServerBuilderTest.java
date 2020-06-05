@@ -549,4 +549,42 @@ class ServerBuilderTest {
         assertThat(config.idleTimeoutMillis()).isEqualTo(idleTimeoutMillis);
         assertThat(config.pingIntervalMillis()).isEqualTo(expectedPingIntervalMillis);
     }
+
+    @CsvSource({
+            "0,     10000",
+            "15000, 0",
+            "20000, 20000",
+            "20000, 15000",
+            "15000, 20000",
+    })
+    @ParameterizedTest
+    void maxConnectionAgeShouldGreatOrEqualThanIdleTimeout(long idleTimeoutMillis,
+                                                           long maxConnectionAgeMillis) {
+        final ServerConfig config = Server.builder()
+                                          .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                          .idleTimeoutMillis(idleTimeoutMillis)
+                                          .maxConnectionAgeMillis(maxConnectionAgeMillis)
+                                          .build()
+                                          .config();
+
+        if (maxConnectionAgeMillis > 0 &&
+            (idleTimeoutMillis == 0 || idleTimeoutMillis > maxConnectionAgeMillis)) {
+            assertThat(config.maxConnectionAgeMillis()).isEqualTo(maxConnectionAgeMillis);
+            assertThat(config.idleTimeoutMillis()).isEqualTo(maxConnectionAgeMillis);
+        } else {
+            assertThat(config.idleTimeoutMillis()).isEqualTo(idleTimeoutMillis);
+            assertThat(config.maxConnectionAgeMillis()).isEqualTo(maxConnectionAgeMillis);
+        }
+    }
+
+    @Test
+    void invalidMaxConnectionAge() {
+        assertThatThrownBy(() -> Server.builder().maxConnectionAgeMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 1000 or == 0");
+
+        assertThatThrownBy(() -> Server.builder().maxConnectionAgeMillis(100))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 1000 or == 0");
+    }
 }
