@@ -37,6 +37,13 @@ public interface RequestConverterFunction {
      * Converts the specified {@code request} to an object of {@code expectedResultType}.
      * Calls {@link RequestConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this converter cannot convert the {@code request} to an object.
+     *
+     * @param ctx the {@link ServiceRequestContext} of {@code request}.
+     * @param request the {@link AggregatedHttpRequest} being handled.
+     * @param expectedResultType the desired type of the conversion result.
+     * @param expectedParameterizedResultType the desired parameterized type of the conversion result.
+     *                                        {@code null} will be given if {@code expectedResultType} doesn't
+     *                                        have any type parameters.
      */
     @Nullable
     Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
