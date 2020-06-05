@@ -822,7 +822,7 @@ final class AnnotatedValueResolver {
             // May return 'null' if no default value is specified.
             return defaultValue;
         }
-        throw new IllegalArgumentException("Mandatory parameter is missing: " + httpElementName);
+        throw new IllegalArgumentException("Mandatory parameter/header is missing: " + httpElementName);
     }
 
     @Override
@@ -998,14 +998,29 @@ final class AnnotatedValueResolver {
                     defaultValue = null;
                 }
             } else {
-                shouldExist = !isOptional;
                 // Set the default value to null if it was not specified.
                 defaultValue = null;
+
+                if (isOptional) {
+                    shouldExist = false;
+                } else {
+                    // Allow `null` if annotated with `@Nullable`.
+                    boolean isNonNull = true;
+                    for (Annotation a : annotatedElement.getAnnotations()) {
+                        final String annotationTypeName = a.annotationType().getName();
+                        if (annotationTypeName.endsWith(".Nullable")) {
+                            isNonNull = false;
+                            break;
+                        }
+                    }
+
+                    shouldExist = isNonNull;
+                }
             }
 
             if (pathVariable && !shouldExist) {
-                logger.warn("Optional is redundant for path variable '{}' because the value is always present.",
-                            httpElementName);
+                logger.warn("Optional or @Nullable is redundant for path variable '{}' " +
+                            "because the value is always present.", httpElementName);
             }
 
             final Class<?> containerType = getContainerType(unwrappedParameterizedType);
