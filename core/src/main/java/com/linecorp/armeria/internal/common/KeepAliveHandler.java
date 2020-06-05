@@ -83,6 +83,11 @@ public abstract class KeepAliveHandler {
     private long lastPingIdleTime;
     private boolean firstPingIdleEvent = true;
 
+    @Nullable
+    private ScheduledFuture<?> maxConnectionAgeFuture;
+    private final long maxConnectionAgeNanos;
+    private boolean isMaxConnectionAgeExceeded;
+
     private boolean isInitialized;
     private PingState pingState = PingState.IDLE;
 
@@ -91,7 +96,8 @@ public abstract class KeepAliveHandler {
     @Nullable
     private Future<?> shutdownFuture;
 
-    protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis) {
+    protected KeepAliveHandler(Channel channel, String name,
+                               long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis) {
         this.channel = channel;
         this.name = name;
 
@@ -100,10 +106,17 @@ public abstract class KeepAliveHandler {
         } else {
             connectionIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(idleTimeoutMillis);
         }
+
         if (pingIntervalMillis <= 0) {
             pingIdleTimeNanos = 0;
         } else {
             pingIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis);
+        }
+
+        if (maxConnectionAgeMillis <= 0) {
+            maxConnectionAgeNanos = 0;
+        } else {
+            maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         }
     }
 
@@ -124,6 +137,10 @@ public abstract class KeepAliveHandler {
             pingIdleTimeout = executor().schedule(new PingIdleTimeoutTask(ctx),
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
+        if (maxConnectionAgeNanos > 0) {
+            maxConnectionAgeFuture = executor().schedule(() -> isMaxConnectionAgeExceeded = true,
+                                                         maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
+        }
     }
 
     public final void destroy() {
@@ -136,7 +153,12 @@ public abstract class KeepAliveHandler {
             pingIdleTimeout.cancel(false);
             pingIdleTimeout = null;
         }
+        if (maxConnectionAgeFuture != null) {
+            maxConnectionAgeFuture.cancel(false);
+            maxConnectionAgeFuture = null;
+        }
         pingState = PingState.SHUTDOWN;
+        isMaxConnectionAgeExceeded = true;
         cancelFutures();
     }
 
@@ -174,6 +196,10 @@ public abstract class KeepAliveHandler {
 
     public final boolean isClosing() {
         return pingState == PingState.SHUTDOWN;
+    }
+
+    public final boolean isMaxConnectionAgeExceeded() {
+        return isMaxConnectionAgeExceeded;
     }
 
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);

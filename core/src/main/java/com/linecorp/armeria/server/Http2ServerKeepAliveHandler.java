@@ -24,8 +24,8 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 
 final class Http2ServerKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ServerKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
-                                long idleTimeoutMillis, long pingIntervalMillis) {
-        super(channel, frameWriter, "server", idleTimeoutMillis, pingIntervalMillis);
+                                long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis) {
+        super(channel, frameWriter, "server", idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis);
     }
 
     @Override

@@ -36,7 +36,8 @@ final class Http1ClientKeepAliveHandler extends KeepAliveHandler {
 
     Http1ClientKeepAliveHandler(Channel channel, ClientHttp1ObjectEncoder encoder, Http1ResponseDecoder decoder,
                                 long idleTimeoutMillis, long pingIntervalMillis) {
-        super(channel, "client", idleTimeoutMillis, pingIntervalMillis);
+        // TODO(ikhoon): Should set maxConnectionAgeMillis by https://github.com/line/armeria/pull/2741
+        super(channel, "client", idleTimeoutMillis, pingIntervalMillis, /* maxConnectionAgeMillis */ 0);
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.encoder = requireNonNull(encoder, "encoder");
         this.decoder = requireNonNull(decoder, "decoder");
