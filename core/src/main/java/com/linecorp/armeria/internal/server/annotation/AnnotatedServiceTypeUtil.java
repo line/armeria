@@ -52,6 +52,18 @@ final class AnnotatedServiceTypeUtil {
                     .put(UUID.class, UUID::fromString)
                     .build();
 
+    private static final Map<String, Boolean> stringToBooleanMap =
+            ImmutableMap.<String, Boolean>builder()
+                    .put("true", true)
+                    .put("on", true)
+                    .put("yes", true)
+                    .put("1", true)
+                    .put("false", false)
+                    .put("off", false)
+                    .put("no", false)
+                    .put("0", false)
+                    .build();
+
     /**
      * Normalizes the specified container {@link Class}. Throws {@link IllegalArgumentException}
      * if it is not able to be normalized.
@@ -117,14 +129,11 @@ final class AnnotatedServiceTypeUtil {
     }
 
     private static Boolean parseBoolean(String s) {
-        switch (Ascii.toLowerCase(s)) {
-            case "true":
-                return true;
-            case "false":
-                return false;
-            default:
-                throw new IllegalArgumentException("must be 'true' or 'false': " + s);
+        final Boolean result = stringToBooleanMap.get(Ascii.toLowerCase(s));
+        if (result == null) {
+            throw new IllegalArgumentException("must be one of " + stringToBooleanMap.keySet() + ": " + s);
         }
+        return result;
     }
 
     private AnnotatedServiceTypeUtil() {}

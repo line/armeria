@@ -749,7 +749,13 @@ class AnnotatedServiceTest {
             testBody(hc, post("/2/long/42"), "Number[42]");
             testBody(hc, get("/2/string/blah"), "String: blah");
             testBody(hc, get("/2/boolean/true"), "String[true]");
+            testBody(hc, get("/2/boolean/on"), "String[true]");
+            testBody(hc, get("/2/boolean/yes"), "String[true]");
+            testBody(hc, get("/2/boolean/1"), "String[true]");
             testBody(hc, get("/2/boolean/false"), "String[false]");
+            testBody(hc, get("/2/boolean/off"), "String[false]");
+            testBody(hc, get("/2/boolean/no"), "String[false]");
+            testBody(hc, get("/2/boolean/0"), "String[false]");
 
             // Illegal parameter.
             testStatusCode(hc, get("/2/int/forty-two"), 400);
