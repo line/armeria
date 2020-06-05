@@ -71,7 +71,15 @@ task checkJavaVersion {
 
 // Configure all Java projects
 configure(projectsWithFlags('java')) {
-    apply plugin: 'net.ltgt.errorprone'
+
+    // Error Prone compiler
+    if (!rootProject.hasProperty('noLint')) {
+        apply plugin: 'net.ltgt.errorprone'
+
+        dependencies {
+            errorprone 'com.google.errorprone:error_prone_core'
+        }
+    }
 
     // Common dependencies
     dependencies {
@@ -79,9 +87,6 @@ configure(projectsWithFlags('java')) {
         if (project != project(':core')) {
             api project(':core')
         }
-
-        // Error Prone compiler
-        errorprone 'com.google.errorprone:error_prone_core'
 
         // Testing utilities
         testImplementation project(':testing-internal')
