@@ -749,9 +749,13 @@ class AnnotatedServiceTest {
             testBody(hc, post("/2/long/42"), "Number[42]");
             testBody(hc, get("/2/string/blah"), "String: blah");
             testBody(hc, get("/2/boolean/true"), "String[true]");
+            testBody(hc, get("/2/boolean/1"), "String[true]");
+            testBody(hc, get("/2/boolean/false"), "String[false]");
+            testBody(hc, get("/2/boolean/0"), "String[false]");
 
             // Illegal parameter.
             testStatusCode(hc, get("/2/int/forty-two"), 400);
+            testStatusCode(hc, get("/2/boolean/maybe"), 400);
             // Without parameter (non-existing url).
             testStatusCode(hc, post("/2/long/"), 404);
             // Not-mapped HTTP method (Post).
