@@ -19,6 +19,7 @@ node {
     version = '12.17.0'
     npmVersion = '6.14.5'
     download = true
+    npmInstallCommand = "ci"
 }
 
 task buildWeb(type: NpmTask) {
