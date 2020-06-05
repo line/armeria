@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRe
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -99,10 +100,8 @@ class AnnotatedServiceRequestConverterTest {
         }
 
         @Post("/convert3")
-        public String convert3(@RequestConverter(TestRequestConverterOptional1.class)
-                                       Optional<RequestJsonObj1> obj1,
-                               @RequestConverter(TestRequestConverterOptional2.class)
-                                       Optional<RequestJsonObj2> obj2) {
+        public String convert3(@RequestConverter(TestRequestConverter1.class) Optional<RequestJsonObj1> obj1,
+                               @RequestConverter(TestRequestConverter2.class) Optional<RequestJsonObj2> obj2) {
             assertThat(obj1.isPresent()).isTrue();
             assertThat(obj2.isPresent()).isTrue();
             return obj2.get().strVal();
@@ -302,8 +301,10 @@ class AnnotatedServiceRequestConverterTest {
         static class AliceRequestConverter implements RequestConverterFunction {
             @Nullable
             @Override
-            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                         Class<?> expectedResultType) throws Exception {
+            public Object convertRequest(
+                    ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                    @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
                 if (expectedResultType == Alice.class) {
                     final String age = ctx.pathParam("age");
                     assert age != null;
@@ -316,8 +317,10 @@ class AnnotatedServiceRequestConverterTest {
         static class BobRequestConverter implements RequestConverterFunction {
             @Nullable
             @Override
-            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                         Class<?> expectedResultType) throws Exception {
+            public Object convertRequest(
+                    ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                    @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
                 if (expectedResultType == Bob.class) {
                     final String age = ctx.pathParam("age");
                     assert age != null;
@@ -575,8 +578,10 @@ class AnnotatedServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj1 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
                 return mapper.readValue(request.contentUtf8(), RequestJsonObj1.class);
             }
@@ -588,45 +593,31 @@ class AnnotatedServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj1 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
                 final RequestJsonObj1 obj1 = mapper.readValue(request.contentUtf8(),
                                                               RequestJsonObj1.class);
                 return new RequestJsonObj1(obj1.intVal() + 1, obj1.strVal() + 'a');
             }
+
             return RequestConverterFunction.fallthrough();
         }
     }
 
     public static class TestRequestConverter2 implements RequestConverterFunction {
         @Override
-        public RequestJsonObj2 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj2 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj2.class)) {
-                return new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD));
+                return new RequestJsonObj2(request.headers().method().name());
             }
+
             return RequestConverterFunction.fallthrough();
-        }
-    }
-
-    public static class TestRequestConverterOptional1 implements RequestConverterFunction {
-        private final ObjectMapper mapper = new ObjectMapper();
-
-        @Override
-        public Optional<RequestJsonObj1> convertRequest(ServiceRequestContext ctx,
-                                                        AggregatedHttpRequest request,
-                                                        Class<?> expectedResultType) throws Exception {
-            return Optional.of(mapper.readValue(request.contentUtf8(), RequestJsonObj1.class));
-        }
-    }
-
-    public static class TestRequestConverterOptional2 implements RequestConverterFunction {
-        @Override
-        public Optional<RequestJsonObj2> convertRequest(ServiceRequestContext ctx,
-                                                        AggregatedHttpRequest request,
-                                                        Class<?> expectedResultType) throws Exception {
-            return Optional.of(new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD)));
         }
     }
 

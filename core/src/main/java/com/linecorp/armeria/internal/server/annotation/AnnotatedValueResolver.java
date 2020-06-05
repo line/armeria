@@ -21,9 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.normalizeContainerType;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.validateElementType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
 
@@ -37,13 +35,13 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -93,7 +91,7 @@ final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
     private static final List<RequestObjectResolver> defaultRequestConverters = ImmutableList.of(
-            (resolverContext, expectedResultType, beanFactoryId) -> {
+            (resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
                 final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
                 if (factory == null) {
                     return RequestConverterFunction.fallthrough();
@@ -379,8 +377,7 @@ final class AnnotatedValueResolver {
             final List<RequestConverter> converters =
                     AnnotationUtil.findDeclared(typeElement, RequestConverter.class);
             return ofRequestObject(annotatedElement, type, pathParams,
-                                   addToFirstIfExists(objectResolvers, converters),
-                                   description);
+                                   addToFirstIfExists(objectResolvers, converters), description);
         }
 
         // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -404,8 +401,7 @@ final class AnnotatedValueResolver {
         }
 
         if (implicitRequestObjectAnnotation) {
-            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
-                                   description);
+            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers, description);
         }
 
         return null;
@@ -501,6 +497,7 @@ final class AnnotatedValueResolver {
                                                                                   objectResolvers);
         return builder(annotatedElement, type)
                 .annotationType(RequestObject.class)
+                .supportOptional(true)
                 .description(description)
                 .aggregation(AggregationStrategy.ALWAYS)
                 .resolver(resolver(objectResolvers, beanFactoryId))
@@ -640,7 +637,8 @@ final class AnnotatedValueResolver {
             Object value = null;
             for (final RequestObjectResolver objectResolver : objectResolvers) {
                 try {
-                    value = objectResolver.convert(ctx, resolver.elementType(), beanFactoryId);
+                    value = objectResolver.convert(ctx, resolver.elementType(),
+                                                   resolver.parameterizedElementType(), beanFactoryId);
                     break;
                 } catch (FallthroughException ignore) {
                     // Do nothing.
@@ -681,6 +679,8 @@ final class AnnotatedValueResolver {
     @Nullable
     private final Class<?> containerType;
     private final Class<?> elementType;
+    @Nullable
+    private final ParameterizedType parameterizedElementType;
 
     @Nullable
     private final Object defaultValue;
@@ -705,6 +705,7 @@ final class AnnotatedValueResolver {
                                    boolean isPathVariable, boolean shouldExist,
                                    boolean shouldWrapValueAsOptional,
                                    @Nullable Class<?> containerType, Class<?> elementType,
+                                   @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
                                    @Nullable String description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
@@ -716,6 +717,7 @@ final class AnnotatedValueResolver {
         this.shouldExist = shouldExist;
         this.shouldWrapValueAsOptional = shouldWrapValueAsOptional;
         this.elementType = requireNonNull(elementType, "elementType");
+        this.parameterizedElementType = parameterizedElementType;
         this.description = description;
         this.containerType = containerType;
         this.resolver = requireNonNull(resolver, "resolver");
@@ -771,6 +773,11 @@ final class AnnotatedValueResolver {
 
     Class<?> elementType() {
         return elementType;
+    }
+
+    @Nullable
+    ParameterizedType parameterizedElementType() {
+        return parameterizedElementType;
     }
 
     @Nullable
@@ -965,45 +972,19 @@ final class AnnotatedValueResolver {
             return this;
         }
 
-        private static Entry<Class<?>, Class<?>> resolveTypes(Type parameterizedType, Type type,
-                                                              boolean unwrapOptionalType) {
-            if (unwrapOptionalType) {
-                // Unwrap once again so that a pattern like 'Optional<List<?>>' can be supported.
-                assert parameterizedType instanceof ParameterizedType : String.valueOf(parameterizedType);
-                parameterizedType = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
-            }
-
-            final Class<?> elementType;
-            final Class<?> containerType;
-            if (parameterizedType instanceof ParameterizedType) {
-                try {
-                    elementType =
-                            (Class<?>) ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
-                } catch (Throwable cause) {
-                    throw new IllegalArgumentException("Invalid parameter type: " + parameterizedType, cause);
-                }
-                containerType = normalizeContainerType(
-                        (Class<?>) ((ParameterizedType) parameterizedType).getRawType());
-            } else {
-                elementType = unwrapOptionalType ? (Class<?>) parameterizedType : (Class<?>) type;
-                containerType = null;
-            }
-            return new SimpleImmutableEntry<>(containerType, validateElementType(elementType));
-        }
-
         private AnnotatedValueResolver build() {
             checkArgument(resolver != null, "'resolver' should be specified");
 
-            // Request convert may produce 'Optional<?>' value. But it is different from supporting
-            // 'Optional' type. So if the annotation is 'RequestObject', 'shouldWrapValueAsOptional'
-            // is always set as 'false'.
-            final boolean shouldWrapValueAsOptional = type == Optional.class &&
-                                                      annotationType != RequestObject.class;
-            if (!supportOptional && shouldWrapValueAsOptional) {
+            final boolean isOptional = type == Optional.class;
+            final Type originalParameterizedType = parameterizedTypeOf(typeElement);
+            final Type unwrappedParameterizedType = isOptional ? unwrapOptional(originalParameterizedType)
+                                                               : originalParameterizedType;
+
+            if (!supportOptional && isOptional) {
                 throw new IllegalArgumentException(
                         '@' + Optional.class.getSimpleName() + " is not supported for: " +
                         (annotationType != null ? annotationType.getSimpleName()
-                                                : type.getTypeName()));
+                                                : unwrappedParameterizedType.getTypeName()));
             }
 
             final boolean shouldExist;
@@ -1013,7 +994,7 @@ final class AnnotatedValueResolver {
             if (aDefault != null) {
                 if (supportDefault) {
                     // Warn unusual usage. e.g. @Param @Default("a") Optional<String> param
-                    if (shouldWrapValueAsOptional) {
+                    if (isOptional) {
                         // 'annotatedElement' can be one of constructor, field, method or parameter.
                         // So, it may be printed verbosely but it's okay because it provides where this message
                         // is caused.
@@ -1035,17 +1016,17 @@ final class AnnotatedValueResolver {
                     } else if (annotationType != null) {
                         msg.append("annotation @").append(annotationType.getSimpleName());
                     } else {
-                        msg.append("type '").append(type.getTypeName()).append('\'');
+                        msg.append("type '").append(originalParameterizedType.getTypeName()).append('\'');
                     }
                     msg.append(" because the value is always present.");
                     logger.warn(msg.toString());
 
-                    shouldExist = !shouldWrapValueAsOptional;
+                    shouldExist = !isOptional;
                     // Set the default value to null just like it was not specified.
                     defaultValue = null;
                 }
             } else {
-                shouldExist = !shouldWrapValueAsOptional;
+                shouldExist = !isOptional;
                 // Set the default value to null if it was not specified.
                 defaultValue = null;
             }
@@ -1055,22 +1036,14 @@ final class AnnotatedValueResolver {
                             httpElementName);
             }
 
-            final Entry<Class<?>, Class<?>> types;
-            if (annotationType == Param.class || annotationType == Header.class) {
-                assert httpElementName != null;
+            final Class<?> containerType = getContainerType(unwrappedParameterizedType);
+            final Class<?> elementType;
+            final ParameterizedType parameterizedElementType;
 
-                // The value annotated with @Param or @Header should be converted to the desired type,
-                // so the type should be resolved here.
-                final Type parameterizedType = parameterizedTypeOf(typeElement);
-                types = resolveTypes(parameterizedType, type, shouldWrapValueAsOptional);
-
-                // Currently a container type such as 'List' and 'Set' is allowed to @Header annotation
-                // and HTTP parameters specified by @Param annotation.
-                if (!supportContainer && types.getKey() != null) {
-                    throw new IllegalArgumentException("Unsupported collection type: " + parameterizedType);
-                }
+            if (containerType != null) {
+                elementType = getElementType(unwrappedParameterizedType, isOptional);
+                parameterizedElementType = getParameterizedElementType(unwrappedParameterizedType);
             } else {
-                assert type.getClass() == Class.class : String.valueOf(type);
                 //
                 // Here, 'type' should be one of the following types:
                 // - RequestContext (or ServiceRequestContext)
@@ -1079,15 +1052,115 @@ final class AnnotatedValueResolver {
                 // - QueryParams (or HttpParameters)
                 // - User classes which can be converted by request converter
                 //
-                // So the container type should be 'null'.
-                //
-                types = new SimpleImmutableEntry<>(null, (Class<?>) type);
+                if (unwrappedParameterizedType instanceof Class) {
+                    elementType = (Class<?>) unwrappedParameterizedType;
+                    parameterizedElementType = null;
+                } else if (unwrappedParameterizedType instanceof ParameterizedType) {
+                    parameterizedElementType = (ParameterizedType) unwrappedParameterizedType;
+                    elementType = (Class<?>) parameterizedElementType.getRawType();
+                } else {
+                    throw new IllegalArgumentException("Unsupported parameter type: " +
+                                                       unwrappedParameterizedType.getTypeName());
+                }
             }
 
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
-                                              shouldWrapValueAsOptional, types.getKey(), types.getValue(),
-                                              defaultValue, description, resolver,
+                                              isOptional, containerType, elementType,
+                                              parameterizedElementType, defaultValue, description, resolver,
                                               beanFactoryId, aggregation);
+        }
+
+        @Nullable
+        private Class<?> getContainerType(Type parameterizedType) {
+            final Class<?> rawType = toRawType(parameterizedType);
+            if (pathVariable) {
+                if (Iterable.class.isAssignableFrom(rawType)) {
+                    throw new IllegalArgumentException(
+                            "Container type is not supported for a path variable: " + httpElementName +
+                            " (" + parameterizedType + ')');
+                }
+            }
+
+            if (!supportContainer) {
+                return null;
+            }
+
+            if (rawType == Iterable.class ||
+                rawType == List.class ||
+                rawType == Collection.class) {
+                return ArrayList.class;
+            }
+
+            if (rawType == Set.class) {
+                return LinkedHashSet.class;
+            }
+
+            if (List.class.isAssignableFrom(rawType) ||
+                Set.class.isAssignableFrom(rawType)) {
+                try {
+                    // Only if there is a default constructor.
+                    rawType.getConstructor();
+                    return rawType;
+                } catch (Throwable cause) {
+                    throw new IllegalArgumentException("Unsupported container type: " + rawType.getName(),
+                                                       cause);
+                }
+            }
+
+            return null;
+        }
+
+        private Class<?> getElementType(Type parameterizedType, boolean unwrapOptional) {
+            if (!(parameterizedType instanceof ParameterizedType)) {
+                return toRawType(unwrapOptional ? parameterizedType : type);
+            }
+
+            final Type elementType;
+            try {
+                elementType = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException(
+                        "Unsupported or invalid parameter type: " + parameterizedType, cause);
+            }
+            return toRawType(elementType);
+        }
+
+        @Nullable
+        private static ParameterizedType getParameterizedElementType(Type parameterizedType) {
+            if (!(parameterizedType instanceof ParameterizedType)) {
+                return null;
+            }
+
+            try {
+                final Type elementType =
+                        ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+                if (elementType instanceof ParameterizedType) {
+                    return (ParameterizedType) elementType;
+                }
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException(
+                        "Unsupported parameter type: " + parameterizedType, cause);
+            }
+
+            return null;
+        }
+
+        private static Type unwrapOptional(Type parameterizedType) {
+            // Unwrap once again so that a pattern like 'Optional<List<?>>' can be supported.
+            assert parameterizedType instanceof ParameterizedType : String.valueOf(parameterizedType);
+            parameterizedType = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+            return parameterizedType;
+        }
+
+        private static Class<?> toRawType(Type type) {
+            if (type instanceof Class) {
+                return (Class<?>) type;
+            }
+            if (type instanceof ParameterizedType) {
+                return (Class<?>) ((ParameterizedType) type).getRawType();
+            }
+
+            throw new IllegalArgumentException("Unsupported or invalid parameter type: " + type);
         }
     }
 
@@ -1276,18 +1349,20 @@ final class AnnotatedValueResolver {
     @FunctionalInterface
     interface RequestObjectResolver {
         static RequestObjectResolver of(RequestConverterFunction function) {
-            return (resolverContext, expectedResultType, beanFactoryId) -> {
+            return (resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
                 final AggregatedHttpRequest request = resolverContext.aggregatedRequest();
                 if (request == null) {
                     throw new IllegalArgumentException(
                             "Cannot convert this request to an object because it is not aggregated.");
                 }
-                return function.convertRequest(resolverContext.context(), request, expectedResultType);
+                return function.convertRequest(resolverContext.context(), request,
+                                               expectedResultType, expectedParameterizedResultType);
             };
         }
 
         @Nullable
         Object convert(ResolverContext resolverContext, Class<?> expectedResultType,
+                       @Nullable ParameterizedType expectedParameterizedResultType,
                        @Nullable BeanFactoryId beanFactoryId) throws Throwable;
     }
 

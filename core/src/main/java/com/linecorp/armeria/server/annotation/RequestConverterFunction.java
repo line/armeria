@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.reflect.ParameterizedType;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -38,7 +40,8 @@ public interface RequestConverterFunction {
      */
     @Nullable
     Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                          Class<?> expectedResultType) throws Exception;
+                          Class<?> expectedResultType,
+                          @Nullable ParameterizedType expectedParameterizedResultType) throws Exception;
 
     /**
      * Throws a {@link FallthroughException} in order to try to convert the {@code request} to

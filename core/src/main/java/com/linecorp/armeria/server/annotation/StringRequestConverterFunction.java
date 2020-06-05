@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.reflect.ParameterizedType;
 import java.nio.charset.Charset;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -32,8 +35,10 @@ public final class StringRequestConverterFunction implements RequestConverterFun
      * Converts the specified {@link AggregatedHttpRequest} to a {@link String}.
      */
     @Override
-    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                 Class<?> expectedResultType) throws Exception {
+    public Object convertRequest(
+            ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+            @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
         if (expectedResultType == String.class ||
             expectedResultType == CharSequence.class) {
             final Charset charset;

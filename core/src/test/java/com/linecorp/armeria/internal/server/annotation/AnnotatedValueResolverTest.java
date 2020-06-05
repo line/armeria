@@ -97,8 +97,8 @@ class AnnotatedValueResolverTest {
         request = HttpRequest.of(originalHeaders);
 
         final RoutingResultBuilder builder = RoutingResult.builder()
-                                                         .path(path)
-                                                         .query(query);
+                                                          .path(path)
+                                                          .query(query);
         pathParams.forEach(param -> builder.rawParam(param, param));
 
         context = ServiceRequestContext.builder(request)
@@ -361,22 +361,22 @@ class AnnotatedValueResolverTest {
 
     static class Service {
         void method1(@Param String var1,
-                            @Param String param1,
-                            @Param @Default("1") int param2,
-                            @Param @Default("1") List<Integer> param3,
-                            @Header List<String> header1,
-                            @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
-                            @Header String header2,
-                            @Header @Default("defaultValue") List<String> header3,
-                            @Header @Default("defaultValue") String header4,
-                            @Param CaseInsensitiveEnum enum1,
-                            @Param @Default("enum2") CaseInsensitiveEnum enum2,
-                            @Param("sensitive") CaseSensitiveEnum enum3,
-                            @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
-                            ServiceRequestContext ctx,
-                            HttpRequest request,
-                            @RequestObject OuterBean outerBean,
-                            Cookies cookies) {}
+                     @Param String param1,
+                     @Param @Default("1") int param2,
+                     @Param @Default("1") List<Integer> param3,
+                     @Header List<String> header1,
+                     @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
+                     @Header String header2,
+                     @Header @Default("defaultValue") List<String> header3,
+                     @Header @Default("defaultValue") String header4,
+                     @Param CaseInsensitiveEnum enum1,
+                     @Param @Default("enum2") CaseInsensitiveEnum enum2,
+                     @Param("sensitive") CaseSensitiveEnum enum3,
+                     @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
+                     ServiceRequestContext ctx,
+                     HttpRequest request,
+                     @RequestObject OuterBean outerBean,
+                     Cookies cookies) {}
 
         void dummy1() {}
 

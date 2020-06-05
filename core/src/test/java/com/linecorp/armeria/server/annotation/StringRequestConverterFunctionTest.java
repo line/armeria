@@ -40,7 +40,7 @@ class StringRequestConverterFunctionTest {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET)).thenReturn(JSON_TEXT);
 
-        final Object result = function.convertRequest(ctx, req, String.class);
+        final Object result = function.convertRequest(ctx, req, String.class, null);
         assertThat(result).isInstanceOf(String.class);
     }
 
@@ -49,7 +49,7 @@ class StringRequestConverterFunctionTest {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET)).thenReturn(JSON_TEXT);
 
-        final Object result = function.convertRequest(ctx, req, CharSequence.class);
+        final Object result = function.convertRequest(ctx, req, CharSequence.class, null);
         assertThat(result).isInstanceOf(CharSequence.class);
     }
 }

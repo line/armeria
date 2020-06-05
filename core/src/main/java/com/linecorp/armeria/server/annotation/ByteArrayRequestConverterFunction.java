@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.reflect.ParameterizedType;
+
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -33,8 +37,10 @@ public final class ByteArrayRequestConverterFunction implements RequestConverter
      * or if it has {@code Content-Type: application/octet-stream} or {@code Content-Type: application/binary}.
      */
     @Override
-    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                 Class<?> expectedResultType) throws Exception {
+    public Object convertRequest(
+            ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+            @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
         final HttpData content = request.content();
         if (expectedResultType == byte[].class) {
             return content.array();
