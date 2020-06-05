@@ -106,6 +106,13 @@ class AnnotatedServiceRequestConverterTest {
             assertThat(obj2.isPresent()).isTrue();
             return obj2.get().strVal();
         }
+
+        @Post("/convert4")
+        @RequestConverter(NullReturningConverter.class)
+        public void convert4(Optional<String> optional, @Nullable String nullable) {
+            assertThat(optional).isEmpty();
+            assertThat(nullable).isNull();
+        }
     }
 
     @ResponseConverter(ByteArrayConverterFunction.class)
@@ -621,6 +628,16 @@ class AnnotatedServiceRequestConverterTest {
         }
     }
 
+    public static class NullReturningConverter implements RequestConverterFunction {
+        @Nullable
+        @Override
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+            return null;
+        }
+    }
+
     @Test
     void testRequestConverter() throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
@@ -645,6 +662,10 @@ class AnnotatedServiceRequestConverterTest {
         response = client.post("/1/convert3", content1).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(HttpMethod.POST.name());
+
+        // Conversion of null
+        response = client.post("/1/convert4", content1).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

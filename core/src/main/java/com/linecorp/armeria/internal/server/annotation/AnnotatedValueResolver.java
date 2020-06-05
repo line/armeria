@@ -624,11 +624,13 @@ final class AnnotatedValueResolver {
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
     resolver(List<RequestObjectResolver> objectResolvers, BeanFactoryId beanFactoryId) {
         return (resolver, ctx) -> {
+            boolean found = false;
             Object value = null;
             for (final RequestObjectResolver objectResolver : objectResolvers) {
                 try {
                     value = objectResolver.convert(ctx, resolver.elementType(),
                                                    resolver.parameterizedElementType(), beanFactoryId);
+                    found = true;
                     break;
                 } catch (FallthroughException ignore) {
                     // Do nothing.
@@ -636,7 +638,7 @@ final class AnnotatedValueResolver {
                     Exceptions.throwUnsafely(cause);
                 }
             }
-            if (value != null) {
+            if (found) {
                 return value;
             }
             throw new IllegalArgumentException("No suitable request converter found for a @" +
