@@ -73,7 +73,6 @@ public final class StructInfo implements NamedTypeInfo {
         return fields;
     }
 
-    @Nullable
     @Override
     public String docString() {
         return docString;
