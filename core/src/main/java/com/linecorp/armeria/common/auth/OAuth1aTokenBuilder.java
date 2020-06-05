@@ -58,7 +58,7 @@ public final class OAuth1aTokenBuilder {
     @Nullable
     private String realm;
     private String version = DEFAULT_OAUTH_VERSION;
-    private Map<String, String> additionals = ImmutableMap.of();
+    private final Builder<String, String> additionalsBuilder = ImmutableMap.builder();
 
     /**
      * Creates a new instance.
@@ -137,21 +137,42 @@ public final class OAuth1aTokenBuilder {
     }
 
     /**
-     * Sets additional parameters. If the specified {@code additionals} has pre-defined parameters,
-     * the parameters are set automatically to this builder and removed from the {@code additionals}.
+     * Sets the specified {@code key}-{@code value} parameter. If the {@code key} is not one of the
+     * pre-defined parameters, then the {@code key}-{@code value} pair is set as an additional parameter.
+     * If the {@code key} is one of the pre-defined parameters, then the corresponding property is
+     * automatically set.
+     *
+     * <pre>{@code
+     * OAuth1aToken.builder().put("oauth_signature_method", "foo");
+     * // is equivalent to
+     * OAuth1aToken.builder().signatureMethod("foo");
+     *
+     * // This is just an additional parameter.
+     * OAuth1aToken.builder().put("just_an_additional_parameter", "bar");
+     * }</pre>
      */
-    public OAuth1aTokenBuilder additionals(Map<String, String> additionals) {
-        setParameters(this, requireNonNull(additionals, "additionals"));
+    public OAuth1aTokenBuilder put(String key, String value) {
+        additionalsBuilder.put(requireNonNull(key, "key"), requireNonNull(value, "value"));
         return this;
     }
 
-    private void additionals0(ImmutableMap<String, String> additionals) {
-        this.additionals = additionals;
-    }
-
-    static void setParameters(OAuth1aTokenBuilder builder, Map<String, String> parameters) {
-        final Builder<String, String> additionals = ImmutableMap.builder();
-        for (Entry<String, String> param : parameters.entrySet()) {
+    /**
+     * Sets the specified {@link Map}. If the key in the {@link Map} is not one of the
+     * pre-defined parameters, then the key-value pair is set as an additional parameter.
+     * If the key is one of the pre-defined parameters, then the corresponding property is
+     * automatically set.
+     *
+     * <pre>{@code
+     * OAuth1aToken.builder().putAll(Map.of("oauth_signature_method", "foo"
+     *                                      "oauth_signature", "bar"));
+     * // is equivalent to
+     * OAuth1aToken.builder().signatureMethod("foo")
+     *                       .signature("bar");
+     * }</pre>
+     */
+    public OAuth1aTokenBuilder putAll(Map<String, String> params) {
+        requireNonNull(params, "params");
+        for (Entry<String, String> param : params.entrySet()) {
             final String key = param.getKey();
             final String value = param.getValue();
 
@@ -160,35 +181,35 @@ public final class OAuth1aTokenBuilder {
                 final String lowerCased = Ascii.toLowerCase(key);
                 switch (lowerCased) {
                     case REALM:
-                        builder.realm(value);
+                        realm(value);
                         break;
                     case OAUTH_CONSUMER_KEY:
-                        builder.consumerKey(value);
+                        consumerKey(value);
                         break;
                     case OAUTH_TOKEN:
-                        builder.token(value);
+                        token(value);
                         break;
                     case OAUTH_SIGNATURE_METHOD:
-                        builder.signatureMethod(value);
+                        signatureMethod(value);
                         break;
                     case OAUTH_SIGNATURE:
-                        builder.signature(value);
+                        signature(value);
                         break;
                     case OAUTH_TIMESTAMP:
-                        builder.timestamp(value);
+                        timestamp(value);
                         break;
                     case OAUTH_NONCE:
-                        builder.nonce(value);
+                        nonce(value);
                         break;
                     case OAUTH_VERSION:
-                        builder.version(value);
+                        version(value);
                         break;
                     default:
-                        additionals.put(key, value);
+                        additionalsBuilder.put(key, value);
                 }
             }
         }
-        builder.additionals0(additionals.build());
+        return this;
     }
 
     /**
@@ -202,6 +223,6 @@ public final class OAuth1aTokenBuilder {
         checkState(timestamp != null, "timestamp is not set.");
         checkState(nonce != null, "nonce is not set.");
         return new OAuth1aToken(consumerKey, token, signatureMethod, signature, timestamp, nonce,
-                                version, additionals, realm);
+                                version, additionalsBuilder.build(), realm);
     }
 }

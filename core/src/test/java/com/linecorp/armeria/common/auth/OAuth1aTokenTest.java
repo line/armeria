@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 class OAuth1aTokenTest {
     @Test
@@ -31,8 +32,17 @@ class OAuth1aTokenTest {
                                                .signature("d")
                                                .timestamp("0")
                                                .nonce("f")
-                                               .additionals(ImmutableMap.of("x-others", "g"))
+                                               .put("x-others", "g")
                                                .build();
+        final Builder<String, String> paramsBuilder = ImmutableMap.builder();
+        paramsBuilder.put("oauth_consumer_key", "a");
+        paramsBuilder.put("oauth_token", "b");
+        paramsBuilder.put("oauth_signature_method", "c");
+        paramsBuilder.put("oauth_signature", "d");
+        paramsBuilder.put("oauth_timestamp", "0");
+        paramsBuilder.put("oauth_nonce", "f");
+        paramsBuilder.put("x-others", "g");
+        assertThat(token).isEqualTo(OAuth1aToken.builder().putAll(paramsBuilder.build()).build());
         assertThat(token).isNotEqualTo(OAuth1aToken.builder()
                                                    .consumerKey("a")
                                                    .token("b")
@@ -48,8 +58,8 @@ class OAuth1aTokenTest {
                                                    .signature("d")
                                                    .timestamp("0")
                                                    .nonce("f")
-                                                   .additionals(ImmutableMap.of("x-others", "g",
-                                                                                "x-others-2", "h"))
+                                                   .putAll(ImmutableMap.of("x-others", "g",
+                                                                           "x-others-2", "h"))
                                                    .build());
     }
 }

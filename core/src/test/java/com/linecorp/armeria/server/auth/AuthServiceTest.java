@@ -339,8 +339,9 @@ class AuthServiceTest {
                     .put("oauth_nonce", "dummy_nonce")
                     .put("version", "1.0")
                     .build();
+            final OAuth1aToken oAuth1aToken = OAuth1aToken.builder().putAll(passToken).build();
             try (CloseableHttpResponse res = hc.execute(
-                    oauth1aGetRequest("/composite", OAuth1aToken.of(passToken), AUTHORIZATION))) {
+                    oauth1aGetRequest("/composite", oAuth1aToken, AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             try (CloseableHttpResponse res = hc.execute(

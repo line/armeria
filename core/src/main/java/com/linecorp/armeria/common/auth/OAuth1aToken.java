@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.auth;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.linecorp.armeria.common.auth.OAuth1aTokenBuilder.setParameters;
 import static com.linecorp.armeria.internal.common.PercentEncoder.encodeComponent;
 
 import java.util.Map;
@@ -83,9 +82,7 @@ public final class OAuth1aToken {
      */
     @Deprecated
     public static OAuth1aToken of(Map<String, String> params) {
-        final OAuth1aTokenBuilder builder = builder();
-        setParameters(builder, params);
-        return builder.build();
+        return builder().putAll(params).build();
     }
 
     /**
