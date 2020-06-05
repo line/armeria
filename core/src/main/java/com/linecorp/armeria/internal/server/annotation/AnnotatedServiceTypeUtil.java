@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
 import io.netty.util.AsciiString;
@@ -34,8 +35,8 @@ final class AnnotatedServiceTypeUtil {
                     .put(Byte.class, Byte::valueOf)
                     .put(Short.TYPE, Short::valueOf)
                     .put(Short.class, Short::valueOf)
-                    .put(Boolean.TYPE, Boolean::valueOf)
-                    .put(Boolean.class, Boolean::valueOf)
+                    .put(Boolean.TYPE, AnnotatedServiceTypeUtil::parseBoolean)
+                    .put(Boolean.class, AnnotatedServiceTypeUtil::parseBoolean)
                     .put(Integer.TYPE, Integer::valueOf)
                     .put(Integer.class, Integer::valueOf)
                     .put(Long.TYPE, Long::valueOf)
@@ -49,6 +50,14 @@ final class AnnotatedServiceTypeUtil {
                     .put(String.class, Function.identity())
                     .put(CharSequence.class, Function.identity())
                     .put(Object.class, Function.identity())
+                    .build();
+
+    private static final Map<String, Boolean> stringToBooleanMap =
+            ImmutableMap.<String, Boolean>builder()
+                    .put("true", true)
+                    .put("1", true)
+                    .put("false", false)
+                    .put("0", false)
                     .build();
 
     /**
@@ -72,6 +81,14 @@ final class AnnotatedServiceTypeUtil {
 
         throw new IllegalArgumentException(
                 "Can't convert '" + str + "' to type '" + clazz.getSimpleName() + "'.");
+    }
+
+    private static Boolean parseBoolean(String s) {
+        final Boolean result = stringToBooleanMap.get(Ascii.toLowerCase(s));
+        if (result == null) {
+            throw new IllegalArgumentException("must be one of " + stringToBooleanMap.keySet() + ": " + s);
+        }
+        return result;
     }
 
     private AnnotatedServiceTypeUtil() {}
