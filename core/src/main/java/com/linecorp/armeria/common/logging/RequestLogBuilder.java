@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.server.HttpService;
 
 import io.netty.channel.Channel;
 
@@ -100,10 +101,15 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void serializationFormat(SerializationFormat serializationFormat);
 
     /**
-     * Sets the human-readable name of the {@link Request}, such as RPC method name, annotated service method
-     * name or HTTP method name. This property is often used as a meter tag or distributed trace's span name.
+     * Sets the human-readable service name and method name of the {@link Request} such as:
+     * <ul>
+     *    <li>A service and method name for gRPC and Thrift</li>
+     *    <li>An innermost class and method name for annotated service</li>
+     *    <li>A path pattern and HTTP method name for {@link HttpService}</li>
+     * </ul>
+     * This property is often used as a meter tag or distributed trace's span name.
      */
-    void name(String name);
+    void name(String serviceName, String name);
 
     /**
      * Increases the {@link RequestLog#requestLength()} by {@code deltaBytes}.

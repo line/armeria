@@ -175,11 +175,27 @@ public interface RequestOnlyLog extends RequestLogAccess {
     Scheme scheme();
 
     /**
+     * Returns the human-readable service name of the {@link Request}, such as RPC service name or
+     * innermost class name of annotated service. This property is often used as a meter tag or distributed
+     * trace's span name.
+     */
+    @Nullable
+    String serviceName();
+
+    /**
      * Returns the human-readable simple name of the {@link Request}, such as RPC method name or annotated
      * service method name. This property is often used as a meter tag or distributed trace's span name.
      */
     @Nullable
     String name();
+
+    /**
+     * Returns the human-readable full name, which is the combination of {@link #serviceName()} and
+     * {@link #name()} concatenated with {@code '/'}, of the {@link Request}.
+     * This property is often used as a meter tag or distributed trace's span name.
+     */
+    @Nullable
+    String fullName();
 
     /**
      * Returns the {@link RequestHeaders}. If the {@link Request} was not received or sent at all,

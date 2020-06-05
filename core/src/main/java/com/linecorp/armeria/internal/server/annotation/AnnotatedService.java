@@ -196,7 +196,11 @@ public class AnnotatedService implements HttpService {
         }
     }
 
-    public String logName() {
+    public String serviceName() {
+        return method.getDeclaringClass().getName();
+    }
+
+    public String methodName() {
         return method.getName();
     }
 
@@ -227,7 +231,7 @@ public class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        ctx.logBuilder().name(logName());
+        ctx.logBuilder().name(serviceName(), methodName());
 
         final CompletableFuture<AggregatedHttpRequest> f;
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {

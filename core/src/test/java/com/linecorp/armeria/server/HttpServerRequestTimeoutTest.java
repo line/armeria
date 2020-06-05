@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -43,18 +44,23 @@ import reactor.core.publisher.Flux;
 
 class HttpServerRequestTimeoutTest {
 
+    static class MyService implements HttpService {
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            final Flux<Long> publisher =
+                    Flux.interval(Duration.ofMillis(200))
+                        .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
+                                                             Duration.ofMillis(300)));
+            return JsonTextSequences.fromPublisher(publisher.take(5));
+        }
+    }
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.requestTimeoutMillis(400)
-              .service("/extend-timeout-from-now", (ctx, req) -> {
-                  final Flux<Long> publisher =
-                          Flux.interval(Duration.ofMillis(200))
-                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
-                                                                   Duration.ofMillis(300)));
-                  return JsonTextSequences.fromPublisher(publisher.take(5));
-              })
+              .service("/extend-timeout-from-now", new MyService())
               .service("/extend-timeout-from-start", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))

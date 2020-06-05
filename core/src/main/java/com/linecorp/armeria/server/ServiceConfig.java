@@ -45,6 +45,8 @@ public final class ServiceConfig {
     private final Route route;
     private final HttpService service;
     @Nullable
+    private String defaultServiceName;
+    @Nullable
     private final String defaultLogName;
 
     private final long requestTimeoutMillis;
@@ -58,10 +60,11 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(Route route, HttpService service, @Nullable String defaultLogName,
+    ServiceConfig(Route route, HttpService service,
+                  @Nullable String defaultServiceName, @Nullable String defaultLogName,
                   long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                   AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
-        this(null, route, service, defaultLogName, requestTimeoutMillis, maxRequestLength,
+        this(null, route, service, defaultServiceName, defaultLogName, requestTimeoutMillis, maxRequestLength,
              verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
@@ -69,12 +72,13 @@ public final class ServiceConfig {
      * Creates a new instance.
      */
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
-                          @Nullable String defaultLogName,
+                          @Nullable String defaultServiceName, @Nullable String defaultLogName,
                           long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                           AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
+        this.defaultServiceName = defaultServiceName;
         this.defaultLogName = defaultLogName;
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
@@ -102,14 +106,15 @@ public final class ServiceConfig {
 
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
-        return new ServiceConfig(virtualHost, route, service, defaultLogName,
+        return new ServiceConfig(virtualHost, route, service, defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-        return new ServiceConfig(virtualHost, route, service.decorate(decorator), defaultLogName,
+        return new ServiceConfig(virtualHost, route, service.decorate(decorator),
+                                 defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop);
     }
@@ -146,8 +151,19 @@ public final class ServiceConfig {
     }
 
     /**
+     * Returns the default value of the {@link RequestLog#serviceName()} property which is used when
+     * no service name was set via {@link RequestLogBuilder#name(String, String)}.
+     * If {@code null}, the path pattern of the {@link #route()} will be used instead.
+     */
+    @Nullable
+    public String defaultServiceName() {
+        return defaultServiceName;
+    }
+
+    /**
      * Returns the default value of the {@link RequestLog#name()} property which is used when no name was set
-     * via {@link RequestLogBuilder#name(String)}. If {@code null}, HTTP method name will be used instead.
+     * via {@link RequestLogBuilder#name(String, String)}. If {@code null}, HTTP method name will be used
+     * instead.
      */
     @Nullable
     public String defaultLogName() {

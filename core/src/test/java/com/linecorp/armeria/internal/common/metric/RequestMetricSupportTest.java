@@ -53,7 +53,7 @@ class RequestMetricSupportTest {
         //                 As a result, `activeRequestPrefix()` will be invoked only after
         //                 a request is completed, i.e. active request count will be inaccurate,
         //                 especially for streaming requests.
-        ctx.logBuilder().name("POST");
+        ctx.logBuilder().name("FooService", "POST");
 
         Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.active.requests#value{method=POST}", 1.0);
@@ -272,7 +272,7 @@ class RequestMetricSupportTest {
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
 
-        ctx.logBuilder().name("baz");
+        ctx.logBuilder().name("BarService", "baz");
 
         assertThat(measureAll(registry)).containsEntry("bar.active.requests#value{method=baz}", 1.0);
     }

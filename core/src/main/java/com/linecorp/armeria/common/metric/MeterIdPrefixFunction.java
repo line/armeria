@@ -105,6 +105,7 @@ public interface MeterIdPrefixFunction {
                                               sCtx.config().virtualHost().hostnamePattern()));
                 }
 
+                // TODO(ikhoon): Do we need to change this to RequestLog.fullName()?
                 tagListBuilder.add(Tag.of("method", methodName));
 
                 if (ctx instanceof ServiceRequestContext) {
