@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,7 +50,6 @@ import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.GoAwayReceivedException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -115,25 +115,48 @@ class ServerMaxConnectionAgeTest {
 
     @Test
     void http1MaxConnectionAge() throws InterruptedException {
-        final AtomicInteger oldClosed = new AtomicInteger();
-        final WebClient client = newWebClient(server.uri(SessionProtocol.H1C));
+        final Stopwatch stopwatch = Stopwatch.createUnstarted();
+        final List<Long> elapsedTimes = new ArrayList<>();
+        final int maxClosedConnection = 5;
+        final ConnectionPoolListener connectionPoolListener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                opened.incrementAndGet();
+            }
 
-        final Stopwatch stopwatch = Stopwatch.createStarted();
-        while (closed.get() < 5) {
-            final AggregatedHttpResponse agg = client.get("/").aggregate().join();
-            assertThat(agg.status()).isEqualTo(OK);
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                final int numClosed = closed.incrementAndGet();
+                if (numClosed == 1) {
+                    stopwatch.start();
+                } else if (numClosed <= maxClosedConnection) {
+                    elapsedTimes.add(stopwatch.elapsed().toMillis());
+                    stopwatch.reset().start();
+                }
+            }
+        };
 
+        final ClientFactory clientFactory = ClientFactory.builder()
+                                                         .connectionPoolListener(connectionPoolListener)
+                                                         .idleTimeoutMillis(0)
+                                                         .build();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
+                                          .factory(clientFactory)
+                                          .responseTimeoutMillis(0)
+                                          .build();
+
+        while (closed.get() < maxClosedConnection) {
+            assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             final int closed = this.closed.get();
             assertThat(opened).hasValueBetween(closed, closed + 1);
-
-            // When a connection is disconnected, check the time from the previous disconnection.
-            if (this.closed.get() > oldClosed.get()) {
-                assertThat(stopwatch.elapsed().toMillis())
-                        .isCloseTo(MAX_CONNECTION_AGE, withinPercentage(35));
-                oldClosed.set(this.closed.get());
-                stopwatch.reset().start();
-            }
         }
+
+        for (long elapsed: elapsedTimes) {
+            assertThat(elapsed).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(35));
+        }
+        clientFactory.close();
     }
 
     @Test
