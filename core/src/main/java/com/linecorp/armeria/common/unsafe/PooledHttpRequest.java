@@ -23,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.HttpRequestAggregator;
 
@@ -34,7 +33,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A streamed HTTP/2 {@link Request} which returns pooled buffers.
  */
-public interface PooledHttpRequest extends HttpRequest {
+public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage {
 
     /**
      * Returns a {@link PooledHttpRequest} that wraps the {@link HttpRequest}, ensuring all published data
@@ -82,7 +81,7 @@ public interface PooledHttpRequest extends HttpRequest {
             EventExecutor executor, ByteBufAllocator alloc) {
         final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
-        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
+        subscribeWithPooledObjects(aggregator, executor);
         return future.thenApply(DefaultPooledAggregatedHttpRequest::new);
     }
 
@@ -109,11 +108,4 @@ public interface PooledHttpRequest extends HttpRequest {
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         return HttpRequest.super.aggregate(executor);
     }
-
-    /**
-     * Converts this {@link PooledHttpRequest} to an unpooled {@link HttpRequest}. Only one of this
-     * {@link PooledHttpRequest} or the returned {@link HttpRequest} can be subscribed to, if both are attempted
-     * to be used, it will cause an error or bad behavior.
-     */
-    HttpRequest toUnpooled();
 }

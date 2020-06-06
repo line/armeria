@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;

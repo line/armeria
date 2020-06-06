@@ -23,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.HttpResponseAggregator;
 
@@ -34,7 +33,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A streamed HTTP/2 {@link Response} which returns pooled buffers.
  */
-public interface PooledHttpResponse extends HttpResponse {
+public interface PooledHttpResponse extends HttpResponse, PooledHttpStreamMessage {
 
     /**
      * Returns a {@link PooledHttpResponse} that wraps the {@link HttpResponse}, ensuring all published data
@@ -73,7 +72,7 @@ public interface PooledHttpResponse extends HttpResponse {
             EventExecutor executor, ByteBufAllocator alloc) {
         final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
+        subscribeWithPooledObjects(aggregator, executor);
         return future.thenApply(DefaultPooledAggregatedHttpResponse::new);
     }
 

@@ -52,8 +52,9 @@ class PooledHttpServiceTest {
     };
 
     private static final PooledHttpService WRAPPED = PooledHttpService.of((ctx, req) -> {
-        // We are just a normal HttpService so should not be given a pooled request.
-        assertThat(req).isNotInstanceOf(PooledHttpRequest.class);
+        // Even though we are a normal HttpService, the wrapper passes us a pooled request. This is OK since we
+        // still just operate on the non-pooled API without problems.
+        assertThat(req).isInstanceOf(PooledHttpRequest.class);
 
         // We are a normal HttpService and return a non-pooled response. But users of the wrapping
         // PooledHttpService will be able to access it using pooled objects.

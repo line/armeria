@@ -32,6 +32,6 @@ final class DefaultPooledHttpClient extends AbstractUnwrappable<HttpClient> impl
     public PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception {
         // Always a wrapped non-pooled client, make sure it gets a normal request.
         assert !(delegate() instanceof PooledHttpClient);
-        return PooledHttpResponse.of(delegate().execute(ctx, req.toUnpooled()));
+        return PooledHttpResponse.of(delegate().execute(ctx, req));
     }
 }

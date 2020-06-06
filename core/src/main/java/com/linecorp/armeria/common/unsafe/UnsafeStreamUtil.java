@@ -16,22 +16,16 @@
 
 package com.linecorp.armeria.common.unsafe;
 
-import com.linecorp.armeria.common.FilteredHttpResponse;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpResponse;
+import com.google.common.collect.ObjectArrays;
 
-final class DefaultPooledHttpResponse extends FilteredHttpResponse implements PooledHttpResponse {
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.stream.InternalSubscriptionOption;
 
-    DefaultPooledHttpResponse(HttpResponse delegate) {
-        super(delegate, true);
+final class UnsafeStreamUtil {
+
+    static SubscriptionOption[] withPooledObjects(SubscriptionOption[] options) {
+        return ObjectArrays.concat(options, InternalSubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
-    @Override
-    protected HttpObject filter(HttpObject obj) {
-        if (!(obj instanceof HttpData)) {
-            return obj;
-        }
-        return PooledHttpData.of((HttpData) obj);
-    }
+    private UnsafeStreamUtil() {}
 }

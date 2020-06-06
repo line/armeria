@@ -37,8 +37,9 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 class SimplePooledDecoratingHttpServiceTest {
 
     private static final HttpService UNPOOLED_DELEGATE = (ctx, req) -> {
-        // Normal HttpService do not have access to the unsafe API without explicitly asking for it.
-        assertThat(req).isNotInstanceOf(PooledHttpRequest.class);
+        // Even though we are a normal HttpService, the wrapper passes us a pooled request. This is OK since we
+        // still just operate on the non-pooled API without problems.
+        assertThat(req).isInstanceOf(PooledHttpRequest.class);
         return HttpResponse.from(
                 req.aggregate().thenApply(agg -> HttpResponse.of("Hello " + agg.contentUtf8())));
     };

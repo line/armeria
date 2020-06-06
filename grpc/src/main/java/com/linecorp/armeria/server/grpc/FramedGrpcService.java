@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -41,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -52,16 +50,17 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.unsafe.AbstractPooledHttpService;
 
 import io.grpc.Codec.Identity;
 import io.grpc.CompressorRegistry;
@@ -78,7 +77,7 @@ import io.grpc.protobuf.services.ProtoReflectionService;
 /**
  * The framed {@link GrpcService} implementation.
  */
-final class FramedGrpcService extends AbstractHttpService implements GrpcService {
+final class FramedGrpcService extends AbstractPooledHttpService implements GrpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
 
@@ -145,7 +144,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Override
-    protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    protected HttpResponse doPost(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         final MediaType contentType = req.contentType();
         final SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
@@ -200,7 +199,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
             ctx.setRequestTimeoutHandler(() -> call.close(Status.CANCELLED, new Metadata()));
-            req.subscribe(call.messageReader(), ctx.eventLoop(), WITH_POOLED_OBJECTS);
+            req.subscribeWithPooledObjects(call.messageReader(), ctx.eventLoop());
             req.whenComplete().handleAsync(call.messageReader(), ctx.eventLoop());
         }
         return res;

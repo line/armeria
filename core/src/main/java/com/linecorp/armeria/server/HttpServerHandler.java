@@ -20,8 +20,8 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 

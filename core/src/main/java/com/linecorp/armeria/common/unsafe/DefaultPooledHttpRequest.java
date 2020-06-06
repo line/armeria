@@ -16,28 +16,15 @@
 
 package com.linecorp.armeria.common.unsafe;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import org.reactivestreams.Subscriber;
-
-import com.google.common.collect.ObjectArrays;
-
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
-
-import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultPooledHttpRequest extends FilteredHttpRequest implements PooledHttpRequest {
 
-    private final HttpRequest unpooled;
-
     DefaultPooledHttpRequest(HttpRequest delegate) {
         super(delegate, true);
-        unpooled = delegate;
     }
 
     @Override
@@ -46,78 +33,5 @@ final class DefaultPooledHttpRequest extends FilteredHttpRequest implements Pool
             return obj;
         }
         return PooledHttpData.of((HttpData) obj);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber) {
-        subscribe(subscriber, SubscriptionOption.WITH_POOLED_OBJECTS);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
-        if (hasPooledObjects(options)) {
-            super.subscribe(subscriber, options);
-        } else {
-            super.subscribe(subscriber, withPooled(options));
-        }
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        if (hasPooledObjects(options)) {
-            super.subscribe(subscriber, executor, options);
-        } else {
-            super.subscribe(subscriber, executor, withPooled(options));
-        }
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll() {
-        return drainAll(SubscriptionOption.WITH_POOLED_OBJECTS);
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(SubscriptionOption... options) {
-        if (hasPooledObjects(options)) {
-            return super.drainAll(options);
-        }
-        return super.drainAll(withPooled(options));
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
-        return drainAll(executor, SubscriptionOption.WITH_POOLED_OBJECTS);
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        if (hasPooledObjects(options)) {
-            return super.drainAll(executor, options);
-        }
-        return super.drainAll(executor, withPooled(options));
-    }
-
-    private static boolean hasPooledObjects(SubscriptionOption... options) {
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static SubscriptionOption[] withPooled(SubscriptionOption[] options) {
-        return ObjectArrays.concat(options, SubscriptionOption.WITH_POOLED_OBJECTS);
-    }
-
-    @Override
-    public HttpRequest toUnpooled() {
-        return unpooled;
     }
 }
