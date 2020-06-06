@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logback;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
@@ -144,7 +145,7 @@ public final class RequestContextExportingAppender
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
-        builder.addKeyPattern(mdcKeys);
+        Arrays.stream(mdcKeys.split(",")).map(String::trim).forEach(builder::addKeyPattern);
     }
 
     private void ensureNotStarted() {
