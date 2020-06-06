@@ -393,13 +393,11 @@ public final class DefaultClientRequestContext
 
     @Override
     public EndpointGroup endpointGroup() {
-        assert endpointGroup != null;
         return endpointGroup;
     }
 
     @Override
     public Endpoint endpoint() {
-        assert endpoint != null;
         return endpoint;
     }
 
