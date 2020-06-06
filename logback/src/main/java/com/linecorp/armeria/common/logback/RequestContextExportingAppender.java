@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -135,6 +136,7 @@ public final class RequestContextExportingAppender
      */
     public void setExport(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
+        checkArgument(!mdcKey.isEmpty(), "mdcKeys must not be empty");
         builder.addKeyPattern(mdcKey);
     }
 
@@ -145,6 +147,7 @@ public final class RequestContextExportingAppender
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
+        checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
         Arrays.stream(mdcKeys.split(",")).map(String::trim).forEach(builder::addKeyPattern);
     }
 
