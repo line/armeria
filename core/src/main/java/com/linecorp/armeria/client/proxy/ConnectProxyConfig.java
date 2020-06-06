@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -48,6 +49,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
     /**
      * Returns the configured proxy address.
      */
+    @Override
     public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
@@ -90,5 +92,25 @@ public final class ConnectProxyConfig extends ProxyConfig {
                           .add("useTls", useTls())
                           .omitNullValues()
                           .toString();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ConnectProxyConfig)) {
+            return false;
+        }
+        final ConnectProxyConfig that = (ConnectProxyConfig) o;
+        return useTls == that.useTls &&
+               proxyAddress.equals(that.proxyAddress) &&
+               Objects.equals(username, that.username) &&
+               Objects.equals(password, that.password);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(proxyAddress, username, password, useTls);
     }
 }

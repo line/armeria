@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
+import java.net.URI;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,8 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.StaticProxyConfigSelector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
@@ -183,6 +186,15 @@ class ClientFactoryBuilderTest {
             assertThat(factory1.options().pingIntervalMillis()).isEqualTo(0);
         } else {
             assertThat(factory1.options().pingIntervalMillis()).isEqualTo(pingIntervalMillis);
+        }
+    }
+
+    @Test
+    void defaultProxySelectorShouldBeStaticDirect() {
+        try (ClientFactory factory = ClientFactory.ofDefault()) {
+            assertThat(factory.options().proxyConfigSelector()).isInstanceOf(StaticProxyConfigSelector.class);
+            assertThat(factory.options().proxyConfigSelector().select(URI.create("http://any.uri"))).isEqualTo(
+                    ProxyConfig.direct());
         }
     }
 }

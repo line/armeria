@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -40,6 +41,7 @@ public final class Socks4ProxyConfig extends ProxyConfig {
     /**
      * Returns the configured proxy address.
      */
+    @Override
     public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
@@ -64,5 +66,23 @@ public final class Socks4ProxyConfig extends ProxyConfig {
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .toString();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Socks4ProxyConfig)) {
+            return false;
+        }
+        final Socks4ProxyConfig that = (Socks4ProxyConfig) o;
+        return proxyAddress.equals(that.proxyAddress) &&
+               Objects.equals(username, that.username);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(proxyAddress, username);
     }
 }

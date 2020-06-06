@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import java.net.InetSocketAddress;
+
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 /**
@@ -34,7 +38,22 @@ public final class DirectProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public InetSocketAddress proxyAddress() {
+        return null;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).add("proxyType", proxyType()).toString();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        return this == obj;
+    }
+
+    @Override
+    public int hashCode() {
+        return System.identityHashCode(this);
     }
 }

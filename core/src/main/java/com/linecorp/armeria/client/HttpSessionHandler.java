@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.HttpChannelPool.REQUEST_URI_KEY;
+import static com.linecorp.armeria.client.HttpChannelPool.PROXY_CONTEXT;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -25,7 +25,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 
@@ -34,7 +33,6 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -75,7 +73,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
-    private final ProxyConfigSelector proxyConfigSelector;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -115,8 +112,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis,
-                       ProxyConfigSelector proxyConfigSelector) {
+                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
@@ -125,7 +121,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
-        this.proxyConfigSelector = proxyConfigSelector;
     }
 
     @Override
@@ -354,11 +349,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            final URI reqUri = ctx.channel().attr(REQUEST_URI_KEY).get();
+            final ProxyContext proxyContext = ctx.channel().attr(PROXY_CONTEXT).get();
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, H1C, sessionPromise, reqUri);
+                channelPool.connect(proxyDestinationAddress, H1C, proxyContext, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, H1C, sessionPromise, reqUri);
+                channelPool.connect(remoteAddress, H1C, proxyContext, sessionPromise);
             }
         } else {
             // Fail all pending responses.
@@ -385,12 +380,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
             setPendingException(ctx, new UnprocessedRequestException(cause));
-            final URI reqUri = ctx.channel().attr(REQUEST_URI_KEY).get();
-            try {
-                proxyConfigSelector.connectFailed(reqUri, ctx.channel().remoteAddress(), cause);
-            } catch (Throwable t) {
-                logger.warn("Exception while invoking proxy connectFailed for <{}> ", reqUri, t);
-            }
+            final ProxyContext proxyContext = ctx.channel().attr(PROXY_CONTEXT).get();
+            channelPool.invokeProxyConnectFailed(proxyContext, cause);
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));

@@ -48,7 +48,6 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.proxy.StaticProxyConfigSelector;
-import com.linecorp.armeria.client.proxy.WrappingProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -513,7 +512,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * The {@link ProxyConfig} which contains proxy related configuration.
+     * Sets the {@link ProxyConfig} which contains proxy related configuration.
      */
     public ClientFactoryBuilder proxyConfig(ProxyConfig proxyConfig) {
         requireNonNull(proxyConfig, "proxyConfig");
@@ -522,9 +521,18 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * The {@link ProxyConfigSelector} which contains proxy related configuration.
+     * Sets the {@link ProxySelector} which determines the proxy configuration.
      */
-    public ClientFactoryBuilder proxyConfigSelector(ProxyConfigSelector proxyConfigSelector) {
+    public ClientFactoryBuilder proxyConfig(ProxySelector proxySelector) {
+        requireNonNull(proxySelector, "proxySelector");
+        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, ProxyConfigSelector.wrap(proxySelector));
+        return this;
+    }
+
+    /**
+     * Sets the {@link ProxyConfigSelector} which determines the proxy configuration.
+     */
+    public ClientFactoryBuilder proxyConfig(ProxyConfigSelector proxyConfigSelector) {
         requireNonNull(proxyConfigSelector, "proxyConfigSelector");
         option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, proxyConfigSelector);
         return this;
@@ -591,10 +599,6 @@ public final class ClientFactoryBuilder {
                     };
             return ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
-
-        final ProxyConfigSelector selector = WrappingProxyConfigSelector.of(ProxySelector.getDefault());
-        options.computeIfAbsent(ClientFactoryOption.PROXY_CONFIG_SELECTOR, k ->
-                ClientFactoryOption.PROXY_CONFIG_SELECTOR.newValue(selector));
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();

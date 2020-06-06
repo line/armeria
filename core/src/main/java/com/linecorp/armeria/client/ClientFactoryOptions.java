@@ -260,7 +260,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * TODO: add javadocs.
+     * The {@link ProxyConfigSelector} which determines the proxy configuration.
      */
     public ProxyConfigSelector proxyConfigSelector() {
         return get(ClientFactoryOption.PROXY_CONFIG_SELECTOR);

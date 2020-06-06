@@ -16,16 +16,20 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.SocketAddress;
 import java.net.URI;
 
 /**
- * TODO: add javadocs.
+ * A {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
+ * for all requests.
  */
 public final class StaticProxyConfigSelector implements ProxyConfigSelector {
 
     /**
-     * TODO: add javadocs.
+     * Constructs a {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
+     * for all requests.
      */
     public static StaticProxyConfigSelector of(ProxyConfig proxyConfig) {
         return new StaticProxyConfigSelector(proxyConfig);
@@ -34,7 +38,7 @@ public final class StaticProxyConfigSelector implements ProxyConfigSelector {
     private final ProxyConfig proxyConfig;
 
     private StaticProxyConfigSelector(ProxyConfig proxyConfig) {
-        this.proxyConfig = proxyConfig;
+        this.proxyConfig = requireNonNull(proxyConfig, "proxyConfig");
     }
 
     @Override

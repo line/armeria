@@ -30,9 +30,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO: add javadocs.
+ * A simple class which wraps a {@link ProxySelector}. This class may have some limitations, most notably:
+
+ * 1. Some incompatibilities when used with sun's {@code DefaultProxySelector}
+ *     - some fields like socksProxyVersion aren't used
+ *     - this class doesn't attempt to resolve scheme format differences.
+ * 2. Selecting multiple {@link Proxy} isn't supported.
  */
-public final class WrappingProxyConfigSelector implements ProxyConfigSelector {
+final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     private static final Logger logger = LoggerFactory.getLogger(WrappingProxyConfigSelector.class);
 
     private static InetSocketAddress resolve(InetSocketAddress inetSocketAddress) {
@@ -42,8 +47,8 @@ public final class WrappingProxyConfigSelector implements ProxyConfigSelector {
         return new InetSocketAddress(inetSocketAddress.getHostString(), inetSocketAddress.getPort());
     }
 
-    private static ProxyConfig toProxyConfig(Proxy proxy) {
-        if (proxy.address() == null) {
+    private static ProxyConfig toProxyConfig(@Nullable Proxy proxy) {
+        if (proxy == null || proxy.address() == null) {
             return ProxyConfig.direct();
         }
         if (!(proxy.address() instanceof InetSocketAddress)) {
@@ -56,7 +61,7 @@ public final class WrappingProxyConfigSelector implements ProxyConfigSelector {
             case HTTP:
                 return ProxyConfig.connect(resolve(proxyAddress));
             case SOCKS:
-                // TODO: find a way to use flag "socksProxyVersion"
+                // NOTE: we may consider using {@code sun.net.SocksProxy} to determine the socksProxyVersion
                 return ProxyConfig.socks5(resolve(proxyAddress));
             case DIRECT:
             default:
@@ -64,25 +69,18 @@ public final class WrappingProxyConfigSelector implements ProxyConfigSelector {
         }
     }
 
-    /**
-     * TODO: add javadocs.
-     */
-    public static WrappingProxyConfigSelector of(@Nullable ProxySelector proxySelector) {
+    static WrappingProxyConfigSelector of(ProxySelector proxySelector) {
         return new WrappingProxyConfigSelector(proxySelector);
     }
 
-    @Nullable
     final ProxySelector proxySelector;
 
-    private WrappingProxyConfigSelector(@Nullable ProxySelector proxySelector) {
+    private WrappingProxyConfigSelector(ProxySelector proxySelector) {
         this.proxySelector = proxySelector;
     }
 
     @Override
     public ProxyConfig select(URI uri) {
-        if (proxySelector == null) {
-            return ProxyConfig.direct();
-        }
         final List<Proxy> proxies = proxySelector.select(uri);
         if (proxies == null || proxies.isEmpty()) {
             return ProxyConfig.direct();
@@ -97,9 +95,6 @@ public final class WrappingProxyConfigSelector implements ProxyConfigSelector {
 
     @Override
     public void connectFailed(URI uri, SocketAddress sa, Throwable throwable) {
-        if (proxySelector == null) {
-            return;
-        }
         proxySelector.connectFailed(uri, sa, new IOException(throwable));
     }
 }

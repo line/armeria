@@ -16,21 +16,48 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static java.util.Objects.requireNonNull;
+
+import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
- * TODO: add javadocs.
+ * Selects the {@link ProxyConfig} to use when connecting to a network
+ * resource specified by the {@code URI} parameter.
+ * This class may be used to dynamically control what proxy configuration
+ * to use for each request.
  */
+@UnstableApi
 public interface ProxyConfigSelector {
 
     /**
-     * TODO: add javadocs.
+     * Selects the {@link ProxyConfig} to use when connecting to a network
+     * resource specified by the {@code URI} parameter.
+     *
+     * @param uri the requested uri
+     * @return the selected proxy config which should not be null
      */
     ProxyConfig select(URI uri);
 
     /**
-     * TODO: add javadocs.
+     * Called to indicate a connection attempt to the specified {@code URI}
+     * has failed. This callback may be utilized to decide which proxy configuration
+     * should be used for each uri.
+     *
+     * @param uri the requested uri
+     * @param sa the remote socket address of the proxy server
+     * @param throwable the cause of the failure
      */
     void connectFailed(URI uri, SocketAddress sa, Throwable throwable);
+
+    /**
+     * Provides a way to re-use an existing {@link ProxySelector} with some limitations.
+     * See {@link WrappingProxyConfigSelector} for more details.
+     */
+    static ProxyConfigSelector wrap(ProxySelector proxySelector) {
+        return WrappingProxyConfigSelector.of(requireNonNull(proxySelector, "proxySelector"));
+    }
 }
