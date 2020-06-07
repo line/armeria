@@ -60,8 +60,17 @@ public interface PooledHttpResponse extends HttpResponse, PooledHttpStreamMessag
      * the trailers of the response are received fully.
      */
     default CompletableFuture<PooledAggregatedHttpResponse> aggregateWithPooledObjects(EventExecutor executor) {
-        requireNonNull(executor);
+        requireNonNull(executor, "executor");
         return aggregateWithPooledObjects(executor, PooledByteBufAllocator.DEFAULT);
+    }
+
+    /**
+     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the response are received fully.
+     */
+    default CompletableFuture<PooledAggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+        requireNonNull(alloc, "alloc");
+        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
     }
 
     /**
@@ -70,6 +79,8 @@ public interface PooledHttpResponse extends HttpResponse, PooledHttpStreamMessag
      */
     default CompletableFuture<PooledAggregatedHttpResponse> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         subscribeWithPooledObjects(aggregator, executor);

@@ -209,14 +209,9 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
-<<<<<<< HEAD
-                            } else {
-                                res.tryWrite(PooledHttpData.wrap(data.retain()));
-=======
-                            } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
+                            } else if (!res.tryWrite(PooledHttpData.wrap(data.retain()))) {
                                 fail(ctx, ClosedStreamException.get());
                                 return;
->>>>>>> b792aecdc642b9fa6b0a54b25befb9c911b587c7
                             }
                         }
 

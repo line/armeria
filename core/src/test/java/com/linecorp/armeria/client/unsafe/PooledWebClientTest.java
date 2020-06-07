@@ -18,6 +18,9 @@ package com.linecorp.armeria.client.unsafe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledAggregatedHttpResponse;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -102,5 +106,24 @@ class PooledWebClientTest {
                         assertThat(response.content().content().alloc()).isSameAs(alloc);
                     }
                 }).join();
+    }
+
+    @Test
+    void pooledAndUnpooledHaveSameApi() {
+        for (Method unpooledMethod : WebClient.class.getMethods()) {
+            if (Modifier.isStatic(unpooledMethod.getModifiers())) {
+                continue;
+            }
+            assertThat(PooledWebClient.class.getMethods()).anySatisfy(pooledMethod -> {
+                assertThat(pooledMethod.getName()).isEqualTo(unpooledMethod.getName());
+                assertThat(pooledMethod.getParameterTypes())
+                        .containsExactly(unpooledMethod.getParameterTypes());
+                if (unpooledMethod.getReturnType().equals(HttpResponse.class)) {
+                    assertThat(pooledMethod.getReturnType()).isEqualTo(PooledHttpResponse.class);
+                } else {
+                    assertThat(pooledMethod.getReturnType()).isEqualTo(unpooledMethod.getReturnType());
+                }
+            });
+        }
     }
 }

@@ -60,7 +60,7 @@ public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage 
      * the trailers of the request are received fully.
      */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
-        requireNonNull(alloc);
+        requireNonNull(alloc, "alloc");
         return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
     }
 
@@ -69,7 +69,7 @@ public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage 
      * the trailers of the request are received fully.
      */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects(EventExecutor executor) {
-        requireNonNull(executor);
+        requireNonNull(executor, "executor");
         return aggregateWithPooledObjects(executor, PooledByteBufAllocator.DEFAULT);
     }
 
@@ -79,6 +79,8 @@ public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage 
      */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         subscribeWithPooledObjects(aggregator, executor);
