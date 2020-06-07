@@ -169,12 +169,8 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                         WebClient webClient, long registryFetchIntervalSeconds, @Nullable String appName,
                         @Nullable String instanceId, @Nullable String vipAddress,
                         @Nullable String secureVipAddress, @Nullable List<String> regions) {
-<<<<<<< HEAD
-        this.webClient = PooledWebClient.of(webClient);
-=======
         super(selectionStrategy);
-        this.webClient = webClient;
->>>>>>> b792aecdc642b9fa6b0a54b25befb9c911b587c7
+        this.webClient = PooledWebClient.of(webClient);
         this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();
