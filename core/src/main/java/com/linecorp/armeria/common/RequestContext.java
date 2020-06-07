@@ -364,6 +364,19 @@ public interface RequestContext {
     MeterRegistry meterRegistry();
 
     /**
+     * Triggers the current timeout immediately if a timeout was scheduled before.
+     * Otherwise, the current {@link Request} will be timed-out immediately after a timeout scheduler is
+     * initialized.
+     */
+    void timeoutNow();
+
+    /**
+     * Returns whether this {@link RequestContext} has been timed-out (e.g., when the
+     * corresponding request passes a deadline).
+     */
+    boolean isTimedOut();
+
+    /**
      * Returns the {@link Executor} that is handling the current {@link Request}.
      */
     default Executor executor() {
@@ -581,6 +594,9 @@ public interface RequestContext {
      * Creates a new {@link RequestContext} whose properties and {@link #attrs()} are copied from this
      * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
      * and its own {@link RequestLog}.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     RequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 }

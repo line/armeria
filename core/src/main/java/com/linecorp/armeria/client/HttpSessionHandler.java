@@ -135,7 +135,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean hasUnfinishedResponses() {
-        assert responseDecoder != null;
+        // This method can be called from KeepAliveHandler before HTTP/2 connection receives
+        // a settings frame which triggers to initialize responseDecoder.
+        // So we just return false because it does not have any unfinished responses.
+        if (responseDecoder == null) {
+            return false;
+        }
         return responseDecoder.hasUnfinishedResponses();
     }
 
@@ -167,9 +172,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (!protocol.isMultiplex()) {
             // When HTTP/1.1 is used:
             // If pipelining is enabled, return as soon as the request is fully sent.
-            // If pipelining is disabled, return after the response is fully received.
+            // If pipelining is disabled,
+            // return after the response is fully received and the request is fully sent.
             final CompletableFuture<Void> completionFuture =
-                    useHttp1Pipelining ? req.whenComplete() : res.whenComplete();
+                    useHttp1Pipelining ? req.whenComplete()
+                                       : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
                 if (!responseDecoder.needsToDisconnectWhenFinished()) {
                     pooledChannel.release();
@@ -270,7 +277,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             } else {
                 typeInfo = String.valueOf(msg);
             }
-            throw new IllegalStateException("unexpected message type: " + typeInfo);
+            throw new IllegalStateException("unexpected message type: " + typeInfo + " (expected: ByteBuf)");
         } finally {
             ReferenceCountUtil.release(msg);
         }

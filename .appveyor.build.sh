@@ -143,9 +143,9 @@ fi
 
 msg "Building .."
 if [[ "$PROFILE" != 'site' ]]; then
-  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 checkstyle build
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 lint build
 else
-  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 -xcheckstyleMain site
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:lint :site:site
 fi
 
 if [[ "$COVERAGE" -eq 1 ]]; then

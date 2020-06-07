@@ -160,11 +160,16 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
-        final KeepAliveHandler keepAliveHandler =
-                idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis) : null;
+        final KeepAliveHandler keepAliveHandler;
+        if (idleTimeoutMillis > 0) {
+            keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis,
+                                                               config.maxConnectionAgeMillis());
+        } else {
+            keepAliveHandler = null;
+        }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), SessionProtocol.H1C, keepAliveHandler, config.isDateHeaderEnabled(),
-                config.isServerHeaderEnabled()
+                p.channel(), SessionProtocol.H1C, keepAliveHandler,
+                config.isDateHeaderEnabled(), config.isServerHeaderEnabled()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
@@ -399,11 +404,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
             final long idleTimeoutMillis = config.idleTimeoutMillis();
-            final KeepAliveHandler keepAliveHandler =
-                    idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis) : null;
+            final KeepAliveHandler keepAliveHandler;
+            if (idleTimeoutMillis > 0) {
+                keepAliveHandler = new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis,
+                                                                   config.maxConnectionAgeMillis());
+            } else {
+                keepAliveHandler = null;
+            }
+
             final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
-                    ch, SessionProtocol.H1, keepAliveHandler, config.isDateHeaderEnabled(),
-                    config.isServerHeaderEnabled());
+                    ch, SessionProtocol.H1, keepAliveHandler,
+                    config.isDateHeaderEnabled(), config.isServerHeaderEnabled());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),

@@ -27,16 +27,24 @@ import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Headers;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
+
+    private static final ByteBuf MAX_CONNECTION_AGE_DEBUG = Unpooled.wrappedBuffer("max-age".getBytes());
+
     @Nullable
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+
+    private boolean isGoAwaySent;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
                              @Nullable KeepAliveHandler keepAliveHandler,
@@ -55,6 +63,13 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             // - Stream has been closed already.
             // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
             return newFailedFuture(ClosedStreamException.get());
+        }
+
+        if (!isGoAwaySent && keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
+            final int lastStreamId = encoder().connection().remote().lastStreamCreated();
+            encoder().writeGoAway(ctx(), lastStreamId, Http2Error.NO_ERROR.code(),
+                                  MAX_CONNECTION_AGE_DEBUG.retain(), ctx().newPromise());
+            isGoAwaySent = true;
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);

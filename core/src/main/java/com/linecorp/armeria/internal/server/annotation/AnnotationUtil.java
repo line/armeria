@@ -230,7 +230,7 @@ final class AnnotationUtil {
             Class<T> annotationType, Class<? extends Annotation> containerType,
             Set<Class<? extends Annotation>> visitedAnnotationTypes) {
 
-        final Class<? extends Annotation> actualAnnotationType = annotation.getClass();
+        final Class<? extends Annotation> actualAnnotationType = annotation.annotationType();
         if (knownCyclicAnnotationTypes.contains(actualAnnotationType)) {
             return false;
         }

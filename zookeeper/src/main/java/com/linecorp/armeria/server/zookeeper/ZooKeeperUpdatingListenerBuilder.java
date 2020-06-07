@@ -15,33 +15,30 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
-import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.server.Server;
 
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.
- * <h2>Examples</h2>
  * <pre>{@code
+ * ZookeeperRegistrationSpec spec = ZookeeperRegistrationSpec.curator("myServices");
  * ZooKeeperUpdatingListener listener =
- *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints")
+ *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints", spec)
  *                              .sessionTimeoutMillis(10000)
- *                              .codec(NodeValueCodec.ofDefault())
  *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
+ * This registers the {@link Server} using the format compatible with
+ * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
  *
  * <p>You can also specify the {@link CuratorFramework} instance to use. In this case,
  * invoking {@link #connectTimeout(Duration)}, {@link #connectTimeoutMillis(long)},
@@ -58,10 +55,8 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
  * }</pre>
  * */
 public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
-    private final String zNodePath;
-    @Nullable
-    private Endpoint endpoint;
-    private NodeValueCodec nodeValueCodec = NodeValueCodec.ofDefault();
+
+    private final ZookeeperRegistrationSpec spec;
 
     /**
      * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
@@ -70,10 +65,10 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
-        super(client);
-        this.zNodePath = zNodePath;
-        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty.");
+    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath,
+                                     ZookeeperRegistrationSpec spec) {
+        super(client, zNodePath);
+        this.spec = requireNonNull(spec, "spec");
     }
 
     /**
@@ -82,42 +77,10 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath) {
-        super(zkConnectionStr);
-        this.zNodePath = zNodePath;
-        checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty.");
-    }
-
-    /**
-     * Sets the {@link Endpoint} to register. If not set, the current host name is used automatically.
-     *
-     * @param endpoint the {@link Endpoint} to register
-     */
-    public ZooKeeperUpdatingListenerBuilder endpoint(Endpoint endpoint) {
-        this.endpoint = requireNonNull(endpoint, "endpoint");
-        return this;
-    }
-
-    /**
-     * Sets the {@link NodeValueCodec} to encode or decode ZooKeeper data.
-     *
-     * @param nodeValueCodec the {@link NodeValueCodec} instance to use
-     */
-    public ZooKeeperUpdatingListenerBuilder codec(NodeValueCodec nodeValueCodec) {
-        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        return this;
-    }
-
-    /**
-     * Sets the {@link NodeValueCodec} to encode or decode ZooKeeper data.
-     *
-     * @param nodeValueCodec the {@link NodeValueCodec} instance to use
-     *
-     * @deprecated Use {@link #codec(NodeValueCodec)}
-     */
-    @Deprecated
-    public ZooKeeperUpdatingListenerBuilder nodeValueCodec(NodeValueCodec nodeValueCodec) {
-        return codec(nodeValueCodec);
+    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath,
+                                     ZookeeperRegistrationSpec spec) {
+        super(zkConnectionStr, zNodePath);
+        this.spec = requireNonNull(spec, "spec");
     }
 
     /**
@@ -128,7 +91,7 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
         final CuratorFramework client = buildCuratorFramework();
         final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
-        return new ZooKeeperUpdatingListener(client, zNodePath, nodeValueCodec, endpoint, internalClient);
+        return new ZooKeeperUpdatingListener(client, zNodePath(), spec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.

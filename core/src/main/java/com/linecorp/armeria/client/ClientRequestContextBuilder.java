@@ -23,6 +23,8 @@ import java.net.URI;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -31,10 +33,13 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Builds a new {@link ClientRequestContext}. Note that it is not usually required to create a new context by
@@ -43,6 +48,26 @@ import io.netty.channel.EventLoop;
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
+    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+        @Override
+        public boolean canSchedule() {
+            return true;
+        }
+
+        @Override
+        public void run() { /* no-op */ }
+    };
+
+    /**
+     * A timeout controller that has been timed-out.
+     */
+    private static final DefaultTimeoutController noopTimedOutController =
+            new DefaultTimeoutController(noopTimeoutTask, ImmediateEventExecutor.INSTANCE);
+
+    static {
+        noopTimedOutController.timeoutNow();
+    }
+
     @Nullable
     private final String fragment;
     @Nullable
@@ -50,6 +75,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     private ClientOptions options = ClientOptions.of();
     @Nullable
     private ClientConnectionTimings connectionTimings;
+
+    private boolean initTimeoutController = true;
 
     ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
@@ -91,6 +118,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         return this;
     }
 
+    @VisibleForTesting
+    ClientRequestContextBuilder noTimeoutController() {
+        initTimeoutController = false;
+        return this;
+    }
+
     /**
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
@@ -117,6 +150,16 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         if (rpcRequest() != null) {
             ctx.logBuilder().requestContent(rpcRequest(), null);
+        }
+
+        if (initTimeoutController) {
+            final DefaultTimeoutController timeoutController;
+            if (timedOut()) {
+                timeoutController = noopTimedOutController;
+            } else {
+                timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
+            }
+            ctx.setResponseTimeoutController(timeoutController);
         }
 
         return ctx;
@@ -169,5 +212,10 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
                                                         long requestStartTimeMicros) {
         return (ClientRequestContextBuilder) super.requestStartTime(requestStartTimeNanos,
                                                                     requestStartTimeMicros);
+    }
+
+    @Override
+    public ClientRequestContextBuilder timedOut(boolean timedOut) {
+        return (ClientRequestContextBuilder) super.timedOut(timedOut);
     }
 }

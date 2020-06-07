@@ -99,6 +99,8 @@ configure(projectsWithFlags('java')) {
             if (compileTask != null) {
                 compileTask.dependsOn(task)
             }
+
+            project.ext.getGenerateSourcesTask().dependsOn(task)
         }
     }
 }

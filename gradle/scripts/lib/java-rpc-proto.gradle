@@ -77,10 +77,12 @@ configure(projectsWithFlags('java')) {
         // Make sure protoc runs before the resources are copied so that .dsc files are included.
         project.afterEvaluate {
             project.sourceSets.each { sourceSet ->
+                def task = tasks.findByName(sourceSet.getTaskName('generate', 'proto'))
                 def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
                 if (processResourcesTask != null) {
-                    processResourcesTask.dependsOn(tasks.findByName(sourceSet.getTaskName('generate', 'proto')))
+                    processResourcesTask.dependsOn(task)
                 }
+                project.ext.getGenerateSourcesTask().dependsOn(task)
             }
         }
     }

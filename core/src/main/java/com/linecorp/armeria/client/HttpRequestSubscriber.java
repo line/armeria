@@ -228,8 +228,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailers = (HttpHeaders) o;
                     if (trailers.contains(HttpHeaderNames.STATUS)) {
-                        failAndReset(
-                                new IllegalArgumentException("published a trailers with status: " + o));
+                        failAndReset(new IllegalArgumentException("published a trailers with status: " + o));
                         return;
                     }
                     // Trailers always end the stream even if not explicitly set.

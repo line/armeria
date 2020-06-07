@@ -197,19 +197,19 @@ public final class Server implements ListenableAsyncCloseable {
 
     @Nullable
     private ServerPort activePort0(@Nullable SessionProtocol protocol) {
+        ServerPort candidate = null;
         synchronized (activePorts) {
             for (ServerPort serverPort : activePorts.values()) {
-                if (!isLocalPort(serverPort, protocol)) {
-                    return serverPort;
-                }
-            }
-            for (ServerPort serverPort : activePorts.values()) {
                 if (protocol == null || serverPort.hasProtocol(protocol)) {
-                    return serverPort;
+                    if (!isLocalPort(serverPort)) {
+                        return serverPort;
+                    } else if (candidate == null) {
+                        candidate = serverPort;
+                    }
                 }
             }
         }
-        return null;
+        return candidate;
     }
 
     /**
@@ -235,7 +235,8 @@ public final class Server implements ListenableAsyncCloseable {
     private int activeLocalPort0(@Nullable SessionProtocol protocol) {
         synchronized (activePorts) {
             return activePorts.values().stream()
-                              .filter(activePort -> isLocalPort(activePort, protocol))
+                              .filter(activePort -> (protocol == null || activePort.hasProtocol(protocol)) &&
+                                                    isLocalPort(activePort))
                               .findFirst()
                               .orElseThrow(() -> new IllegalStateException(
                                       (protocol == null ? "no active local ports: "
@@ -720,7 +721,7 @@ public final class Server implements ListenableAsyncCloseable {
                 }
 
                 if (logger.isInfoEnabled()) {
-                    if (isLocalPort(actualPort, null)) {
+                    if (isLocalPort(actualPort)) {
                         port.protocols().forEach(p -> logger.info(
                                 "Serving {} at {} - {}://127.0.0.1:{}/",
                                 p.name(), localAddress, p.uriText(), localAddress.getPort()));
@@ -746,17 +747,8 @@ public final class Server implements ListenableAsyncCloseable {
         return "armeria-boss-" + protocolNames + '-' + localHostName + ':' + localAddr.getPort();
     }
 
-    private static boolean isLocalPort(ServerPort serverPort, @Nullable SessionProtocol protocol) {
+    private static boolean isLocalPort(ServerPort serverPort) {
         final InetAddress address = serverPort.localAddress().getAddress();
-
-        if (!address.isAnyLocalAddress() && !address.isLoopbackAddress()) {
-            return false;
-        }
-
-        if (protocol == null) {
-            return true;
-        }
-
-        return serverPort.hasProtocol(protocol);
+        return address.isAnyLocalAddress() || address.isLoopbackAddress();
     }
 }

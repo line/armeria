@@ -62,7 +62,7 @@ class Http2KeepAliveHandlerTest {
         when(ctx.channel()).thenReturn(channel);
 
         keepAliveHandler = new Http2KeepAliveHandler(channel, frameWriter, "test",
-                                                     idleTimeoutMillis, pingIntervalMillis) {
+                                                     idleTimeoutMillis, pingIntervalMillis, 0) {
             @Override
             protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
                 return false;

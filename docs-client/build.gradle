@@ -19,6 +19,7 @@ node {
     version = '12.17.0'
     npmVersion = '6.14.5'
     download = true
+    npmInstallCommand = "ci"
 }
 
 task buildWeb(type: NpmTask) {
@@ -32,17 +33,6 @@ task buildWeb(type: NpmTask) {
     outputs.dir('build/web')
 }
 
-task checkWeb(type: NpmTask) {
-    dependsOn tasks.npmInstall
-
-    args = ['run', 'check']
-
-    inputs.dir('src')
-    inputs.file('package.json')
-    inputs.file('package-lock.json')
-    outputs.upToDateWhen { true }
-}
-
 task copyWeb(type: Copy) {
     dependsOn buildWeb
 
@@ -50,5 +40,21 @@ task copyWeb(type: Copy) {
     into 'build/javaweb/com/linecorp/armeria/server/docs'
 }
 
-tasks.assemble.dependsOn copyWeb
-tasks.check.dependsOn checkWeb
+tasks.assemble.dependsOn tasks.copyWeb
+
+if (!rootProject.hasProperty('noLint')) {
+    task eslint(type: NpmTask) {
+        dependsOn tasks.npmInstall
+
+        args = ['run', 'lint']
+
+        inputs.dir('src')
+        inputs.file('package.json')
+        inputs.file('package-lock.json')
+        outputs.upToDateWhen { true }
+    }
+
+    Task lintTask = project.ext.getLintTask()
+    lintTask.dependsOn(tasks.eslint)
+    tasks.buildWeb.dependsOn(lintTask)
+}

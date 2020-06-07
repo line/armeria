@@ -200,7 +200,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, false, endOfStream);
         try {
             res.initTimeout();
-            res.tryWrite(converted);
+            res.write(converted);
         } catch (Throwable t) {
             res.close(t);
             throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
@@ -249,7 +249,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         try {
-            res.tryWrite(new ByteBufHttpData(data.retain(), endOfStream));
+            res.write(new ByteBufHttpData(data.retain(), endOfStream));
         } catch (Throwable t) {
             res.close(t);
             throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");

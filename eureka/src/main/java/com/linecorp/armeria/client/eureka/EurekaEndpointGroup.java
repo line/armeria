@@ -45,6 +45,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.unsafe.PooledWebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -164,10 +165,16 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private volatile ScheduledFuture<?> scheduledFuture;
     private volatile boolean closed;
 
-    EurekaEndpointGroup(WebClient webClient, long registryFetchIntervalSeconds, @Nullable String appName,
+    EurekaEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                        WebClient webClient, long registryFetchIntervalSeconds, @Nullable String appName,
                         @Nullable String instanceId, @Nullable String vipAddress,
                         @Nullable String secureVipAddress, @Nullable List<String> regions) {
+<<<<<<< HEAD
         this.webClient = PooledWebClient.of(webClient);
+=======
+        super(selectionStrategy);
+        this.webClient = webClient;
+>>>>>>> b792aecdc642b9fa6b0a54b25befb9c911b587c7
         this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();

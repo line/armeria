@@ -131,7 +131,7 @@ class SubscriptionOptionTest {
         }, NOTIFY_CANCELLATION);
 
         await().untilAsserted(() -> assertThat(completed).isTrue());
-        await().untilAsserted(() -> assertThat(stream.whenComplete().isCompletedExceptionally()));
+        await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompletedExceptionally());
     }
 
     static SubscriptionOption[] subscriptionOptions(boolean subscribedWithPooledObjects) {

@@ -25,26 +25,23 @@ import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
-import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 
 /**
  * Builds a {@link ZooKeeperEndpointGroup}.
  */
 public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder {
 
-    private final String zNodePath;
-
+    private final ZookeeperDiscoverySpec spec;
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
-    private NodeValueCodec nodeValueCodec = NodeValueCodec.ofDefault();
 
-    ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String zNodePath) {
-        super(zkConnectionStr);
-        this.zNodePath = zNodePath;
+    ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String zNodePath, ZookeeperDiscoverySpec spec) {
+        super(zkConnectionStr, zNodePath);
+        this.spec = requireNonNull(spec, "spec");
     }
 
-    ZooKeeperEndpointGroupBuilder(CuratorFramework client, String zNodePath) {
-        super(client);
-        this.zNodePath = zNodePath;
+    ZooKeeperEndpointGroupBuilder(CuratorFramework client, String zNodePath, ZookeeperDiscoverySpec spec) {
+        super(client, zNodePath);
+        this.spec = requireNonNull(spec, "spec");
     }
 
     /**
@@ -56,21 +53,13 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
     }
 
     /**
-     * Sets the {@link NodeValueCodec} of the {@link ZooKeeperEndpointGroup}.
-     */
-    public ZooKeeperEndpointGroupBuilder codec(NodeValueCodec nodeValueCodec) {
-        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        return this;
-    }
-
-    /**
      * Returns a newly-created {@link ZooKeeperEndpointGroup} based on the properties set so far.
      */
     public ZooKeeperEndpointGroup build() {
         final CuratorFramework client = buildCuratorFramework();
         final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
-        return new ZooKeeperEndpointGroup(selectionStrategy, client, zNodePath, nodeValueCodec, internalClient);
+        return new ZooKeeperEndpointGroup(selectionStrategy, client, zNodePath(), spec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.
