@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.Unpooled;
 
@@ -80,8 +80,8 @@ class DefaultHttpResponseTest {
     @Test
     void closeMustReleaseAggregatedContent() {
         final HttpResponseWriter res = HttpResponse.streaming();
-        final ByteBufHttpData data =
-                new ByteBufHttpData(Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8), true);
+        final PooledHttpData data =
+                PooledHttpData.wrap(Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8)).withEndOfStream();
         res.close();
         res.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), data));
         assertThat(data.refCnt()).isZero();

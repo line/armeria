@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
@@ -249,7 +249,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         try {
-            res.write(new ByteBufHttpData(data.retain(), endOfStream));
+            res.write(PooledHttpData.wrap(data.retain()).withEndOfStream(endOfStream));
         } catch (Throwable t) {
             res.close(t);
             throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");

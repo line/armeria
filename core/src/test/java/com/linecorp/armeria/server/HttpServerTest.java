@@ -81,7 +81,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.PathAndQuery;
@@ -216,7 +216,7 @@ class HttpServerTest {
                                         final ByteBuf content = PooledByteBufAllocator.DEFAULT
                                                 .buffer(1)
                                                 .writeByte('0' + finalI);
-                                        data = new ByteBufHttpData(content, false);
+                                        data = PooledHttpData.wrap(content);
                                     } else {
                                         data = HttpData.ofAscii(String.valueOf(finalI));
                                     }

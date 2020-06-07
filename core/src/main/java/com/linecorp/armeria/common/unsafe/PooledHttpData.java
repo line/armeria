@@ -120,6 +120,7 @@ public interface PooledHttpData extends HttpData, ByteBufHolder, SafeCloseable {
     static PooledHttpData wrap(ByteBuf buf) {
         requireNonNull(buf, "buf");
         if (!buf.isReadable()) {
+            buf.release();
             return ByteBufHttpData.EMPTY;
         }
         return new ByteBufHttpData(buf, false);

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
@@ -133,12 +133,12 @@ class StreamMessageDrainerTest {
 
     @Test
     void withPooledObjects() {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-        final DefaultStreamMessage<ByteBufHttpData> stream = new DefaultStreamMessage<>();
+        final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
+        final DefaultStreamMessage<PooledHttpData> stream = new DefaultStreamMessage<>();
         stream.write(data);
         stream.close();
 
-        final List<ByteBufHttpData> httpData = stream.drainAll(WITH_POOLED_OBJECTS).join();
+        final List<PooledHttpData> httpData = stream.drainAll(WITH_POOLED_OBJECTS).join();
 
         assertThat(httpData.size()).isOne();
         assertThat(data.refCnt()).isOne();
@@ -147,12 +147,12 @@ class StreamMessageDrainerTest {
 
     @Test
     void unpooledByDefault() {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-        final DefaultStreamMessage<ByteBufHttpData> stream = new DefaultStreamMessage<>();
+        final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
+        final DefaultStreamMessage<PooledHttpData> stream = new DefaultStreamMessage<>();
         stream.write(data);
         stream.close();
 
-        final List<ByteBufHttpData> httpData = stream.drainAll().join();
+        final List<PooledHttpData> httpData = stream.drainAll().join();
 
         assertThat(httpData.size()).isOne();
         assertThat(data.refCnt()).isZero();

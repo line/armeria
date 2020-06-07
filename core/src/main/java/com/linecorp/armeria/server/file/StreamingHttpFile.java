@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
@@ -126,7 +125,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
         final long nextOffset = offset + readBytes;
         final boolean endOfStream = nextOffset == end;
         if (readBytes > 0) {
-            if (!res.tryWrite(new ByteBufHttpData(buf, endOfStream))) {
+            if (!res.tryWrite(PooledHttpData.wrap(buf).withEndOfStream(endOfStream))) {
                 close(in);
                 return;
             }

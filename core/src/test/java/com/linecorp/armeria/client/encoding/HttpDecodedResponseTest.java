@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -77,8 +76,8 @@ class HttpDecodedResponseTest {
 
     @Test
     void pooledPayload_unpooledDrain() {
-        final ByteBufHttpData payload = new ByteBufHttpData(
-                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
+        final PooledHttpData payload = PooledHttpData.wrap(
+                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD)).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, false);
@@ -100,8 +99,8 @@ class HttpDecodedResponseTest {
 
     @Test
     void pooledPayload_pooledDrain() {
-        final ByteBufHttpData payload = new ByteBufHttpData(
-                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
+        final PooledHttpData payload = PooledHttpData.wrap(
+                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD)).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, true);

@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBufHolder;
 
@@ -46,16 +46,16 @@ class FilteredStreamMessageTest {
     @ArgumentsSource(ParametersProvider.class)
     void withPooledObjects(boolean filterSupportsPooledObjects, boolean subscribedWithPooledObjects,
                            int expectedRefCntInFilter, int expectedRefCntInOnNext) {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-        final DefaultStreamMessage<ByteBufHttpData> stream = new DefaultStreamMessage<>();
+        final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
+        final DefaultStreamMessage<PooledHttpData> stream = new DefaultStreamMessage<>();
         stream.write(data);
         stream.close();
 
-        final FilteredStreamMessage<ByteBufHttpData, ByteBufHttpData> filtered =
-                new FilteredStreamMessage<ByteBufHttpData, ByteBufHttpData>(stream,
+        final FilteredStreamMessage<PooledHttpData, PooledHttpData> filtered =
+                new FilteredStreamMessage<PooledHttpData, PooledHttpData>(stream,
                                                                             filterSupportsPooledObjects) {
                     @Override
-                    protected ByteBufHttpData filter(ByteBufHttpData obj) {
+                    protected PooledHttpData filter(PooledHttpData obj) {
                         assertThat(data.refCnt()).isEqualTo(expectedRefCntInFilter);
                         return obj;
                     }
@@ -63,7 +63,7 @@ class FilteredStreamMessageTest {
 
         final AtomicBoolean completed = new AtomicBoolean();
         final SubscriptionOption[] options = subscriptionOptions(subscribedWithPooledObjects);
-        filtered.subscribe(new Subscriber<ByteBufHttpData>() {
+        filtered.subscribe(new Subscriber<PooledHttpData>() {
 
             @Nullable
             private Subscription subscription;
@@ -75,7 +75,7 @@ class FilteredStreamMessageTest {
             }
 
             @Override
-            public void onNext(ByteBufHttpData b) {
+            public void onNext(PooledHttpData b) {
                 assertThat(data.refCnt()).isEqualTo(expectedRefCntInOnNext);
                 subscription.cancel();
                 b.release();
@@ -99,7 +99,7 @@ class FilteredStreamMessageTest {
 
     @Test
     void notifyCancellation() {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+        final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
         final DefaultStreamMessage<ByteBufHolder> stream = new DefaultStreamMessage<>();
         stream.write(data);
         stream.close();

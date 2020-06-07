@@ -38,7 +38,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBufHolder;
 
@@ -151,23 +151,23 @@ class SubscriptionOptionTest {
 
         private static Arguments defaultStream() {
             final DefaultStreamMessage<ByteBufHolder> defaultStream = new DefaultStreamMessage<>();
-            final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+            final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
             defaultStream.write(data);
             defaultStream.close();
             return of(data, defaultStream);
         }
 
         private static Arguments fixedStream() {
-            final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-            final StreamMessage<ByteBufHttpData> fixedStream = StreamMessage.of(data);
+            final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
+            final StreamMessage<PooledHttpData> fixedStream = StreamMessage.of(data);
             return of(data, fixedStream);
         }
 
         private static Arguments deferredStream() {
-            final DeferredStreamMessage<ByteBufHttpData> deferredStream = new DeferredStreamMessage<>();
-            final DefaultStreamMessage<ByteBufHttpData> d = new DefaultStreamMessage<>();
+            final DeferredStreamMessage<PooledHttpData> deferredStream = new DeferredStreamMessage<>();
+            final DefaultStreamMessage<PooledHttpData> d = new DefaultStreamMessage<>();
             deferredStream.delegate(d);
-            final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+            final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
             d.write(data);
             d.close();
             return of(data, deferredStream);

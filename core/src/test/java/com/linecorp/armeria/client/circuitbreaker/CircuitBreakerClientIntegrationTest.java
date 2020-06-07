@@ -32,7 +32,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.Unpooled;
 
@@ -55,7 +55,8 @@ class CircuitBreakerClientIntegrationTest {
 
         for (int i = 0; i < 3; i++) {
             final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "h2c://127.0.0.1:1");
-            final ByteBufHttpData data = new ByteBufHttpData(Unpooled.wrappedBuffer(new byte[] { 0 }), true);
+            final PooledHttpData data = PooledHttpData.wrap(Unpooled.wrappedBuffer(new byte[] { 0 }))
+                                                      .withEndOfStream();
             req.write(data);
 
             switch (i) {
