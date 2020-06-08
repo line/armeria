@@ -462,8 +462,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> {
                  final String serviceName = log.serviceName();
                  final String name = log.name();
-                 if (serviceName != null && name != null) {
-                     name(serviceName, name);
+                 if (name != null) {
+                     if (serviceName != null) {
+                         name(serviceName, name);
+                     } else {
+                         name(name);
+                     }
                  }
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
@@ -695,7 +699,23 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void name(@Nullable String serviceName, String name) {
+    public void name(String name) {
+        requireNonNull(name, "name");
+        checkArgument(!name.isEmpty(), "name is empty.");
+
+        if (isAvailable(RequestLogProperty.NAME)) {
+            return;
+        }
+
+        this.name = name;
+        fullName = name;
+        updateFlags(RequestLogProperty.NAME);
+    }
+
+    @Override
+    public void name(String serviceName, String name) {
+        requireNonNull(serviceName, "serviceName");
+        checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
         requireNonNull(name, "name");
         checkArgument(!name.isEmpty(), "name is empty.");
 
@@ -705,11 +725,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.serviceName = serviceName;
         this.name = name;
-        if (serviceName != null) {
-            fullName = serviceName + '/' + name;
-        } else {
-            fullName = name;
-        }
+        fullName = serviceName + '/' + name;
         updateFlags(RequestLogProperty.NAME);
     }
 

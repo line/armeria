@@ -288,7 +288,8 @@ class AccessLogFormatsTest {
 
     @Test
     void requestLogAvailabilityException() {
-        final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2c\" 200 1024";
+        final String fullName = AccessLogFormatsTest.class.getName() + "/rpcMethod";
+        final String expectedLogMessage = "\"GET /armeria/log#" + fullName + " h2c\" 200 1024";
 
         final ServiceRequestContext ctx = ServiceRequestContext.builder(
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
@@ -305,7 +306,7 @@ class AccessLogFormatsTest {
         // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
         // component to RequestLog. So we cannot get the expected log message here.
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        logBuilder.requestContent(RpcRequest.of(Object.class, "rpcMethod"), null);
+        logBuilder.requestContent(RpcRequest.of(AccessLogFormatsTest.class, "rpcMethod"), null);
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
         logBuilder.endRequest();
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);

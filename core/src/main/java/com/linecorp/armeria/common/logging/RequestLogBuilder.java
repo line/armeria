@@ -112,6 +112,12 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void name(String serviceName, String name);
 
     /**
+     * Sets the human-readable name of the {@link Request}, such as RPC method name, annotated service method
+     * name or HTTP method name. This property is often used as a meter tag or distributed trace's span name.
+     */
+    void name(String name);
+
+    /**
      * Increases the {@link RequestLog#requestLength()} by {@code deltaBytes}.
      */
     void increaseRequestLength(long deltaBytes);

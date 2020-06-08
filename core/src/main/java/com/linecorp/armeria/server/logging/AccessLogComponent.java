@@ -293,12 +293,15 @@ interface AccessLogComponent {
                 case REQUEST_LINE:
                     final String httpMethodName = log.requestHeaders().method().name();
                     final String path = log.requestHeaders().path();
-                    final String logName = log.name();
+                    final String meterTag = ((ServiceRequestContext) log.context()).config().route().meterTag();
+                    final String logName = log.serviceName() == meterTag ? null : log.fullName();
+
                     final String protocol = firstNonNull(log.sessionProtocol(),
                                                          log.context().sessionProtocol()).uriText();
 
                     final StringBuilder requestLine = TemporaryThreadLocals.get().stringBuilder();
                     requestLine.append(httpMethodName).append(' ').append(path);
+
                     if (logName != null) {
                         requestLine.append('#')
                                    .append(UrlEscapers.urlFragmentEscaper().escape(logName));

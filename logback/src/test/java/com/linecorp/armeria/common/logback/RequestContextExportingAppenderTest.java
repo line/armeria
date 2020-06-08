@@ -304,7 +304,7 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
                            .containsKey("req.id")
-                           .hasSize(21);
+                           .hasSize(22);
         }
     }
 

@@ -92,7 +92,6 @@ public interface MeterIdPrefixFunction {
             private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
                 final RequestContext ctx = log.context();
 
-
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
                     tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "hostnamePattern"

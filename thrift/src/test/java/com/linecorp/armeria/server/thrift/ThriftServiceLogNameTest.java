@@ -33,7 +33,10 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 class ThriftServiceLogNameTest {
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =
-            (name, resultHandler) -> resultHandler.onComplete("Hello " + name);
+            (name, resultHandler) -> {
+                capturedCtx = ServiceRequestContext.current();
+                resultHandler.onComplete("Hello " + name);
+            };
 
     private static ServiceRequestContext capturedCtx;
     @RegisterExtension
