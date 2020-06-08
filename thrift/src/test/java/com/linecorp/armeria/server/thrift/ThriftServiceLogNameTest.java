@@ -44,8 +44,8 @@ class ThriftServiceLogNameTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/thrift", THttpService.builder()
-                                                         .addService(HELLO_SERVICE_HANDLER)
-                                                         .build());
+                                              .addService(HELLO_SERVICE_HANDLER)
+                                              .build());
         }
     };
 
