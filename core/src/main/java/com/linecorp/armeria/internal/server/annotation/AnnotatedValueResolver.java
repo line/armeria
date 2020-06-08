@@ -308,7 +308,7 @@ final class AnnotatedValueResolver {
         //
         // void setter(@Param("serialNo") Long serialNo, @Param("serialNo") Long serialNo2) { ... }
         //
-        warnOnRedundantUse(constructorOrMethod, list);
+        warnOnDuplicateResolver(constructorOrMethod, list);
         return list;
     }
 
@@ -426,12 +426,13 @@ final class AnnotatedValueResolver {
                element.isAnnotationPresent(RequestObject.class);
     }
 
-    private static void warnOnRedundantUse(Executable constructorOrMethod,
-                                           List<AnnotatedValueResolver> list) {
+    private static void warnOnDuplicateResolver(Executable constructorOrMethod,
+                                                List<AnnotatedValueResolver> list) {
         final Set<AnnotatedValueResolver> uniques = AnnotatedBeanFactoryRegistry.uniqueResolverSet();
         list.forEach(element -> {
             if (!uniques.add(element)) {
-                AnnotatedBeanFactoryRegistry.warnRedundantUse(element, constructorOrMethod.toGenericString());
+                AnnotatedBeanFactoryRegistry.warnDuplicateResolver(
+                        element, constructorOrMethod.toGenericString());
             }
         });
     }
@@ -864,6 +865,7 @@ final class AnnotatedValueResolver {
         @Nullable
         private BeanFactoryId beanFactoryId;
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
+        private boolean warnedRedundantUse;
 
         private Builder(AnnotatedElement annotatedElement, Type type) {
             this.annotatedElement = requireNonNull(annotatedElement, "annotatedElement");
@@ -955,9 +957,13 @@ final class AnnotatedValueResolver {
             checkArgument(resolver != null, "'resolver' should be specified");
 
             final boolean isOptional = type == Optional.class;
+            final boolean isNullable = isNullable();
             final Type originalParameterizedType = parameterizedTypeOf(typeElement);
             final Type unwrappedParameterizedType = isOptional ? unwrapOptional(originalParameterizedType)
                                                                : originalParameterizedType;
+            if (isOptional && isNullable) {
+                warnRedundantUse("Optional", "@Nullable");
+            }
 
             final boolean shouldExist;
             final String defaultValue;
@@ -967,31 +973,16 @@ final class AnnotatedValueResolver {
                 if (supportDefault) {
                     // Warn unusual usage. e.g. @Param @Default("a") Optional<String> param
                     if (isOptional) {
-                        // 'annotatedElement' can be one of constructor, field, method or parameter.
-                        // So, it may be printed verbosely but it's okay because it provides where this message
-                        // is caused.
-                        logger.warn("@{} was used with '{}'. " +
-                                    "Optional is redundant because the value is always present.",
-                                    Default.class.getSimpleName(), annotatedElement);
+                        warnRedundantUse("@Default", "Optional");
+                    } else if (isNullable) {
+                        warnRedundantUse("@Default", "@Nullable");
                     }
 
                     shouldExist = false;
                     defaultValue = getSpecifiedValue(aDefault.value());
                 } else {
                     // Warn if @Default exists in an unsupported place.
-                    final StringBuilder msg = new StringBuilder();
-                    msg.append('@');
-                    msg.append(Default.class.getSimpleName());
-                    msg.append(" is redundant for ");
-                    if (pathVariable) {
-                        msg.append("path variable '").append(httpElementName).append('\'');
-                    } else if (annotationType != null) {
-                        msg.append("annotation @").append(annotationType.getSimpleName());
-                    } else {
-                        msg.append("type '").append(originalParameterizedType.getTypeName()).append('\'');
-                    }
-                    msg.append(" because the value is always present.");
-                    logger.warn(msg.toString());
+                    warnRedundantUse("@Default", null);
 
                     shouldExist = !isOptional;
                     // Set the default value to null just like it was not specified.
@@ -1005,22 +996,16 @@ final class AnnotatedValueResolver {
                     shouldExist = false;
                 } else {
                     // Allow `null` if annotated with `@Nullable`.
-                    boolean isNonNull = true;
-                    for (Annotation a : annotatedElement.getAnnotations()) {
-                        final String annotationTypeName = a.annotationType().getName();
-                        if (annotationTypeName.endsWith(".Nullable")) {
-                            isNonNull = false;
-                            break;
-                        }
-                    }
-
-                    shouldExist = isNonNull;
+                    shouldExist = !isNullable;
                 }
             }
 
             if (pathVariable && !shouldExist) {
-                logger.warn("Optional or @Nullable is redundant for path variable '{}' " +
-                            "because the value is always present.", httpElementName);
+                if (isOptional) {
+                    warnRedundantUse("a path variable", "Optional");
+                } else {
+                    warnRedundantUse("a path variable", "@Nullable");
+                }
             }
 
             final Class<?> containerType = getContainerType(unwrappedParameterizedType);
@@ -1055,6 +1040,51 @@ final class AnnotatedValueResolver {
                                               isOptional, containerType, elementType,
                                               parameterizedElementType, defaultValue, description, resolver,
                                               beanFactoryId, aggregation);
+        }
+
+        private void warnRedundantUse(String whatWasUsed1, @Nullable String whatWasUsed2) {
+            if (warnedRedundantUse) {
+                return;
+            }
+
+            warnedRedundantUse = true;
+            final StringBuilder buf = new StringBuilder();
+            buf.append("Found a redundant ");
+            if (whatWasUsed2 != null) {
+                buf.append("combined ");
+            }
+            buf.append("use of ")
+               .append(whatWasUsed1);
+            if (whatWasUsed2 != null) {
+                buf.append(" and ").append(whatWasUsed2);
+            }
+            buf.append(" in '")
+               .append(typeElement)
+               .append('\'');
+
+            if (typeElement != annotatedElement) {
+                buf.append(" of '")
+                   .append(annotatedElement)
+                   .append('\'');
+            }
+
+            if (annotationType != null) {
+                buf.append(" (type: ")
+                   .append(annotationType.getSimpleName())
+                   .append(')');
+            }
+
+            logger.warn(buf.toString());
+        }
+
+        private boolean isNullable() {
+            for (Annotation a : annotatedElement.getAnnotations()) {
+                final String annotationTypeName = a.annotationType().getName();
+                if (annotationTypeName.endsWith(".Nullable")) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Nullable
