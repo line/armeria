@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Period;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -203,6 +204,12 @@ class AnnotatedServiceRequestConverterTest {
         public UUID defaultUUID(@Param UUID uuid) {
             assertThat(uuid).isNotNull();
             return uuid;
+        }
+
+        @Get("/default/period/:period")
+        public Period defaultPeriod(@Param Period period) {
+            assertThat(period).isNotNull();
+            return period;
         }
     }
 
@@ -920,6 +927,14 @@ class AnnotatedServiceRequestConverterTest {
         final UUID uuid = UUID.randomUUID();
         final AggregatedHttpResponse response = client.get("/2/default/uuid/" + uuid).aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo(uuid.toString());
+    }
+
+    @Test
+    void testDefaultRequestConverter_period() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final Period period = Period.of(2020, 1, 1);
+        final AggregatedHttpResponse response = client.get("/2/default/period/" + period).aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo(period.toString());
     }
 
     @Test
