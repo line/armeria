@@ -24,6 +24,7 @@ import static org.reflections.ReflectionUtils.getAllMethods;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.time.Period;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -373,6 +374,7 @@ class AnnotatedValueResolverTest {
                      @Param @Default("enum2") CaseInsensitiveEnum enum2,
                      @Param("sensitive") CaseSensitiveEnum enum3,
                      @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
+                     @Param @Default("P1Y2M3W4D") Period period,
                      ServiceRequestContext ctx,
                      HttpRequest request,
                      @RequestObject OuterBean outerBean,
@@ -423,6 +425,8 @@ class AnnotatedValueResolverTest {
         OuterBean outerBean();
 
         Cookies cookies();
+
+        Period period();
     }
 
     static class FieldBean implements Bean {
@@ -479,6 +483,10 @@ class AnnotatedValueResolverTest {
         OuterBean outerBean;
 
         Cookies cookies;
+
+        @Param
+        @Default("P1Y2M3W4D")
+        Period period;
 
         String notInjected1;
 
@@ -566,6 +574,11 @@ class AnnotatedValueResolverTest {
         public Cookies cookies() {
             return cookies;
         }
+
+        @Override
+        public Period period() {
+            return period;
+        }
     }
 
     static class ConstructorBean implements Bean {
@@ -586,6 +599,7 @@ class AnnotatedValueResolverTest {
         final HttpRequest request;
         final OuterBean outerBean;
         final Cookies cookies;
+        final Period period;
 
         ConstructorBean(@Param String var1,
                         @Param String param1,
@@ -603,7 +617,8 @@ class AnnotatedValueResolverTest {
                         ServiceRequestContext ctx,
                         HttpRequest request,
                         @RequestObject OuterBean outerBean,
-                        Cookies cookies) {
+                        Cookies cookies,
+                        @Param @Default("P1Y2M3W4D") Period period) {
             this.var1 = var1;
             this.param1 = param1;
             this.param2 = param2;
@@ -621,6 +636,7 @@ class AnnotatedValueResolverTest {
             this.request = request;
             this.outerBean = outerBean;
             this.cookies = cookies;
+            this.period = period;
         }
 
         @Override
@@ -707,6 +723,11 @@ class AnnotatedValueResolverTest {
         public Cookies cookies() {
             return cookies;
         }
+
+        @Override
+        public Period period() {
+            return period;
+        }
     }
 
     static class SetterBean implements Bean {
@@ -727,6 +748,7 @@ class AnnotatedValueResolverTest {
         HttpRequest request;
         OuterBean outerBean;
         Cookies cookies;
+        Period period;
 
         @Param
         void setVar1(String var1) {
@@ -801,6 +823,10 @@ class AnnotatedValueResolverTest {
             this.cookies = cookies;
         }
 
+        void setPeriod(@Param @Default("P1Y2M3W4D") Period period) {
+            this.period = period;
+        }
+
         @Override
         public String var1() {
             return var1;
@@ -885,6 +911,11 @@ class AnnotatedValueResolverTest {
         public Cookies cookies() {
             return cookies;
         }
+
+        @Override
+        public Period period() {
+            return period;
+        }
     }
 
     static class MixedBean implements Bean {
@@ -905,6 +936,7 @@ class AnnotatedValueResolverTest {
         HttpRequest request;
         final OuterBean outerBean;
         final Cookies cookies;
+        final Period period;
 
         MixedBean(@Param String var1,
                   @Param String param1,
@@ -915,7 +947,8 @@ class AnnotatedValueResolverTest {
                   @Param("sensitive") CaseSensitiveEnum enum3,
                   ServiceRequestContext ctx,
                   @RequestObject OuterBean outerBean,
-                  Cookies cookies) {
+                  Cookies cookies,
+                  @Param @Default("P1Y2M3W4D") Period period) {
             this.var1 = var1;
             this.param1 = param1;
             this.header1 = header1;
@@ -926,6 +959,7 @@ class AnnotatedValueResolverTest {
             this.ctx = ctx;
             this.outerBean = outerBean;
             this.cookies = cookies;
+            this.period = period;
         }
 
         void setParam2(@Param @Default("1") int param2) {
@@ -1039,6 +1073,11 @@ class AnnotatedValueResolverTest {
         @Override
         public Cookies cookies() {
             return cookies;
+        }
+
+        @Override
+        public Period period() {
+            return period;
         }
     }
 

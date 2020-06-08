@@ -220,14 +220,14 @@ final class AnnotationUtil {
 
     private static <T extends Annotation> void findMetaAnnotations(
             Builder<T> builder, Annotation annotation,
-            Class<T> annotationType, Class<? extends Annotation> containerType) {
+            Class<T> annotationType, @Nullable Class<? extends Annotation> containerType) {
         findMetaAnnotations(builder, annotation, annotationType, containerType,
                             Collections.newSetFromMap(new IdentityHashMap<>()));
     }
 
     private static <T extends Annotation> boolean findMetaAnnotations(
             Builder<T> builder, Annotation annotation,
-            Class<T> annotationType, Class<? extends Annotation> containerType,
+            Class<T> annotationType, @Nullable Class<? extends Annotation> containerType,
             Set<Class<? extends Annotation>> visitedAnnotationTypes) {
 
         final Class<? extends Annotation> actualAnnotationType = annotation.annotationType();

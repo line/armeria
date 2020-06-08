@@ -251,38 +251,37 @@ class AuthServiceTest {
 
     @Test
     void testOAuth1a() throws Exception {
-        final Map<String, String> passToken = ImmutableMap.<String, String>builder()
-                .put("realm", "dummy_realm")
-                .put("oauth_consumer_key", "dummy_consumer_key@#$!")
-                .put("oauth_token", "dummy_oauth1a_token")
-                .put("oauth_signature_method", "dummy")
-                .put("oauth_signature", "dummy_signature")
-                .put("oauth_timestamp", "0")
-                .put("oauth_nonce", "dummy_nonce")
-                .put("version", "1.0")
-                .build();
+        final OAuth1aToken passToken = OAuth1aToken.builder()
+                                                   .realm("dummy_realm")
+                                                   .consumerKey("dummy_consumer_key@#$!")
+                                                   .token("dummy_oauth1a_token")
+                                                   .signatureMethod("dummy")
+                                                   .signature("dummy_signature")
+                                                   .timestamp("0")
+                                                   .nonce("dummy_nonce")
+                                                   .version("1.0")
+                                                   .build();
         final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .auth(OAuth1aToken.of(passToken))
+                                             .auth(passToken)
                                              .build();
         assertThat(webClient.get("/oauth1a").aggregate().join().status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    oauth1aGetRequest("/oauth1a-custom", OAuth1aToken.of(passToken),
-                                      CUSTOM_TOKEN_HEADER))) {
+                    oauth1aGetRequest("/oauth1a-custom", passToken, CUSTOM_TOKEN_HEADER))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
-            final Map<String, String> failToken = ImmutableMap.<String, String>builder()
-                    .put("realm", "dummy_realm")
-                    .put("oauth_consumer_key", "dummy_consumer_key@#$!")
-                    .put("oauth_token", "dummy_oauth1a_token")
-                    .put("oauth_signature_method", "dummy")
-                    .put("oauth_signature", "DUMMY_signature")
-                    .put("oauth_timestamp", "0")
-                    .put("oauth_nonce", "dummy_nonce")
-                    .put("version", "1.0")
-                    .build();
+            final OAuth1aToken failToken = OAuth1aToken.builder()
+                                                       .realm("dummy_realm")
+                                                       .consumerKey("dummy_consumer_key@#$!")
+                                                       .token("dummy_oauth1a_token")
+                                                       .signatureMethod("dummy")
+                                                       .signature("DUMMY_signature") // This is different.
+                                                       .timestamp("0")
+                                                       .nonce("dummy_nonce")
+                                                       .version("1.0")
+                                                       .build();
             try (CloseableHttpResponse res = hc.execute(
-                    oauth1aGetRequest("/oauth1a", OAuth1aToken.of(failToken), AUTHORIZATION))) {
+                    oauth1aGetRequest("/oauth1a", failToken, AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
         }
@@ -340,8 +339,9 @@ class AuthServiceTest {
                     .put("oauth_nonce", "dummy_nonce")
                     .put("version", "1.0")
                     .build();
+            final OAuth1aToken oAuth1aToken = OAuth1aToken.builder().putAll(passToken).build();
             try (CloseableHttpResponse res = hc.execute(
-                    oauth1aGetRequest("/composite", OAuth1aToken.of(passToken), AUTHORIZATION))) {
+                    oauth1aGetRequest("/composite", oAuth1aToken, AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             try (CloseableHttpResponse res = hc.execute(

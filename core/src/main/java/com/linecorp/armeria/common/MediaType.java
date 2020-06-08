@@ -1214,6 +1214,7 @@ public final class MediaType {
                       .distinct()
                       .collect(toImmutableMap(MediaType::toString, Function.identity(), (a, b) -> a));
 
+        @Nullable
         static MediaType get(String input) {
             return KNOWN_TYPES_BY_STRING.get(input);
         }
