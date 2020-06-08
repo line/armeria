@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
@@ -30,6 +29,7 @@ import org.slf4j.MDC;
 import org.slf4j.Marker;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
@@ -65,6 +65,8 @@ public final class RequestContextExportingAppender
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
         }
     }
+
+    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
     private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
@@ -136,7 +138,7 @@ public final class RequestContextExportingAppender
      */
     public void setExport(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
-        checkArgument(!mdcKey.isEmpty(), "mdcKeys must not be empty");
+        checkArgument(!mdcKey.isEmpty(), "mdcKey must not be empty");
         builder.addKeyPattern(mdcKey);
     }
 
@@ -147,8 +149,11 @@ public final class RequestContextExportingAppender
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
-        checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
-        Arrays.stream(mdcKeys.split(",")).map(String::trim).forEach(builder::addKeyPattern);
+        KEY_SPLITTER.split(mdcKeys)
+                    .forEach(mdcKey -> {
+                        checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
+                        builder.addKeyPattern(mdcKey);
+                    });
     }
 
     private void ensureNotStarted() {
