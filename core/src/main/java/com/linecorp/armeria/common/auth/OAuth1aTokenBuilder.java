@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 /**
  * Builds a new {@link OAuth1aToken}.
@@ -58,7 +57,7 @@ public final class OAuth1aTokenBuilder {
     @Nullable
     private String realm;
     private String version = DEFAULT_OAUTH_VERSION;
-    private final Builder<String, String> additionalsBuilder = ImmutableMap.builder();
+    private final ImmutableMap.Builder<String, String> additionalsBuilder = ImmutableMap.builder();
 
     /**
      * Creates a new instance.

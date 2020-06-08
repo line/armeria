@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 class OAuth1aTokenTest {
     @Test
@@ -34,7 +33,7 @@ class OAuth1aTokenTest {
                                                .nonce("f")
                                                .put("x-others", "g")
                                                .build();
-        final Builder<String, String> paramsBuilder = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, String> paramsBuilder = ImmutableMap.builder();
         paramsBuilder.put("oauth_consumer_key", "a");
         paramsBuilder.put("oauth_token", "b");
         paramsBuilder.put("oauth_signature_method", "c");
