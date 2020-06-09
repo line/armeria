@@ -107,7 +107,7 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
         if (invocation != null) {
             if (serviceTagName != null) {
                 final String service = firstNonNull(serviceName,
-                                                    invocation.method().getDeclaringClass().getSimpleName());
+                                                    invocation.method().getDeclaringClass().getName());
                 tagListBuilder.add(Tag.of(serviceTagName, service));
             }
             tagListBuilder.add(Tag.of("method", invocation.method().getName()));
