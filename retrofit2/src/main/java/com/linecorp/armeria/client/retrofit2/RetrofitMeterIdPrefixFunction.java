@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.HttpStatus;
@@ -54,10 +55,11 @@ import retrofit2.http.PUT;
  * Returns the default function for retrofit that creates a {@link MeterIdPrefix} with the specified name and
  * the {@link Tag}s derived from the {@link RequestLog} properties and {@link Invocation}.
  * <ul>
- *     <li>{@code service} (or {@code serviceTagName}) - Retrofit service interface name
- *                                                       or provided {@code serviceName}</li>
+ *     <li>{@code service} (or {@code serviceTagName}) - Retrofit service interface name, provided
+ *                                                       {@code serviceName} or {@code UNKNOWN} if Retrofit
+ *                                                       service interface method available</li>
  *     <li>{@code path}   - Retrofit service interface method path taken from method annotation
- *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
+ *                          or {@link RequestHeaders#path()} if Retrofit service interface method available</li>
  *     <li>{@code method} - Retrofit service interface method
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
  *     <li>{@code http.method} - HTTP method name from Retrofit service interface method annotation
@@ -118,20 +120,33 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
         final Invocation invocation = InvocationUtil.getInvocation(log);
+        final RequestHeaders requestHeaders = log.requestHeaders();
+
+        final String httpMethod = requestHeaders.method().name();
+        final String serviceName;
+        final String methodName;
+        final String path;
         if (invocation != null) {
             final Method method = invocation.method();
-            final String service = firstNonNull(serviceName, method.getDeclaringClass().getName());
-            tagListBuilder.add(Tag.of(serviceTagName, service));
-            tagListBuilder.add(Tag.of("method", method.getName()));
-            tagListBuilder.add(Tag.of("path", getPathFromMethod(method)));
+            methodName = method.getName();
+            serviceName = firstNonNull(this.serviceName, method.getDeclaringClass().getName());
+            path = getPathFromMethod(method);
         } else {
-            tagListBuilder.add(Tag.of(serviceTagName, firstNonNull(serviceName, UNKNOWN)));
-            tagListBuilder.add(Tag.of("method", UNKNOWN));
-            tagListBuilder.add(Tag.of("path", log.requestHeaders().path()));
+            methodName = requestHeaders.method().name();
+            serviceName = firstNonNull(this.serviceName, UNKNOWN);
+            path = requestHeaders.path();
         }
-        tagListBuilder.add(Tag.of("http.method", log.requestHeaders().method().name()));
+
+        buildTags(tagListBuilder, serviceName, methodName, httpMethod, path);
     }
 
+    private void buildTags(Builder<Tag> tagListBuilder, String serviceName, String methodName,
+                           String httpMethod, String path) {
+        tagListBuilder.add(Tag.of("http.method", httpMethod));
+        tagListBuilder.add(Tag.of("method", methodName));
+        tagListBuilder.add(Tag.of("path", path));
+        tagListBuilder.add(Tag.of(serviceTagName, serviceName));
+    }
 
     @VisibleForTesting
     static String getPathFromMethod(Method method) {
