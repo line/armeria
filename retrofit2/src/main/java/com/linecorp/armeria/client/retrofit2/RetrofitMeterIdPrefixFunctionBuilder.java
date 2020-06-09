@@ -31,8 +31,6 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     private String serviceTagName;
     @Nullable
     private String serviceName;
-    @Nullable
-    private Class<?> serviceClass;
 
     RetrofitMeterIdPrefixFunctionBuilder(String name) {
         this.name = name;
@@ -63,23 +61,9 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     }
 
     /**
-     * Adds retrofit client service class that would be used to provide additional tags for metrics
-     * based on retrofit annotations. See {@link RetrofitClassAwareMeterIdPrefixFunction}.
-     *
-     * @param serviceClass class that defines retrofit client service.
-     */
-    public RetrofitMeterIdPrefixFunctionBuilder serviceClass(Class<?> serviceClass) {
-        this.serviceClass = requireNonNull(serviceClass, "serviceClass");
-        return this;
-    }
-
-    /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the properties specified so far.
      */
     public RetrofitMeterIdPrefixFunction build() {
-        if (serviceClass == null) {
-            return new RetrofitMeterIdPrefixFunction(name, serviceTagName, serviceName);
-        }
-        return new RetrofitClassAwareMeterIdPrefixFunction(name, serviceTagName, serviceName, serviceClass);
+        return new RetrofitMeterIdPrefixFunction(name, serviceTagName, serviceName);
     }
 }

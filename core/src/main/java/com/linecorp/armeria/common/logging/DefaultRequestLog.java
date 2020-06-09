@@ -462,10 +462,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> {
                  final String serviceName = log.serviceName();
                  final String name = log.name();
-                 if (serviceName != null && name != null) {
-                     name(serviceName, name);
-                 } else if (name != null) {
-                     name(name);
+                 if (name != null) {
+                     if (serviceName != null) {
+                         name(serviceName, name);
+                     } else {
+                         name(name);
+                     }
                  }
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
@@ -975,21 +977,17 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 if (newServiceName == null) {
                     newServiceName = config.route().meterTag();
                 }
-
                 newName = config.defaultLogName();
-                if (newName == null) {
-                    newName = ctx.method().name();
-                }
+            }
+
+            if (newName == null) {
+                newName = ctx.method().name();
             }
 
             serviceName = newServiceName;
             name = newName;
             if (serviceName != null) {
-                if (name != null) {
-                    fullName = serviceName + '/' + name;
-                } else {
-                    fullName = serviceName;
-                }
+                fullName = serviceName + '/' + name;
             } else {
                 fullName = name;
             }

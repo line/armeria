@@ -306,10 +306,12 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         if (parentLog.isAvailable(RequestLogProperty.NAME)) {
             final String serviceName = partial.serviceName();
             final String name = partial.name();
-            if (serviceName != null && name != null) {
-                logBuilder.name(serviceName, name);
-            } else if (name != null) {
-                logBuilder.name(name);
+            if (name != null) {
+                if (serviceName != null) {
+                    logBuilder.name(serviceName, name);
+                } else {
+                    logBuilder.name(name);
+                }
             }
         }
 

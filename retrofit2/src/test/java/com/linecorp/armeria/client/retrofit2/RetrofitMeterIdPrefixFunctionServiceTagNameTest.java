@@ -1,7 +1,7 @@
 /*
  * Copyright 2019 LINE Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LINE Corporation licenses this file to you under the Apache License)
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -15,10 +15,12 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.List;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -29,25 +31,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
@@ -58,7 +52,7 @@ import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 
-class RetrofitClassAwareMeterIdPrefixFunctionTest {
+class RetrofitMeterIdPrefixFunctionServiceTagNameTest {
 
     private static final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private static final ClientFactory clientFactory = ClientFactory.builder()
@@ -133,29 +127,26 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
     }
 
     private static Stream<Arguments> metrics() {
+        final String serviceClassName = Example.class.getName();
         return Stream.of(
-                Arguments.of(RetrofitMeterIdPrefixFunction.of("foo", Example.class),
-                             "service=Example"),
+                Arguments.of(RetrofitMeterIdPrefixFunction.of("foo"),
+                             "service=" + serviceClassName),
                 Arguments.of(RetrofitMeterIdPrefixFunction
                                      .builder("foo")
-                                     .serviceClass(Example.class)
                                      .build(),
-                             "service=Example"),
+                             "service=" + serviceClassName),
                 Arguments.of(RetrofitMeterIdPrefixFunction
                                      .builder("foo")
-                                     .serviceClass(Example.class)
                                      .serviceName("serviceName")
                                      .build(),
                              "service=serviceName"),
                 Arguments.of(RetrofitMeterIdPrefixFunction
                                      .builder("foo")
-                                     .serviceClass(Example.class)
                                      .serviceTag("tservice")
                                      .build(),
-                             "tservice=Example"),
+                             "tservice=" + serviceClassName),
                 Arguments.of(RetrofitMeterIdPrefixFunction
                                      .builder("foo")
-                                     .serviceClass(Example.class)
                                      .serviceTag("tservice")
                                      .serviceName("serviceName")
                                      .build(),
@@ -164,54 +155,22 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
     }
 
     @Test
-    void hasSameNameAndTagAsDefaultMeterIdPrefixFunction() {
-        final MeterRegistry registry = NoopMeterRegistry.get();
-        final MeterIdPrefixFunction f1 = RetrofitMeterIdPrefixFunction.of("foo");
-        final MeterIdPrefixFunction f2 = MeterIdPrefixFunction.ofDefault("foo");
+    void canParseAllRetrofitAnnotations() {
+        final Map<String, String> expected =
+                ImmutableMap.<String, String>builder().put("deleteFoo", "/foo")
+                                                      .put("getFoo", "/foo")
+                                                      .put("headFoo", "/foo")
+                                                      .put("traceFoo", "/foo")
+                                                      .put("optionsFoo", "/foo")
+                                                      .put("patchFoo", "/foo")
+                                                      .put("postFoo", "/foo")
+                                                      .put("putFoo", "/foo")
+                                                      .build();
+        final Map<String, String> actual =
+                Arrays.stream(Example.class.getMethods())
+                      .collect(toImmutableMap(Method::getName,
+                                              RetrofitMeterIdPrefixFunction::getPathFromMethod));
 
-        final RequestLog log = newContext().log().ensureComplete();
-        assertThat(f1.completeRequestPrefix(registry, log)).isEqualTo(f2.completeRequestPrefix(registry, log));
-    }
-
-    @ParameterizedTest
-    @MethodSource
-    void canParseAllRetrofitAnnotations(String method, List<Tag> expectedTags) {
-        final Map<String, List<Tag>> methodToTags =
-                RetrofitClassAwareMeterIdPrefixFunction.defineTagsForMethods(Example.class);
-
-        assertThat(methodToTags).containsKey(method);
-        assertThat(methodToTags.get(method)).containsExactlyInAnyOrderElementsOf(expectedTags);
-    }
-
-    private static Stream<Arguments> canParseAllRetrofitAnnotations() {
-        return Stream.of(
-                createArgumentsWithMethodAndTags("deleteFoo", "DELETE", "/foo"),
-                createArgumentsWithMethodAndTags("getFoo", "GET", "/foo"),
-                createArgumentsWithMethodAndTags("headFoo", "HEAD", "/foo"),
-                createArgumentsWithMethodAndTags("traceFoo", "TRACE", "/foo"),
-                createArgumentsWithMethodAndTags("optionsFoo", "OPTIONS", "/foo"),
-                createArgumentsWithMethodAndTags("patchFoo", "PATCH", "/foo"),
-                createArgumentsWithMethodAndTags("postFoo", "POST", "/foo"),
-                createArgumentsWithMethodAndTags("putFoo", "PUT", "/foo")
-        );
-    }
-
-    private static Arguments createArgumentsWithMethodAndTags(String methodName,
-                                                              String httpMethod,
-                                                              String path) {
-        return Arguments.of(
-                methodName,
-                ImmutableList.of(
-                        Tag.of("http.method", httpMethod),
-                        Tag.of("method", methodName),
-                        Tag.of("path", path))
-        );
-    }
-
-    private static ClientRequestContext newContext() {
-        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx.logBuilder().endRequest();
-        ctx.logBuilder().endResponse();
-        return ctx;
+        assertThat(actual).containsExactlyInAnyOrderEntriesOf(expected);
     }
 }
