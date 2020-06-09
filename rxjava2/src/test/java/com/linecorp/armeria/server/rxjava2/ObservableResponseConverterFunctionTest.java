@@ -319,12 +319,10 @@ public class ObservableResponseConverterFunctionTest {
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         res = client.post("/defer-empty-post", "").aggregate().join();
-        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("a");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
         res = client.post("/defer-post", "b").aggregate().join();
-        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("b");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

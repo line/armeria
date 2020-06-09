@@ -248,11 +248,10 @@ public class AnnotatedService implements HttpService {
                                                                      exceptionHandler),
                             ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApplyAsync(
+                    return f.thenApply(
                             msg -> new ExceptionFilteredHttpResponse(ctx, req,
                                                                      (HttpResponse) invoke(ctx, req, msg),
-                                                                     exceptionHandler),
-                            ctx.contextAwareExecutor());
+                                                                     exceptionHandler));
                 }
 
             case COMPLETION_STAGE:
@@ -264,8 +263,7 @@ public class AnnotatedService implements HttpService {
                                                                             HttpHeaders.of())
                                                           : exceptionHandler.handleException(ctx, req, cause));
                 } else {
-                    return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
-                                              ctx.contextAwareExecutor())
+                    return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
                             .handle((result, cause) ->
                                             cause == null ? convertResponse(ctx, req, null, result,
                                                                             HttpHeaders.of())
@@ -279,10 +277,9 @@ public class AnnotatedService implements HttpService {
                                                    HttpHeaders.of()),
                             ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApplyAsync(
+                    return f.thenApply(
                             msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                   HttpHeaders.of()),
-                            ctx.contextAwareExecutor());
+                                                   HttpHeaders.of()));
                 }
         }
     }
@@ -335,7 +332,7 @@ public class AnnotatedService implements HttpService {
                             .exceptionally(cause -> exceptionHandler.handleException(ctx, req, cause)));
         }
 
-        try {
+        try (SafeCloseable ignored = ctx.push()) {
             final HttpResponse response =
                     responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
             if (response instanceof HttpResponseWriter) {
