@@ -248,10 +248,11 @@ public class AnnotatedService implements HttpService {
                                                                      exceptionHandler),
                             ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(
+                    return f.thenApplyAsync(
                             msg -> new ExceptionFilteredHttpResponse(ctx, req,
                                                                      (HttpResponse) invoke(ctx, req, msg),
-                                                                     exceptionHandler));
+                                                                     exceptionHandler),
+                            ctx.contextAwareExecutor());
                 }
 
             case COMPLETION_STAGE:
@@ -263,7 +264,8 @@ public class AnnotatedService implements HttpService {
                                                                             HttpHeaders.of())
                                                           : exceptionHandler.handleException(ctx, req, cause));
                 } else {
-                    return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
+                    return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
+                                              ctx.contextAwareExecutor())
                             .handle((result, cause) ->
                                             cause == null ? convertResponse(ctx, req, null, result,
                                                                             HttpHeaders.of())
@@ -277,8 +279,10 @@ public class AnnotatedService implements HttpService {
                                                    HttpHeaders.of()),
                             ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                              HttpHeaders.of()));
+                    return f.thenApplyAsync(
+                            msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                   HttpHeaders.of()),
+                            ctx.contextAwareExecutor());
                 }
         }
     }

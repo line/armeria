@@ -35,10 +35,13 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
@@ -82,6 +85,26 @@ public class ObservableResponseConverterFunctionTest {
                 public Maybe<HttpResponse> httpResponse() {
                     return Maybe.just(HttpResponse.of("a"));
                 }
+
+                @Post("/defer-empty-post")
+                public Maybe<String> deferEmptyPost() {
+                    final RequestContext ctx = RequestContext.current();
+                    return Maybe.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Maybe.just("a");
+                            });
+                }
+
+                @Post("/defer-post")
+                public Maybe<String> deferPost(String request) {
+                    final RequestContext ctx = RequestContext.current();
+                    return Maybe.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Maybe.just(request);
+                            });
+                }
             });
 
             sb.annotatedService("/single", new Object() {
@@ -102,8 +125,28 @@ public class ObservableResponseConverterFunctionTest {
                 }
 
                 @Get("/http-response")
-                public Maybe<HttpResponse> httpResponse() {
-                    return Maybe.just(HttpResponse.of("a"));
+                public Single<HttpResponse> httpResponse() {
+                    return Single.just(HttpResponse.of("a"));
+                }
+
+                @Post("/defer-empty-post")
+                public Single<String> deferEmptyPost() {
+                    final RequestContext ctx = RequestContext.current();
+                    return Single.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Single.just("a");
+                            });
+                }
+
+                @Post("/defer-post")
+                public Single<String> deferPost(String request) {
+                    final RequestContext ctx = RequestContext.current();
+                    return Single.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Single.just(request);
+                            });
                 }
             });
 
@@ -116,6 +159,26 @@ public class ObservableResponseConverterFunctionTest {
                 @Get("/error")
                 public Completable error() {
                     return Completable.error(new AnticipatedException());
+                }
+
+                @Post("/defer-empty-post")
+                public Completable deferEmptyPost() {
+                    final RequestContext ctx = RequestContext.current();
+                    return Completable.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Completable.complete();
+                            });
+                }
+
+                @Post("/defer-post")
+                public Completable deferPost(String request) {
+                    final RequestContext ctx = RequestContext.current();
+                    return Completable.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Completable.complete();
+                            });
                 }
             });
 
@@ -203,6 +266,14 @@ public class ObservableResponseConverterFunctionTest {
         res = client.get("/http-response").aggregate().join();
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.post("/defer-empty-post", "").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.post("/defer-post", "b").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("b");
     }
 
     @Test
@@ -225,6 +296,14 @@ public class ObservableResponseConverterFunctionTest {
         res = client.get("/http-response").aggregate().join();
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.post("/defer-empty-post", "").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.post("/defer-post", "b").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("b");
     }
 
     @Test
@@ -238,6 +317,14 @@ public class ObservableResponseConverterFunctionTest {
 
         res = client.get("/error").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        res = client.post("/defer-empty-post", "").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.post("/defer-post", "b").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("b");
     }
 
     @Test
@@ -319,5 +406,11 @@ public class ObservableResponseConverterFunctionTest {
 
         res = client.get("/defer2").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    static void validateContext(RequestContext ctx) {
+        if (ServiceRequestContext.current() != ctx) {
+            throw new RuntimeException("ServiceRequestContext instances are not same!");
+        }
     }
 }
