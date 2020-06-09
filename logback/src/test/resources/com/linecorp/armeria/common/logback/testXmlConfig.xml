@@ -24,6 +24,11 @@
     <export>attrs.foo:com.example.AttrKeys#FOO</export>
     <export>attrs.bar:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectValueStringifier</export>
     <export>attrs.qux:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectNameStringifier</export>
+    <exports>
+      remote.ip, remote.port,
+      req.headers.content-type,
+      attrs.baz:com.example.AttrKeys#BAZ
+    </exports>
   </appender>
 
   <logger name="com.linecorp.armeria.common.logback.RequestContextExportingAppenderTest" level="TRACE">
