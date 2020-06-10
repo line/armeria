@@ -39,7 +39,7 @@ final class DefaultServletOutputStream extends ServletOutputStream {
 
     @Override
     public boolean isReady() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return response.getResponseWriter().isOpen();
     }
 
     @Override
@@ -49,6 +49,7 @@ final class DefaultServletOutputStream extends ServletOutputStream {
 
     @Override
     public void close() throws IOException {
+        response.getResponseWriter().close();
     }
 
     @Override

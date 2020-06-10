@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.base.Strings.lenientFormat;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.Cookie;
@@ -55,6 +57,7 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     private final ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
     private final PrintWriter writer;
     private final HttpResponseWriter responseWriter;
+    private AtomicBoolean isWritten = new AtomicBoolean(false);
 
     DefaultServletHttpResponse(DefaultServletContext servletContext, HttpResponseWriter responseWriter) {
         requireNonNull(servletContext, "servletContext");
@@ -67,15 +70,26 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     }
 
     /**
+     * Get response writer.
+     */
+    HttpResponseWriter getResponseWriter() {
+        return responseWriter;
+    }
+
+    /**
      * Write {@link HttpData} to client.
      */
     void write(HttpData data) {
         requireNonNull(data, "data");
-        if (responseWriter.tryWrite(headersBuilder.setObject(HttpHeaderNames.SET_COOKIE, cookies)
-                                                  .status(HttpStatus.OK).build())) {
-            if (responseWriter.tryWrite(data)) {
-                responseWriter.close();
+        if (isWritten.compareAndSet(false, true)) {
+            if (responseWriter.tryWrite(headersBuilder.setObject(HttpHeaderNames.SET_COOKIE, cookies)
+                                                      .status(HttpStatus.OK).build())) {
+                if (responseWriter.tryWrite(data)) {
+                    responseWriter.close();
+                }
             }
+        } else {
+            throw new IllegalStateException(lenientFormat("Response have already sent!"));
         }
     }
 

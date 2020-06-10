@@ -49,7 +49,7 @@ final class ServletPrintWriter extends PrintWriter {
 
     @Override
     public void close() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        response.getResponseWriter().close();
     }
 
     @Override

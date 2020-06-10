@@ -32,7 +32,6 @@ import java.util.Objects;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
-import javax.servlet.ReadListener;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -66,7 +65,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpConstants;
 
 public class ServletServiceTest {
@@ -240,7 +238,6 @@ public class ServletServiceTest {
                 assertThat(
                         Collections.list(request.getAttributeNames()).contains("attribute1")).isEqualTo(false);
                 assertThat(request.getServerPort()).isEqualTo(request.getServerPort());
-                assertThat(Objects.isNull(request.getReader())).isEqualTo(false);
                 assertThat(request.getRemoteAddr()).isEqualTo("127.0.0.1");
                 assertThat(request.getRemoteHost()).isEqualTo("localhost");
                 assertThat(request.getRemotePort()).isEqualTo(request.getRemotePort());
@@ -364,7 +361,6 @@ public class ServletServiceTest {
                         Collections.list(request.getParameterNames()).contains("application")).isEqualTo(true);
                 assertThat(request.getParameterValues("application")[0]).isEqualTo("Armeria Servlet");
                 assertThat(request.getParameterValues("empty")).isEqualTo(null);
-                assertThat(Objects.isNull(request.getInputStream())).isEqualTo(false);
                 assertThat(request.getServletContext().getSessionTimeout()).isEqualTo(30);
                 assertThat(request.getServletContext().getMajorVersion()).isEqualTo(4);
                 assertThat(request.getServletContext().getMinorVersion()).isEqualTo(0);
@@ -424,30 +420,7 @@ public class ServletServiceTest {
                 throws ServletException, IOException {
             logger.info("DELETE: {}", request.getRequestURI());
             try {
-                final DefaultServletInputStream inputStream = new DefaultServletInputStream(
-                        Unpooled.wrappedBuffer(
-                                ((DefaultServletHttpRequest) request).getHttpRequest().content().array()));
-                assertThat(inputStream.isFinished()).isEqualTo(true);
-                assertThat(inputStream.isReady()).isEqualTo(false);
-                assertThat(inputStream.skip(1)).isEqualTo(0L);
-                assertThat(inputStream.available()).isEqualTo(0);
-                inputStream.setReadListener(new ReadListener() {
-                    @Override
-                    public void onDataAvailable() throws IOException {
-                    }
-
-                    @Override
-                    public void onAllDataRead() throws IOException {
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                    }
-                });
-                assertThat(inputStream.read()).isEqualTo(-1);
                 assertThat(response.encodeURL("http://localhost")).isEqualTo("http://localhost");
-                inputStream.close();
-
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
@@ -456,56 +429,6 @@ public class ServletServiceTest {
                 ((ServletPrintWriter) response.getWriter()).setError();
                 ((ServletPrintWriter) response.getWriter()).clearError();
 
-                final ServletPrintWriter newWriter = (ServletPrintWriter) response.getWriter();
-                newWriter.print(true);
-                newWriter.print('c');
-                newWriter.print(1);
-                newWriter.print(1L);
-                newWriter.print(1.1f);
-                newWriter.print(1.1D);
-                newWriter.print(new char[1]);
-                newWriter.print("test");
-                newWriter.print(new HashMap<>());
-                newWriter.println();
-                newWriter.println(true);
-                newWriter.println('c');
-                newWriter.println(1);
-                newWriter.println(1L);
-                newWriter.println(1.1f);
-                newWriter.println(1.1D);
-                newWriter.println(new char[1]);
-                newWriter.println("test");
-                newWriter.println(new HashMap<>());
-                newWriter.append('c');
-                newWriter.printf("test %d", 1);
-                newWriter.printf(Locale.US, "test %d", 1);
-                newWriter.format("test %d", 1);
-                newWriter.format(Locale.US, "test %d", 1);
-                final CharSequence cs = "test";
-                newWriter.append(cs);
-                newWriter.append(cs, 0, 1);
-                newWriter.append(null);
-                newWriter.setError();
-                newWriter.checkError();
-                newWriter.clearError();
-                final char[] c = new char[1];
-                c[0] = 'c';
-                newWriter.write(c, 0, 1);
-
-                final DefaultServletInputStream d = new DefaultServletInputStream(Unpooled.wrappedBuffer(
-                        new byte[1]));
-                try {
-                    d.skip(1);
-                    d.readLine(new byte[1], 0, 0);
-                } catch (Exception e) {
-                    logger.info("test");
-                }
-
-                try {
-                    d.read(new byte[1], 0, 0);
-                } catch (Exception e) {
-                    logger.info("test");
-                }
                 request.getContentLength();
                 request.getContentLengthLong();
                 request.getContentType();

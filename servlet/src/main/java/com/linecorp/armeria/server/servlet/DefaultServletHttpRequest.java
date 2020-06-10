@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -41,6 +40,7 @@ import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.SessionTrackingMode;
@@ -68,7 +68,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
 
 /**
@@ -85,7 +84,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     private final ServiceRequestContext serviceRequestContext;
     private final DefaultServletContext servletContext;
     private final AggregatedHttpRequest httpRequest;
-    private final DefaultServletInputStream inputStream;
     private final Map<String, Object> attributeMap = new ConcurrentHashMap<>(16);
     private final SessionTrackingMode sessionIdSource = SessionTrackingMode.COOKIE;
 
@@ -101,12 +99,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     @Nullable
     private final String pathInfo;
 
-    //Can't be final because user will decide reader or inputStream is initialize.
-    @Nullable
-    private BufferedReader reader;
-
-    private boolean useInputStream;
-
     DefaultServletHttpRequest(ServiceRequestContext serviceRequestContext,
                               DefaultServletContext servletContext,
                               AggregatedHttpRequest httpRequest) throws IOException {
@@ -117,8 +109,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         this.serviceRequestContext = serviceRequestContext;
         this.servletContext = servletContext;
         this.httpRequest = httpRequest;
-        inputStream = new DefaultServletInputStream(Unpooled.wrappedBuffer(httpRequest.content().array()));
-
         final MediaType contentType = httpRequest.headers().contentType();
         if (contentType != null && contentType.charset() != null) {
             characterEncoding = contentType.charset().name();
@@ -390,12 +380,8 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     }
 
     @Override
-    public DefaultServletInputStream getInputStream() throws IOException {
-        if (reader != null) {
-            throw new IllegalStateException("getReader() has already been called for this request");
-        }
-        useInputStream = true;
-        return inputStream;
+    public ServletInputStream getInputStream() throws IOException {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
@@ -448,18 +434,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public BufferedReader getReader() throws IOException {
-        if (useInputStream) {
-            throw new IllegalStateException("getInputStream() has already been called for this request");
-        }
-        if (reader == null) {
-            synchronized (this) {
-                if (reader == null) {
-                    reader = new BufferedReader(
-                            new InputStreamReader(inputStream, getCharacterEncoding()));
-                }
-            }
-        }
-        return reader;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
