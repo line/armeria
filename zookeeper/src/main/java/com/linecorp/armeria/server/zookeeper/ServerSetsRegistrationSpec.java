@@ -20,14 +20,14 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
-final class ServerSetsZooKeeperRegistrationSpec implements ZooKeeperRegistrationSpec {
+final class ServerSetsRegistrationSpec implements ZooKeeperRegistrationSpec {
 
     private final String path;
     private final boolean isSequential;
     private final ServerSetsInstance serverSetsInstance;
 
-    ServerSetsZooKeeperRegistrationSpec(String nodeName, boolean isSequential,
-                                        ServerSetsInstance serverSetsInstance) {
+    ServerSetsRegistrationSpec(String nodeName, boolean isSequential,
+                               ServerSetsInstance serverSetsInstance) {
         path = '/' + nodeName;
         this.isSequential = isSequential;
         this.serverSetsInstance = serverSetsInstance;

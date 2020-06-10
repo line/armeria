@@ -77,7 +77,7 @@ public interface ZooKeeperDiscoverySpec {
      * @see ZooKeeperRegistrationSpec#builderForServerSets()
      */
     static ZooKeeperDiscoverySpec serverSets(Function<? super ServerSetsInstance, Endpoint> converter) {
-        return new ServerSetsZooKeeperDiscoverySpec(requireNonNull(converter, "converter"));
+        return new ServerSetsDiscoverySpec(requireNonNull(converter, "converter"));
     }
 
     /**

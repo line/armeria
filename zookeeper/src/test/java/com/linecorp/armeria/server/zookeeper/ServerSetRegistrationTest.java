@@ -69,7 +69,7 @@ class ServerSetRegistrationTest {
         endpointStatus.leave();
         await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/member_0000000000"));
 
-        final ServerSetsZooKeeperRegistrationSpecBuilder specBuilder =
+        final ServerSetsRegistrationSpecBuilder specBuilder =
                 ZooKeeperRegistrationSpec.builderForServerSets();
         final ZooKeeperRegistrationSpec spec =
                 specBuilder.serviceEndpoint(Endpoint.of("127.0.0.1", endpoints.get(0).port()))
@@ -110,7 +110,7 @@ class ServerSetRegistrationTest {
     @Test
     void noSequential() throws Throwable {
         final List<Endpoint> endpoints = ZooKeeperTestUtil.sampleEndpoints(1);
-        final ServerSetsZooKeeperRegistrationSpecBuilder specBuilder =
+        final ServerSetsRegistrationSpecBuilder specBuilder =
                 ZooKeeperRegistrationSpec.builderForServerSets();
         final ZooKeeperRegistrationSpec spec =
                 specBuilder.serviceEndpoint(Endpoint.of("127.0.0.1", endpoints.get(0).port()))

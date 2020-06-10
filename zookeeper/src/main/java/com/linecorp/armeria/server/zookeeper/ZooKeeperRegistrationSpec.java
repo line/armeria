@@ -56,13 +56,13 @@ public interface ZooKeeperRegistrationSpec {
     }
 
     /**
-     * Returns a new {@link ServerSetsZooKeeperRegistrationSpecBuilder}. The specification is compatible with
+     * Returns a new {@link ServerSetsRegistrationSpecBuilder}. The specification is compatible with
      * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
      *
      * @see ZooKeeperDiscoverySpec#serverSets()
      */
-    static ServerSetsZooKeeperRegistrationSpecBuilder builderForServerSets() {
-        return new ServerSetsZooKeeperRegistrationSpecBuilder();
+    static ServerSetsRegistrationSpecBuilder builderForServerSets() {
+        return new ServerSetsRegistrationSpecBuilder();
     }
 
     /**

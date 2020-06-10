@@ -135,8 +135,8 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         if (spec instanceof CuratorRegistrationSpec) {
             return curatorSpec(((CuratorRegistrationSpec) spec).serviceInstance(), server);
         }
-        if (spec instanceof ServerSetsZooKeeperRegistrationSpec) {
-            return serverSetsSpec((ServerSetsZooKeeperRegistrationSpec) spec, server);
+        if (spec instanceof ServerSetsRegistrationSpec) {
+            return serverSetsSpec((ServerSetsRegistrationSpec) spec, server);
         }
         return spec;
     }
@@ -195,14 +195,14 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     private static ZooKeeperRegistrationSpec serverSetsSpec(
-            ServerSetsZooKeeperRegistrationSpec spec, Server server) {
+            ServerSetsRegistrationSpec spec, Server server) {
         final ServerSetsInstance serverSetsInstance = spec.serverSetsInstance();
         if (serverSetsInstance.serviceEndpoint() != null) {
             if (validatePort(server, serverSetsInstance.serviceEndpoint().port(), null)) {
                 return spec;
             }
         }
-        final ServerSetsZooKeeperRegistrationSpecBuilder builder =
+        final ServerSetsRegistrationSpecBuilder builder =
                 ZooKeeperRegistrationSpec.builderForServerSets();
         builder.serviceEndpoint(defaultEndpoint(server))
                .additionalEndpoints(serverSetsInstance.additionalEndpoints())

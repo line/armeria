@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
  * Builds a {@link ZooKeeperRegistrationSpec} for
  * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
  */
-public final class ServerSetsZooKeeperRegistrationSpecBuilder {
+public final class ServerSetsRegistrationSpecBuilder {
 
     private static final String DEFAULT_NODE_NAME = "member_";
 
@@ -50,12 +50,12 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
     private String nodeName = DEFAULT_NODE_NAME;
     private boolean sequential = true;
 
-    ServerSetsZooKeeperRegistrationSpecBuilder() {}
+    ServerSetsRegistrationSpecBuilder() {}
 
     /**
      * Sets the specified {@link Endpoint}.
      */
-    public ServerSetsZooKeeperRegistrationSpecBuilder serviceEndpoint(Endpoint serviceEndpoint) {
+    public ServerSetsRegistrationSpecBuilder serviceEndpoint(Endpoint serviceEndpoint) {
         this.serviceEndpoint = requireNonNull(serviceEndpoint, "serviceEndpoint");
         return this;
     }
@@ -63,7 +63,7 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
     /**
      * Sets the specified additional {@link Endpoint} with the specified {@code name}.
      */
-    public ServerSetsZooKeeperRegistrationSpecBuilder additionalEndpoint(
+    public ServerSetsRegistrationSpecBuilder additionalEndpoint(
             String name, Endpoint additionalEndpoint) {
         additionalEndpointsBuilder.put(requireNonNull(name, "name"),
                                        requireNonNull(additionalEndpoint, "additionalEndpoint"));
@@ -73,7 +73,7 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
     /**
      * Sets the specified additional {@link Endpoint}s.
      */
-    public ServerSetsZooKeeperRegistrationSpecBuilder additionalEndpoints(
+    public ServerSetsRegistrationSpecBuilder additionalEndpoints(
             Map<String, Endpoint> additionalEndpoints) {
         requireNonNull(additionalEndpoints, "additionalEndpoints");
         additionalEndpointsBuilder.putAll(additionalEndpoints);
@@ -83,7 +83,7 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
     /**
      * Sets the shard ID.
      */
-    public ServerSetsZooKeeperRegistrationSpecBuilder shardId(int shardId) {
+    public ServerSetsRegistrationSpecBuilder shardId(int shardId) {
         this.shardId = shardId;
         return this;
     }
@@ -91,7 +91,7 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
     /**
      * Sets the metadata.
      */
-    public ServerSetsZooKeeperRegistrationSpecBuilder metadata(Map<String, String> metadata) {
+    public ServerSetsRegistrationSpecBuilder metadata(Map<String, String> metadata) {
         this.metadata = ImmutableMap.copyOf(requireNonNull(metadata, "metadata"));
         return this;
     }
@@ -99,7 +99,7 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
     /**
      * Sets the specified {@code nodeName}. {@value DEFAULT_NODE_NAME} is used by default.
      */
-    public ServerSetsZooKeeperRegistrationSpecBuilder nodeName(String nodeName) {
+    public ServerSetsRegistrationSpecBuilder nodeName(String nodeName) {
         this.nodeName = validatePath(nodeName, "nodeName");
         return this;
     }
@@ -110,7 +110,7 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
      * the sequence number to {@link #nodeName(String)}. For example, if the {@code nodeName} is
      * {@code "foo_"}, the nodes will be {@code "foo_0000000000"}, {@code "foo_0000000001"} and so on.
      */
-    public ServerSetsZooKeeperRegistrationSpecBuilder sequential(boolean sequential) {
+    public ServerSetsRegistrationSpecBuilder sequential(boolean sequential) {
         this.sequential = sequential;
         return this;
     }
@@ -122,6 +122,6 @@ public final class ServerSetsZooKeeperRegistrationSpecBuilder {
         final ServerSetsInstance serverSetsInstance =
                 new ServerSetsInstance(serviceEndpoint, additionalEndpointsBuilder.build(),
                                        shardId, metadata);
-        return new ServerSetsZooKeeperRegistrationSpec(nodeName, sequential, serverSetsInstance);
+        return new ServerSetsRegistrationSpec(nodeName, sequential, serverSetsInstance);
     }
 }

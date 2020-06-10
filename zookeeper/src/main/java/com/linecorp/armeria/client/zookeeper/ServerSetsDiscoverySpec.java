@@ -24,13 +24,13 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
-final class ServerSetsZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
+final class ServerSetsDiscoverySpec implements ZooKeeperDiscoverySpec {
 
-    private static final Logger logger = LoggerFactory.getLogger(ServerSetsZooKeeperDiscoverySpec.class);
+    private static final Logger logger = LoggerFactory.getLogger(ServerSetsDiscoverySpec.class);
 
     private final Function<? super ServerSetsInstance, Endpoint> converter;
 
-    ServerSetsZooKeeperDiscoverySpec(Function<? super ServerSetsInstance, Endpoint> converter) {
+    ServerSetsDiscoverySpec(Function<? super ServerSetsInstance, Endpoint> converter) {
         this.converter = converter;
     }
 
