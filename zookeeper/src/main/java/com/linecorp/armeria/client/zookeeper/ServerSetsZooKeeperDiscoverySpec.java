@@ -42,9 +42,12 @@ final class ServerSetsZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
     @Override
     public Endpoint decode(byte[] data) {
         final ServerSetsInstance decodedInstance = ServerSetsNodeValueCodec.INSTANCE.decode(data);
+        if (decodedInstance.serviceEndpoint() == null) {
+            return null;
+        }
         final Endpoint endpoint = converter.apply(decodedInstance);
         if (endpoint == null) {
-            logger.debug("Returned null endpoint from {}.", decodedInstance);
+            logger.debug("Converter returned null endpoint from {}.", decodedInstance);
         }
         return endpoint;
     }
