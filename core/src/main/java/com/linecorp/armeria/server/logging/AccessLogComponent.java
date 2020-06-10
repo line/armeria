@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -293,8 +294,30 @@ interface AccessLogComponent {
                 case REQUEST_LINE:
                     final String httpMethodName = log.requestHeaders().method().name();
                     final String path = log.requestHeaders().path();
-                    final String meterTag = ((ServiceRequestContext) log.context()).config().route().meterTag();
-                    final String logName = log.serviceName() == meterTag ? null : log.fullName();
+                    final String name = log.name();
+                    final RpcRequest rpcRequest = log.context().rpcRequest();
+                    final boolean isGrpc = rpcRequest != null &&
+                                           "com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(
+                                                   rpcRequest.serviceType().getName());
+
+                    final String logName;
+                    if (name != null && !isGrpc) {
+                        String serviceName = log.serviceName();
+                        if (serviceName != null) {
+                            final int idx = serviceName.lastIndexOf('.') + 1;
+                            if (idx > 0) {
+                                serviceName = serviceName.substring(idx);
+                            }
+                        }
+
+                        if (rpcRequest == null && httpMethodName.equals(name)) {
+                            logName = serviceName;
+                        } else {
+                            logName = serviceName + '/' + name;
+                        }
+                    } else {
+                        logName = null;
+                    }
 
                     final String protocol = firstNonNull(log.sessionProtocol(),
                                                          log.context().sessionProtocol()).uriText();

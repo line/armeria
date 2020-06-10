@@ -77,6 +77,20 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
     }
 
     /**
+     * Unwraps this {@link Service} recursively and returns the innermost object being
+     * decorated. For example:
+     * <pre>{@code
+     * HttpService service1 = new MyService();
+     * HttpService service2 = service1.decorate(LoggingService.newDecorator())
+     *                                .decorate(AuthService.newDecorator());
+     * assert service2.unwrap() == service1;
+     * }</pre>
+     */
+    default Service<? extends Request, ? extends Response> unwrap() {
+        return this;
+    }
+
+    /**
      * Returns whether the given {@code path} and {@code query} should be cached if the service's result is
      * successful. By default, exact path mappings with no input query are cached.
      */

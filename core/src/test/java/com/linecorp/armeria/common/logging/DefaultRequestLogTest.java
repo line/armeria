@@ -64,6 +64,7 @@ class DefaultRequestLogTest {
     @Test
     void endRequestSuccess() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         log.endRequest();
         assertThat(log.requestDurationNanos()).isZero();
         assertThat(log.requestCause()).isNull();
@@ -72,6 +73,7 @@ class DefaultRequestLogTest {
     @Test
     void endRequestWithoutHeaders() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         log.endRequest();
         final RequestHeaders headers = log.requestHeaders();
         assertThat(headers.scheme()).isEqualTo("http");
@@ -83,6 +85,7 @@ class DefaultRequestLogTest {
     @Test
     void endRequestWithHeadersInContext() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         when(ctx.request()).thenReturn(HttpRequest.of(HttpMethod.GET, "/foo"));
         log.endRequest();
         assertThat(log.requestHeaders()).isSameAs(ctx.request().headers());
@@ -147,6 +150,7 @@ class DefaultRequestLogTest {
 
     @Test
     void addChild() {
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest();
@@ -221,6 +225,7 @@ class DefaultRequestLogTest {
     @Test
     void deferContent_setContentAfterEndResponse() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 
@@ -244,6 +249,7 @@ class DefaultRequestLogTest {
     @Test
     void deferContent_setContentBeforeEndResponse() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 

@@ -41,8 +41,9 @@ class HttpServiceLogNameTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.accessLogWriter(AccessLogWriter.combined(), true);
             sb.service("/no-default", new MyHttpService());
-            sb.service("/no-default/:id", new MyHttpService());
+            sb.service("/no-default/:id", new MyHttpService().decorate(LoggingService.newDecorator()));
             sb.route()
               .get("/users/:id")
               .defaultServiceName("userService")
@@ -67,10 +68,10 @@ class HttpServiceLogNameTest {
     @Test
     void httpServiceWithoutDefault() {
         client.get("/no-default?a=1").aggregate().join();
-        assertName("exact:/no-default", "GET");
+        assertName(MyHttpService.class.getName(), "GET");
 
         client.get("/no-default/10").aggregate().join();
-        assertName("/no-default/:id", "GET");
+        assertName(MyHttpService.class.getName(), "GET");
     }
 
     @Test

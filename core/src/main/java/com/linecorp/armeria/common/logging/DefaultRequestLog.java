@@ -975,7 +975,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 final ServiceConfig config = ((ServiceRequestContext) ctx).config();
                 newServiceName = config.defaultServiceName();
                 if (newServiceName == null) {
-                    newServiceName = config.route().meterTag();
+                    newServiceName = config.service().unwrap().getClass().getName();
                 }
                 newName = config.defaultLogName();
             }

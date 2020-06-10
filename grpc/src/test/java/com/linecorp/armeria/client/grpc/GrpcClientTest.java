@@ -98,6 +98,7 @@ import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -144,6 +145,7 @@ class GrpcClientTest {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
+            sb.accessLogWriter(AccessLogWriter.combined(), true);
 
             final ServerServiceDefinition interceptService =
                     ServerInterceptors.intercept(

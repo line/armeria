@@ -245,6 +245,7 @@ class RequestMetricSupportTest {
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
                                      .build();
+        final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
@@ -258,20 +259,20 @@ class RequestMetricSupportTest {
 
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{hostname.pattern=*,method=POST," +
-                               "service=exact:/foo}", 0.0)
+                .containsEntry("foo.active.requests#value{hostname.pattern=*,method=POST," + serviceTag + '}',
+                               0.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "result=success,service=exact:/foo}", 0.0)
+                               "result=success," + serviceTag + '}', 0.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "result=failure,service=exact:/foo}", 1.0)
+                               "result=failure," + serviceTag + '}', 1.0)
                 .containsEntry("foo.timeouts#count{cause=RequestTimeoutException,hostname.pattern=*," +
-                               "http.status=503,method=POST,service=exact:/foo}", 1.0)
+                               "http.status=503,method=POST," + serviceTag + '}', 1.0)
                 .containsEntry("foo.response.duration#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "service=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.response.length#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "service=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.total.duration#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "service=exact:/foo}", 1.0);
+                               serviceTag + '}', 1.0);
     }
 
     @Test
@@ -299,6 +300,7 @@ class RequestMetricSupportTest {
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
                                      .build();
+        final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET, MeterIdPrefixFunction.ofDefault("foo"), true);
         sctx.logBuilder().endRequest();
@@ -328,16 +330,16 @@ class RequestMetricSupportTest {
                 .containsEntry("bar.total.duration#count{http.status=200,method=POST}", 1.0)
                 // serviceRequestContext
                 .containsEntry("foo.active.requests#value{hostname.pattern=*,method=POST," +
-                               "service=exact:/foo}", 0.0)
+                               serviceTag + '}', 0.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "result=success,service=exact:/foo}", 1.0)
+                               "result=success," + serviceTag + '}', 1.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "result=failure,service=exact:/foo}", 0.0)
+                               "result=failure," + serviceTag + '}', 0.0)
                 .containsEntry("foo.response.duration#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "service=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.response.length#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "service=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.total.duration#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "service=exact:/foo}", 1.0);
+                               serviceTag + '}', 1.0);
     }
 }

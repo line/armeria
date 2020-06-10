@@ -46,6 +46,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -204,6 +206,8 @@ class AccessLogFormatsTest {
         logBuilder.endResponse();
 
         final RequestLog log = ctx.log().ensureComplete();
+        final String serviceName = log.serviceName();
+        final String logName = serviceName.substring(serviceName.lastIndexOf('.') + 1);
 
         final String localhostAddress = NetUtil.LOCALHOST.getHostAddress();
         final String timestamp = defaultDateTimeFormatter.format(ZonedDateTime.ofInstant(
@@ -214,11 +218,11 @@ class AccessLogFormatsTest {
 
         message = AccessLogger.format(AccessLogFormats.COMMON, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024");
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024");
 
         message = AccessLogger.format(AccessLogFormats.COMBINED, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024" +
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
                 " \"http://log.example.com\" \"armeria/x.y.z\" \"a=1;b=2\"");
 
         // Check conditions with custom formats.
@@ -228,7 +232,7 @@ class AccessLogFormatsTest {
 
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024" +
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
                 " \"http://log.example.com\" \"-\" some-text -");
 
         format = AccessLogFormats.parseCustom(
@@ -236,7 +240,7 @@ class AccessLogFormatsTest {
                 " some-text %{Non-Existing-Header}i");
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log h2c\" 200 1024" +
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
                 " \"-\" \"armeria/x.y.z\" some-text -");
 
         format = AccessLogFormats.parseCustom(
@@ -258,6 +262,42 @@ class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom("%{short}I");
         assertThat(AccessLogger.format(format, log)).isEqualTo(id.shortText());
+    }
+
+    @CsvSource({
+            "armeria.LogService, write, LogService/write",
+            "LogService, write, LogService/write",
+            "LogService, POST, LogService/POST",
+            "LogService, GET, LogService",
+    })
+    @ParameterizedTest
+    void formatWithLogName(String serviceName, String name, String logName) {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/armeria/log");
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.builder(req)
+                                     .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .build();
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.name(serviceName, name);
+        logBuilder.endRequest();
+        ctx.log().ensureRequestComplete();
+
+        logBuilder.responseHeaders(ResponseHeaders.of(HttpStatus.OK,
+                                                      HttpHeaderNames.CONTENT_TYPE,
+                                                      MediaType.PLAIN_TEXT_UTF_8));
+        logBuilder.responseLength(1024);
+        logBuilder.endResponse();
+
+        final RequestLog log = ctx.log().ensureComplete();
+
+        final String localhostAddress = NetUtil.LOCALHOST.getHostAddress();
+        final String timestamp = defaultDateTimeFormatter.format(ZonedDateTime.ofInstant(
+                Instant.ofEpochMilli(requestStartTimeMillis), defaultZoneId));
+
+        final String message = AccessLogger.format(AccessLogFormats.COMMON, log);
+        assertThat(message).isEqualTo(
+                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024");
     }
 
     @Test
@@ -288,7 +328,7 @@ class AccessLogFormatsTest {
 
     @Test
     void requestLogAvailabilityException() {
-        final String fullName = AccessLogFormatsTest.class.getName() + "/rpcMethod";
+        final String fullName = AccessLogFormatsTest.class.getSimpleName() + "/rpcMethod";
         final String expectedLogMessage = "\"GET /armeria/log#" + fullName + " h2c\" 200 1024";
 
         final ServiceRequestContext ctx = ServiceRequestContext.builder(

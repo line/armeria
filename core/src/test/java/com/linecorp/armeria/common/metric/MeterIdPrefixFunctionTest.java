@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -83,7 +82,7 @@ class MeterIdPrefixFunctionTest {
         final MeterRegistry registry = NoopMeterRegistry.get();
         final MeterIdPrefixFunction f = MeterIdPrefixFunction.ofDefault("foo");
 
-        RequestContext ctx;
+        ServiceRequestContext ctx;
         MeterIdPrefix res;
 
         // A simple HTTP request.
@@ -94,7 +93,7 @@ class MeterIdPrefixFunctionTest {
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("http.status", "0"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("service", "exact:/"));
+                                               Tag.of("service", ctx.config().service().getClass().getName()));
 
         // An RPC request.
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
@@ -116,7 +115,7 @@ class MeterIdPrefixFunctionTest {
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("http.status", "200"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("service", "exact:/get"));
+                                               Tag.of("service", ctx.config().service().getClass().getName()));
     }
 
     @Test
@@ -124,7 +123,7 @@ class MeterIdPrefixFunctionTest {
         final MeterRegistry registry = NoopMeterRegistry.get();
         final MeterIdPrefixFunction f = MeterIdPrefixFunction.ofDefault("foo");
 
-        RequestContext ctx;
+        ServiceRequestContext ctx;
         MeterIdPrefix res;
 
         // A simple HTTP request.
@@ -133,7 +132,7 @@ class MeterIdPrefixFunctionTest {
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("service", "exact:/"));
+                                               Tag.of("service", ctx.config().service().getClass().getName()));
 
         // An RPC request.
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
@@ -151,7 +150,7 @@ class MeterIdPrefixFunctionTest {
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("service", "exact:/get"));
+                                               Tag.of("service", ctx.config().service().getClass().getName()));
     }
 
     @Nested
@@ -188,7 +187,8 @@ class MeterIdPrefixFunctionTest {
         }
     }
 
-    private static RequestContext newContext(HttpMethod method, String path, @Nullable Object requestContent) {
+    private static ServiceRequestContext newContext(HttpMethod method, String path,
+                                                    @Nullable Object requestContent) {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(method, path));
         ctx.logBuilder().requestContent(requestContent, null);
         ctx.logBuilder().endRequest();
