@@ -47,7 +47,7 @@ final class ServerSetsDiscoverySpec implements ZooKeeperDiscoverySpec {
         }
         final Endpoint endpoint = converter.apply(decodedInstance);
         if (endpoint == null) {
-            logger.debug("Converter returned null endpoint from {}.", decodedInstance);
+            logger.warn("The endpoint converter returned null from {}.", decodedInstance);
         }
         return endpoint;
     }

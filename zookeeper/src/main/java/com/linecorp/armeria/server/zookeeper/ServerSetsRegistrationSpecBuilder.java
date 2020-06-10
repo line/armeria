@@ -61,7 +61,7 @@ public final class ServerSetsRegistrationSpecBuilder {
     }
 
     /**
-     * Sets the specified additional {@link Endpoint} with the specified {@code name}.
+     * Adds the specified additional {@link Endpoint} with the specified {@code name}.
      */
     public ServerSetsRegistrationSpecBuilder additionalEndpoint(
             String name, Endpoint additionalEndpoint) {
@@ -71,7 +71,7 @@ public final class ServerSetsRegistrationSpecBuilder {
     }
 
     /**
-     * Sets the specified additional {@link Endpoint}s.
+     * Adds the specified additional {@link Endpoint}s.
      */
     public ServerSetsRegistrationSpecBuilder additionalEndpoints(
             Map<String, Endpoint> additionalEndpoints) {

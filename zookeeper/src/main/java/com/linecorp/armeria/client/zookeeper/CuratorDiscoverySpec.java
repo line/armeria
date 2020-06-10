@@ -49,7 +49,7 @@ final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
         final ServiceInstance<?> decodedInstance = CuratorXNodeValueCodec.INSTANCE.decode(data);
         final Endpoint endpoint = converter.apply(decodedInstance);
         if (endpoint == null) {
-            logger.debug("Returned null endpoint from {}.", decodedInstance);
+            logger.warn("The endpoint converter returned null from {}.", decodedInstance);
         }
         return endpoint;
     }
