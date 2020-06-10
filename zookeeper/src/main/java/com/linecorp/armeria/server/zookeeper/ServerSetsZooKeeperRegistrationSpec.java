@@ -57,7 +57,7 @@ final class ServerSetsZooKeeperRegistrationSpec implements ZooKeeperRegistration
         return MoreObjects.toStringHelper(this)
                           .add("serverSetsInstance", serverSetsInstance)
                           .add("path", path)
-                          .add("isSequential", isSequential())
+                          .add("isSequential", isSequential)
                           .toString();
     }
 }

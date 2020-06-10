@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.zookeeper;
 import java.util.function.Function;
 
 import org.apache.curator.x.discovery.ServiceInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
@@ -25,6 +27,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
 final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
+
+    private static final Logger logger = LoggerFactory.getLogger(CuratorDiscoverySpec.class);
 
     private final String path;
     private final Function<? super ServiceInstance<?>, Endpoint> converter;
@@ -42,7 +46,12 @@ final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
 
     @Override
     public Endpoint decode(byte[] data) {
-        return converter.apply(CuratorXNodeValueCodec.INSTANCE.decode(data));
+        final ServiceInstance<?> decodedInstance = CuratorXNodeValueCodec.INSTANCE.decode(data);
+        final Endpoint endpoint = converter.apply(decodedInstance);
+        if (endpoint == null) {
+            logger.debug("Returned null endpoint from {}.", decodedInstance);
+        }
+        return endpoint;
     }
 
     @Override

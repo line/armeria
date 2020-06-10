@@ -17,11 +17,16 @@ package com.linecorp.armeria.client.zookeeper;
 
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
 final class ServerSetsZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
+
+    private static final Logger logger = LoggerFactory.getLogger(ServerSetsZooKeeperDiscoverySpec.class);
 
     private final Function<? super ServerSetsInstance, Endpoint> converter;
 
@@ -36,6 +41,11 @@ final class ServerSetsZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
 
     @Override
     public Endpoint decode(byte[] data) {
-        return converter.apply(ServerSetsNodeValueCodec.INSTANCE.decode(data));
+        final ServerSetsInstance decodedInstance = ServerSetsNodeValueCodec.INSTANCE.decode(data);
+        final Endpoint endpoint = converter.apply(decodedInstance);
+        if (endpoint == null) {
+            logger.debug("Returned null endpoint from {}.", decodedInstance);
+        }
+        return endpoint;
     }
 }

@@ -20,6 +20,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -96,6 +99,8 @@ final class ServerSetsInstanceConverter {
 
         private static final long serialVersionUID = 3445603112141405710L;
 
+        private static final Logger logger = LoggerFactory.getLogger(FinagleServiceInstanceDeserializer.class);
+
         private static final ServerSetsInstance notAliveInstance = new ServerSetsInstance(
           null, ImmutableMap.of(), null, ImmutableMap.of());
 
@@ -107,13 +112,14 @@ final class ServerSetsInstanceConverter {
         public ServerSetsInstance deserialize(JsonParser p, DeserializationContext ctxt)
                 throws IOException, JsonProcessingException {
             final JsonNode tree = p.getCodec().readTree(p);
-            if (!ALIVE.equals(tree.get(STATUS).asText())) {
-                return notAliveInstance;
-            }
-
             final JsonNode serviceEndpointNode = tree.get(SERVICE_ENDPOINT);
             final Endpoint serviceEndpoint = endpoint(serviceEndpointNode);
-
+            final String status = tree.get(STATUS).asText();
+            if (!ALIVE.equals(status)) {
+                logger.warn("Found an instance whose status is not alive. status: {}, serviceEndpoint: {}",
+                            status, serviceEndpoint);
+                return notAliveInstance;
+            }
             final ImmutableMap.Builder<String, Endpoint> additionalsBuilder = ImmutableMap.builder();
             final Iterator<Entry<String, JsonNode>> additionals = tree.get(ADDITIONAL_ENDPOINTS).fields();
             while (additionals.hasNext()) {
