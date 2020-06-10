@@ -22,14 +22,10 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Formatter;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpStatus;
 
 /**
  *  Printing flow.
@@ -101,18 +97,7 @@ final class ServletPrintWriter extends PrintWriter {
         } else {
             writeStr = s.substring(off, off + len);
         }
-        response.getHeadersBuilder().status(HttpStatus.OK);
-        response.getHeadersBuilder().setObject(
-                HttpHeaderNames.SET_COOKIE,
-                response.getCookies().stream().map(x ->
-                                                           Cookie.builder(x.getName(), x.getValue())
-                                                                 .path("/")
-                                                                 .httpOnly(true)
-                                                                 .build().toSetCookieHeader()
-                ).collect(Collectors.toList()));
-        response.getResponseWriter().tryWrite(response.getHeadersBuilder().build());
-        response.getResponseWriter().tryWrite(HttpData.ofUtf8(writeStr));
-        response.getResponseWriter().close();
+        response.write(HttpData.ofUtf8(writeStr));
     }
 
     @Override

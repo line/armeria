@@ -32,6 +32,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 import javax.servlet.Filter;
+import javax.servlet.FilterRegistration;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -50,7 +51,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.server.servlet.UrlMapper.Element;
 
 /**
  * Servlet context (lifetime same as server).
@@ -100,6 +103,13 @@ final class DefaultServletContext implements ServletContext {
     }
 
     /**
+     * Check servlet context is initialized.
+     */
+    boolean isInitialized() {
+        return initialized;
+    }
+
+    /**
      * Set server started.
      */
     void init() {
@@ -121,9 +131,10 @@ final class DefaultServletContext implements ServletContext {
     /**
      * Get servlet path.
      */
-    String getServletPath(String absoluteUri) {
-        requireNonNull(absoluteUri, "absoluteUri");
-        return servletUrlMapper.getServletPath(absoluteUri);
+    @Nullable
+    String getServletPath(String uri) {
+        final Element element = servletUrlMapper.getMapping(StringUtil.normalizePath(uri));
+        return element == null ? null : element.path.substring(contextPath.length());
     }
 
     @Override
@@ -133,9 +144,7 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public void setSessionTimeout(int sessionTimeout) {
-        ensureUninitialized("setSessionTimeout");
-        checkArgument(sessionTimeout > 0, "sessionTimeout: %s (expected: > 0)", sessionTimeout);
-        this.sessionTimeout = sessionTimeout;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
@@ -210,20 +219,19 @@ final class DefaultServletContext implements ServletContext {
     public ServletRequestDispatcher getRequestDispatcher(String path) {
         requireNonNull(path, "path");
         final UrlMapper.Element<DefaultServletRegistration> element =
-                servletUrlMapper.getMappingObjectByUri(path);
+                servletUrlMapper.getMapping(StringUtil.normalizePath(path));
         if (element == null) {
             return null;
         }
-        return new ServletRequestDispatcher(new ServletFilterChain(element.getObject()), path, element);
+        return new ServletRequestDispatcher(new ServletFilterChain(element.getObject()),
+                                            element.pattern, element);
     }
 
     @Override
     @Nullable
     public ServletRequestDispatcher getNamedDispatcher(String name) {
         requireNonNull(name, "name");
-        if (!name.isEmpty() && name.charAt(name.length() - 1) == '/') {
-            name = name.substring(0, name.length() - 1);
-        }
+        name = StringUtil.normalizePath(name);
         final DefaultServletRegistration servletRegistration = getServletRegistration(name);
         if (servletRegistration == null) {
             return null;
@@ -280,7 +288,8 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return ServletUtil.getServerInfo();
+        return ArmeriaHttpUtil.SERVER_HEADER +
+               " (JDK " + SystemInfo.javaVersion() + ";" + SystemInfo.osType().name() + ")";
     }
 
     @Override
@@ -352,10 +361,7 @@ final class DefaultServletContext implements ServletContext {
         checkArgument(!isNullOrEmpty(servletName),
                       "servletName: %s (expected: not null and empty)", servletName);
         requireNonNull(servlet, "servlet");
-        if (!servletName.isEmpty() && servletName.charAt(servletName.length() - 1) == '/') {
-            servletName = servletName.substring(0, servletName.length() - 1);
-        }
-        servletName = servletName.trim();
+        servletName = StringUtil.normalizePath(servletName);
         final DefaultServletRegistration servletRegistration =
                 new DefaultServletRegistration(servletName, servlet, this, servletUrlMapper, initParamMap);
         servletRegistrationMap.put(servletName, servletRegistration);
@@ -418,7 +424,7 @@ final class DefaultServletContext implements ServletContext {
     }
 
     @Override
-    public javax.servlet.FilterRegistration getFilterRegistration(String filterName) {
+    public FilterRegistration getFilterRegistration(String filterName) {
         requireNonNull(filterName, "filterName");
         return filterRegistrationMap.get(filterName);
     }
@@ -435,9 +441,7 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes) {
-        ensureUninitialized("setSessionTrackingModes");
-        requireNonNull(sessionTrackingModes, "sessionTrackingModes");
-        sessionTrackingModeSet = ImmutableSet.copyOf(sessionTrackingModes);
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
@@ -487,7 +491,8 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public String getVirtualServerName() {
-        return ServletUtil.getServerInfo();
+        return ArmeriaHttpUtil.SERVER_HEADER +
+               " (JDK " + SystemInfo.javaVersion() + ";" + SystemInfo.osType().name() + ")";
     }
 
     @Override
@@ -519,7 +524,8 @@ final class DefaultServletContext implements ServletContext {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    private void ensureUninitialized(@Nullable String name) {
+    private void ensureUninitialized(String name) {
+        requireNonNull(name, "name");
         checkState(!initialized, "Can't execute %s after the servlet context is initialized.", name);
     }
 }

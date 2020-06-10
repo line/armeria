@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
@@ -138,6 +137,7 @@ public class ServletServiceTest {
     void doGetNotFound() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/test"))) {
+                assertThat(res.getStatusLine().getStatusCode()).isEqualTo(404);
                 EntityUtils.consume(res.getEntity());
             }
         }
@@ -212,13 +212,14 @@ public class ServletServiceTest {
                         "Tue May 12 12:55:48 2020");
                 assertThat(request.getHeader("start_date")).isEqualTo("Tue May 12 12:55:48 2020");
                 assertThat(request.getIntHeader("start_flag")).isEqualTo(1);
+                assertThat(request.getIntHeader("test")).isEqualTo(-1);
                 assertThat(request.getCookies()[0].getName() + "=" +
                            request.getCookies()[0].getValue()).isEqualTo("armeria=session_id_1");
                 assertThat(request.getRequestURI()).isEqualTo("/home");
                 assertThat(request.getRequestURL().toString()).isEqualTo("http://127.0.0.1:" +
                                                                          request.getServerPort() + "/home");
-                assertThat(request.getPathInfo()).isEqualTo("");
-                assertThat(request.getQueryString()).isEqualTo("test=1&array=abc&array=a%20bc");
+                assertThat(request.getPathInfo()).isEqualTo(null);
+                assertThat(request.getQueryString()).isEqualTo("test=1&array=abc&array=a+bc");
                 assertThat(request.getServletPath()).isEqualTo("/home");
                 assertThat(
                         Collections.list(request.getHeaderNames()).contains("start_date")).isEqualTo(true);
@@ -238,14 +239,11 @@ public class ServletServiceTest {
                 request.removeAttribute("attribute1");
                 assertThat(
                         Collections.list(request.getAttributeNames()).contains("attribute1")).isEqualTo(false);
-                assertThat(request.getServerName()).isEqualTo("127.0.0.1");
                 assertThat(request.getServerPort()).isEqualTo(request.getServerPort());
                 assertThat(Objects.isNull(request.getReader())).isEqualTo(false);
                 assertThat(request.getRemoteAddr()).isEqualTo("127.0.0.1");
                 assertThat(request.getRemoteHost()).isEqualTo("localhost");
-                assertThat(request.getRemotePort()).isEqualTo(request.getServerPort());
-                assertThat(request.getLocale()).isEqualTo(Locale.US);
-                assertThat(Collections.list(request.getLocales()).contains(Locale.US)).isEqualTo(true);
+                assertThat(request.getRemotePort()).isEqualTo(request.getRemotePort());
                 assertThat(request.isSecure()).isEqualTo(false);
                 assertThat(request.getLocalAddr()).isEqualTo("/127.0.0.1:" + request.getServerPort());
                 request.getLocalName();
@@ -324,6 +322,10 @@ public class ServletServiceTest {
                 request.getServletContext().log(new Exception("Test log"), "Test log exception");
                 request.getServletContext().log("Test log", new Exception("Test log exception"));
                 request.getServletContext().setAttribute("attribute1", null);
+                assertThat(servletRegistration.getServletConfig().getServletName()).isEqualTo("/home");
+                assertThat(servletRegistration.getServletConfig().getInitParameter("test")).isEqualTo(null);
+                assertThat(servletRegistration.getServletConfig()
+                                              .getInitParameterNames().hasMoreElements()).isEqualTo(false);
                 assertThat(request.getServletContext().getServletRegistrations().size()).isEqualTo(1);
                 request.getServletContext().getClassLoader();
 
@@ -355,13 +357,13 @@ public class ServletServiceTest {
                 assertThat(request.getParameterMap().entrySet().size()).isEqualTo(1);
                 assertThat(request.getParameterMap().containsKey("application")).isEqualTo(true);
                 assertThat(request.getParameterMap().get("app")).isEqualTo(null);
-                assertThat(request.getParameterMap().containsValue("Armeria Servlet")).isEqualTo(true);
                 assertThat(request.getParameterMap().containsKey("null")).isEqualTo(false);
                 assertThat(Objects.isNull(
                         ((DefaultServletHttpRequest) request).getHttpRequest())).isEqualTo(false);
                 assertThat(
                         Collections.list(request.getParameterNames()).contains("application")).isEqualTo(true);
                 assertThat(request.getParameterValues("application")[0]).isEqualTo("Armeria Servlet");
+                assertThat(request.getParameterValues("empty")).isEqualTo(null);
                 assertThat(Objects.isNull(request.getInputStream())).isEqualTo(false);
                 assertThat(request.getServletContext().getSessionTimeout()).isEqualTo(30);
                 assertThat(request.getServletContext().getMajorVersion()).isEqualTo(4);
@@ -443,34 +445,13 @@ public class ServletServiceTest {
                     }
                 });
                 assertThat(inputStream.read()).isEqualTo(-1);
+                assertThat(response.encodeURL("http://localhost")).isEqualTo("http://localhost");
                 inputStream.close();
 
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().println("delete");
-
-                final LinkedMultiValueMap map = new LinkedMultiValueMap(request.getParameterMap());
-                map.addAll("key1",
-                           request.getParameterMap().keySet().stream().collect(Collectors.toList()));
-                map.getFirst("key1");
-                map.set("key1", "value1");
-                map.clear();
-
-                map.remove("key2");
-                map.putAll(request.getParameterMap());
-                if (!map.equals(new HashMap())) {
-                    map.setAll(request.getParameterMap());
-                }
-
-                if (!map.containsValue("value1")) {
-                    map.set("key1", "value1");
-                }
-
-                map.keySet();
-                map.values();
-                map.hashCode();
-                map.toString();
 
                 ((ServletPrintWriter) response.getWriter()).setError();
                 ((ServletPrintWriter) response.getWriter()).clearError();
@@ -484,7 +465,7 @@ public class ServletServiceTest {
                 newWriter.print(1.1D);
                 newWriter.print(new char[1]);
                 newWriter.print("test");
-                newWriter.print(map);
+                newWriter.print(new HashMap<>());
                 newWriter.println();
                 newWriter.println(true);
                 newWriter.println('c');
@@ -494,7 +475,7 @@ public class ServletServiceTest {
                 newWriter.println(1.1D);
                 newWriter.println(new char[1]);
                 newWriter.println("test");
-                newWriter.println(map);
+                newWriter.println(new HashMap<>());
                 newWriter.append('c');
                 newWriter.printf("test %d", 1);
                 newWriter.printf(Locale.US, "test %d", 1);
@@ -525,16 +506,16 @@ public class ServletServiceTest {
                 } catch (Exception e) {
                     logger.info("test");
                 }
-
-                final UrlMapper mapper = new UrlMapper(true);
-                final List registers = new ArrayList();
-                registers.add(request.getServletContext().getServletRegistration("/app/home"));
-                mapper.addMappingObjectsByUri("/app/abc", registers);
-
-                ServletUtil.decodeCookie(
-                        "APISID=\"gRqwDKlSoHYAnwys/AWbcomjB88s4OUwa2\"; " +
-                        "SAPISID=ziUenALC1x0ThWIX/AtHW-l5Nu6BBD8VYo; ");
-
+                request.getContentLength();
+                request.getContentLengthLong();
+                request.getContentType();
+                request.getScheme();
+                request.getProtocol();
+                request.getServerName();
+                request.getServletContext().getMimeType(null);
+                request.getServletContext().getMimeType("test");
+                request.getServletContext().getMimeType("test.");
+                response.setStatus(HttpStatus.OK.code(), "success");
                 response.getOutputStream().write(1);
                 response.getOutputStream().close();
             } catch (Exception e) {

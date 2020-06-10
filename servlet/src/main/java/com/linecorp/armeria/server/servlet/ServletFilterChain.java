@@ -31,11 +31,6 @@ import javax.servlet.ServletResponse;
  */
 final class ServletFilterChain implements FilterChain {
 
-    /**
-     * Consider that each request is handled by only one thread, and that the ServletContext will create a new
-     * SimpleFilterChain object on each request therefore, the FilterChain's Iterator is used as a private
-     * variable of the FilterChain, without thread safety problems.
-     */
     private final List<DefaultFilterRegistration> filterRegistrationList = new ArrayList<>();
     private final DefaultServletRegistration servletRegistration;
     private int pos;
@@ -48,11 +43,6 @@ final class ServletFilterChain implements FilterChain {
         this.servletRegistration = servletRegistration;
     }
 
-    /**
-     * each Filter calls the FilterChain method after processing the request.
-     * this should find the next Filter, call its doFilter() method.
-     * if there is no next one, you should call the servlet's service() method
-     */
     @Override
     public void doFilter(ServletRequest request, ServletResponse response)
             throws IOException, ServletException {
@@ -69,13 +59,6 @@ final class ServletFilterChain implements FilterChain {
         } else {
             servletRegistration.getServlet().service(request, response);
         }
-    }
-
-    /**
-     * Get servlet registration.
-     */
-    DefaultServletRegistration getServletRegistration() {
-        return servletRegistration;
     }
 
     /**

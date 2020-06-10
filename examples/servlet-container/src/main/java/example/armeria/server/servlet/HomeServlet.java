@@ -62,11 +62,13 @@ public class HomeServlet extends HttpServlet {
                                       "<p>TYPE: " + request.getParameter("type") + "\n" +
                                       "<p>COOKIES:\n"
                     );
-            for (Cookie c : request.getCookies()) {
-                htmlFile.append("<p>name: ");
-                htmlFile.append(c.getName());
-                htmlFile.append(" - value: ");
-                htmlFile.append(c.getValue());
+            if (request.getCookies() != null) {
+                for (Cookie c : request.getCookies()) {
+                    htmlFile.append("<p>name: ");
+                    htmlFile.append(c.getName());
+                    htmlFile.append(" - value: ");
+                    htmlFile.append(c.getValue());
+                }
             }
             response.setContentType(MediaType.HTML_UTF_8.toString());
             response.getOutputStream().write(htmlFile.toString().getBytes());
@@ -79,7 +81,7 @@ public class HomeServlet extends HttpServlet {
     protected void doPut(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         logger.info("PUT: {}", request.getRequestURI());
-        response.sendError(HttpStatus.NOT_FOUND.code());
+        response.sendRedirect("/app/home");
     }
 
     @Override

@@ -450,4 +450,15 @@ final class StringUtil {
             tokens.add(token);
         }
     }
+
+    /**
+     * Normalize path.
+     */
+    static String normalizePath(String path) {
+        requireNonNull(path, "path");
+        if (!path.isEmpty() && path.charAt(path.length() - 1) == '/') {
+            path = path.substring(0, path.length() - 1);
+        }
+        return path.trim();
+    }
 }

@@ -20,15 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.stream.Collectors;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
-import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpStatus;
 
 /**
  * Servlets output streams (wrapper classes) that control access to the flow.
@@ -72,18 +68,7 @@ final class DefaultServletOutputStream extends ServletOutputStream {
         requireNonNull(b, "b");
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
-        response.getHeadersBuilder().setObject(
-                HttpHeaderNames.SET_COOKIE,
-                response.getCookies().stream().map(x ->
-                                                           Cookie.builder(x.getName(), x.getValue())
-                                                                 .path("/")
-                                                                 .httpOnly(true)
-                                                                 .build().toSetCookieHeader()
-                ).collect(Collectors.toList()));
-        response.getHeadersBuilder().status(HttpStatus.OK);
-        response.getResponseWriter().tryWrite(response.getHeadersBuilder().build());
-        response.getResponseWriter().tryWrite(HttpData.copyOf(Arrays.copyOfRange(b, off, len)));
-        response.getResponseWriter().close();
+        response.write(HttpData.copyOf(Arrays.copyOfRange(b, off, len)));
     }
 
     @Override

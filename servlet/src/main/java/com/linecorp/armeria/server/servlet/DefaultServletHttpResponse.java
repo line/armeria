@@ -16,10 +16,12 @@
 package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -39,12 +42,15 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+
+import io.netty.util.AsciiString;
 
 /**
  * Servlet response.
  */
 final class DefaultServletHttpResponse implements HttpServletResponse {
-    private final List<Cookie> cookies = new ArrayList<>();
+    private final List<String> cookies = new ArrayList<>();
     private final DefaultServletOutputStream outputStream;
     private final ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
     private final PrintWriter writer;
@@ -56,35 +62,40 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         this.responseWriter = responseWriter;
         outputStream = new DefaultServletOutputStream(this);
         writer = new ServletPrintWriter(this, outputStream);
-        headersBuilder.set(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8.toString());
-        setCharacterEncoding(servletContext.getRequestCharacterEncoding());
+        headersBuilder.contentType(MediaType.HTML_UTF_8);
+        setCharacterEncoding(servletContext.getResponseCharacterEncoding());
     }
 
     /**
-     * Get response writer.
+     * Write {@link HttpData} to client.
      */
-    HttpResponseWriter getResponseWriter() {
-        return responseWriter;
-    }
-
-    /**
-     * Get header builder.
-     */
-    ResponseHeadersBuilder getHeadersBuilder() {
-        return headersBuilder;
-    }
-
-    /**
-     * Get cookie.
-     */
-    List<Cookie> getCookies() {
-        return cookies;
+    void write(HttpData data) {
+        requireNonNull(data, "data");
+        if (responseWriter.tryWrite(headersBuilder.setObject(HttpHeaderNames.SET_COOKIE, cookies)
+                                                  .status(HttpStatus.OK).build())) {
+            if (responseWriter.tryWrite(data)) {
+                responseWriter.close();
+            }
+        }
     }
 
     @Override
     public void addCookie(Cookie cookie) {
         requireNonNull(cookie, "cookie");
-        cookies.add(cookie);
+        final String path = cookie.getPath() == null ? "/" : cookie.getPath();
+        final CookieBuilder builder =
+                com.linecorp.armeria.common.Cookie.builder(cookie.getName(), cookie.getValue())
+                                                  .path(path)
+                                                  .httpOnly(
+                                                          cookie.isHttpOnly())
+                                                  .secure(cookie.getSecure());
+        if (cookie.getMaxAge() != -1) {
+            builder.maxAge(cookie.getMaxAge());
+        }
+        if (!isNullOrEmpty(cookie.getDomain())) {
+            builder.domain(cookie.getDomain());
+        }
+        cookies.add(builder.build().toSetCookieHeader());
     }
 
     @Override
@@ -121,13 +132,15 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
 
     @Override
     public void sendError(int sc, @Nullable String msg) throws IOException {
-        if (msg == null) {
-            msg = "";
+        final ResponseHeaders headers = ResponseHeaders.builder(sc).contentType(MediaType.HTML_UTF_8).build();
+        if (responseWriter.tryWrite(headers)) {
+            if (msg != null) {
+                if (!responseWriter.tryWrite(HttpData.ofUtf8(msg))) {
+                    return;
+                }
+            }
+            responseWriter.close();
         }
-        headersBuilder.status(new HttpStatus(sc, msg));
-        responseWriter.tryWrite(headersBuilder.build());
-        responseWriter.tryWrite(HttpData.ofUtf8(msg));
-        responseWriter.close();
     }
 
     @Override
@@ -138,37 +151,38 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     @Override
     public void sendRedirect(String location) throws IOException {
         requireNonNull(location, "location");
-        responseWriter.tryWrite(
-                ResponseHeaders.of(HttpStatus.SEE_OTHER, HttpHeaderNames.LOCATION.toString(), location));
-        responseWriter.close();
+        if (responseWriter.tryWrite(
+                ResponseHeaders.of(HttpStatus.FOUND, HttpHeaderNames.LOCATION, location))) {
+            responseWriter.close();
+        }
     }
 
     @Override
     public void setDateHeader(String name, long date) {
         requireNonNull(name, "name");
         checkArgument(date > 0, "date: %s (expected: > 0)", date);
-        headersBuilder.setObject(name, date);
+        headersBuilder.setLong(name, date);
     }
 
     @Override
     public void addDateHeader(String name, long date) {
         requireNonNull(name, "name");
         checkArgument(date > 0, "date: %s (expected: > 0)", date);
-        headersBuilder.addObject(name, date);
+        headersBuilder.addLong(name, date);
     }
 
     @Override
     public void setHeader(String name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        headersBuilder.setObject(name, value);
+        headersBuilder.set(name, value);
     }
 
     @Override
     public void addHeader(String name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        headersBuilder.addObject(name, value);
+        headersBuilder.add(name, value);
     }
 
     @Override
@@ -188,13 +202,13 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     @Override
     public void setContentType(String contentType) {
         requireNonNull(contentType, "contentType");
-        setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), contentType);
+        headersBuilder.set(HttpHeaderNames.CONTENT_TYPE, contentType);
     }
 
     @Override
+    @Nullable
     public String getContentType() {
-        final String contentType = getHeader(HttpHeaderNames.CONTENT_TYPE.toString());
-        return contentType == null ? "" : contentType;
+        return getHeader(HttpHeaderNames.CONTENT_TYPE.toString());
     }
 
     @Override
@@ -206,9 +220,10 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     @Deprecated
     public void setStatus(int sc, @Nullable String sm) {
         if (sm == null) {
-            sm = "";
+            headersBuilder.status(HttpStatus.valueOf(sc));
+        } else {
+            headersBuilder.status(new HttpStatus(sc, sm));
         }
-        headersBuilder.status(new HttpStatus(sc, sm));
     }
 
     @Override
@@ -231,12 +246,17 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
 
     @Override
     public Collection<String> getHeaderNames() {
-        return headersBuilder.names().stream().map(s -> s.toString()).collect(ImmutableList.toImmutableList());
+        return headersBuilder.names().stream()
+                             .map(AsciiString::toString).collect(ImmutableList.toImmutableList());
     }
 
     @Override
     public String getCharacterEncoding() {
-        return getContentType().split(";")[1].trim();
+        final MediaType mediaType = headersBuilder.contentType();
+        if (mediaType != null && mediaType.charset() != null) {
+            return mediaType.charset().toString();
+        }
+        return ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
     }
 
     @Override
@@ -252,8 +272,10 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     @Override
     public void setCharacterEncoding(String charset) {
         requireNonNull(charset, "charset");
-        headersBuilder.set(HttpHeaderNames.CONTENT_TYPE,
-                           getContentType().split(";")[0].trim() + "; " + charset);
+        final MediaType mediaType = headersBuilder.contentType();
+        if (mediaType != null) {
+            headersBuilder.contentType(mediaType.withCharset(Charset.forName(charset)));
+        }
     }
 
     @Override
@@ -286,17 +308,11 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * Reset response (full reset, head, state, response buffer).
-     */
     @Override
     public void reset() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * Reset response (only reset response buffer).
-     */
     @Override
     public void resetBuffer() {
         throw new UnsupportedOperationException("Not supported yet.");

@@ -43,19 +43,11 @@ final class DefaultServletInputStream extends ServletInputStream {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * There is no new HttpContent input for this request, and all of the current content has been read.
-     * @return True = false after reading.
-     */
     @Override
     public boolean isFinished() {
         return source.readableBytes() == 0;
     }
 
-    /**
-     * HttpContent has been read in at least once and not all of it has been read,
-     * or the HttpContent queue is not empty.
-     */
     @Override
     public boolean isReady() {
         return source.readableBytes() != 0;
@@ -66,9 +58,6 @@ final class DefaultServletInputStream extends ServletInputStream {
         requireNonNull(readListener, "readListener");
     }
 
-    /**
-     * Skip n bytes.
-     */
     @Override
     public long skip(long n) throws IOException {
         final long skipLen = Math.min(source.readableBytes(), n);
@@ -76,10 +65,6 @@ final class DefaultServletInputStream extends ServletInputStream {
         return skipLen;
     }
 
-    /**
-     * Get number of readable bytes.
-     * @return Number of readable bytes.
-     */
     @Override
     public int available() throws IOException {
         return source.readableBytes();
@@ -89,19 +74,11 @@ final class DefaultServletInputStream extends ServletInputStream {
     public void close() throws IOException {
     }
 
-    /**
-     * Try to update current, then read len bytes and copy to b (start with off subscript).
-     * @return The number of bytes actually read.
-     */
     @Override
     public int read(byte[] bytes, int off, int len) throws IOException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * Try updating current, then read a byte, and return, where int is returned,
-     * but third-party frameworks treat it as one byte instead of four.
-     */
     @Override
     public int read() throws IOException {
         if (isFinished()) {

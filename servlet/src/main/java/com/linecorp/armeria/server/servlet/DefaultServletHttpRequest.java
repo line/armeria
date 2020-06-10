@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.servlet;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
@@ -23,23 +24,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -58,26 +54,30 @@ import javax.servlet.http.Part;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
+import io.netty.util.AsciiString;
 
 /**
  * The servlet request.
  */
 final class DefaultServletHttpRequest implements HttpServletRequest {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletHttpRequest.class);
-    private static final Locale[] DEFAULT_LOCALS = { Locale.getDefault() };
-    private static final String RFC1123_DATE = "EEE, dd MMM yyyy HH:mm:ss zzz";
     private static final SimpleDateFormat[] FORMATS_TEMPLATE = {
-            new SimpleDateFormat(RFC1123_DATE, Locale.ENGLISH),
+            new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.ENGLISH),
             new SimpleDateFormat("EEEEEE, dd-MMM-yy HH:mm:ss zzz", Locale.ENGLISH),
             new SimpleDateFormat("EEE MMMM d HH:mm:ss yyyy", Locale.ENGLISH)
     };
@@ -89,68 +89,27 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     private final Map<String, Object> attributeMap = new ConcurrentHashMap<>(16);
     private final SessionTrackingMode sessionIdSource = SessionTrackingMode.COOKIE;
 
-    private final LinkedMultiValueMap<String, String> parameterMap = new LinkedMultiValueMap<>();
     private final List<Part> fileUploadList = new ArrayList<>();
     private final String servletPath;
-    private final String pathInfo;
     private final String requestURI;
     private final String characterEncoding;
-    private final Locale[] locales;
-    private final String queryString;
+    private final QueryParams queryParams;
+    private final Map<String, String[]> parameters;
 
     @Nullable
     private final Cookie[] cookies;
+    @Nullable
+    private final String pathInfo;
 
     //Can't be final because user will decide reader or inputStream is initialize.
     @Nullable
     private BufferedReader reader;
 
-    private final Map<String, String[]> unmodifiableParameterMap = new AbstractMap<String, String[]>() {
-        @Override
-        public Set<Entry<String, String[]>> entrySet() {
-            if (isEmpty()) {
-                return Collections.emptySet();
-            }
-            return parameterMap.entrySet()
-                               .stream()
-                               .map(x -> new SimpleImmutableEntry<>(
-                                       x.getKey(),
-                                       x.getValue() != null ? x.getValue().toArray(new String[0]) : null))
-                               .collect(Collectors.toSet());
-        }
-
-        @Override
-        @Nullable
-        public String[] get(@Nullable Object key) {
-            final List<String> value = parameterMap.get(key);
-            if (value == null) {
-                return null;
-            } else {
-                return value.toArray(new String[0]);
-            }
-        }
-
-        @Override
-        public boolean containsKey(Object key) {
-            requireNonNull(key, "key");
-            return parameterMap.containsKey(key);
-        }
-
-        @Override
-        public boolean containsValue(Object value) {
-            requireNonNull(value, "value");
-            return parameterMap.toSingleValueMap().containsValue(value);
-        }
-
-        @Override
-        public int size() {
-            return parameterMap.size();
-        }
-    };
+    private boolean useInputStream;
 
     DefaultServletHttpRequest(ServiceRequestContext serviceRequestContext,
                               DefaultServletContext servletContext,
-                              AggregatedHttpRequest httpRequest) {
+                              AggregatedHttpRequest httpRequest) throws IOException {
         requireNonNull(serviceRequestContext, "serviceRequestContext");
         requireNonNull(servletContext, "servletContext");
         requireNonNull(httpRequest, "request");
@@ -160,107 +119,103 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         this.httpRequest = httpRequest;
         inputStream = new DefaultServletInputStream(Unpooled.wrappedBuffer(httpRequest.content().array()));
 
-        final String encoding = ServletUtil.decodeCharacterEncoding(getContentType());
-        characterEncoding = encoding != null ? encoding : servletContext.getRequestCharacterEncoding();
+        final MediaType contentType = httpRequest.headers().contentType();
+        if (contentType != null && contentType.charset() != null) {
+            characterEncoding = contentType.charset().name();
+        } else {
+            characterEncoding = servletContext.getRequestCharacterEncoding();
+        }
 
-        requestURI = decodeRequestURI();
-        decodeUrlParameter();
-        decodeBody();
+        requestURI = serviceRequestContext.path();
+        queryParams = queryParamsOf(serviceRequestContext.query(), contentType, httpRequest);
         cookies = decodeCookie();
-        locales = decodeLocale();
-        getProtocol();
-        getScheme();
-        queryString = decodeQuery();
-        servletPath = servletContext.getServletPath(requestURI).replaceFirst(
-                servletContext.getContextPath(), "");
+        servletPath = servletContext.getServletPath(requestURI);
         pathInfo = decodePathInfo();
+
+        final Builder<String, String[]> builder = ImmutableMap.builder();
+        for (String name : queryParams.names()) {
+            builder.put(name, queryParams.getAll(name).toArray(new String[0]));
+        }
+        parameters = builder.build();
     }
 
     /**
-     * Get netty request.
+     * Parse {@link QueryParams} from {@link AggregatedHttpRequest}.
      */
+    private static QueryParams queryParamsOf(@Nullable String query,
+                                             @Nullable MediaType contentType,
+                                             @Nullable AggregatedHttpRequest message) {
+        try {
+            final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
+            QueryParams params2 = null;
+            if (message != null && contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
+                // Respect 'charset' attribute of the 'content-type' header if it exists.
+                final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
+                if (!body.isEmpty()) {
+                    params2 = QueryParams.fromQueryString(body);
+                }
+            }
+
+            if (params1 == null || params1.isEmpty()) {
+                return firstNonNull(params2, QueryParams.of());
+            } else if (params2 == null || params2.isEmpty()) {
+                return params1;
+            } else {
+                return QueryParams.builder()
+                                  .sizeHint(params1.size() + params2.size())
+                                  .add(params1)
+                                  .add(params2)
+                                  .build();
+            }
+        } catch (Exception e) {
+            // If we failed to decode the query string, we ignore the exception raised here.
+            // A missing parameter might be checked when invoking the annotated method.
+            logger.debug("Failed to decode query string: {}", query, e);
+            return QueryParams.of();
+        }
+    }
+
+    /**
+     * Get aggregated http request.
+     */
+    @VisibleForTesting
     AggregatedHttpRequest getHttpRequest() {
         return httpRequest;
     }
 
-    private Map<String, Object> getAttributeMap() {
-        return attributeMap;
-    }
-
     /**
-     * Parse area.
-     */
-    private Locale[] decodeLocale() {
-        final String headerValue = getHeader(HttpHeaderNames.ACCEPT_LANGUAGE.toString());
-        if (headerValue.isEmpty()) {
-            return DEFAULT_LOCALS;
-        } else {
-            return Arrays.stream(headerValue.split(","))
-                         .map(x -> x.split(";").length > 0 ?
-                                   Locale.forLanguageTag(x.split(";")[0].trim())
-                                                           : Locale.forLanguageTag(x.trim())
-                         ).toArray(Locale[]::new);
-        }
-    }
-
-    /**
-     * parse parameter specification.
-     */
-    private void decodeBody() {
-        if (HttpMethod.POST.toString().equalsIgnoreCase(getMethod()) && getContentLength() > 0) {
-            ServletUtil.decodeBody(parameterMap, httpRequest.content().array(), getContentType());
-        }
-    }
-
-    /**
-     * Parsing URL parameters.
-     */
-    private void decodeUrlParameter() {
-        final Charset charset = Charset.forName(getCharacterEncoding());
-        ServletUtil.decodeByUrl(parameterMap, httpRequest.path(), charset);
-    }
-
-    /**
-     * Parsing the cookie.
+     * Parse cookie.
      */
     @Nullable
     private Cookie[] decodeCookie() {
-        final String value = getHeader(HttpHeaderNames.COOKIE.toString());
-        if (!isNullOrEmpty(value)) {
-            final Collection<Cookie> cookieSet = ServletUtil.decodeCookie(value);
-            if (!cookieSet.isEmpty()) {
-                return cookieSet.toArray(new Cookie[0]);
-            }
+        final String cookieValue = httpRequest.headers().get(HttpHeaderNames.COOKIE);
+        if (cookieValue != null) {
+            final Cookies cookies = com.linecorp.armeria.common.Cookie.fromCookieHeader(cookieValue);
+            return cookies.stream().map(c -> {
+                final Cookie cookie = new Cookie(c.name(), c.value());
+                if (c.domain() != null) {
+                    cookie.setDomain(c.domain());
+                }
+                if (c.path() != null) {
+                    cookie.setPath(c.path());
+                }
+                cookie.setSecure(c.isSecure());
+                cookie.setMaxAge(Ints.saturatedCast(c.maxAge()));
+                cookie.setHttpOnly(c.isHttpOnly());
+                return new Cookie(c.name(), c.value());
+            }).toArray(Cookie[]::new);
+        } else {
+            return null;
         }
-        return null;
     }
 
     /**
-     * Parsing path.
+     * Parse path info.
      */
+    @Nullable
     private String decodePathInfo() {
-        return requestURI.replaceFirst(getContextPath(), "")
-                         .replaceFirst(servletPath, "");
-    }
-
-    /**
-     * Parsing path.
-     */
-    private String decodeRequestURI() {
-        final String path = httpRequest.path();
-        int queryInx = path.indexOf('?');
-        if (queryInx == -1) {
-            queryInx = path.indexOf('#');
-        }
-        return queryInx > -1 ? path.substring(0, queryInx) : path;
-    }
-
-    /**
-     * Parsing path.
-     */
-    private String decodeQuery() {
-        final int queryInx = httpRequest.path().indexOf('?');
-        return queryInx > -1 ? httpRequest.path().substring(queryInx + 1) : "";
+        final int index = getContextPath().length() + servletPath.length();
+        return index < requestURI.length() ? requestURI.substring(index) : null;
     }
 
     @Override
@@ -269,75 +224,42 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         return cookies;
     }
 
-    /**
-     * Get date header.
-     */
     @Override
     public long getDateHeader(String name) {
         requireNonNull(name, "name");
+        boolean error = false;
         for (DateFormat x : FORMATS_TEMPLATE) {
             try {
-                final Date date = x.parse(getHeader(name));
-                if (date != null) {
-                    return date.getTime();
-                }
+                return x.parse(getHeader(name)).getTime();
             } catch (Exception e) {
-                logger.info("Try parse " + getHeader(name) + " to date");
+                error = true;
             }
+        }
+        if (error) {
+            logger.info("Can't parse " + getHeader(name) + " to date");
         }
         return -1;
     }
 
-    /**
-     * The getHeader method returns the header for the given header name.
-     * @param name name.
-     * @return header value.
-     */
     @Override
+    @Nullable
     public String getHeader(String name) {
         requireNonNull(name, "name");
-        final Object value = httpRequest.headers().get(name);
-        return value == null ? "" : String.valueOf(value);
+        return httpRequest.headers().get(name);
     }
 
     @Override
     public Enumeration<String> getHeaderNames() {
         return Collections.enumeration(
                 httpRequest.headers().names().stream()
-                           .map(x -> x.toString()).collect(ImmutableList.toImmutableList()));
+                           .map(AsciiString::toString).collect(ImmutableList.toImmutableList()));
     }
 
-    /**
-     * Copy the implementation of tomcat.
-     * @return Request URL.
-     */
     @Override
     public StringBuffer getRequestURL() {
-        final StringBuffer url = new StringBuffer();
-        final String scheme = getScheme();
-        int port = getServerPort();
-        if (port < 0) {
-            port = SessionProtocol.HTTP.defaultPort();
-        }
-
-        url.append(scheme);
-        url.append("://");
-        url.append(getServerName());
-        if ((SessionProtocol.HTTP.uriText().equals(scheme) && (port != SessionProtocol.HTTP.defaultPort())) ||
-            (SessionProtocol.HTTPS.uriText().equals(scheme) && (port != SessionProtocol.HTTPS.defaultPort()))) {
-            url.append(':');
-            url.append(port);
-        }
-        url.append(getRequestURI());
-        return url;
+        return new StringBuffer(httpRequest.scheme() + "://" + httpRequest.authority() + requestURI);
     }
 
-    /**
-     * PathInfo：Part of the request Path that is not part of the Context Path or Servlet Path.
-     * If there's no extra path, it's either null,
-     * Or a string that starts with '/'.
-     * @return pathInfo.
-     */
     @Override
     @Nullable
     public String getPathInfo() {
@@ -347,7 +269,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     @Override
     @Nullable
     public String getQueryString() {
-        return queryString;
+        return serviceRequestContext.query();
     }
 
     @Override
@@ -355,12 +277,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         return requestURI;
     }
 
-    /**
-     * Servlet Path: the Path section corresponds directly to the mapping of the activation request.
-     * The path starts with the "/" character, if the request is in the "/ *" or "" mode."
-     * matches, in which case it is an empty string.
-     * @return servletPath.
-     */
     @Override
     public String getServletPath() {
         return servletPath;
@@ -388,20 +304,13 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
                 httpRequest.headers().getAll(name).stream().collect(ImmutableList.toImmutableList()));
     }
 
-    /**
-     * servlet standard:
-     * returns the value of the specified request header
-     * as int. If the request has no title
-     * the name specified by this method returns -1. if This method does not convert headers to integers
-     * throws a NumberFormatException code. The first name is case insensitive.
-     * @param name  specifies the name of the request header
-     * @exception NumberFormatException If the header value cannot be converted to an int.
-     * @return An integer request header representing a value or -1 if the request does not return -1.
-     */
     @Override
     public int getIntHeader(String name) {
         requireNonNull(name, "name");
         final String headerStringValue = getHeader(name);
+        if (isNullOrEmpty(headerStringValue)) {
+            return -1;
+        }
         return Integer.parseInt(headerStringValue);
     }
 
@@ -410,12 +319,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         return httpRequest.method().toString();
     }
 
-    /**
-     * Context Path: the Path prefix associated with the ServletContext is part of this servlet.
-     * If the context is web-based the server's URL namespace based on the "default" context,
-     * then the path will be an empty string. Otherwise, if the context is not
-     * server-based namespaces, so the path starts with /, but does not end with /.
-     */
     @Override
     public String getContextPath() {
         return servletContext.getContextPath();
@@ -451,13 +354,12 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     @Nullable
     public Object getAttribute(String name) {
         requireNonNull(name, "name");
-        final Object value = getAttributeMap().get(name);
-        return value;
+        return attributeMap.get(name);
     }
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        return Collections.enumeration(ImmutableSet.copyOf(getAttributeMap().keySet()));
+        return Collections.enumeration(ImmutableSet.copyOf(attributeMap.keySet()));
     }
 
     @Override
@@ -472,18 +374,19 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public int getContentLength() {
-        return (int) getContentLengthLong();
+        return httpRequest.content().length();
     }
 
     @Override
     public long getContentLengthLong() {
-        return Integer.parseInt(getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())
-                                        .replaceAll("[\\[\\]]", ""));
+        return getContentLength();
     }
 
     @Override
+    @Nullable
     public String getContentType() {
-        return getHeader(HttpHeaderNames.CONTENT_TYPE.toString());
+        final MediaType contentType = httpRequest.headers().contentType();
+        return contentType == null ? null : contentType.toString();
     }
 
     @Override
@@ -491,6 +394,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         if (reader != null) {
             throw new IllegalStateException("getReader() has already been called for this request");
         }
+        useInputStream = true;
         return inputStream;
     }
 
@@ -498,28 +402,27 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     @Nullable
     public String getParameter(String name) {
         requireNonNull(name, "name");
-        final String[] values = getParameterMap().get(name);
-        if (values == null || values.length == 0) {
-            return null;
-        }
-        return values[0];
+        return queryParams.get(name);
     }
 
     @Override
     public Enumeration<String> getParameterNames() {
-        return Collections.enumeration(ImmutableSet.copyOf(getParameterMap().keySet()));
+        return Collections.enumeration(ImmutableSet.copyOf(queryParams.names()));
     }
 
     @Override
     @Nullable
     public String[] getParameterValues(String name) {
         requireNonNull(name, "name");
-        return getParameterMap().get(name);
+        if (queryParams.getAll(name).isEmpty()) {
+            return null;
+        }
+        return queryParams.getAll(name).toArray(new String[0]);
     }
 
     @Override
     public Map<String, String[]> getParameterMap() {
-        return unmodifiableParameterMap;
+        return parameters;
     }
 
     @Override
@@ -534,9 +437,8 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     }
 
     @Override
-    @Nullable
     public String getServerName() {
-        return ((InetSocketAddress) serviceRequestContext.remoteAddress()).getAddress().getHostAddress();
+        return serviceRequestContext.config().virtualHost().defaultHostname();
     }
 
     @Override
@@ -546,11 +448,14 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public BufferedReader getReader() throws IOException {
+        if (useInputStream) {
+            throw new IllegalStateException("getInputStream() has already been called for this request");
+        }
         if (reader == null) {
             synchronized (this) {
                 if (reader == null) {
                     reader = new BufferedReader(
-                            new InputStreamReader(getInputStream(), getCharacterEncoding()));
+                            new InputStreamReader(inputStream, getCharacterEncoding()));
                 }
             }
         }
@@ -569,7 +474,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public int getRemotePort() {
-        return getServerPort();
+        return ((InetSocketAddress) serviceRequestContext.remoteAddress()).getPort();
     }
 
     @Override
@@ -579,28 +484,28 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
             removeAttribute(name);
             return;
         }
-        getAttributeMap().put(name, object);
+        attributeMap.put(name, object);
     }
 
     @Override
     public void removeAttribute(String name) {
         requireNonNull(name, "name");
-        getAttributeMap().remove(name);
+        attributeMap.remove(name);
     }
 
     @Override
     public Locale getLocale() {
-        return locales[0];
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public Enumeration<Locale> getLocales() {
-        return Collections.enumeration(Arrays.stream(locales).collect(ImmutableList.toImmutableList()));
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public boolean isSecure() {
-        return SessionProtocol.HTTPS.uriText().equals(getScheme());
+        return serviceRequestContext.sessionProtocol().isTls();
     }
 
     @Override
@@ -669,10 +574,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * "BASIC", or "DIGEST", or "SSL".
-     * @return Authentication type.
-     */
     @Override
     public String getAuthType() {
         throw new UnsupportedOperationException("Not supported yet.");

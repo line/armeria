@@ -71,16 +71,16 @@ final class DefaultServletService implements HttpService {
 
     private void process(ServiceRequestContext ctx, HttpResponseWriter res, AggregatedHttpRequest req) {
         requireNonNull(res, "res");
-        final DefaultServletHttpRequest request = new DefaultServletHttpRequest(ctx, servletContext, req);
-        final DefaultServletHttpResponse response = new DefaultServletHttpResponse(servletContext, res);
         try {
-            final ServletRequestDispatcher dispatcher =
-                    servletContext.getNamedDispatcher(request.getRequestURI());
+            final ServletRequestDispatcher dispatcher = servletContext.getRequestDispatcher(ctx.path());
             if (dispatcher == null) {
-                res.tryWrite(ResponseHeaders.of(HttpStatus.NOT_FOUND));
+                if (res.tryWrite(ResponseHeaders.of(HttpStatus.NOT_FOUND))) {
+                    res.close();
+                }
                 return;
             }
-            dispatcher.dispatch(request, response);
+            dispatcher.dispatch(new DefaultServletHttpRequest(ctx, servletContext, req),
+                                new DefaultServletHttpResponse(servletContext, res));
         } catch (Throwable throwable) {
             logger.error("Servlet process failed: ", throwable);
         } finally {

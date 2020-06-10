@@ -66,38 +66,20 @@ final class ServletRequestDispatcher implements RequestDispatcher {
         mapperElement = element;
     }
 
-    /**
-     * Forward to other servlets for processing (note: transfer control of the response to other servlets).
-     * @param request request.
-     * @param response response.
-     * @throws ServletException ServletException.
-     * @throws IOException IOException.
-     */
     @Override
     public void forward(ServletRequest request, ServletResponse response) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * Introduction of response content from other servlets
-     * (note: other servlets can write data, but cannot submit data)
-     * Premise: transfer-encoding is required.
-     * @param request request.
-     * @param response response.
-     * @throws ServletException ServletException.
-     * @throws IOException IOException.
-     */
     @Override
     public void include(ServletRequest request, ServletResponse response) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     /**
-     * dispatch.
+     * Dispatch servlet request and servlet response.
      * @param request request.
      * @param response response.
-     * @throws ServletException ServletException.
-     * @throws IOException IOException.
      */
     void dispatch(ServletRequest request, ServletResponse response)
             throws ServletException, IOException {
@@ -117,9 +99,12 @@ final class ServletRequestDispatcher implements RequestDispatcher {
      * Get name.
      */
     String getName() {
-        return filterChain.getServletRegistration().getName();
+        return name;
     }
 
+    /**
+     * Clear filter registration list.
+     */
     void clearFilter() {
         filterChain.getFilterRegistrationList().clear();
     }

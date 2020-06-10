@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.servlet;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -103,6 +104,8 @@ final class DefaultServletRegistration implements Dynamic {
 
     @Override
     public Set<String> addMapping(String... urlPatterns) {
+        checkState(!((DefaultServletContext) servletConfig.getServletContext()).isInitialized(),
+                   "Can't add servlet mapping after the servlet context is initialized.");
         requireNonNull(urlPatterns, "urlPatterns");
         mappingSet.addAll(Arrays.asList(urlPatterns));
         for (String pattern : urlPatterns) {

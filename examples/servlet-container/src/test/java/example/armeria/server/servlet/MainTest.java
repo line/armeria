@@ -80,7 +80,7 @@ public class MainTest {
     void doPut() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpPut(rule.httpUri() + "/app/home"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
+                assertThat(res.getStatusLine().getStatusCode()).isEqualTo(302);
                 EntityUtils.consume(res.getEntity());
             }
         }
@@ -90,7 +90,7 @@ public class MainTest {
     void doDelete() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpDelete(rule.httpUri() + "/app/home"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
+                assertThat(res.getStatusLine().getStatusCode()).isEqualTo(404);
                 EntityUtils.consume(res.getEntity());
             }
         }

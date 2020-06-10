@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.servlet;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -43,67 +44,48 @@ final class UrlMapper<T> {
 
     /**
      * Add mapping.
-     * @param urlPattern  urlPattern.
-     * @param object     object.
-     * @param objectName objectName.
      */
     void addMapping(String urlPattern, T object, String objectName) {
         requireNonNull(urlPattern, "urlPattern");
         requireNonNull(object, "object");
         requireNonNull(objectName, "objectName");
         if (elementList.stream()
-                       .filter(x -> singlePattern && x.objectName.equals(objectName))
+                       .filter(x -> singlePattern && x.name.equals(objectName))
                        .findAny().orElse(null) != null) {
             throw new IllegalArgumentException("The [" + objectName + "] mapping exist!");
         }
 
         final Element element = elementList.stream()
-                                           .filter(x -> x.originalPattern.equals(urlPattern))
+                                           .filter(x -> x.pattern.equals(urlPattern))
                                            .findFirst().orElse(null);
         if (element != null) {
-            element.objectName = objectName;
+            element.name = objectName;
             element.object = object;
         } else {
-            elementList.add(new Element<>(null, urlPattern, object, objectName));
+            elementList.add(new Element<>(urlPattern, object, objectName));
         }
     }
 
     /**
-     * Gets a servlet path.
-     * @param absoluteUri An absolute path.
-     * @return servlet path.
-     */
-    String getServletPath(String absoluteUri) {
-        requireNonNull(absoluteUri, "absoluteUri");
-        return elementList.stream()
-                          .filter(x -> stringUtil.match(x.pattern, absoluteUri, "*"))
-                          .map(x -> x.servletPath)
-                          .findAny()
-                          .orElse(absoluteUri);
-    }
-
-    /**
      * Gets a mapping object.
-     * @param absoluteUri An absolute path.
-     * @return T object.
      */
     @Nullable
-    Element<T> getMappingObjectByUri(String absoluteUri) {
+    Element<T> getMapping(String absoluteUri) {
         requireNonNull(absoluteUri, "absoluteUri");
         return elementList.stream()
                           .filter(x -> stringUtil.match(x.pattern, absoluteUri, "*"))
                           .findAny()
                           .orElse(
                                   elementList.stream()
-                                             .filter(s -> !"default".equals(s.objectName) &&
-                                                          ('/' == s.pattern.charAt(0) ||
-                                                           '*' == s.pattern.charAt(0) ||
+                                             .filter(s -> !"default".equals(s.name) &&
+                                                          !isNullOrEmpty(s.name) &&
+                                                          ('*' == s.pattern.charAt(0) ||
                                                            "/*".equals(s.pattern) ||
                                                            "/**".equals(s.pattern)))
                                              .findAny()
                                              .orElse(
                                                      elementList.stream()
-                                                                .filter(a -> "default".equals(a.objectName))
+                                                                .filter(a -> "default".equals(a.name))
                                                                 .findAny()
                                                                 .orElse(null)
                                              )
@@ -111,46 +93,20 @@ final class UrlMapper<T> {
     }
 
     /**
-     * Add multiple mapping objects.
-     * @param list add in list.
-     * @param absoluteUri An absolute path.
-     */
-    void addMappingObjectsByUri(String absoluteUri, List<T> list) {
-        requireNonNull(absoluteUri, "absoluteUri");
-        requireNonNull(list, "list");
-        elementList.stream()
-                   .filter(x -> "/*".equals(x.pattern) ||
-                                (absoluteUri.length() == 1 &&
-                                 '/' == absoluteUri.charAt(0) && '/' == x.pattern.charAt(0)) ||
-                                '*' == x.pattern.charAt(0) || "/**".equals(x.pattern) ||
-                                stringUtil.match(x.pattern, absoluteUri, "*"))
-                   .forEach(x -> list.add(x.object));
-    }
-
-    /**
      * Class element.
      */
     static class Element<T> {
         String pattern;
-        String originalPattern;
         T object;
-        String objectName;
-        String servletPath;
-        String rootPath;
+        String name;
+        String path;
 
-        Element(@Nullable String rootPath, String originalPattern, T object, String objectName) {
-            requireNonNull(originalPattern, "originalPattern");
-            requireNonNull(objectName, "objectName");
+        Element(String pattern, T object, String name) {
+            requireNonNull(name, "objectName");
             requireNonNull(object, "object");
-            if (rootPath != null) {
-                pattern = rootPath + originalPattern;
-            } else {
-                pattern = originalPattern;
-            }
-            this.rootPath = rootPath;
-            this.originalPattern = originalPattern;
+            this.pattern = pattern;
             this.object = object;
-            this.objectName = objectName;
+            this.name = name;
             final StringJoiner joiner = new StringJoiner("/");
             final String[] pattens = pattern.split("/");
             for (int i = 0; i < pattens.length; i++) {
@@ -162,7 +118,7 @@ final class UrlMapper<T> {
                 }
                 joiner.add(path);
             }
-            servletPath = joiner.toString();
+            path = joiner.toString();
         }
 
         /**

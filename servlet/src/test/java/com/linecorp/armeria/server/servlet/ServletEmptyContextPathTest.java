@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -27,8 +26,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -49,6 +46,7 @@ class ServletEmptyContextPathTest {
                     .servlet("/", new HomeServlet())
                     .servlet("/bar", new BarServlet())
                     .servlet("/end/", new EndServlet())
+                    .servlet("/servlet/path/*", new PathInfoServlet())
                     .build();
         }
     };
@@ -81,20 +79,16 @@ class ServletEmptyContextPathTest {
         res = client.get("/end/").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(new String(res.content().array())).isEqualTo("get end");
+
+        res = client.get("/servlet/path/path/info").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(new String(res.content().array())).isEqualTo("get path info");
     }
 
     static class HomeServlet extends HttpServlet {
-        private static final Logger logger = LoggerFactory.getLogger(HomeServlet.class);
-
-        @Override
-        public void init(ServletConfig config) throws ServletException {
-            logger.info("init ...");
-        }
-
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
-            logger.info("GET: {}", request.getRequestURI());
             try {
                 // Context path: "" and servlet path: ""
                 assertThat(((ServletRequestDispatcher) request
@@ -108,38 +102,12 @@ class ServletEmptyContextPathTest {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         }
-
-        @Override
-        protected void doPost(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        @Override
-        protected void doPut(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        @Override
-        protected void doDelete(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
     }
 
     static class BarServlet extends HttpServlet {
-        private static final Logger logger = LoggerFactory.getLogger(BarServlet.class);
-
-        @Override
-        public void init(ServletConfig config) throws ServletException {
-            logger.info("init ...");
-        }
-
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
-            logger.info("GET: {}", request.getRequestURI());
             try {
                 // Context path: "" and servlet path: "/bar"
                 assertThat(((ServletRequestDispatcher) request
@@ -153,38 +121,12 @@ class ServletEmptyContextPathTest {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         }
-
-        @Override
-        protected void doPost(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        @Override
-        protected void doPut(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        @Override
-        protected void doDelete(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
     }
 
     static class EndServlet extends HttpServlet {
-        private static final Logger logger = LoggerFactory.getLogger(EndServlet.class);
-
-        @Override
-        public void init(ServletConfig config) throws ServletException {
-            logger.info("init ...");
-        }
-
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
-            logger.info("GET: {}", request.getRequestURI());
             try {
                 // Context path: "" and servlet path: "/end"
                 assertThat(((ServletRequestDispatcher) request
@@ -198,23 +140,23 @@ class ServletEmptyContextPathTest {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         }
+    }
 
+    static class PathInfoServlet extends HttpServlet {
         @Override
-        protected void doPost(HttpServletRequest request, HttpServletResponse response)
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        @Override
-        protected void doPut(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        @Override
-        protected void doDelete(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            try {
+                // Context path: "" and servlet path: "/servlet/path" path info: "/path/info"
+                assertThat(request.getContextPath()).isEqualTo("");
+                assertThat(request.getServletPath()).isEqualTo("/servlet/path");
+                assertThat(request.getPathInfo()).isEqualTo("/path/info");
+                response.setStatus(HttpStatus.OK.code());
+                response.setContentType(MediaType.HTML_UTF_8.toString());
+                response.getWriter().write("get path info");
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
         }
     }
 }
