@@ -261,7 +261,7 @@ public class AnnotatedService implements HttpService {
                 return composedFuture.handle(
                         (result, cause) -> {
                             if (cause != null) {
-                                return exceptionHandler.handleException(ctx, req, cause);
+                                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
                             }
                             return convertResponse(ctx, req, null, result, HttpHeaders.of());
                         });
@@ -287,6 +287,14 @@ public class AnnotatedService implements HttpService {
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             return method.invoke(object, arguments);
         } catch (Throwable cause) {
+            return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
+        }
+    }
+
+    private static HttpResponse handleExceptionWithContext(ExceptionHandlerFunction exceptionHandler,
+                                                           ServiceRequestContext ctx, HttpRequest req,
+                                                           Throwable cause) {
+        try (SafeCloseable ignored = ctx.push()) {
             return exceptionHandler.handleException(ctx, req, cause);
         }
     }
@@ -322,7 +330,8 @@ public class AnnotatedService implements HttpService {
                     ((CompletionStage<?>) result)
                             .thenApply(object -> convertResponse(ctx, req, newHeaders, object,
                                                                  newTrailers))
-                            .exceptionally(cause -> exceptionHandler.handleException(ctx, req, cause)));
+                            .exceptionally(
+                                    cause -> handleExceptionWithContext(exceptionHandler, ctx, req, cause)));
         }
 
         try (SafeCloseable ignored = ctx.push()) {
@@ -335,7 +344,7 @@ public class AnnotatedService implements HttpService {
                 return response;
             }
         } catch (Exception cause) {
-            return exceptionHandler.handleException(ctx, req, cause);
+            return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
         }
     }
 
@@ -404,7 +413,7 @@ public class AnnotatedService implements HttpService {
                 }
                 return new ExceptionFilteredHttpResponse(ctx, req, response, exceptionHandler);
             } catch (Exception cause) {
-                return exceptionHandler.handleException(ctx, req, cause);
+                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
             }
         }
     }
@@ -440,7 +449,7 @@ public class AnnotatedService implements HttpService {
                 // Do not convert again if it has been already converted.
                 return cause;
             }
-            return HttpResponseException.of(exceptionHandler.handleException(ctx, req, cause));
+            return HttpResponseException.of(handleExceptionWithContext(exceptionHandler, ctx, req, cause));
         }
     }
 
@@ -568,12 +577,12 @@ public class AnnotatedService implements HttpService {
             assert f != null;
             return HttpResponse.from(f.handle((aggregated, cause) -> {
                 if (cause != null) {
-                    return exceptionHandler.handleException(ctx, ctx.request(), cause);
+                    return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), cause);
                 }
                 try {
                     return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
                 } catch (Exception e) {
-                    return exceptionHandler.handleException(ctx, ctx.request(), e);
+                    return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), e);
                 }
             }));
         }
