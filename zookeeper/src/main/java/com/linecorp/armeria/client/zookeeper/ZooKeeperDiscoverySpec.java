@@ -58,25 +58,21 @@ public interface ZooKeeperDiscoverySpec {
 
     /**
      * Returns a {@link ZooKeeperDiscoverySpec} that is compatible with
-     * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+     * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
      *
      * @see ZooKeeperRegistrationSpec#builderForServerSets()
      */
     static ZooKeeperDiscoverySpec serverSets() {
-        return serverSets(serverSetsInstance -> {
-            final Endpoint serviceEndpoint = serverSetsInstance.serviceEndpoint();
-            if (serviceEndpoint == null) {
-                return null;
-            }
-            return Endpoint.of(serviceEndpoint.host(), serviceEndpoint.port());
-        });
+        return serverSets(ServerSetsInstance::serviceEndpoint);
     }
 
     /**
      * Returns a {@link ZooKeeperDiscoverySpec} that is compatible with
-     * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+     * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
      *
-     * @param converter the converter to convert a {@link ServerSetsInstance} to an {@link Endpoint}
+     * @param converter the converter to convert a {@link ServerSetsInstance} to an {@link Endpoint}.
+     *                  If you don't want to connect to the service, you can simply return
+     *                  {@code null} in the converter.
      *
      * @see ZooKeeperRegistrationSpec#builderForServerSets()
      */
@@ -85,8 +81,8 @@ public interface ZooKeeperDiscoverySpec {
     }
 
     /**
-     * Returns the legacy {@link ZooKeeperDiscoverySpec} implementation which assumes a zNode value is
-     * a comma-separated string. Each element of the zNode value represents an {@link Endpoint} whose format is
+     * Returns the legacy {@link ZooKeeperDiscoverySpec} implementation which assumes a znode value is
+     * a comma-separated string. Each element of the znode value represents an {@link Endpoint} whose format is
      * {@code <host>[:<port_number>[:weight]]}, such as:
      * <ul>
      *   <li>{@code "foo.com"} - default port number, default weight (1000)</li>
@@ -104,13 +100,13 @@ public interface ZooKeeperDiscoverySpec {
 
     /**
      * Returns the path for finding the byte array representation of registered instances. The path is appended
-     * to the {@code zNodePath} that is specified when creating {@link ZooKeeperEndpointGroup}.
+     * to the {@code znodePath} that is specified when creating {@link ZooKeeperEndpointGroup}.
      */
     @Nullable
     String path();
 
     /**
-     * Decodes a zNode value to an {@link Endpoint}.
+     * Decodes a znode value to an {@link Endpoint}.
      */
     @Nullable
     Endpoint decode(byte[] data);

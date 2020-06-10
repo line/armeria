@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.zookeeper.ServerSetsInstanceConverter.Finagle
 
 /**
  * A class that represents a service instance used by
- * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+ * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
  */
 @JsonSerialize(using = FinagleServiceInstanceSerializer.class)
 @JsonDeserialize(using = FinagleServiceInstanceDeserializer.class)

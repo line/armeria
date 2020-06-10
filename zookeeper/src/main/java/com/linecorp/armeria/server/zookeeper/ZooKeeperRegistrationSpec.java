@@ -57,7 +57,7 @@ public interface ZooKeeperRegistrationSpec {
 
     /**
      * Returns a new {@link ServerSetsZooKeeperRegistrationSpecBuilder}. The specification is compatible with
-     * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+     * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
      *
      * @see ZooKeeperDiscoverySpec#serverSets()
      */
@@ -105,7 +105,7 @@ public interface ZooKeeperRegistrationSpec {
 
     /**
      * Returns the path for registering the {@link Server}. The path is appended to the
-     * {@code zNodePath} that is specified when creating {@link ZooKeeperUpdatingListener}.
+     * {@code znodePath} that is specified when creating {@link ZooKeeperUpdatingListener}.
      */
     String path();
 

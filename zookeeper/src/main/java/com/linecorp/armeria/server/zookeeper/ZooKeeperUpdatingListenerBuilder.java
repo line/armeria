@@ -59,27 +59,27 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
     private final ZooKeeperRegistrationSpec spec;
 
     /**
-     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a znode
      * path.
      *
      * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath,
+    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String znodePath,
                                      ZooKeeperRegistrationSpec spec) {
-        super(client, zNodePath);
+        super(client, znodePath);
         this.spec = requireNonNull(spec, "spec");
     }
 
     /**
-     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a znode path.
      *
      * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath,
+    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String znodePath,
                                      ZooKeeperRegistrationSpec spec) {
-        super(zkConnectionStr, zNodePath);
+        super(zkConnectionStr, znodePath);
         this.spec = requireNonNull(spec, "spec");
     }
 
@@ -91,7 +91,7 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
         final CuratorFramework client = buildCuratorFramework();
         final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
-        return new ZooKeeperUpdatingListener(client, zNodePath(), spec, internalClient);
+        return new ZooKeeperUpdatingListener(client, znodePath(), spec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.

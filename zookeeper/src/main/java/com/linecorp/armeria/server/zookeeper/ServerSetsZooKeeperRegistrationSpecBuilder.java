@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 
 /**
  * Builds a {@link ZooKeeperRegistrationSpec} for
- * <a href="https://github.com/twitter/finagle/tree/develop/finagle-serversets">Finagle ServerSets</a>.
+ * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
  */
 public final class ServerSetsZooKeeperRegistrationSpecBuilder {
 

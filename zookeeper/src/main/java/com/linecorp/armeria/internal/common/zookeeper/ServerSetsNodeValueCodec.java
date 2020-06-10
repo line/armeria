@@ -38,12 +38,12 @@ public enum ServerSetsNodeValueCodec {
     private static final JavaType type = mapper.getTypeFactory().constructType(ServerSetsInstance.class);
 
     /**
-     * Decodes a zNode value to a {@link ServerSetsInstance}.
+     * Decodes a znode value to a {@link ServerSetsInstance}.
      */
-    public ServerSetsInstance decode(byte[] zNodeValue) {
-        requireNonNull(zNodeValue, "zNodeValue");
+    public ServerSetsInstance decode(byte[] znodeValue) {
+        requireNonNull(znodeValue, "znodeValue");
         try {
-            return mapper.readValue(zNodeValue, type);
+            return mapper.readValue(znodeValue, type);
         } catch (IOException e) {
             throw new EndpointGroupException("invalid endpoint segment.", e);
         }

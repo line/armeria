@@ -52,7 +52,7 @@ class ZooKeeperRegistrationTest {
     @Test
     void legacyZooKeeperRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(true);
-        // all servers start and with zNode created
+        // all servers start and with znode created
         await().untilAsserted(() -> sampleEndpoints.forEach(
                 endpoint -> zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port())));
 
@@ -123,7 +123,7 @@ class ZooKeeperRegistrationTest {
     @Test
     void curatorRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(false);
-        // all servers start and with zNode created
+        // all servers start and with znode created
         await().untilAsserted(() -> {
             for (int i = 0; i < 3; i++) {
                 zkInstance.assertExists(Z_NODE + '/' + CURATOR_X_SERVICE_NAME + '/' + i);

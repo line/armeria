@@ -55,12 +55,12 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * {@link #builder(String, String, ZooKeeperRegistrationSpec)} instead.
      *
      * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListener of(
-            String zkConnectionStr, String zNodePath, ZooKeeperRegistrationSpec spec) {
-        return builder(zkConnectionStr, zNodePath, spec).build();
+            String zkConnectionStr, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return builder(zkConnectionStr, znodePath, spec).build();
     }
 
     /**
@@ -70,48 +70,48 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * {@link #builder(CuratorFramework, String, ZooKeeperRegistrationSpec)} instead.
      *
      * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListener of(
-            CuratorFramework client, String zNodePath, ZooKeeperRegistrationSpec spec) {
-        return builder(client, zNodePath, spec).build();
+            CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return builder(client, znodePath, spec).build();
     }
 
     /**
-     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a znode
      * path.
      *
      * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
-            CuratorFramework client, String zNodePath, ZooKeeperRegistrationSpec spec) {
-        return new ZooKeeperUpdatingListenerBuilder(client, zNodePath, spec);
+            CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return new ZooKeeperUpdatingListenerBuilder(client, znodePath, spec);
     }
 
     /**
-     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a znode path.
      *
      * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
-            String zkConnectionStr, String zNodePath, ZooKeeperRegistrationSpec spec) {
-        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath, spec);
+            String zkConnectionStr, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, znodePath, spec);
     }
 
     private final CuratorFramework client;
-    private final String zNodePath;
+    private final String znodePath;
     private final ZooKeeperRegistrationSpec spec;
     private final boolean closeClientOnStop;
 
-    ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, ZooKeeperRegistrationSpec spec,
+    ZooKeeperUpdatingListener(CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec,
                               boolean closeClientOnStop) {
         this.client = requireNonNull(client, "client");
-        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        this.znodePath = requireNonNull(znodePath, "znodePath");
         this.spec = spec;
         this.closeClientOnStop = closeClientOnStop;
     }
@@ -124,7 +124,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
               .creatingParentsIfNeeded()
               .withMode(registrationSpec.isSequential() ? CreateMode.EPHEMERAL_SEQUENTIAL
                                                         : CreateMode.EPHEMERAL)
-              .forPath(zNodePath + registrationSpec.path(), registrationSpec.encodedInstance());
+              .forPath(znodePath + registrationSpec.path(), registrationSpec.encodedInstance());
     }
 
     private static ZooKeeperRegistrationSpec fillAndCreateNewRegistrationSpec(

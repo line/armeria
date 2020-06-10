@@ -30,7 +30,7 @@ enum LegacyZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
 
     @Nonnull
     @Override
-    public Endpoint decode(byte[] zNodeValue) {
-        return LegacyNodeValueCodec.INSTANCE.decode(zNodeValue);
+    public Endpoint decode(byte[] znodeValue) {
+        return LegacyNodeValueCodec.INSTANCE.decode(znodeValue);
     }
 }

@@ -49,7 +49,7 @@ public class AbstractCuratorFrameworkBuilder {
 
     @Nullable
     private final CuratorFramework client;
-    private final String zNodePath;
+    private final String znodePath;
     @Nullable
     private final CuratorFrameworkFactory.Builder clientBuilder;
     @Nullable
@@ -58,11 +58,11 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Creates a new instance with the specified {@code zkConnectionStr}.
      */
-    protected AbstractCuratorFrameworkBuilder(String zkConnectionStr, String zNodePath) {
+    protected AbstractCuratorFrameworkBuilder(String zkConnectionStr, String znodePath) {
         requireNonNull(zkConnectionStr, "zkConnectionStr");
         checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty.");
         client = null;
-        this.zNodePath = validateZNodePath(zNodePath);
+        this.znodePath = validateZNodePath(znodePath);
         clientBuilder = CuratorFrameworkFactory.builder()
                                                .connectString(zkConnectionStr)
                                                .connectionTimeoutMs(DEFAULT_CONNECT_TIMEOUT_MILLIS)
@@ -74,28 +74,28 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Creates a new instance with the specified {@link CuratorFramework}.
      */
-    protected AbstractCuratorFrameworkBuilder(CuratorFramework client, String zNodePath) {
+    protected AbstractCuratorFrameworkBuilder(CuratorFramework client, String znodePath) {
         this.client = requireNonNull(client, "client");
-        this.zNodePath = validateZNodePath(zNodePath);
+        this.znodePath = validateZNodePath(znodePath);
         clientBuilder = null;
         customizers = null;
     }
 
-    private static String validateZNodePath(String zNodePath) {
+    private static String validateZNodePath(String znodePath) {
         try {
-            PathUtils.validatePath(zNodePath);
+            PathUtils.validatePath(znodePath);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("zNodePath: " + zNodePath +
+            throw new IllegalArgumentException("znodePath: " + znodePath +
                                                " (reason: " + e.getMessage() + ')');
         }
-        return zNodePath;
+        return znodePath;
     }
 
     /**
-     * Returns the zNode Path.
+     * Returns the znode Path.
      */
-    protected String zNodePath() {
-        return zNodePath;
+    protected String znodePath() {
+        return znodePath;
     }
 
     /**
