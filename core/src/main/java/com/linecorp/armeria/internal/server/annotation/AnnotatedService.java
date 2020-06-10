@@ -241,45 +241,38 @@ public class AnnotatedService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
+                final Function<AggregatedHttpRequest, HttpResponse> httpResponseApplyFunction =
+                        msg -> new ExceptionFilteredHttpResponse(
+                                ctx, req, (HttpResponse) invoke(ctx, req, msg), exceptionHandler);
                 if (useBlockingTaskExecutor) {
-                    return f.thenApplyAsync(
-                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
-                                                                     (HttpResponse) invoke(ctx, req, msg),
-                                                                     exceptionHandler),
-                            ctx.blockingTaskExecutor());
+                    return f.thenApplyAsync(httpResponseApplyFunction, ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(
-                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
-                                                                     (HttpResponse) invoke(ctx, req, msg),
-                                                                     exceptionHandler));
+                    return f.thenApply(httpResponseApplyFunction);
                 }
 
             case COMPLETION_STAGE:
+                final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
-                    return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
-                                              ctx.blockingTaskExecutor())
-                            .handle((result, cause) ->
-                                            cause == null ? convertResponse(ctx, req, null, result,
-                                                                            HttpHeaders.of())
-                                                          : exceptionHandler.handleException(ctx, req, cause));
+                    composedFuture = f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
+                                                        ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
-                            .handle((result, cause) ->
-                                            cause == null ? convertResponse(ctx, req, null, result,
-                                                                            HttpHeaders.of())
-                                                          : exceptionHandler.handleException(ctx, req, cause));
+                    composedFuture = f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)));
                 }
+                return composedFuture.handle(
+                        (result, cause) -> {
+                            if (cause != null) {
+                                return exceptionHandler.handleException(ctx, req, cause);
+                            }
+                            return convertResponse(ctx, req, null, result, HttpHeaders.of());
+                        });
 
             default:
+                final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
+                        msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());
                 if (useBlockingTaskExecutor) {
-                    return f.thenApplyAsync(
-                            msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                   HttpHeaders.of()),
-                            ctx.blockingTaskExecutor());
+                    return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(
-                            msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                   HttpHeaders.of()));
+                    return f.thenApply(defaultApplyFunction);
                 }
         }
     }

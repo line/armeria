@@ -48,6 +48,7 @@ import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.reactivex.Completable;
+import io.reactivex.Flowable;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -182,6 +183,42 @@ public class ObservableResponseConverterFunctionTest {
                 }
             });
 
+            sb.annotatedService("/flowable", new Object() {
+                @Get("/string")
+                @ProducesText
+                public Flowable<String> string() {
+                    return Flowable.just("a");
+                }
+
+                @Get("/json/1")
+                @ProducesJson
+                public Flowable<String> json1() {
+                    return Flowable.just("a");
+                }
+
+                @Get("/json/3")
+                @ProducesJson
+                public Flowable<String> json3() {
+                    return Flowable.just("a", "b", "c");
+                }
+
+                @Get("/error")
+                public Flowable<String> error() {
+                    return Flowable.error(new AnticipatedException());
+                }
+
+                @Post("/defer-post")
+                @ProducesJson
+                public Flowable<String> deferPost(String request) {
+                    final RequestContext ctx = RequestContext.current();
+                    return Flowable.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Flowable.just("a", "b", "c");
+                            });
+                }
+            });
+
             sb.annotatedService("/observable", new Object() {
                 @Get("/string")
                 @ProducesText
@@ -204,6 +241,17 @@ public class ObservableResponseConverterFunctionTest {
                 @Get("/error")
                 public Observable<String> error() {
                     return Observable.error(new AnticipatedException());
+                }
+
+                @Post("/defer-post")
+                @ProducesJson
+                public Observable<String> deferPost(String request) {
+                    final RequestContext ctx = RequestContext.current();
+                    return Observable.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Observable.just("a", "b", "c");
+                            });
                 }
             });
 
@@ -347,6 +395,40 @@ public class ObservableResponseConverterFunctionTest {
 
         res = client.get("/error").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        res = client.post("/defer-post", "").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
+                .isArray().ofLength(3).thatContains("a").thatContains("b").thatContains("c");
+    }
+
+    @Test
+    public void flowable() {
+        final WebClient client = WebClient.of(rule.httpUri() + "/flowable");
+
+        AggregatedHttpResponse res;
+
+        res = client.get("/string").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.get("/json/1").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
+                .isArray().ofLength(1).thatContains("a");
+
+        res = client.get("/json/3").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
+                .isArray().ofLength(3).thatContains("a").thatContains("b").thatContains("c");
+
+        res = client.get("/error").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        res = client.post("/defer-post", "").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
+                .isArray().ofLength(3).thatContains("a").thatContains("b").thatContains("c");
     }
 
     @Test
