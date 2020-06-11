@@ -334,6 +334,7 @@ public class ServletServiceTest {
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().write("welcome");
+                response.getWriter().close();
                 new StringUtil().match("/bla/**/bla", "/bla/testing/testing/bla", "**");
                 new StringUtil().match("test/*", "test/", "*");
                 new StringUtil().match("test*", "test/t", "*");
@@ -389,10 +390,11 @@ public class ServletServiceTest {
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 assertThat(response.getContentType()).isEqualTo(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
-                response.getWriter().write(request.getParameter("application"));
-
+                response.setStatus(200);
                 assertThat(response.getStatus()).isEqualTo(200);
                 assertThat(response.containsHeader("header1")).isEqualTo(true);
+                response.getWriter().write(request.getParameter("application"));
+                response.getWriter().close();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
@@ -409,7 +411,44 @@ public class ServletServiceTest {
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
+
+                response.getWriter().print(true);
+                response.getWriter().print('c');
+                response.getWriter().print(1);
+                response.getWriter().print(1L);
+                response.getWriter().print(1.1f);
+                response.getWriter().print(1.1D);
+                response.getWriter().print(new char[1]);
+                response.getWriter().print("test");
+                response.getWriter().print(new HashMap<>());
+                response.getWriter().println();
+                response.getWriter().println(true);
+                response.getWriter().println('c');
+                response.getWriter().println(1);
+                response.getWriter().println(1L);
+                response.getWriter().println(1.1f);
+                response.getWriter().println(1.1D);
+                response.getWriter().println(new char[1]);
+                response.getWriter().println("test");
+                response.getWriter().println(new HashMap<>());
+                response.getWriter().append('c');
+                response.getWriter().printf("test %d", 1);
+                response.getWriter().printf(Locale.US, "test %d", 1);
+                response.getWriter().format("test %d", 1);
+                response.getWriter().format(Locale.US, "test %d", 1);
+                final CharSequence cs = "test";
+                response.getWriter().append(cs);
+                response.getWriter().append(cs, 0, 1);
+                response.getWriter().append(null);
+                ((ServletPrintWriter) response.getWriter()).setError();
+                response.getWriter().checkError();
+                ((ServletPrintWriter) response.getWriter()).clearError();
+                final char[] c = new char[1];
+                c[0] = 'c';
+                response.getWriter().write(c, 0, 1);
+
                 response.getWriter().write("put");
+                response.getWriter().close();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }

@@ -46,6 +46,7 @@ public class HomeServlet extends HttpServlet {
                     "  <p><input type=\"text\" name=\"application\" value=\"Armeria Servlet\">\n" +
                     "  <p><button type=\"submit\" style=\"background:CYAN\">Submit</button>\n" +
                     "</form><html>");
+            response.getWriter().close();
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
@@ -72,6 +73,7 @@ public class HomeServlet extends HttpServlet {
             }
             response.setContentType(MediaType.HTML_UTF_8.toString());
             response.getOutputStream().write(htmlFile.toString().getBytes());
+            response.getOutputStream().close();
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }

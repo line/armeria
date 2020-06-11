@@ -98,6 +98,8 @@ class ServletEmptyContextPathTest {
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get home");
+                response.getWriter().flush();
+                response.getWriter().close();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
@@ -117,6 +119,8 @@ class ServletEmptyContextPathTest {
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get bar");
+                response.getWriter().flush();
+                response.getWriter().close();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
@@ -136,6 +140,8 @@ class ServletEmptyContextPathTest {
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get end");
+                response.getWriter().flush();
+                response.getWriter().close();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
@@ -154,6 +160,8 @@ class ServletEmptyContextPathTest {
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get path info");
+                response.getWriter().flush();
+                response.getWriter().close();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }

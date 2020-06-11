@@ -17,9 +17,9 @@ package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.google.common.base.Strings.lenientFormat;
 import static java.util.Objects.requireNonNull;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
@@ -33,6 +33,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -52,11 +55,13 @@ import io.netty.util.AsciiString;
  * Servlet response.
  */
 final class DefaultServletHttpResponse implements HttpServletResponse {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultServletHttpRequest.class);
     private final List<String> cookies = new ArrayList<>();
     private final DefaultServletOutputStream outputStream;
     private final ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
     private final PrintWriter writer;
     private final HttpResponseWriter responseWriter;
+    private ByteArrayOutputStream content = new ByteArrayOutputStream();
     private AtomicBoolean isWritten = new AtomicBoolean(false);
 
     DefaultServletHttpResponse(DefaultServletContext servletContext, HttpResponseWriter responseWriter) {
@@ -77,19 +82,28 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     }
 
     /**
-     * Write {@link HttpData} to client.
+     * Write data to response writer.
      */
-    void write(HttpData data) {
-        requireNonNull(data, "data");
+    void flush() {
         if (isWritten.compareAndSet(false, true)) {
             if (responseWriter.tryWrite(headersBuilder.setObject(HttpHeaderNames.SET_COOKIE, cookies)
                                                       .status(HttpStatus.OK).build())) {
-                if (responseWriter.tryWrite(data)) {
+                if (responseWriter.tryWrite(HttpData.copyOf(content.toByteArray()))) {
                     responseWriter.close();
                 }
             }
-        } else {
-            throw new IllegalStateException(lenientFormat("Response have already sent!"));
+        }
+    }
+
+    /**
+     * Write {@link HttpData} to client.
+     */
+    void write(byte[] data) {
+        requireNonNull(data, "data");
+        try {
+            content.write(data);
+        } catch (IOException e) {
+            logger.error("Write data failed", e);
         }
     }
 

@@ -24,8 +24,6 @@ import java.util.Arrays;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
-import com.linecorp.armeria.common.HttpData;
-
 /**
  * Servlets output streams (wrapper classes) that control access to the flow.
  */
@@ -49,12 +47,13 @@ final class DefaultServletOutputStream extends ServletOutputStream {
 
     @Override
     public void close() throws IOException {
+        response.flush();
         response.getResponseWriter().close();
     }
 
     @Override
     public void flush() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        response.flush();
     }
 
     @Override
@@ -69,7 +68,7 @@ final class DefaultServletOutputStream extends ServletOutputStream {
         requireNonNull(b, "b");
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
-        response.write(HttpData.copyOf(Arrays.copyOfRange(b, off, len)));
+        response.write(Arrays.copyOfRange(b, off, len));
     }
 
     @Override

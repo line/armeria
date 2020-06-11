@@ -25,8 +25,6 @@ import java.util.Locale;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpData;
-
 /**
  *  Printing flow.
  */
@@ -44,11 +42,12 @@ final class ServletPrintWriter extends PrintWriter {
 
     @Override
     public void flush() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        response.flush();
     }
 
     @Override
     public void close() {
+        response.flush();
         response.getResponseWriter().close();
     }
 
@@ -97,7 +96,7 @@ final class ServletPrintWriter extends PrintWriter {
         } else {
             writeStr = s.substring(off, off + len);
         }
-        response.write(HttpData.ofUtf8(writeStr));
+        response.write(writeStr.getBytes());
     }
 
     @Override
