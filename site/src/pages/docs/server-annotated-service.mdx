@@ -138,13 +138,13 @@ public class MyAnnotatedService {
 
     // Handles a request which contains 'client-type: android' header.
     @Get("/users")
-    @ConditionalHeader("client-type=android")
+    @MatchesHeader("client-type=android")
     public User getUsers1() { ... }
 
     // Handles a request which contains 'client-type' header.
     // Any values of the 'client-type' header are accepted.
     @Get("/users")
-    @ConditionalHeader("client-type")
+    @MatchesHeader("client-type")
     public User getUsers2() { ... }
 
     // Handles a request which doesn't contain 'client-type' header.
