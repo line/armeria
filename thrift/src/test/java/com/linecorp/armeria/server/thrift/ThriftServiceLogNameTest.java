@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
@@ -103,8 +104,10 @@ class ThriftServiceLogNameTest {
         client.hello("hello");
 
         verify(appender, atLeast(1)).doAppend(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
-            return evt.getMessage().contains("POST /thrift#HelloService$AsyncIface/hello h2c");
+        await().untilAsserted(() -> {
+            assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
+                return evt.getMessage().contains("POST /thrift#HelloService$AsyncIface/hello h2c");
+            });
         });
     }
 }

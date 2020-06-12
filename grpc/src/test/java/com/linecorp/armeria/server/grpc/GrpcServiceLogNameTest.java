@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
@@ -103,8 +104,10 @@ class GrpcServiceLogNameTest {
         client.emptyCall(Empty.newBuilder().build());
 
         verify(appender, atLeast(1)).doAppend(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
-            return evt.getMessage().contains("POST /armeria.grpc.testing.TestService/EmptyCall h2c");
+        await().untilAsserted(() -> {
+            assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
+                return evt.getMessage().contains("POST /armeria.grpc.testing.TestService/EmptyCall h2c");
+            });
         });
     }
 }
