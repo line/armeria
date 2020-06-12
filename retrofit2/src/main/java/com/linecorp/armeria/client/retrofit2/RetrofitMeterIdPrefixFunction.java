@@ -66,8 +66,10 @@ import retrofit2.http.PUT;
 public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     private static final List<Class<?>> RETROFIT_ANNOTATIONS = ImmutableList.of(
-            POST.class, PUT.class, PATCH.class, HEAD.class, GET.class, OPTIONS.class, HTTP.class, DELETE.class
-    );
+            POST.class, PUT.class, PATCH.class, HEAD.class, GET.class, OPTIONS.class, HTTP.class, DELETE.class);
+
+    private static final Map<Method, String> pathCache = new MapMaker().weakKeys().makeMap();
+
     private static final String UNKNOWN = "UNKNOWN";
 
     /**
@@ -78,7 +80,6 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
     }
 
     private final String name;
-    private static final Map<Method, String> pathCache = new MapMaker().weakKeys().makeMap();
 
     RetrofitMeterIdPrefixFunction(String name) {
         this.name = name;
