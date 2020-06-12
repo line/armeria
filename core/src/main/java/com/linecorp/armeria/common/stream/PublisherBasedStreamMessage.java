@@ -361,8 +361,11 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         private void onComplete0() {
             try {
-                subscriber.onComplete();
+                // 'parent.whenComplete()' should be called before 'subscriber.onComplete()'
+                // in order not to complete 'completionFuture' with CancelledSubscriptionException
+                // while canceling in AbortableSubscriber.cancelOrAbort0(cancel)
                 parent.whenComplete().complete(null);
+                subscriber.onComplete();
             } catch (Throwable t) {
                 parent.whenComplete().completeExceptionally(t);
                 throwIfFatal(t);
