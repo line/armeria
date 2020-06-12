@@ -35,13 +35,17 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -99,6 +103,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
+    private final Timer keepAliveTimer;
 
     /**
      * Creates a new instance.
@@ -112,6 +117,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
+        keepAliveTimer = MoreMeters.newTimer(config.meterRegistry(), "armeria.server.connections.lifetime",
+                                             ImmutableList.of());
     }
 
     @Override
@@ -162,8 +169,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final KeepAliveHandler keepAliveHandler;
         if (idleTimeoutMillis > 0) {
-            keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis,
-                                                               config.maxConnectionAgeMillis());
+            keepAliveHandler = new Http1ServerKeepAliveHandler(
+                    p.channel(), keepAliveTimer, idleTimeoutMillis, config.maxConnectionAgeMillis());
         } else {
             keepAliveHandler = null;
         }
@@ -185,9 +192,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
-        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config,
-                                                       gracefulShutdownSupport,
-                                                       scheme.toString())
+        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
+                                                       gracefulShutdownSupport, scheme.toString())
                 .server(true)
                 .initialSettings(http2Settings())
                 .build();
@@ -406,8 +412,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final long idleTimeoutMillis = config.idleTimeoutMillis();
             final KeepAliveHandler keepAliveHandler;
             if (idleTimeoutMillis > 0) {
-                keepAliveHandler = new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis,
-                                                                   config.maxConnectionAgeMillis());
+                keepAliveHandler = new Http1ServerKeepAliveHandler(
+                        ch, keepAliveTimer, idleTimeoutMillis, config.maxConnectionAgeMillis());
             } else {
                 keepAliveHandler = null;
             }

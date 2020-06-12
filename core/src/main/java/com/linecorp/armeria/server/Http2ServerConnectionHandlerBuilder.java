@@ -17,6 +17,7 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandlerBuilder;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
@@ -27,14 +28,15 @@ final class Http2ServerConnectionHandlerBuilder
                                                       Http2ServerConnectionHandlerBuilder> {
 
     private final ServerConfig config;
+    private final Timer keepAliveTimer;
     private final GracefulShutdownSupport gracefulShutdownSupport;
     private final String scheme;
 
-    Http2ServerConnectionHandlerBuilder(Channel ch, ServerConfig config,
-                                        GracefulShutdownSupport gracefulShutdownSupport,
-                                        String scheme) {
+    Http2ServerConnectionHandlerBuilder(Channel ch, ServerConfig config, Timer keepAliveTimer,
+                                        GracefulShutdownSupport gracefulShutdownSupport, String scheme) {
         super(ch);
         this.config = config;
+        this.keepAliveTimer = keepAliveTimer;
         this.gracefulShutdownSupport = gracefulShutdownSupport;
         this.scheme = scheme;
     }
@@ -44,6 +46,6 @@ final class Http2ServerConnectionHandlerBuilder
                                                  Http2ConnectionEncoder encoder,
                                                  Http2Settings initialSettings) throws Exception {
         return new Http2ServerConnectionHandler(decoder, encoder, initialSettings, channel(),
-                                                config, gracefulShutdownSupport, scheme);
+                                                config, keepAliveTimer, gracefulShutdownSupport, scheme);
     }
 }

@@ -29,9 +29,9 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -43,8 +43,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.google.common.base.Stopwatch;
-
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.GoAwayReceivedException;
@@ -52,13 +50,17 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AttributeMap;
 
 class ServerMaxConnectionAgeTest {
 
     private static final long MAX_CONNECTION_AGE = 1000;
+    private static MeterRegistry meterRegistry;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -67,6 +69,8 @@ class ServerMaxConnectionAgeTest {
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
             sb.maxConnectionAgeMillis(MAX_CONNECTION_AGE);
+            meterRegistry = new SimpleMeterRegistry();
+            sb.meterRegistry(meterRegistry);
             sb.service("/", (ctx, req) -> HttpResponse.of(OK));
             sb.service("/slow", (ctx, req) ->
                     HttpResponse.delayed(HttpResponse.of("Disconnect"),
@@ -115,8 +119,6 @@ class ServerMaxConnectionAgeTest {
 
     @Test
     void http1MaxConnectionAge() throws InterruptedException {
-        final Stopwatch stopwatch = Stopwatch.createUnstarted();
-        final List<Long> elapsedTimes = new ArrayList<>();
         final int maxClosedConnection = 5;
         final ConnectionPoolListener connectionPoolListener = new ConnectionPoolListener() {
             @Override
@@ -128,13 +130,7 @@ class ServerMaxConnectionAgeTest {
             @Override
             public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                          InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                final int numClosed = closed.incrementAndGet();
-                if (numClosed == 1) {
-                    stopwatch.start();
-                } else if (numClosed <= maxClosedConnection) {
-                    elapsedTimes.add(stopwatch.elapsed().toMillis());
-                    stopwatch.reset().start();
-                }
+                closed.incrementAndGet();
             }
         };
 
@@ -153,9 +149,18 @@ class ServerMaxConnectionAgeTest {
             assertThat(opened).hasValueBetween(closed, closed + 1);
         }
 
-        for (long elapsed : elapsedTimes) {
-            assertThat(elapsed).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(35));
-        }
+        assertThat(MoreMeters.measureAll(meterRegistry))
+                .hasEntrySatisfying("armeria.server.connections.lifetime.percentile#value{phi=0}", value -> {
+                    assertThat(value).isCloseTo(TimeUnit.MILLISECONDS.toSeconds(MAX_CONNECTION_AGE),
+                                                withinPercentage(25));
+                })
+                .hasEntrySatisfying("armeria.server.connections.lifetime.percentile#value{phi=1}", value -> {
+                    assertThat(value).isCloseTo(TimeUnit.MILLISECONDS.toSeconds(MAX_CONNECTION_AGE),
+                                                withinPercentage(25));
+                })
+                .hasEntrySatisfying("armeria.server.connections.lifetime#count", value -> {
+                    assertThat(value).isEqualTo(maxClosedConnection);
+                });
         clientFactory.close();
     }
 

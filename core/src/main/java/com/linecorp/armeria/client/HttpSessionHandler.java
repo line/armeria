@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -72,6 +73,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
+    private final Timer keepAliveTimer;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -111,12 +113,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
+                       Timer keepAliveTimer, boolean useHttp1Pipelining,
+                       long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
+        this.keepAliveTimer = requireNonNull(keepAliveTimer, "keepAliveTimer");
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
@@ -300,7 +304,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
                     final Http1ClientKeepAliveHandler keepAliveHandler =
                             new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
-                                                            idleTimeoutMillis, pingIntervalMillis);
+                                    keepAliveTimer, idleTimeoutMillis, pingIntervalMillis);
                     requestEncoder.setKeepAliveHandler(keepAliveHandler);
                     responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
                 }
