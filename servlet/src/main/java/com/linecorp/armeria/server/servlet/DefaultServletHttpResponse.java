@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.util.AsciiString;
 
@@ -56,18 +55,32 @@ import io.netty.util.AsciiString;
  */
 final class DefaultServletHttpResponse implements HttpServletResponse {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletHttpRequest.class);
+
     private final List<String> cookies = new ArrayList<>();
     private final DefaultServletOutputStream outputStream;
     private final ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
     private final PrintWriter writer;
     private final HttpResponseWriter responseWriter;
+    private final DefaultServletContext servletContext;
+
     private ByteArrayOutputStream content = new ByteArrayOutputStream();
     private AtomicBoolean isWritten = new AtomicBoolean(false);
+
+    /**
+     * Using output stream flag.
+     */
+    private boolean usingOutputStream;
+
+    /**
+     * Using writer flag.
+     */
+    private boolean usingWriter;
 
     DefaultServletHttpResponse(DefaultServletContext servletContext, HttpResponseWriter responseWriter) {
         requireNonNull(servletContext, "servletContext");
         requireNonNull(responseWriter, "responseWriter");
         this.responseWriter = responseWriter;
+        this.servletContext = servletContext;
         outputStream = new DefaultServletOutputStream(this);
         writer = new ServletPrintWriter(this, outputStream);
         headersBuilder.contentType(MediaType.HTML_UTF_8);
@@ -84,7 +97,7 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     /**
      * Write data to response writer.
      */
-    void flush() {
+    void close() {
         if (isWritten.compareAndSet(false, true)) {
             if (responseWriter.tryWrite(headersBuilder.setObject(HttpHeaderNames.SET_COOKIE, cookies)
                                                       .status(HttpStatus.OK).build())) {
@@ -216,14 +229,12 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     @Override
     public void setIntHeader(String name, int value) {
         requireNonNull(name, "name");
-        checkArgument(value >= 0, "value: %s (expected: >= 0)", value);
         headersBuilder.setInt(name, value);
     }
 
     @Override
     public void addIntHeader(String name, int value) {
         requireNonNull(name, "name");
-        checkArgument(value >= 0, "value: %s (expected: >= 0)", value);
         headersBuilder.addInt(name, value);
     }
 
@@ -284,16 +295,24 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         if (mediaType != null && mediaType.charset() != null) {
             return mediaType.charset().toString();
         }
-        return ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
+        return servletContext.getResponseCharacterEncoding();
     }
 
     @Override
     public DefaultServletOutputStream getOutputStream() throws IOException {
+        if (usingWriter) {
+            throw new IllegalStateException("getWriter() has already call before.");
+        }
+        usingOutputStream = true;
         return outputStream;
     }
 
     @Override
     public PrintWriter getWriter() throws IOException {
+        if (usingOutputStream) {
+            throw new IllegalStateException("getOutputStream() has already call before.");
+        }
+        usingWriter = true;
         return writer;
     }
 
@@ -303,6 +322,8 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         final MediaType mediaType = headersBuilder.contentType();
         if (mediaType != null) {
             headersBuilder.contentType(mediaType.withCharset(Charset.forName(charset)));
+        } else {
+            throw new IllegalStateException("Must set content type before setting a charset.");
         }
     }
 

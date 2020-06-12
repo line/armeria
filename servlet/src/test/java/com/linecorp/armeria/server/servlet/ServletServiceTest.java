@@ -248,8 +248,6 @@ public class ServletServiceTest {
                 assertThat(request.isAsyncStarted()).isEqualTo(false);
                 assertThat(request.isAsyncSupported()).isEqualTo(false);
                 assertThat(request.getDispatcherType()).isEqualTo(DispatcherType.REQUEST);
-                assertThat(request.getParts().size()).isEqualTo(0);
-                assertThat(request.getPart("file1")).isEqualTo(null);
                 assertThat(request.getServletContext().getMimeType("profile.bmp")).isEqualTo("image/bmp");
                 request.getServletContext().getRequestDispatcher("/app/abc");
                 request.getServletContext().getRequestDispatcher("abc");
@@ -436,6 +434,8 @@ public class ServletServiceTest {
                 response.getWriter().printf(Locale.US, "test %d", 1);
                 response.getWriter().format("test %d", 1);
                 response.getWriter().format(Locale.US, "test %d", 1);
+                ((ServletPrintWriter) response.getWriter()).setError();
+                ((ServletPrintWriter) response.getWriter()).clearError();
                 final CharSequence cs = "test";
                 response.getWriter().append(cs);
                 response.getWriter().append(cs, 0, 1);
@@ -463,10 +463,6 @@ public class ServletServiceTest {
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
-                response.getWriter().println("delete");
-
-                ((ServletPrintWriter) response.getWriter()).setError();
-                ((ServletPrintWriter) response.getWriter()).clearError();
 
                 request.getContentLength();
                 request.getContentLengthLong();

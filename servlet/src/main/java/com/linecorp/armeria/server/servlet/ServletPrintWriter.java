@@ -42,13 +42,11 @@ final class ServletPrintWriter extends PrintWriter {
 
     @Override
     public void flush() {
-        response.flush();
     }
 
     @Override
     public void close() {
-        response.flush();
-        response.getResponseWriter().close();
+        response.close();
     }
 
     @Override

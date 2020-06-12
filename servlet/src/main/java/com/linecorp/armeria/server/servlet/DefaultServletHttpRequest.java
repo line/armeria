@@ -27,11 +27,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,8 +84,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     private final AggregatedHttpRequest httpRequest;
     private final Map<String, Object> attributeMap = new ConcurrentHashMap<>(16);
     private final SessionTrackingMode sessionIdSource = SessionTrackingMode.COOKIE;
-
-    private final List<Part> fileUploadList = new ArrayList<>();
     private final String servletPath;
     private final String requestURI;
     private final String characterEncoding;
@@ -217,18 +213,18 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     @Override
     public long getDateHeader(String name) {
         requireNonNull(name, "name");
-        boolean error = false;
+        final String dateHeader = getHeader(name);
+        if (dateHeader == null) {
+            return -1;
+        }
         for (DateFormat x : FORMATS_TEMPLATE) {
             try {
-                return x.parse(getHeader(name)).getTime();
+                return x.parse(dateHeader).getTime();
             } catch (Exception e) {
-                error = true;
+                // ignored.
             }
         }
-        if (error) {
-            logger.info("Can't parse " + getHeader(name) + " to date");
-        }
-        return -1;
+        throw new IllegalArgumentException("failed to parse a date header: " + dateHeader);
     }
 
     @Override
@@ -327,12 +323,12 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public boolean isRequestedSessionIdFromURL() {
-        return isRequestedSessionIdFromUrl();
+        return false;
     }
 
     @Override
     public boolean isRequestedSessionIdFromUrl() {
-        return sessionIdSource == SessionTrackingMode.URL;
+        return isRequestedSessionIdFromURL();
     }
 
     @Override
@@ -400,10 +396,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     @Nullable
     public String[] getParameterValues(String name) {
         requireNonNull(name, "name");
-        if (queryParams.getAll(name).isEmpty()) {
-            return null;
-        }
-        return queryParams.getAll(name).toArray(new String[0]);
+        return parameters.get(name);
     }
 
     @Override
@@ -429,7 +422,8 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public int getServerPort() {
-        return serviceRequestContext.config().server().activeLocalPort();
+        final InetSocketAddress socketAddress = serviceRequestContext.localAddress();
+        return socketAddress.getPort();
     }
 
     @Override
@@ -586,14 +580,13 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public Collection<Part> getParts() throws IOException, ServletException {
-        return fileUploadList;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     @Nullable
     public Part getPart(String name) throws IOException, ServletException {
-        requireNonNull(name, "name");
-        return getParts().stream().filter(x -> name.equals(x.getName())).findAny().orElse(null);
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override

@@ -33,6 +33,7 @@ final class ServletFilterChain implements FilterChain {
 
     private final List<DefaultFilterRegistration> filterRegistrationList = new ArrayList<>();
     private final DefaultServletRegistration servletRegistration;
+
     private int pos;
 
     /**

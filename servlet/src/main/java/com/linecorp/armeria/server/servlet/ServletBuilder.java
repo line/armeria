@@ -32,6 +32,7 @@ public class ServletBuilder {
     private final DefaultServletContext servletContext;
     private final ServerBuilder serverBuilder;
     private final String contextPath;
+
     private boolean rootServletAdded;
 
     /**

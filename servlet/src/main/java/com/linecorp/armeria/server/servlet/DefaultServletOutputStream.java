@@ -47,13 +47,11 @@ final class DefaultServletOutputStream extends ServletOutputStream {
 
     @Override
     public void close() throws IOException {
-        response.flush();
-        response.getResponseWriter().close();
+        response.close();
     }
 
     @Override
     public void flush() throws IOException {
-        response.flush();
     }
 
     @Override

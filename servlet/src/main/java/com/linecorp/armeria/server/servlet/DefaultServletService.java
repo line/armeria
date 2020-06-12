@@ -37,6 +37,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 final class DefaultServletService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletService.class);
+
     private final DefaultServletContext servletContext;
 
     /**
