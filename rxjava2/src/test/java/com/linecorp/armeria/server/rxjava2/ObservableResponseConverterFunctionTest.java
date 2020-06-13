@@ -488,7 +488,7 @@ public class ObservableResponseConverterFunctionTest {
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
-    static void validateContext(RequestContext ctx) {
+    private static void validateContext(RequestContext ctx) {
         if (ServiceRequestContext.current() != ctx) {
             throw new RuntimeException("ServiceRequestContext instances are not same!");
         }
