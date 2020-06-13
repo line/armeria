@@ -34,8 +34,12 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public abstract class AbstractPooledHttpService implements PooledHttpService {
 
+    /**
+     * Serves the specified {@link PooledHttpRequest} by delegating it to the matching {@code 'doMETHOD()'}
+     * method.
+     */
     @Override
-    public PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
+    public final PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         final HttpResponse response;
         switch (req.method()) {
             case OPTIONS:
