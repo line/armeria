@@ -81,7 +81,7 @@ public final class GrpcClientOptions {
             ClientOption.define("GRPC_UNSAFE_WRAP_RESPONSE_BUFFERS", false);
 
     /**
-     * Sets a {@link GrpcJsonMarshaller} that serialize and deserialize request or response messages
+     * Sets a {@link GrpcJsonMarshaller} that serializes and deserializes request or response messages
      * to and from JSON depending on {@link SerializationFormat}. This replaces the built-in
      * {@link GrpcJsonMarshaller} with the specified {@link GrpcJsonMarshaller}.
      *

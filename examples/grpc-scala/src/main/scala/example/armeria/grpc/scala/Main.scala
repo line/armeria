@@ -61,7 +61,6 @@ object Main {
           .service(grpcService)
           .serviceUnder("/docs",
             DocService.builder()
-//                      .objectMapper(mapper => mapper.registerModule(DefaultScalaModule))
                       .exampleRequestForMethod(serviceName, "Hello", exampleRequest)
                       .exampleRequestForMethod(serviceName, "LazyHello", exampleRequest)
                       .exampleRequestForMethod(serviceName, "BlockingHello", exampleRequest)

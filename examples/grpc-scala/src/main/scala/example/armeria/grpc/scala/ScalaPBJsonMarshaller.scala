@@ -48,7 +48,6 @@ class ScalaPBJsonMarshaller private(
 
   override def deserializeMessage[A](marshaller: Marshaller[A], in: InputStream): A = {
     val companion = getMessageCompanion(marshaller)
-
     val jsonString = Source.fromInputStream(in)(Codec.UTF8).mkString
     val message = jsonParser.fromJsonString(jsonString)(companion)
     message.asInstanceOf[A]

@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import io.grpc.MethodDescriptor.Marshaller;
 import io.grpc.MethodDescriptor.PrototypeMarshaller;
 
-public class DefaultJsonMarshaller implements GrpcJsonMarshaller {
+public final class DefaultJsonMarshaller implements GrpcJsonMarshaller {
 
     private final MessageMarshaller delegate;
 
