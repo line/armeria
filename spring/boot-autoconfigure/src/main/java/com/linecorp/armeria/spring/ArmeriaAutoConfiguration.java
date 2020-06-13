@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.conf
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,9 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -159,5 +162,20 @@ public class ArmeriaAutoConfiguration {
         }).join();
         logger.info("Armeria server started at ports: {}", server.activePorts());
         return server;
+    }
+
+    /**
+     * A user can configure a {@link Server} by providing an {@link ArmeriaServerConfigurator} bean.
+     */
+    @Bean
+    @ConditionalOnProperty("server.shutdown")
+    public ArmeriaServerConfigurator gracefulShutdownServerConfigurator(
+            @Value("${server.shutdown}") String shutdown,
+            @Value("${spring.lifecycle.timeout-per-shutdown-phase:30s}") Duration duration) {
+        return sb -> {
+            if ("graceful".equalsIgnoreCase(shutdown)) {
+                sb.gracefulShutdownTimeout(duration, duration);
+            }
+        };
     }
 }
