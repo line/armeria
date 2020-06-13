@@ -126,11 +126,21 @@ public interface PooledHttpData extends HttpData, ByteBufHolder, SafeCloseable {
         return new ByteBufHttpData(buf, false);
     }
 
+    /**
+     * {@inheritDoc} Ownership of the pooled buffer is transferred to the returned {@link PooledHttpData} and
+     * {@code this} is effectively invalidated. In general, you should only use this method in a fluent
+     * invocation, e.g., {@code return PooledHttpData.wrap(buf).withEndOfStream()}.
+     */
     @Override
     default PooledHttpData withEndOfStream() {
         return withEndOfStream(true);
     }
 
+    /**
+     * {@inheritDoc} Ownership of the pooled buffer is transferred to the returned {@link PooledHttpData} and
+     * {@code this} is effectively invalidated. In general, you should only use this method in a fluent
+     * invocation, e.g., {@code return PooledHttpData.wrap(buf).withEndOfStream(endOfStream)}.
+     */
     @Override
     PooledHttpData withEndOfStream(boolean endOfStream);
 }

@@ -76,7 +76,7 @@ class PooledHttpRequestTest {
     }
 
     @Test
-    void aggregate_exeutor() {
+    void aggregate_executor() {
         final AggregatedHttpRequest agg = PooledHttpRequest.of(request())
                                                            .aggregate(CommonPools.workerGroup().next()).join();
         assertThat(agg.content()).isNotInstanceOf(PooledHttpData.class);

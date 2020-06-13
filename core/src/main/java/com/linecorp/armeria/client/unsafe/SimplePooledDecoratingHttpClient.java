@@ -45,7 +45,7 @@ public abstract class SimplePooledDecoratingHttpClient extends SimpleDecoratingH
     }
 
     @Override
-    public PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception {
+    public final PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception {
         return PooledHttpResponse.of(execute(delegate(), ctx, req));
     }
 

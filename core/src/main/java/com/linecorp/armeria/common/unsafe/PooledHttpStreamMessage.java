@@ -125,7 +125,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
      * operating on {@link PooledHttpStreamMessage} this should be avoided.
      *
-     * @deprecated Use {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber, SubscriptionOption...)}.
      */
     @Override
     @Deprecated

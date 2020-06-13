@@ -76,7 +76,7 @@ class PooledHttpResponseTest {
     }
 
     @Test
-    void aggregate_exeutor() {
+    void aggregate_executor() {
         final AggregatedHttpResponse agg =
                 PooledHttpResponse.of(response())
                                   .aggregate(CommonPools.workerGroup().next()).join();
