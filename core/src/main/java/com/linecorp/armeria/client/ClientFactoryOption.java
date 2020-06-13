@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.proxy.StaticProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
@@ -221,7 +220,7 @@ public final class ClientFactoryOption<T>
      * The {@link ProxyConfigSelector} which determines the proxy configuration.
      */
     public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
-            define("PROXY_CONFIG_SELECTOR", StaticProxyConfigSelector.of(ProxyConfig.direct()));
+            define("PROXY_CONFIG_SELECTOR", StaticProxyConfigSelector.DIRECT);
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -73,7 +75,7 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
         return new WrappingProxyConfigSelector(proxySelector);
     }
 
-    final ProxySelector proxySelector;
+    private final ProxySelector proxySelector;
 
     private WrappingProxyConfigSelector(ProxySelector proxySelector) {
         this.proxySelector = proxySelector;
@@ -81,7 +83,7 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
 
     @Override
     public ProxyConfig select(URI uri) {
-        final List<Proxy> proxies = proxySelector.select(uri);
+        final List<Proxy> proxies = proxySelector.select(requireNonNull(uri, "uri"));
         if (proxies == null || proxies.isEmpty()) {
             return ProxyConfig.direct();
         }
@@ -94,7 +96,9 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     }
 
     @Override
-    public void connectFailed(URI uri, SocketAddress sa, Throwable throwable) {
-        proxySelector.connectFailed(uri, sa, new IOException(throwable));
+    public void connectFailed(URI uri, SocketAddress socketAddress, Throwable throwable) {
+        proxySelector.connectFailed(requireNonNull(uri, "uri"),
+                                    requireNonNull(socketAddress, "socketAddress"),
+                                    new IOException(throwable));
     }
 }

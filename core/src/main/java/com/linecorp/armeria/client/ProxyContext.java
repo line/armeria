@@ -21,11 +21,20 @@ import java.net.URI;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 
-class ProxyContext {
+final class ProxyContext {
     private final ProxyConfig proxyConfig;
     private final URI reqUri;
 
+    /**
+     * Constructor for a value object containing client-side proxy fields.
+     * These fields are used to determine which connection will be used,
+     * or how a new connection will be opened.
+     *
+     * @param reqUri the original request URI for a proxy. This value is mainly used to invoke callbacks
+     *               in {@link ProxyConfigSelector} when a new connection is opened.
+     */
     ProxyContext(ProxyConfig proxyConfig, URI reqUri) {
         this.proxyConfig = proxyConfig;
         this.reqUri = reqUri;

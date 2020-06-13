@@ -27,6 +27,8 @@ import java.net.URI;
  */
 public final class StaticProxyConfigSelector implements ProxyConfigSelector {
 
+    public static final StaticProxyConfigSelector DIRECT = new StaticProxyConfigSelector(ProxyConfig.direct());
+
     /**
      * Constructs a {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
      * for all requests.
