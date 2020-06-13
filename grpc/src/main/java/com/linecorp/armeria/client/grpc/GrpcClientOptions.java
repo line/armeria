@@ -21,11 +21,15 @@ import java.util.function.Consumer;
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.NoopJsonMarshaller;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 /**
@@ -77,10 +81,25 @@ public final class GrpcClientOptions {
             ClientOption.define("GRPC_UNSAFE_WRAP_RESPONSE_BUFFERS", false);
 
     /**
-     * Sets a {@link Consumer} that can customize the JSON marshaller used when handling JSON payloads in the
-     * service. This is commonly used to switch from the default of using lowerCamelCase for field names to
-     * using the field name from the proto definition, by setting
+     * Sets a {@link GrpcJsonMarshaller} that serialize and deserialize request or response messages
+     * to and from JSON depending on {@link SerializationFormat}. This replaces the built-in
+     * {@link GrpcJsonMarshaller} with the specified {@link GrpcJsonMarshaller}.
+     *
+     * <p>This is commonly used to marshall non-{@link Message} types such as {@code scalapb.GeneratedMessage}
+     * for Scala and {@code pbandk.Message} for Kotlin.
+     *
+     * <p>Note that {@link #JSON_MARSHALLER_CUSTOMIZER} option will be ignored if this option is set.
+     */
+    public static final ClientOption<GrpcJsonMarshaller> GRPC_JSON_MARSHALLER =
+            ClientOption.define("GRPC_JSON_MARSHALLER", NoopJsonMarshaller.get());
+
+    /**
+     * Sets a {@link Consumer} that can customize the JSON marshaller for {@link Message} used when handling
+     * JSON payloads in the service. This is commonly used to switch from the default of using lowerCamelCase
+     * for field names to using the field name from the proto definition, by setting
      * {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)}.
+     *
+     * <p>Note that this option will be ignored if {@link #GRPC_JSON_MARSHALLER} is set.
      */
     public static final ClientOption<Consumer<MessageMarshaller.Builder>> JSON_MARSHALLER_CUSTOMIZER =
             ClientOption.define("GRPC_JSON_MARSHALLER_CUSTOMIZER", unused -> { /* no-op */ });

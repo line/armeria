@@ -42,9 +42,12 @@ import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
+import com.linecorp.armeria.internal.common.grpc.NoopJsonMarshaller;
 
 import io.grpc.Channel;
 import io.grpc.MethodDescriptor;
@@ -95,13 +98,14 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         final HttpClient httpClient = newHttpClient(params);
 
-        // TODO(ikhoon): Support gjson with Kotlin coroutine stub once
-        //               https://github.com/grpc/grpc-kotlin/pull/63 is released
-        final MessageMarshaller jsonMarshaller =
-                GrpcSerializationFormats.isJson(serializationFormat) ?
-                GrpcJsonUtil.jsonMarshaller(
-                        stubMethods(clientType),
-                        options.get(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER)) : null;
+        GrpcJsonMarshaller jsonMarshaller = null;
+        if (GrpcSerializationFormats.isJson(serializationFormat)) {
+            jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER);
+            if (jsonMarshaller == NoopJsonMarshaller.get()) {
+                jsonMarshaller = new DefaultJsonMarshaller(GrpcJsonUtil.jsonMarshaller(
+                        stubMethods(clientType), options.get(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER)));
+            }
+        }
 
         final ArmeriaChannel channel = new ArmeriaChannel(
                 params,
@@ -139,8 +143,8 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             }
 
             final String methodName = method.getName();
-            if (!(methodName.startsWith("new") && methodName.endsWith("Stub"))) {
-                // Must be named as `new*Stub()`.
+            if (!methodName.toLowerCase().endsWith("stub")) {
+                // Must be named as `*[sS]tub()`.
                 continue;
             }
 

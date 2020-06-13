@@ -49,11 +49,13 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
@@ -88,7 +90,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
     @Nullable
-    private final MessageMarshaller jsonMarshaller;
+    private final GrpcJsonMarshaller jsonMarshaller;
     private final int maxOutboundMessageSizeBytes;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
@@ -106,6 +108,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       DecompressorRegistry decompressorRegistry,
                       CompressorRegistry compressorRegistry,
                       Set<SerializationFormat> supportedSerializationFormats,
+                      GrpcJsonMarshaller jsonMarshaller,
                       Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer,
                       int maxOutboundMessageSizeBytes,
                       boolean useBlockingTaskExecutor,
@@ -120,7 +123,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.useClientTimeoutHeader = useClientTimeoutHeader;
         this.protoReflectionService = protoReflectionService;
-        jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats, jsonMarshallerCustomizer);
+        this.jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats,
+                                             jsonMarshaller, jsonMarshallerCustomizer);
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -357,19 +361,24 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Nullable
-    private static MessageMarshaller jsonMarshaller(
+    private static GrpcJsonMarshaller jsonMarshaller(
             HandlerRegistry registry,
             Set<SerializationFormat> supportedSerializationFormats,
+            @Nullable GrpcJsonMarshaller jsonMarshaller,
             Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
         if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
             return null;
         }
+        if (jsonMarshaller != null) {
+            return jsonMarshaller;
+        }
+
         final List<MethodDescriptor<?, ?>> methods =
                 registry.services().stream()
                         .flatMap(service -> service.getMethods().stream())
                         .map(ServerMethodDefinition::getMethodDescriptor)
                         .collect(toImmutableList());
-        return GrpcJsonUtil.jsonMarshaller(methods, jsonMarshallerCustomizer);
+        return new DefaultJsonMarshaller(GrpcJsonUtil.jsonMarshaller(methods, jsonMarshallerCustomizer));
     }
 
     @Override

@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
@@ -153,7 +153,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       int maxOutboundMessageSizeBytes,
                       ServiceRequestContext ctx,
                       SerializationFormat serializationFormat,
-                      @Nullable MessageMarshaller jsonMarshaller,
+                      @Nullable GrpcJsonMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
                       ResponseHeaders defaultHeaders) {

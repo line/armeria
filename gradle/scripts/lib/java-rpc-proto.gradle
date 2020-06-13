@@ -1,3 +1,6 @@
+import static org.gradle.internal.os.OperatingSystem.WINDOWS
+import static org.gradle.internal.os.OperatingSystem.current
+
 buildscript {
     repositories {
         gradlePluginPortal()
@@ -41,22 +44,38 @@ configure(projectsWithFlags('java')) {
                             artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}"
                         }
                     }
+
+                    def isWindow = current() == WINDOWS
+                    if (project.ext.hasFlag('scala-grpc')) {
+                        def artifactName = "com.thesamet.scalapb:protoc-gen-scala:${managedVersions['com.thesamet.scalapb:scalapb-runtime_2.13']}:"
+                        artifactName += isWindow ? "windows@bat" : "unix@sh"
+                        scalapb {
+                            artifact = artifactName
+                        }
+                    }
                 }
                 generateProtoTasks {
                     all()*.plugins {
-                        grpc {
-                            option 'enable_deprecated=false'
-                        }
-                        if (project.ext.hasFlag('reactor-grpc') && managedVersions.containsKey('com.salesforce.servicelibs:reactor-grpc')) {
-                            reactorGrpc {}
-                        }
-                        if (project.ext.hasFlag('rxgrpc') && managedVersions.containsKey('com.salesforce.servicelibs:rxgrpc')) {
-                            rxgrpc {}
-                        }
-                        if (project.ext.hasFlag('kotlin-grpc') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
-                            kotlinGrpc {}
+                        if (project.ext.hasFlag('scala-grpc') && managedVersions.containsKey('com.thesamet.scalapb:scalapb-runtime_2.13')) {
+                            scalapb {
+                                option 'grpc'
+                            }
+                        } else {
+                            grpc {
+                                option 'enable_deprecated=false'
+                            }
+                            if (project.ext.hasFlag('reactor-grpc') && managedVersions.containsKey('com.salesforce.servicelibs:reactor-grpc')) {
+                                reactorGrpc {}
+                            }
+                            if (project.ext.hasFlag('rxgrpc') && managedVersions.containsKey('com.salesforce.servicelibs:rxgrpc')) {
+                                rxgrpc {}
+                            }
+                            if (project.ext.hasFlag('kotlin-grpc') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
+                                kotlinGrpc {}
+                            }
                         }
                     }
+
                     all().each { task ->
                         task.generateDescriptorSet = true
                         task.descriptorSetOptions.includeSourceInfo = true
