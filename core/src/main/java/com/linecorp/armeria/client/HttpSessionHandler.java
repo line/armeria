@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.HttpChannelPool.PROXY_CONTEXT;
+import static com.linecorp.armeria.client.HttpChannelPool.POOL_KEY;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -349,11 +350,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            final ProxyContext proxyContext = ctx.channel().attr(PROXY_CONTEXT).get();
+            final PoolKey poolKey = ctx.channel().attr(POOL_KEY).get();
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, H1C, proxyContext, sessionPromise);
+                channelPool.connect(proxyDestinationAddress, H1C, poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, H1C, proxyContext, sessionPromise);
+                channelPool.connect(remoteAddress, H1C, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.
@@ -380,8 +381,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
             setPendingException(ctx, new UnprocessedRequestException(cause));
-            final ProxyContext proxyContext = ctx.channel().attr(PROXY_CONTEXT).get();
-            channelPool.invokeProxyConnectFailed(proxyContext, cause);
+            final PoolKey poolKey = ctx.channel().attr(POOL_KEY).get();
+            channelPool.invokeProxyConnectFailed(poolKey, cause);
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));

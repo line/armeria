@@ -19,6 +19,7 @@ import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -76,8 +77,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpChannelPool.class);
     private static final Channel[] EMPTY_CHANNELS = new Channel[0];
-    static final AttributeKey<ProxyContext> PROXY_CONTEXT =
-            AttributeKey.valueOf(ProxyContext.class, "PROXY_CONTEXT");
+    static final AttributeKey<PoolKey> POOL_KEY = AttributeKey.valueOf(PoolKey.class, "POOL_KEY");
 
     private final EventLoop eventLoop;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
@@ -238,8 +238,7 @@ final class HttpChannelPool implements AsyncCloseable {
      * Attempts to acquire a {@link Channel} which is matched by the specified condition immediately.
      *
      * @return {@code null} is there's no match left in the pool and thus a new connection has to be
-     *         requested via {@link #acquireLater(SessionProtocol, PoolKey, ClientConnectionTimingsBuilder,
-     *         ProxyContext)}.
+     *         requested via {@link #acquireLater(SessionProtocol, PoolKey, ClientConnectionTimingsBuilder)}.
      */
     @Nullable
     PooledChannel acquireNow(SessionProtocol desiredProtocol, PoolKey key) {
@@ -318,11 +317,10 @@ final class HttpChannelPool implements AsyncCloseable {
      * attempt or waiting for the current connection attempt in progress.
      */
     CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
-                                                  ClientConnectionTimingsBuilder timingsBuilder,
-                                                  ProxyContext proxyContext) {
+                                                  ClientConnectionTimingsBuilder timingsBuilder) {
         final ChannelAcquisitionFuture promise = new ChannelAcquisitionFuture();
-        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder, proxyContext)) {
-            connect(desiredProtocol, key, promise, timingsBuilder, proxyContext);
+        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
+            connect(desiredProtocol, key, promise, timingsBuilder);
         }
         return promise;
     }
@@ -334,8 +332,7 @@ final class HttpChannelPool implements AsyncCloseable {
      */
     private boolean usePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
                                           ChannelAcquisitionFuture promise,
-                                          ClientConnectionTimingsBuilder timingsBuilder,
-                                          ProxyContext proxyContext) {
+                                          ClientConnectionTimingsBuilder timingsBuilder) {
 
         if (desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C) {
             // Can't use HTTP/1 connections because they will not be available in the pool until
@@ -349,12 +346,12 @@ final class HttpChannelPool implements AsyncCloseable {
         }
 
         timingsBuilder.pendingAcquisitionStart();
-        pendingAcquisition.piggyback(desiredProtocol, key, promise, timingsBuilder, proxyContext);
+        pendingAcquisition.piggyback(desiredProtocol, key, promise, timingsBuilder);
         return true;
     }
 
     private void connect(SessionProtocol desiredProtocol, PoolKey key, ChannelAcquisitionFuture promise,
-                         ClientConnectionTimingsBuilder timingsBuilder, ProxyContext proxyContext) {
+                         ClientConnectionTimingsBuilder timingsBuilder) {
         setPendingAcquisition(desiredProtocol, key, promise);
         timingsBuilder.socketConnectStart();
 
@@ -378,7 +375,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         // Create a new connection.
         final Promise<Channel> sessionPromise = eventLoop.newPromise();
-        connect(remoteAddress, desiredProtocol, proxyContext, sessionPromise);
+        connect(remoteAddress, desiredProtocol, key, sessionPromise);
 
         if (sessionPromise.isDone()) {
             notifyConnect(desiredProtocol, key, sessionPromise, promise, timingsBuilder);
@@ -393,40 +390,40 @@ final class HttpChannelPool implements AsyncCloseable {
      * A low-level operation that triggers a new connection attempt. Used only by:
      * <ul>
      *   <li>{@link #connect(SessionProtocol, PoolKey, ChannelAcquisitionFuture,
-     *       ClientConnectionTimingsBuilder, ProxyContext)} - The pool has been exhausted.</li>
+     *       ClientConnectionTimingsBuilder)} - The pool has been exhausted.</li>
      *   <li>{@link HttpSessionHandler} - HTTP/2 upgrade has failed.</li>
      * </ul>
      */
     void connect(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
-                 ProxyContext proxyContext, Promise<Channel> sessionPromise) {
+                 PoolKey poolKey, Promise<Channel> sessionPromise) {
 
         final Bootstrap bootstrap = getBootstrap(desiredProtocol);
 
         final Channel channel = bootstrap.register().channel();
-        channel.attr(PROXY_CONTEXT).set(proxyContext);
-        configureProxy(channel, proxyContext.proxyConfig(), desiredProtocol);
+        channel.attr(POOL_KEY).set(poolKey);
+        configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
         final ChannelFuture connectFuture = channel.connect(remoteAddress);
 
         connectFuture.addListener((ChannelFuture future) -> {
             if (future.isSuccess()) {
                 initSession(desiredProtocol, future, sessionPromise);
             } else {
-                invokeProxyConnectFailed(proxyContext, future.cause());
+                invokeProxyConnectFailed(poolKey, future.cause());
                 sessionPromise.tryFailure(future.cause());
             }
         });
     }
 
-    void invokeProxyConnectFailed(ProxyContext proxyContext, Throwable cause) {
+    void invokeProxyConnectFailed(PoolKey poolKey, Throwable cause) {
         try {
-            final ProxyConfig proxyConfig = proxyContext.proxyConfig();
+            final ProxyConfig proxyConfig = poolKey.proxyConfig;
             if (proxyConfig.proxyType() != ProxyType.DIRECT) {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
-                proxyConfigSelector.connectFailed(proxyContext.reqUri(), proxyAddress, cause);
+                proxyConfigSelector.connectFailed(poolKey.connUri, proxyAddress, cause);
             }
         } catch (Throwable t) {
-            logger.warn("Exception while invoking proxy connectFailed for <{}> ", proxyContext, t);
+            logger.warn("Exception while invoking proxy connectFailed for <{}> ", poolKey, t);
         }
     }
 
@@ -606,12 +603,16 @@ final class HttpChannelPool implements AsyncCloseable {
         final ProxyConfig proxyConfig;
         final int hashCode;
 
-        PoolKey(String host, String ipAddr, int port, ProxyConfig proxyConfig) {
-            this.host = host;
+        final URI connUri;
+
+        PoolKey(String ipAddr, ProxyConfig proxyConfig, URI connUri) {
             this.ipAddr = ipAddr;
-            this.port = port;
             this.proxyConfig = proxyConfig;
+            host = connUri.getHost();
+            port = connUri.getPort();
             hashCode = ((host.hashCode() * 31 + ipAddr.hashCode()) * 31 + port) * 31 + proxyConfig.hashCode();
+
+            this.connUri = connUri;
         }
 
         @Override
@@ -722,14 +723,12 @@ final class HttpChannelPool implements AsyncCloseable {
 
         void piggyback(SessionProtocol desiredProtocol, PoolKey key,
                        ChannelAcquisitionFuture childPromise,
-                       ClientConnectionTimingsBuilder timingsBuilder,
-                       ProxyContext proxyContext) {
+                       ClientConnectionTimingsBuilder timingsBuilder) {
 
             // Add to the pending handler list if not complete yet.
             if (!isDone()) {
                 final Consumer<PooledChannel> handler =
-                        pch -> handlePiggyback(desiredProtocol, key, childPromise,
-                                               timingsBuilder, pch, proxyContext);
+                        pch -> handlePiggyback(desiredProtocol, key, childPromise, timingsBuilder, pch);
 
                 if (pendingPiggybackHandlers == null) {
                     // The 1st handler
@@ -759,13 +758,13 @@ final class HttpChannelPool implements AsyncCloseable {
 
             // Handle immediately if complete already.
             handlePiggyback(desiredProtocol, key, childPromise, timingsBuilder,
-                            isCompletedExceptionally() ? null : getNow(null), proxyContext);
+                            isCompletedExceptionally() ? null : getNow(null));
         }
 
         private void handlePiggyback(SessionProtocol desiredProtocol, PoolKey key,
                                      ChannelAcquisitionFuture childPromise,
                                      ClientConnectionTimingsBuilder timingsBuilder,
-                                     @Nullable PooledChannel pch, ProxyContext proxyContext) {
+                                     @Nullable PooledChannel pch) {
 
             final PiggybackedChannelAcquisitionResult result;
             if (pch != null) {
@@ -774,8 +773,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     final HttpSession session = HttpSession.get(pch.get());
                     if (session.incrementNumUnfinishedResponses()) {
                         result = PiggybackedChannelAcquisitionResult.SUCCESS;
-                    } else if (usePendingAcquisition(actualProtocol, key, childPromise,
-                                                     timingsBuilder, proxyContext)) {
+                    } else if (usePendingAcquisition(actualProtocol, key, childPromise, timingsBuilder)) {
                         result = PiggybackedChannelAcquisitionResult.PIGGYBACKED_AGAIN;
                     } else {
                         result = PiggybackedChannelAcquisitionResult.NEW_CONNECTION;
@@ -804,7 +802,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     break;
                 case NEW_CONNECTION:
                     timingsBuilder.pendingAcquisitionEnd();
-                    connect(desiredProtocol, key, childPromise, timingsBuilder, proxyContext);
+                    connect(desiredProtocol, key, childPromise, timingsBuilder);
                     break;
                 case PIGGYBACKED_AGAIN:
                     // There's nothing to do because usePendingAcquisition() was called successfully above.

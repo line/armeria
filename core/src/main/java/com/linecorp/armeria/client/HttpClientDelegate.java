@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import javax.annotation.Nullable;
 
@@ -143,36 +144,46 @@ final class HttpClientDelegate implements HttpClient {
         final int port = endpointWithPort.port();
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop());
-        final URI reqUri = req.uri();
-
-        ProxyConfig proxyConfig;
+        final URI connUri;
         try {
-            proxyConfig = factory.proxyConfigSelector().select(reqUri);
-            requireNonNull(proxyConfig, "proxyConfig");
-        } catch (Throwable t) {
-            logger.warn("Failed to select ProxyConfig for <{}>; falling back to DIRECT ", reqUri, t);
-            proxyConfig = ProxyConfig.direct();
+            connUri = new URI("http", null, host, port, null, null, null);
+        } catch (URISyntaxException e) {
+            final UnprocessedRequestException ure = new UnprocessedRequestException(e);
+            handleEarlyRequestException(ctx, req, ure);
+            res.close(ure);
+            return;
         }
 
-        final ProxyContext proxyContext = new ProxyContext(proxyConfig, reqUri);
-        final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
+        final ProxyConfig proxyConfig = selectProxyConfig(connUri);
+        final PoolKey key = new PoolKey(ipAddr, proxyConfig, connUri);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquireLater(protocol, key, timingsBuilder, proxyContext)
-                .handle((newPooledChannel, cause) -> {
-                    logSession(ctx, newPooledChannel, timingsBuilder.build());
-                    if (cause == null) {
-                        doExecute(newPooledChannel, ctx, req, res);
-                    } else {
-                        handleEarlyRequestException(ctx, req, cause);
-                        res.close(cause);
-                    }
-                    return null;
-                });
+            pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
+                logSession(ctx, newPooledChannel, timingsBuilder.build());
+                if (cause == null) {
+                    doExecute(newPooledChannel, ctx, req, res);
+                } else {
+                    handleEarlyRequestException(ctx, req, cause);
+                    res.close(cause);
+                }
+                return null;
+            });
         }
+    }
+
+    private ProxyConfig selectProxyConfig(URI connUri) {
+        ProxyConfig proxyConfig;
+        try {
+            proxyConfig = factory.proxyConfigSelector().select(connUri);
+            requireNonNull(proxyConfig, "proxyConfig");
+        } catch (Throwable t) {
+            logger.warn("Failed to select ProxyConfig for <{}>; falling back to DIRECT ", connUri, t);
+            proxyConfig = ProxyConfig.direct();
+        }
+        return proxyConfig;
     }
 
     private static void logSession(ClientRequestContext ctx, @Nullable PooledChannel pooledChannel,
