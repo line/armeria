@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -276,5 +277,50 @@ class DefaultRequestLogTest {
                                                                .defaultLogName(logName).build();
         ctx.logBuilder().endRequest();
         assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).name()).isSameAs(logName);
+    }
+
+    @Test
+    void logNameWithRequestContent() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+    }
+
+    @Test
+    void logNameWithDeferredRequestContent() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+
+        log.deferRequestContent();
+        log.endRequest();
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        assertThat(log.whenRequestComplete()).isNotDone();
+
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        assertThat(log.name()).isSameAs("test");
+        await().untilAsserted(() -> {
+            assertThat(log.whenRequestComplete()).isDone();
+        });
+    }
+
+    @Test
+    void logNameWithDeferredRequestContent_beforeEndRequest() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+
+        log.deferRequestContent();
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        assertThat(log.whenRequestComplete()).isNotDone();
+
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        await().untilAsserted(() -> {
+            assertThat(log.whenRequestComplete()).isDone();
+        });
     }
 }

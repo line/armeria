@@ -826,12 +826,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
+        int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
+        if (needToDeferName() && name == null) {
+            requestCompletionFlags &= ~RequestLogProperty.NAME.flag();
+        }
+
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
         updateFlags(RequestLogProperty.REQUEST_CONTENT);
 
         if (requestContent instanceof RpcRequest && ctx.rpcRequest() == null) {
             ctx.updateRpcRequest((RpcRequest) requestContent);
+        }
+
+        if (isAvailable(requestCompletionFlags)) {
+            setNamesIfAbsent();
         }
     }
 
@@ -933,6 +942,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (requestCause != null) {
             flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE;
         } else {
+            int deferredFlags = this.deferredFlags;
+            if (needToDeferName() && name == null) {
+                deferredFlags |= RequestLogProperty.NAME.flag();
+            }
             flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         }
 
@@ -960,12 +973,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
         }
 
+        if (!needToDeferName()) {
+            setNamesIfAbsent();
+        }
+        this.requestEndTimeNanos = requestEndTimeNanos;
+        this.requestCause = requestCause;
+        updateFlags(flags);
+    }
+
+    private void setNamesIfAbsent() {
         if (name == null) {
             String newServiceName = null;
             String newName = null;
             RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq == null && requestContent instanceof RpcRequest) {
-               rpcReq = (RpcRequest) requestContent;
+                rpcReq = (RpcRequest) requestContent;
             }
 
             if (rpcReq != null) {
@@ -991,10 +1013,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             } else {
                 fullName = name;
             }
+
+            updateFlags(RequestLogProperty.NAME);
         }
-        this.requestEndTimeNanos = requestEndTimeNanos;
-        this.requestCause = requestCause;
-        updateFlags(flags);
+    }
+
+    private boolean needToDeferName() {
+        return isDeferRequestContentSet() && !isAvailable(RequestLogProperty.REQUEST_CONTENT);
     }
 
     // Response-side methods.
