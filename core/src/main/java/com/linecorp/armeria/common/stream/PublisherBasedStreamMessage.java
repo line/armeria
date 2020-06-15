@@ -208,6 +208,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private volatile Subscription subscription;
         @Nullable
         private volatile Throwable abortCause;
+        private volatile boolean isCompleting;
 
         @SuppressWarnings("unchecked")
         AbortableSubscriber(PublisherBasedStreamMessage<?> parent, Subscriber<?> subscriber,
@@ -253,6 +254,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void cancelOrAbort0(boolean cancel) {
+            if (isCompleting) {
+                return;
+            }
             final CompletableFuture<Void> completionFuture = parent.whenComplete();
             if (completionFuture.isDone()) {
                 return;
@@ -361,11 +365,11 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         private void onComplete0() {
             try {
-                // 'parent.whenComplete()' should be called before 'subscriber.onComplete()'
-                // in order not to complete 'completionFuture' with CancelledSubscriptionException
-                // while canceling in AbortableSubscriber.cancelOrAbort0(cancel)
-                parent.whenComplete().complete(null);
+                // Mark 'subscriber' is completing in order not to complete 'completionFuture' with
+                // CancelledSubscriptionException while canceling in AbortableSubscriber.cancelOrAbort0(cancel)
+                isCompleting = true;
                 subscriber.onComplete();
+                parent.whenComplete().complete(null);
             } catch (Throwable t) {
                 parent.whenComplete().completeExceptionally(t);
                 throwIfFatal(t);
