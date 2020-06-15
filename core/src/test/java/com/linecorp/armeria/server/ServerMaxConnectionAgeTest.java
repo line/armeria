@@ -31,7 +31,6 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -150,15 +149,13 @@ class ServerMaxConnectionAgeTest {
         }
 
         assertThat(MoreMeters.measureAll(meterRegistry))
-                .hasEntrySatisfying("armeria.server.connections.lifetime.percentile#value{phi=0}", value -> {
-                    assertThat(value).isCloseTo(TimeUnit.MILLISECONDS.toSeconds(MAX_CONNECTION_AGE),
-                                                withinPercentage(25));
+                .hasEntrySatisfying("armeria.server.connections.lifespan.percentile#value{phi=0}", value -> {
+                    assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
                 })
-                .hasEntrySatisfying("armeria.server.connections.lifetime.percentile#value{phi=1}", value -> {
-                    assertThat(value).isCloseTo(TimeUnit.MILLISECONDS.toSeconds(MAX_CONNECTION_AGE),
-                                                withinPercentage(25));
+                .hasEntrySatisfying("armeria.server.connections.lifespan.percentile#value{phi=1}", value -> {
+                    assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
                 })
-                .hasEntrySatisfying("armeria.server.connections.lifetime#count", value -> {
+                .hasEntrySatisfying("armeria.server.connections.lifespan#count", value -> {
                     assertThat(value).isEqualTo(maxClosedConnection);
                 });
         clientFactory.close();

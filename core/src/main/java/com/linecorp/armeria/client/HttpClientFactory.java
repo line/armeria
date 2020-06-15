@@ -149,7 +149,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
-        keepAliveTimer = MoreMeters.newTimer(meterRegistry, "armeria.client.connections.lifetime",
+        keepAliveTimer = MoreMeters.newTimer(meterRegistry, "armeria.client.connections.lifespan",
                                              ImmutableList.of());
         proxyConfig = options.proxyConfig();
 

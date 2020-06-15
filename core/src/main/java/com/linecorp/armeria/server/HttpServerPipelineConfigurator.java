@@ -117,7 +117,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
-        keepAliveTimer = MoreMeters.newTimer(config.meterRegistry(), "armeria.server.connections.lifetime",
+        keepAliveTimer = MoreMeters.newTimer(config.meterRegistry(), "armeria.server.connections.lifespan",
                                              ImmutableList.of());
     }
 

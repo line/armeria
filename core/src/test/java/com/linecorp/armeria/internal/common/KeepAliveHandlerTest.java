@@ -58,7 +58,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class KeepAliveHandlerTest {
 
-    private static final String CONNECTION_LIFETIME = "armeria.connections.lifetime";
+    private static final String CONNECTION_LIFETIME = "armeria.connections.lifespan";
 
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
