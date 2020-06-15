@@ -23,7 +23,17 @@ import static org.assertj.core.api.Assertions.fail;
 
 import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +50,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -47,8 +58,10 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean1;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean2;
@@ -219,10 +232,11 @@ class AnnotatedServiceRequestConverterTest {
             return uuid;
         }
 
-        @Get("/default/period/:period")
-        public Period defaultPeriod(@Param Period period) {
-            assertThat(period).isNotNull();
-            return period;
+        @Post("/default/time")
+        public String defaultTimeBean(TimeBean timeBean) {
+            assertThat(timeBean).isNotNull();
+            timeBean.validate();
+            return timeBean.toString();
         }
     }
 
@@ -595,6 +609,60 @@ class AnnotatedServiceRequestConverterTest {
         }
     }
 
+    static class TimeBean {
+        @Param
+        Duration duration;
+        @Param
+        Instant instant;
+        @Param
+        LocalDate localDate;
+        @Param
+        LocalDateTime localDateTime;
+        @Param
+        LocalTime localTime;
+        @Param
+        OffsetDateTime offsetDateTime;
+        @Param
+        OffsetTime offsetTime;
+        @Param
+        Period period;
+        @Param
+        ZonedDateTime zonedDateTime;
+        @Param
+        ZoneId zoneId;
+        @Param
+        ZoneOffset zoneOffset;
+
+        public void validate() {
+            assertThat(duration).isNotNull();
+            assertThat(instant).isNotNull();
+            assertThat(localDate).isNotNull();
+            assertThat(localDateTime).isNotNull();
+            assertThat(offsetDateTime).isNotNull();
+            assertThat(offsetTime).isNotNull();
+            assertThat(period).isNotNull();
+            assertThat(zonedDateTime).isNotNull();
+            assertThat(zoneId).isNotNull();
+            assertThat(zoneOffset).isNotNull();
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("duration", duration)
+                              .add("instant", instant)
+                              .add("localDate", localDate)
+                              .add("localDateTime", localDateTime)
+                              .add("offsetDateTime", offsetDateTime)
+                              .add("offsetTime", offsetTime)
+                              .add("period", period)
+                              .add("zonedDateTime", zonedDateTime)
+                              .add("zoneId", zoneId)
+                              .add("zoneOffset", zoneOffset)
+                              .toString();
+        }
+    }
+
     public static class TestRequestConverter1 implements RequestConverterFunction {
         private final ObjectMapper mapper = new ObjectMapper();
 
@@ -954,11 +1022,44 @@ class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    void testDefaultRequestConverter_period() {
+    void testDefaultRequestConverter_timeBean() {
         final WebClient client = WebClient.of(server.httpUri());
-        final Period period = Period.of(2020, 1, 1);
-        final AggregatedHttpResponse response = client.get("/2/default/period/" + period).aggregate().join();
-        assertThat(response.contentUtf8()).isEqualTo(period.toString());
+
+        final TimeBean timeBean = new TimeBean();
+        timeBean.duration = Duration.ofDays(1);
+        timeBean.instant = Instant.now();
+        timeBean.localDate = LocalDate.now();
+        timeBean.localDateTime = LocalDateTime.now();
+        timeBean.localTime = LocalTime.now();
+        timeBean.offsetDateTime = OffsetDateTime.now();
+        timeBean.offsetTime = OffsetTime.now();
+        timeBean.period = Period.of(1, 2, 3);
+        timeBean.zonedDateTime = ZonedDateTime.now();
+        timeBean.zoneId = ZoneId.systemDefault();
+        timeBean.zoneOffset = ZoneOffset.ofHours(1);
+
+        final QueryParams queryParams = QueryParams.builder()
+                                                   .add("duration", timeBean.duration.toString())
+                                                   .add("instant", timeBean.instant.toString())
+                                                   .add("localDate", timeBean.localDate.toString())
+                                                   .add("localDateTime", timeBean.localDateTime.toString())
+                                                   .add("localTime", timeBean.localTime.toString())
+                                                   .add("offsetDateTime", timeBean.offsetDateTime.toString())
+                                                   .add("offsetTime", timeBean.offsetTime.toString())
+                                                   .add("period", timeBean.period.toString())
+                                                   .add("zonedDateTime", timeBean.zonedDateTime.toString())
+                                                   .add("zoneId", timeBean.zoneId.toString())
+                                                   .add("zoneOffset", timeBean.zoneOffset.toString())
+                                                   .build();
+
+        final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.POST,
+                                                                              "/2/default/time",
+                                                                              MediaType.FORM_DATA,
+                                                                              queryParams.toQueryString()))
+                                                      .aggregate()
+                                                      .join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(timeBean.toString());
     }
 
     @Test
