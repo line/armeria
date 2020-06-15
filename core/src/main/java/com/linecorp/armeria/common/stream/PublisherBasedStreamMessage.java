@@ -204,11 +204,11 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private final EventExecutor executor;
         private final boolean notifyCancellation;
         private Subscriber<Object> subscriber;
+        private boolean isCompleting;
         @Nullable
         private volatile Subscription subscription;
         @Nullable
         private volatile Throwable abortCause;
-        private volatile boolean isCompleting;
 
         @SuppressWarnings("unchecked")
         AbortableSubscriber(PublisherBasedStreamMessage<?> parent, Subscriber<?> subscriber,
