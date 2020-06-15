@@ -43,10 +43,10 @@ class ServletEmptyContextPathTest {
             sb.http(0);
             final ServletBuilder servletBuilder = new ServletBuilder(sb);
             sb = servletBuilder
-                    .servlet("/", new HomeServlet())
-                    .servlet("/bar", new BarServlet())
-                    .servlet("/end/", new EndServlet())
-                    .servlet("/servlet/path/*", new PathInfoServlet())
+                    .servlet("/", new HomeServletTest())
+                    .servlet("/bar", new BarServletTest())
+                    .servlet("/end/", new EndServletTest())
+                    .servlet("/servlet/path/*", new PathInfoServletTest())
                     .build();
         }
     };
@@ -85,7 +85,7 @@ class ServletEmptyContextPathTest {
         assertThat(new String(res.content().array())).isEqualTo("get path info");
     }
 
-    static class HomeServlet extends HttpServlet {
+    static class HomeServletTest extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
@@ -106,7 +106,7 @@ class ServletEmptyContextPathTest {
         }
     }
 
-    static class BarServlet extends HttpServlet {
+    static class BarServletTest extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
@@ -127,7 +127,7 @@ class ServletEmptyContextPathTest {
         }
     }
 
-    static class EndServlet extends HttpServlet {
+    static class EndServletTest extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
@@ -148,7 +148,7 @@ class ServletEmptyContextPathTest {
         }
     }
 
-    static class PathInfoServlet extends HttpServlet {
+    static class PathInfoServletTest extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {

@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.server.servlet;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -33,7 +33,6 @@ import javax.annotation.Nullable;
 final class UrlMapper<T> {
     private final boolean singlePattern;
     private final List<Element<T>> elementList = new ArrayList<>();
-    private final StringUtil stringUtil = new StringUtil();
 
     /**
      * Creates a new instance.
@@ -72,24 +71,21 @@ final class UrlMapper<T> {
     @Nullable
     Element<T> getMapping(String absoluteUri) {
         requireNonNull(absoluteUri, "absoluteUri");
-        return elementList.stream()
-                          .filter(x -> stringUtil.match(x.pattern, absoluteUri, "*"))
-                          .findAny()
-                          .orElse(
-                                  elementList.stream()
-                                             .filter(s -> !"default".equals(s.name) &&
-                                                          !isNullOrEmpty(s.name) &&
-                                                          ('*' == s.pattern.charAt(0) ||
-                                                           "/*".equals(s.pattern) ||
-                                                           "/**".equals(s.pattern)))
-                                             .findAny()
-                                             .orElse(
-                                                     elementList.stream()
-                                                                .filter(a -> "default".equals(a.name))
-                                                                .findAny()
-                                                                .orElse(null)
-                                             )
-                          );
+        return elementList
+                .stream()
+                .filter(x -> absoluteUri.equals(x.pattern)) // Match exact path: /home
+                .findAny()
+                .orElse(
+                        // Match contain *: /home/*.html
+                        elementList
+                                .stream()
+                                .filter(s -> s.pattern.contains("*") &&
+                                             Pattern.compile(s.pattern.replace(".", "\\.")
+                                                                      .replace("*", ".*"))
+                                                    .matcher(absoluteUri)
+                                                    .find())
+                                .findAny()
+                                .orElse(null));
     }
 
     /**
@@ -127,5 +123,16 @@ final class UrlMapper<T> {
         T getObject() {
             return object;
         }
+    }
+
+    /**
+     * Normalize path.
+     */
+    static String normalizePath(String path) {
+        requireNonNull(path, "path");
+        if (!path.isEmpty() && path.charAt(path.length() - 1) == '/') {
+            path = path.substring(0, path.length() - 1);
+        }
+        return path.trim();
     }
 }

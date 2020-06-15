@@ -97,7 +97,7 @@ public class ServletServiceTest {
             sb.http(0);
             final ServletBuilder servletBuilder = new ServletBuilder(sb);
             sb = servletBuilder
-                    .servlet("/home", HomeServlet.class.getName())
+                    .servlet("/home", TestServlet.class.getName())
                     .requestEncoding(HttpConstants.DEFAULT_CHARSET.name())
                     .responseEncoding(HttpConstants.DEFAULT_CHARSET.name())
                     .attribute("attribute1", "value1")
@@ -191,8 +191,8 @@ public class ServletServiceTest {
         }
     }
 
-    static class HomeServlet extends HttpServlet {
-        private static final Logger logger = LoggerFactory.getLogger(HomeServlet.class);
+    static class TestServlet extends HttpServlet {
+        private static final Logger logger = LoggerFactory.getLogger(TestServlet.class);
 
         @Override
         public void init(ServletConfig config) throws ServletException {
@@ -287,7 +287,7 @@ public class ServletServiceTest {
                         "authenticate"))).isEqualTo(true);
 
                 final DefaultFilterRegistration filterRegistration =
-                        new DefaultFilterRegistration("authenticate", new AuthenFilter(),
+                        new DefaultFilterRegistration("authenticate", new TestFilter(),
                                                       new UrlMapper<>(false),
                                                       ImmutableMap.copyOf(new HashMap<>()));
                 assertThat(filterRegistration.getInitParameters().size()).isEqualTo(0);
@@ -295,7 +295,7 @@ public class ServletServiceTest {
                 assertThat(Objects.isNull(filterRegistration.getFilter())).isEqualTo(false);
                 assertThat(filterRegistration.getName()).isEqualTo("authenticate");
                 assertThat(filterRegistration.getClassName()).isEqualTo(
-                        "com.linecorp.armeria.server.servlet.ServletServiceTest$AuthenFilter");
+                        "com.linecorp.armeria.server.servlet.ServletServiceTest$TestFilter");
                 assertThat(Objects.isNull(filterRegistration.getServletNameMappings())).isEqualTo(false);
                 assertThat(Objects.isNull(filterRegistration.getUrlPatternMappings())).isEqualTo(false);
                 final List dispatchers = new ArrayList();
@@ -312,7 +312,7 @@ public class ServletServiceTest {
                 assertThat(Objects.isNull(servletRegistration.getServlet())).isEqualTo(false);
                 assertThat(servletRegistration.getName()).isEqualTo("/home");
                 assertThat(servletRegistration.getClassName()).isEqualTo(
-                        "com.linecorp.armeria.server.servlet.ServletServiceTest$HomeServlet");
+                        "com.linecorp.armeria.server.servlet.ServletServiceTest$TestServlet");
                 assertThat(servletRegistration.getMappings().size()).isEqualTo(1);
                 request.getServletContext().log(new Exception("Test log"), "Test log exception");
                 request.getServletContext().log("Test log", new Exception("Test log exception"));
@@ -333,11 +333,13 @@ public class ServletServiceTest {
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().write("welcome");
                 response.getWriter().close();
-                new StringUtil().match("/bla/**/bla", "/bla/testing/testing/bla", "**");
-                new StringUtil().match("test/*", "test/", "*");
-                new StringUtil().match("test*", "test/t", "*");
-                new StringUtil().match("test/*", "test", "*");
-                new StringUtil().match("*/*", "test/", "*");
+                final UrlMapper urlMapper = new UrlMapper<String>(true);
+                urlMapper.addMapping("/test", "Exact path", "/test");
+                urlMapper.addMapping("/test/*", "End with *", "/test/*");
+                urlMapper.addMapping("/test/*.html", "Contain *", "/test/*.html");
+                assertThat(urlMapper.getMapping("/test")).isEqualTo("/test");
+                assertThat(urlMapper.getMapping("/test/path/info")).isEqualTo("/test/*");
+                assertThat(urlMapper.getMapping("/test/path/info.html")).isEqualTo("/test/*.html");
                 dispatcher.clearFilter();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -434,15 +436,11 @@ public class ServletServiceTest {
                 response.getWriter().printf(Locale.US, "test %d", 1);
                 response.getWriter().format("test %d", 1);
                 response.getWriter().format(Locale.US, "test %d", 1);
-                ((ServletPrintWriter) response.getWriter()).setError();
-                ((ServletPrintWriter) response.getWriter()).clearError();
                 final CharSequence cs = "test";
                 response.getWriter().append(cs);
                 response.getWriter().append(cs, 0, 1);
                 response.getWriter().append(null);
-                ((ServletPrintWriter) response.getWriter()).setError();
                 response.getWriter().checkError();
-                ((ServletPrintWriter) response.getWriter()).clearError();
                 final char[] c = new char[1];
                 c[0] = 'c';
                 response.getWriter().write(c, 0, 1);
@@ -482,13 +480,13 @@ public class ServletServiceTest {
         }
     }
 
-    static class AuthenFilter implements Filter {
-        private static final Logger logger = LoggerFactory.getLogger(AuthenFilter.class);
+    static class TestFilter implements Filter {
+        private static final Logger logger = LoggerFactory.getLogger(TestFilter.class);
 
         @Override
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
-            logger.info("Authenticate successfully!");
+            logger.info("Do filter successfully!");
             chain.doFilter(request, response);
         }
     }

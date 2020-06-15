@@ -133,7 +133,7 @@ final class DefaultServletContext implements ServletContext {
      */
     @Nullable
     String getServletPath(String uri) {
-        final Element element = servletUrlMapper.getMapping(StringUtil.normalizePath(uri));
+        final Element element = servletUrlMapper.getMapping(UrlMapper.normalizePath(uri));
         return element == null ? null : element.path.substring(contextPath.length());
     }
 
@@ -219,7 +219,7 @@ final class DefaultServletContext implements ServletContext {
     public ServletRequestDispatcher getRequestDispatcher(String path) {
         requireNonNull(path, "path");
         final UrlMapper.Element<DefaultServletRegistration> element =
-                servletUrlMapper.getMapping(StringUtil.normalizePath(path));
+                servletUrlMapper.getMapping(UrlMapper.normalizePath(path));
         if (element == null) {
             return null;
         }
@@ -231,7 +231,7 @@ final class DefaultServletContext implements ServletContext {
     @Nullable
     public ServletRequestDispatcher getNamedDispatcher(String name) {
         requireNonNull(name, "name");
-        name = StringUtil.normalizePath(name);
+        name = UrlMapper.normalizePath(name);
         final DefaultServletRegistration servletRegistration = getServletRegistration(name);
         if (servletRegistration == null) {
             return null;
@@ -361,7 +361,7 @@ final class DefaultServletContext implements ServletContext {
         checkArgument(!isNullOrEmpty(servletName),
                       "servletName: %s (expected: not null and empty)", servletName);
         requireNonNull(servlet, "servlet");
-        servletName = StringUtil.normalizePath(servletName);
+        servletName = UrlMapper.normalizePath(servletName);
         final DefaultServletRegistration servletRegistration =
                 new DefaultServletRegistration(servletName, servlet, this, servletUrlMapper, initParamMap);
         servletRegistrationMap.put(servletName, servletRegistration);

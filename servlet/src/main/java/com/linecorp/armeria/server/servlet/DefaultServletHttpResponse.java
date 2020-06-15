@@ -82,7 +82,7 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         this.responseWriter = responseWriter;
         this.servletContext = servletContext;
         outputStream = new DefaultServletOutputStream(this);
-        writer = new ServletPrintWriter(this, outputStream);
+        writer = new PrintWriter(outputStream);
         headersBuilder.contentType(MediaType.HTML_UTF_8);
         setCharacterEncoding(servletContext.getResponseCharacterEncoding());
     }
