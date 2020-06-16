@@ -16,17 +16,14 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import java.time.Period;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+
+import io.netty.util.AsciiString;
 
 final class AnnotatedServiceTypeUtil {
 
@@ -49,9 +46,12 @@ final class AnnotatedServiceTypeUtil {
                     .put(Float.class, Float::valueOf)
                     .put(Double.TYPE, Double::valueOf)
                     .put(Double.class, Double::valueOf)
-                    .put(String.class, Function.identity())
                     .put(UUID.class, UUID::fromString)
                     .put(Period.class, Period::parse)
+                    .put(AsciiString.class, AsciiString::new)
+                    .put(String.class, Function.identity())
+                    .put(CharSequence.class, Function.identity())
+                    .put(Object.class, Function.identity())
                     .build();
 
     private static final Map<String, Boolean> stringToBooleanMap =
@@ -61,47 +61,6 @@ final class AnnotatedServiceTypeUtil {
                     .put("false", false)
                     .put("0", false)
                     .build();
-
-    /**
-     * Normalizes the specified container {@link Class}. Throws {@link IllegalArgumentException}
-     * if it is not able to be normalized.
-     */
-    static Class<?> normalizeContainerType(Class<?> containerType) {
-        if (containerType == Iterable.class ||
-            containerType == List.class ||
-            containerType == Collection.class) {
-            return ArrayList.class;
-        }
-        if (containerType == Set.class) {
-            return LinkedHashSet.class;
-        }
-        if (List.class.isAssignableFrom(containerType) ||
-            Set.class.isAssignableFrom(containerType)) {
-            try {
-                // Only if there is a default constructor.
-                containerType.getConstructor();
-                return containerType;
-            } catch (Throwable cause) {
-                throw new IllegalArgumentException("Unsupported container type: " + containerType.getName(),
-                                                   cause);
-            }
-        }
-        throw new IllegalArgumentException("Unsupported container type: " + containerType.getName());
-    }
-
-    /**
-     * Validates whether the specified element {@link Class} is supported.
-     * Throws {@link IllegalArgumentException} if it is not supported.
-     */
-    static Class<?> validateElementType(Class<?> clazz) {
-        if (clazz.isEnum()) {
-            return clazz;
-        }
-        if (supportedElementTypes.containsKey(clazz)) {
-            return clazz;
-        }
-        throw new IllegalArgumentException("Parameter type '" + clazz.getName() + "' is not supported.");
-    }
 
     /**
      * Converts the given {@code str} to {@code T} type object. e.g., "42" -> 42.

@@ -1,5 +1,6 @@
 package example.armeria.server.annotated;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -171,8 +172,10 @@ public class MessageConverterService {
 
     public static final class CustomRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType) throws Exception {
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             final MediaType mediaType = request.contentType();
             if (mediaType != null && mediaType.is(MediaType.PLAIN_TEXT_UTF_8)) {
                 return new Request(request.contentUtf8());
@@ -183,10 +186,10 @@ public class MessageConverterService {
 
     public static final class CustomResponseConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            ResponseHeaders headers,
-                                            @Nullable Object result,
-                                            HttpHeaders trailers) throws Exception {
+        public HttpResponse convertResponse(
+                ServiceRequestContext ctx, ResponseHeaders headers,
+                @Nullable Object result, HttpHeaders trailers) throws Exception {
+
             if (result instanceof Response) {
                 final Response response = (Response) result;
                 final HttpData body = HttpData.ofUtf8(response.result() + ':' + response.from());
