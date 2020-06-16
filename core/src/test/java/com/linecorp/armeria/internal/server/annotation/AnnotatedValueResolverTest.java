@@ -888,37 +888,37 @@ class AnnotatedValueResolverTest {
 
         @Override
         public Duration duration() {
-            return null;
+            return duration;
         }
 
         @Override
         public Instant instant() {
-            return null;
+            return instant;
         }
 
         @Override
         public LocalDate localDate() {
-            return null;
+            return localDate;
         }
 
         @Override
         public LocalDateTime localDateTime() {
-            return null;
+            return localDateTime;
         }
 
         @Override
         public LocalTime localTime() {
-            return null;
+            return localTime;
         }
 
         @Override
         public OffsetDateTime offsetDateTime() {
-            return null;
+            return offsetDateTime;
         }
 
         @Override
         public OffsetTime offsetTime() {
-            return null;
+            return offsetTime;
         }
 
         @Override
@@ -928,17 +928,17 @@ class AnnotatedValueResolverTest {
 
         @Override
         public ZonedDateTime zonedDateTime() {
-            return null;
+            return zonedDateTime;
         }
 
         @Override
         public ZoneId zoneId() {
-            return null;
+            return zoneId;
         }
 
         @Override
         public ZoneOffset zoneOffset() {
-            return null;
+            return zoneOffset;
         }
     }
 
