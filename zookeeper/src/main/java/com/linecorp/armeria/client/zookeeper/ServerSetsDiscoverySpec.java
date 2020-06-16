@@ -17,48 +17,38 @@ package com.linecorp.armeria.client.zookeeper;
 
 import java.util.function.Function;
 
-import org.apache.curator.x.discovery.ServiceInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
+import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
-final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
+final class ServerSetsDiscoverySpec implements ZooKeeperDiscoverySpec {
 
-    private static final Logger logger = LoggerFactory.getLogger(CuratorDiscoverySpec.class);
+    private static final Logger logger = LoggerFactory.getLogger(ServerSetsDiscoverySpec.class);
 
-    private final String path;
-    private final Function<? super ServiceInstance<?>, Endpoint> converter;
+    private final Function<? super ServerSetsInstance, Endpoint> converter;
 
-    CuratorDiscoverySpec(
-            String serviceName, Function<? super ServiceInstance<?>, Endpoint> converter) {
-        path = '/' + serviceName;
+    ServerSetsDiscoverySpec(Function<? super ServerSetsInstance, Endpoint> converter) {
         this.converter = converter;
     }
 
     @Override
     public String path() {
-        return path;
+        return null;
     }
 
     @Override
     public Endpoint decode(byte[] data) {
-        final ServiceInstance<?> decodedInstance = CuratorXNodeValueCodec.INSTANCE.decode(data);
+        final ServerSetsInstance decodedInstance = ServerSetsNodeValueCodec.INSTANCE.decode(data);
+        if (decodedInstance.serviceEndpoint() == null) {
+            return null;
+        }
         final Endpoint endpoint = converter.apply(decodedInstance);
         if (endpoint == null) {
             logger.warn("The endpoint converter returned null from {}.", decodedInstance);
         }
         return endpoint;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("path", path)
-                          .add("converter", converter)
-                          .toString();
     }
 }

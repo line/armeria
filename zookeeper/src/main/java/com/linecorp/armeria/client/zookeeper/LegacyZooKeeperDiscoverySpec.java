@@ -15,22 +15,22 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
-enum LegacyZookeeperDiscoverySpec implements ZookeeperDiscoverySpec {
+enum LegacyZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
     INSTANCE;
 
-    @Nullable
     @Override
     public String path() {
         return null;
     }
 
+    @Nonnull
     @Override
-    public Endpoint decode(byte[] zNodeValue) {
-        return LegacyNodeValueCodec.INSTANCE.decode(zNodeValue);
+    public Endpoint decode(byte[] znodeValue) {
+        return LegacyNodeValueCodec.INSTANCE.decode(znodeValue);
     }
 }

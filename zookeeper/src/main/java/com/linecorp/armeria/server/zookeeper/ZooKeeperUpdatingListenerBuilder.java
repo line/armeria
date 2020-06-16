@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.Server;
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.
  * <pre>{@code
- * ZookeeperRegistrationSpec spec = ZookeeperRegistrationSpec.curator("myServices");
+ * ZooKeeperRegistrationSpec spec = ZooKeeperRegistrationSpec.curator("myServices");
  * ZooKeeperUpdatingListener listener =
  *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints", spec)
  *                              .sessionTimeoutMillis(10000)
@@ -46,9 +46,9 @@ import com.linecorp.armeria.server.Server;
  * {@link IllegalStateException}.
  *
  * <pre>{@code
+ * ZooKeeperRegistrationSpec spec = ...
  * ZooKeeperUpdatingListener listener =
- *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints")
- *                              .codec(NodeValueCodec.ofDefault())
+ *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints", spec)
  *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
@@ -56,30 +56,30 @@ import com.linecorp.armeria.server.Server;
  * */
 public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
 
-    private final ZookeeperRegistrationSpec spec;
+    private final ZooKeeperRegistrationSpec spec;
 
     /**
-     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a znode
      * path.
      *
      * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath,
-                                     ZookeeperRegistrationSpec spec) {
-        super(client, zNodePath);
+    ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String znodePath,
+                                     ZooKeeperRegistrationSpec spec) {
+        super(client, znodePath);
         this.spec = requireNonNull(spec, "spec");
     }
 
     /**
-     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
+     * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a znode path.
      *
      * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
+     * @param znodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath,
-                                     ZookeeperRegistrationSpec spec) {
-        super(zkConnectionStr, zNodePath);
+    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String znodePath,
+                                     ZooKeeperRegistrationSpec spec) {
+        super(zkConnectionStr, znodePath);
         this.spec = requireNonNull(spec, "spec");
     }
 
@@ -91,7 +91,7 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
         final CuratorFramework client = buildCuratorFramework();
         final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
-        return new ZooKeeperUpdatingListener(client, zNodePath(), spec, internalClient);
+        return new ZooKeeperUpdatingListener(client, znodePath(), spec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.

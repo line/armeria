@@ -142,6 +142,11 @@ com.squareup.retrofit2:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
 
+# Finagle is used only for testing in zookeeper module.
+com.twitter:
+  finagle-serversets_2.13:
+    version: '20.5.0'
+
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
 

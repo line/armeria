@@ -16,7 +16,7 @@
 package com.linecorp.armeria.server.zookeeper;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.common.zookeeper.ZookeeperPathUtil.validatePath;
+import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperPathUtil.validatePath;
 import static java.util.Objects.requireNonNull;
 
 import java.util.UUID;
@@ -28,7 +28,7 @@ import org.apache.curator.x.discovery.ServiceType;
 import org.apache.curator.x.discovery.UriSpec;
 
 /**
- * Builds a {@link ZookeeperRegistrationSpec} for
+ * Builds a {@link ZooKeeperRegistrationSpec} for
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
  */
 public final class CuratorRegistrationSpecBuilder {
@@ -114,9 +114,9 @@ public final class CuratorRegistrationSpecBuilder {
     }
 
     /**
-     * Returns a newly-created {@link ZookeeperRegistrationSpec} based on the properties set so far.
+     * Returns a newly-created {@link ZooKeeperRegistrationSpec} based on the properties set so far.
      */
-    public ZookeeperRegistrationSpec build() {
+    public ZooKeeperRegistrationSpec build() {
         final String serviceId = this.serviceId != null ? this.serviceId : UUID.randomUUID().toString();
         final ServiceInstance<?> serviceInstance =
                 new ServiceInstance<>(serviceName, serviceId, serviceAddress, port, sslPort,

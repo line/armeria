@@ -31,16 +31,16 @@ import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
  */
 public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder {
 
-    private final ZookeeperDiscoverySpec spec;
+    private final ZooKeeperDiscoverySpec spec;
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
-    ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String zNodePath, ZookeeperDiscoverySpec spec) {
-        super(zkConnectionStr, zNodePath);
+    ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String znodePath, ZooKeeperDiscoverySpec spec) {
+        super(zkConnectionStr, znodePath);
         this.spec = requireNonNull(spec, "spec");
     }
 
-    ZooKeeperEndpointGroupBuilder(CuratorFramework client, String zNodePath, ZookeeperDiscoverySpec spec) {
-        super(client, zNodePath);
+    ZooKeeperEndpointGroupBuilder(CuratorFramework client, String znodePath, ZooKeeperDiscoverySpec spec) {
+        super(client, znodePath);
         this.spec = requireNonNull(spec, "spec");
     }
 
@@ -59,7 +59,7 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
         final CuratorFramework client = buildCuratorFramework();
         final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
-        return new ZooKeeperEndpointGroup(selectionStrategy, client, zNodePath(), spec, internalClient);
+        return new ZooKeeperEndpointGroup(selectionStrategy, client, znodePath(), spec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.
