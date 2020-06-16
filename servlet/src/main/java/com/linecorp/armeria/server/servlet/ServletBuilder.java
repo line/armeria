@@ -18,6 +18,9 @@ package com.linecorp.armeria.server.servlet;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServlet;
 
@@ -34,6 +37,7 @@ public class ServletBuilder {
     private final String contextPath;
 
     private boolean rootServletAdded;
+    private Map<String, String> mappings = new LinkedHashMap<>();
 
     /**
      * Creates a new instance.
@@ -71,6 +75,7 @@ public class ServletBuilder {
             serverBuilder.service(path, (ctx, req) -> HttpResponse.of(HttpStatus.NOT_FOUND));
         }
         servletContext.init();
+        servletContext.setMimeMapping(mappings);
         return serverBuilder;
     }
 
@@ -130,9 +135,9 @@ public class ServletBuilder {
     /**
      * Add a new mime mapping.
      */
-    public ServletBuilder mimeMapping(MimeMappings mimeMappings) {
-        requireNonNull(mimeMappings, "mimeMappings");
-        servletContext.setMimeMapping(mimeMappings);
+    public ServletBuilder mimeMapping(Map<String, String> mappings) {
+        requireNonNull(mappings, "mappings");
+        this.mappings = mappings;
         return this;
     }
 

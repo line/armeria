@@ -123,9 +123,11 @@ final class DefaultServletContext implements ServletContext {
     /**
      * Add a new mime mapping.
      */
-    void setMimeMapping(MimeMappings mimeMappings) {
+    void setMimeMapping(Map<String, String> mappings) {
         requireNonNull(mimeMappings, "mimeMappings");
-        this.mimeMappings = mimeMappings;
+        mappings.forEach((k, v) -> {
+            mimeMappings.add(k, v);
+        });
     }
 
     /**

@@ -73,27 +73,9 @@ public class ServletServiceTest {
     public static ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final MimeMappings mapping = new MimeMappings();
-            mapping.add("avi", "video/x-msvideo");
-            mapping.add("bmp", "image/bmp");
-            assertThat(mapping.getAll().size()).isEqualTo(2);
-            mapping.hashCode();
-            assertThat(mapping.equals(new MimeMappings())).isEqualTo(false);
-            assertThat(mapping.equals(mapping)).isEqualTo(true);
-            assertThat(mapping.equals(null)).isEqualTo(false);
-            assertThat(mapping.equals("test")).isEqualTo(false);
-
-            final MimeMappings.Mapping m = mapping.iterator().next();
-            assertThat(m.getExtension()).isEqualTo("avi");
-            assertThat(m.equals(null)).isEqualTo(false);
-            assertThat(m.equals(m)).isEqualTo(true);
-            assertThat(m.equals("test")).isEqualTo(false);
-            assertThat(m.equals(mapping.getAll().toArray()[1])).isEqualTo(false);
-            m.toString();
-
-            mapping.remove("avi");
-            assertThat(mapping.getAll().size()).isEqualTo(1);
-
+            final HashMap mapping = new HashMap();
+            mapping.put("avi", "video/x-msvideo");
+            mapping.put("bmp", "image/bmp");
             sb.http(0);
             final ServletBuilder servletBuilder = new ServletBuilder(sb);
             sb = servletBuilder
