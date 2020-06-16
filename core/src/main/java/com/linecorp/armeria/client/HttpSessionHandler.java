@@ -303,7 +303,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
                 if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
                     final Http1ClientKeepAliveHandler keepAliveHandler =
-                            new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
+                            new Http1ClientKeepAliveHandler(
+                                    channel, requestEncoder, responseDecoder,
                                     keepAliveTimer, idleTimeoutMillis, pingIntervalMillis);
                     requestEncoder.setKeepAliveHandler(keepAliveHandler);
                     responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
