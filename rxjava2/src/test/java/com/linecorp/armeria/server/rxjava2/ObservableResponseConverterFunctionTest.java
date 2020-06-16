@@ -22,6 +22,8 @@ import static org.awaitility.Awaitility.await;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.Nullable;
+
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -31,6 +33,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -45,6 +48,8 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.reactivex.Completable;
@@ -55,6 +60,15 @@ import io.reactivex.Single;
 import io.reactivex.subscribers.DefaultSubscriber;
 
 public class ObservableResponseConverterFunctionTest {
+
+    private static class CheckCtxConverter implements ResponseConverterFunction {
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
+                                            @Nullable Object result, HttpHeaders trailers) throws Exception {
+            validateContext(ctx);
+            return ResponseConverterFunction.fallthrough();
+        }
+    }
 
     @ClassRule
     public static final ServerRule rule = new ServerRule() {
@@ -148,6 +162,29 @@ public class ObservableResponseConverterFunctionTest {
                                 validateContext(ctx);
                                 return Single.just(request);
                             });
+                }
+
+                @Post("/defer-post2")
+                @ResponseConverter(CheckCtxConverter.class)
+                public Single<String> deferPostValidateCtx(String request) {
+                    final RequestContext ctx = RequestContext.current();
+                    return Single.defer(
+                            () -> {
+                                validateContext(ctx);
+                                return Single.just(request);
+                            });
+                }
+
+                @Post("/defer-post-switch-thread")
+                @ResponseConverter(CheckCtxConverter.class)
+                public Single<String> deferPostSwitchThreadValidateCtx(String request) {
+                    final RequestContext ctx = RequestContext.current();
+                    return Single.defer(() -> {
+                        validateContext(ctx);
+                        return Single.just(request);
+                    }).flatMap(value -> Single.create(
+                            emitter -> new Thread(() -> emitter.onSuccess(value)).start()
+                    ));
                 }
             });
 
@@ -350,6 +387,14 @@ public class ObservableResponseConverterFunctionTest {
         assertThat(res.contentUtf8()).isEqualTo("a");
 
         res = client.post("/defer-post", "b").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("b");
+
+        res = client.post("/defer-post2", "b").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("b");
+
+        res = client.post("/defer-post-switch-thread", "b").aggregate().join();
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("b");
     }
