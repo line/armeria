@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.Gender.MALE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
@@ -113,6 +114,12 @@ class AnnotatedServiceRequestConverterTest {
         public void convert4(Optional<String> optional, @Nullable String nullable) {
             assertThat(optional).isEmpty();
             assertThat(nullable).isNull();
+        }
+
+        @Post("/convert5")
+        @RequestConverter(NullReturningConverter.class)
+        public void convert5(String nonnull) {
+            fail("Should not reach here");
         }
     }
 
@@ -670,9 +677,14 @@ class AnnotatedServiceRequestConverterTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(HttpMethod.POST.name());
 
-        // Conversion of null
+        // Conversion to null
         response = client.post("/1/convert4", content1).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        // Conversion to null that will fail with 400 Bad Request,
+        // because the injection target is not annotated with @Nullable.
+        response = client.post("/1/convert5", content1).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test

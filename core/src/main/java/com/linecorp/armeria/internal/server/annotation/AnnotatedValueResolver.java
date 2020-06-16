@@ -639,12 +639,21 @@ final class AnnotatedValueResolver {
                     Exceptions.throwUnsafely(cause);
                 }
             }
-            if (found) {
-                return value;
+
+            if (!found) {
+                throw new IllegalArgumentException(
+                        "No suitable request converter found for a @" +
+                        RequestObject.class.getSimpleName() + " '" +
+                        resolver.elementType().getSimpleName() + '\'');
             }
-            throw new IllegalArgumentException("No suitable request converter found for a @" +
-                                               RequestObject.class.getSimpleName() + " '" +
-                                               resolver.elementType().getSimpleName() + '\'');
+
+            if (value == null && resolver.shouldExist()) {
+                throw new IllegalArgumentException(
+                        "A request converter converted the request into null, but the injection target " +
+                        "is neither an Optional nor annotated with @Nullable");
+            }
+
+            return value;
         };
     }
 
