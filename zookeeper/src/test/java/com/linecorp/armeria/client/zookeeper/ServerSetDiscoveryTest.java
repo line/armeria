@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
@@ -58,7 +57,7 @@ class ServerSetDiscoveryTest {
         setServerSetNodeChildren(extraEndpoints, 3);
 
         // Construct the final expected node list.
-        final Builder<Endpoint> builder = ImmutableSet.builder();
+        final ImmutableSet.Builder<Endpoint> builder = ImmutableSet.builder();
         builder.addAll(sampleEndpoints).addAll(extraEndpoints);
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             zk.sync(Z_NODE, (rc, path, ctx) -> {}, null);
@@ -92,12 +91,11 @@ class ServerSetDiscoveryTest {
             }
             // Register all child nodes.
             for (int i = 0; i < children.size(); i++) {
-                System.err.println(zk.create(Z_NODE + "/member_",
-                                             ZooKeeperRegistrationSpec.builderForServerSets()
-                                                                      .serviceEndpoint(children.get(i))
-                                                                      .build()
-                                                                      .encodedInstance(),
-                                             Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL));
+                zk.create(Z_NODE + "/member_", ZooKeeperRegistrationSpec.builderForServerSets()
+                                                                        .serviceEndpoint(children.get(i))
+                                                                        .build()
+                                                                        .encodedInstance(),
+                          Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
             }
         }
 
