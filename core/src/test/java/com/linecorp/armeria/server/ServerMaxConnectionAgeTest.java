@@ -65,6 +65,9 @@ class ServerMaxConnectionAgeTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
             sb.maxConnectionAgeMillis(MAX_CONNECTION_AGE);
@@ -116,8 +119,9 @@ class ServerMaxConnectionAgeTest {
         };
     }
 
-    @Test
-    void http1MaxConnectionAge() throws InterruptedException {
+    @CsvSource({ "H1C", "H1" })
+    @ParameterizedTest
+    void http1MaxConnectionAge(SessionProtocol protocol) throws InterruptedException {
         final int maxClosedConnection = 5;
         final ConnectionPoolListener connectionPoolListener = new ConnectionPoolListener() {
             @Override
@@ -136,8 +140,9 @@ class ServerMaxConnectionAgeTest {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .connectionPoolListener(connectionPoolListener)
                                                          .idleTimeoutMillis(0)
+                                                         .tlsNoVerify()
                                                          .build();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .factory(clientFactory)
                                           .responseTimeoutMillis(0)
                                           .build();
@@ -149,15 +154,21 @@ class ServerMaxConnectionAgeTest {
         }
 
         assertThat(MoreMeters.measureAll(meterRegistry))
-                .hasEntrySatisfying("armeria.server.connections.lifespan.percentile#value{phi=0}", value -> {
-                    assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
-                })
-                .hasEntrySatisfying("armeria.server.connections.lifespan.percentile#value{phi=1}", value -> {
-                    assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
-                })
-                .hasEntrySatisfying("armeria.server.connections.lifespan#count", value -> {
-                    assertThat(value).isEqualTo(maxClosedConnection);
-                });
+                .hasEntrySatisfying(
+                        "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
+                        protocol.uriText() + '}',
+                        value -> {
+                            assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                        })
+                .hasEntrySatisfying(
+                        "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
+                        protocol.uriText() + '}',
+                        value -> {
+                            assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                        })
+                .hasEntrySatisfying(
+                        "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
+                        value -> assertThat(value).isEqualTo(maxClosedConnection));
         clientFactory.close();
     }
 
@@ -197,10 +208,11 @@ class ServerMaxConnectionAgeTest {
         }
     }
 
-    @Test
-    void http2MaxConnectionAge() throws InterruptedException {
+    @CsvSource({ "H2C", "H2" })
+    @ParameterizedTest
+    void http2MaxConnectionAge(SessionProtocol protocol) throws InterruptedException {
         final int concurrency = 200;
-        final WebClient client = newWebClient(server.uri(SessionProtocol.H2C));
+        final WebClient client = newWebClient(server.uri(protocol));
 
         // Make sure that a connection is opened.
         assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
@@ -221,10 +233,29 @@ class ServerMaxConnectionAgeTest {
                     break;
                 }
             }
+
             assertThat(cause)
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                     .hasRootCauseInstanceOf(GoAwayReceivedException.class);
+
+            assertThat(MoreMeters.measureAll(meterRegistry))
+                    .hasEntrySatisfying(
+                            "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
+                            protocol.uriText() + '}',
+                            value -> {
+                                assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                            })
+                    .hasEntrySatisfying(
+                            "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
+                            protocol.uriText() + '}',
+                            value -> {
+                                assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                            }
+                    )
+                    .hasEntrySatisfying(
+                            "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
+                            value -> assertThat(value).isEqualTo(1));
         });
     }
 

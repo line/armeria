@@ -45,14 +45,12 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
@@ -97,7 +95,6 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
-    private Timer keepAliveTimer;
     private final ProxyConfig proxyConfig;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
@@ -149,8 +146,6 @@ final class HttpClientFactory implements ClientFactory {
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
-        keepAliveTimer = MoreMeters.newTimer(meterRegistry, "armeria.client.connections.lifespan",
-                                             ImmutableList.of());
         proxyConfig = options.proxyConfig();
 
         this.options = options;
@@ -253,10 +248,6 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-    }
-
-    Timer keepAliveTimer() {
-        return keepAliveTimer;
     }
 
     @Override

@@ -156,9 +156,9 @@ class HttpServerKeepAliveHandlerTest {
         final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
         assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
         assertThat(MoreMeters.measureAll(meterRegistry))
-                .hasEntrySatisfying("armeria.client.connections.lifespan#total", value -> {
-                    assertThat(value * 1000).isCloseTo(elapsed, withinPercentage(25));
-                });
+                .hasEntrySatisfying(
+                        "armeria.client.connections.lifespan#total{protocol=" + protocol.uriText() + '}',
+                        value -> assertThat(value * 1000).isCloseTo(elapsed, withinPercentage(25)));
     }
 
     @Test
