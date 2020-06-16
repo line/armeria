@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.Server;
 public interface ZooKeeperRegistrationSpec {
 
     /**
-     * Returns the {@link ZooKeeperRegistrationSpec} that registers the {@link Server} using
+     * Returns the {@link ZooKeeperRegistrationSpec} that registers the {@link Server} using the format of
      * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
      * This is also compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
@@ -53,6 +53,16 @@ public interface ZooKeeperRegistrationSpec {
      */
     static CuratorRegistrationSpecBuilder builderForCurator(String serviceName) {
         return new CuratorRegistrationSpecBuilder(serviceName);
+    }
+
+    /**
+     * Returns the {@link ZooKeeperRegistrationSpec} that registers the {@link Server} using the format of
+     * <a href="https://twitter.github.io/finagle/docs/com/twitter/serverset.html">Finagle ServerSets</a>.
+     *
+     * @see ZooKeeperDiscoverySpec#serverSets()
+     */
+    static ZooKeeperRegistrationSpec serverSets() {
+        return new ServerSetsRegistrationSpecBuilder().build();
     }
 
     /**
