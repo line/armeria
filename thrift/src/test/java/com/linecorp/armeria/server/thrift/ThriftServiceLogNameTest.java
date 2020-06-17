@@ -103,8 +103,8 @@ class ThriftServiceLogNameTest {
                        .build(HelloService.Iface.class);
         client.hello("hello");
 
-        verify(appender, atLeast(1)).doAppend(eventCaptor.capture());
         await().untilAsserted(() -> {
+            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
             assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
                 return evt.getMessage().contains("POST /thrift#HelloService$AsyncIface/hello h2c");
             });
