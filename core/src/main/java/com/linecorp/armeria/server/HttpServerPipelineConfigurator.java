@@ -201,7 +201,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
         final Timer keepAliveTimer = newKeepAliveTimer(scheme == SCHEME_HTTP ? H2C : H2);
-        ;
         return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
                                                        gracefulShutdownSupport, scheme.toString())
                 .server(true)
