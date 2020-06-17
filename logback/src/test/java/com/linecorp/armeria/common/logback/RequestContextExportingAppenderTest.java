@@ -292,6 +292,7 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.direction", "INBOUND")
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.name", "GET")
+                           .containsEntry("req.serviceName", ctx.config().service().getClass().getName())
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "name=alice")
@@ -304,7 +305,7 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
                            .containsKey("req.id")
-                           .hasSize(22);
+                           .hasSize(23);
         }
     }
 
@@ -350,12 +351,12 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.direction", "INBOUND")
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
-                           .containsEntry("req.name", "hello")
+                           .containsEntry("req.name", RPC_REQ.method())
+                           .containsEntry("req.serviceName", RPC_REQ.serviceType().getName())
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "bar=baz")
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
-                           .containsEntry("req.name", "hello")
                            .containsEntry("req.content", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
@@ -369,7 +370,7 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(28);
+                           .hasSize(29);
         }
     }
 
@@ -491,6 +492,7 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.name", "hello")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.name", "hello")
+                           .containsEntry("req.serviceName", Object.class.getName())
                            .containsEntry("req.content", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
@@ -504,7 +506,7 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(26);
+                           .hasSize(27);
         }
     }
 
