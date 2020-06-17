@@ -64,6 +64,7 @@ class RequestContextExporterTest {
                 BuiltInProperty.REMOTE_IP.key,
                 BuiltInProperty.REMOTE_PORT.key,
                 BuiltInProperty.REQ_NAME.key,
+                BuiltInProperty.REQ_SERVICE_NAME.key,
                 BuiltInProperty.REQ_AUTHORITY.key,
                 BuiltInProperty.REQ_CONTENT_LENGTH.key,
                 BuiltInProperty.REQ_DIRECTION.key,

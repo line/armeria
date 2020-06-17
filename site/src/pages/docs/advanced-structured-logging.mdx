@@ -26,6 +26,19 @@ retrieving the information collected during request life cycle in a machine-frie
 +---------------------------------------+----------------------------------------------------------------------+
 | `serializationFormat`                 | the serialization format of the content (e.g. `tbinary`, `none`)     |
 +---------------------------------------+----------------------------------------------------------------------+
+| `name`                                | the human-readable simple name of the request, such as:              |
+|                                       | - gRPC - A capitalized method name defined in                        |
+|                                       |         `io.grpc.MethodDescriptor` (e.g, `GetItems`)                 |
+|                                       | - Thrift and annotated service - a method name (e.g, `getItems`)     |
+|                                       | - <type://HttpService> - an HTTP method name                         |
++---------------------------------------+----------------------------------------------------------------------+
+| `serviceName`                         | the human-readable service name of the request, such as:             |
+|                                       | - gRPC - a service name (e.g, `com.foo.GrpcService`)                 |
+|                                       | - Thrift - a service type (e.g, `com.foo.ThriftService$AsyncIface` or|
+|                                       |           `com.foo.ThriftService$Iface})`                            |
+|                                       | - <type://HttpService> and annotated service - an innermost class    |
+|                                       |   name                                                               |
++---------------------------------------+----------------------------------------------------------------------+
 | `host`                                | the name of the virtual host that serves the request                 |
 +---------------------------------------+----------------------------------------------------------------------+
 | `requestHeaders`                      | the HTTP headers of the request.                                     |

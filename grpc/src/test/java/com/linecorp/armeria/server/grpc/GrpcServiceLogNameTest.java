@@ -103,8 +103,8 @@ class GrpcServiceLogNameTest {
                                                       .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
-        verify(appender, atLeast(1)).doAppend(eventCaptor.capture());
         await().untilAsserted(() -> {
+            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
             assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
                 return evt.getMessage().contains("POST /armeria.grpc.testing.TestService/EmptyCall h2c");
             });
