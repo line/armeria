@@ -15,24 +15,26 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import org.apache.curator.x.discovery.ServiceInstance;
-
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
+import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
-final class CuratorRegistrationSpec implements ZooKeeperRegistrationSpec {
+final class ServerSetsRegistrationSpec implements ZooKeeperRegistrationSpec {
 
-    private final ServiceInstance<?> serviceInstance;
     private final String path;
+    private final boolean isSequential;
+    private final ServerSetsInstance serverSetsInstance;
 
-    CuratorRegistrationSpec(ServiceInstance<?> serviceInstance) {
-        this.serviceInstance = serviceInstance;
-        path = '/' + serviceInstance.getName() + '/' + serviceInstance.getId();
+    ServerSetsRegistrationSpec(String nodeName, boolean isSequential,
+                               ServerSetsInstance serverSetsInstance) {
+        path = '/' + nodeName;
+        this.isSequential = isSequential;
+        this.serverSetsInstance = serverSetsInstance;
     }
 
-    ServiceInstance<?> serviceInstance() {
-        return serviceInstance;
+    ServerSetsInstance serverSetsInstance() {
+        return serverSetsInstance;
     }
 
     @Override
@@ -42,20 +44,20 @@ final class CuratorRegistrationSpec implements ZooKeeperRegistrationSpec {
 
     @Override
     public boolean isSequential() {
-        return false;
+        return isSequential;
     }
 
     @Override
     public byte[] encodedInstance() {
-        return CuratorXNodeValueCodec.INSTANCE.encode(serviceInstance);
+        return ServerSetsNodeValueCodec.INSTANCE.encode(serverSetsInstance);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("serviceInstance", serviceInstance)
+                          .add("serverSetsInstance", serverSetsInstance)
                           .add("path", path)
-                          .add("isSequential", isSequential())
+                          .add("isSequential", isSequential)
                           .toString();
     }
 }

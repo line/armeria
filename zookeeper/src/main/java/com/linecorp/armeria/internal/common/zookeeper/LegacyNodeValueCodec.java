@@ -31,11 +31,11 @@ public enum LegacyNodeValueCodec {
     private static final String fieldDelimiter = ":";
 
     /**
-     * Decodes a zNode value to an {@link Endpoint}.
+     * Decodes a znode value to an {@link Endpoint}.
      */
-    public Endpoint decode(byte[] zNodeValue) {
-        requireNonNull(zNodeValue, "zNodeValue");
-        final String segment = new String(zNodeValue, StandardCharsets.UTF_8);
+    public Endpoint decode(byte[] znodeValue) {
+        requireNonNull(znodeValue, "znodeValue");
+        final String segment = new String(znodeValue, StandardCharsets.UTF_8);
         final String[] tokens = segment.split(fieldDelimiter);
         final Endpoint endpoint;
         switch (tokens.length) {
@@ -73,6 +73,7 @@ public enum LegacyNodeValueCodec {
      * Encodes a single {@link Endpoint} into a byte array representation.
      */
     public byte[] encode(Endpoint endpoint) {
+        requireNonNull(endpoint, "endpoint");
         final String endpointStr;
         if (endpoint.hasPort()) {
             endpointStr = endpoint.host() + fieldDelimiter + endpoint.port() +

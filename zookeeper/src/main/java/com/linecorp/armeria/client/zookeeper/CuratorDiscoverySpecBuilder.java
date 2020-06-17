@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.zookeeper;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.common.zookeeper.ZookeeperPathUtil.validatePath;
+import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperPathUtil.validatePath;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -28,7 +28,7 @@ import org.apache.curator.x.discovery.ServiceInstance;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
- * Builds a {@link ZookeeperDiscoverySpec} for
+ * Builds a {@link ZooKeeperDiscoverySpec} for
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
  */
 public final class CuratorDiscoverySpecBuilder {
@@ -102,9 +102,9 @@ public final class CuratorDiscoverySpecBuilder {
     }
 
     /**
-     * Returns a newly-created {@link ZookeeperDiscoverySpec} based on the properties set so far.
+     * Returns a newly-created {@link ZooKeeperDiscoverySpec} based on the properties set so far.
      */
-    public ZookeeperDiscoverySpec build() {
+    public ZooKeeperDiscoverySpec build() {
         return new CuratorDiscoverySpec(serviceName, converter());
     }
 }

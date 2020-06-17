@@ -21,9 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.normalizeContainerType;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.validateElementType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
 
@@ -37,13 +35,13 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -93,7 +91,7 @@ final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
     private static final List<RequestObjectResolver> defaultRequestConverters = ImmutableList.of(
-            (resolverContext, expectedResultType, beanFactoryId) -> {
+            (resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
                 final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
                 if (factory == null) {
                     return RequestConverterFunction.fallthrough();
@@ -310,7 +308,7 @@ final class AnnotatedValueResolver {
         //
         // void setter(@Param("serialNo") Long serialNo, @Param("serialNo") Long serialNo2) { ... }
         //
-        warnOnRedundantUse(constructorOrMethod, list);
+        warnOnDuplicateResolver(constructorOrMethod, list);
         return list;
     }
 
@@ -379,8 +377,7 @@ final class AnnotatedValueResolver {
             final List<RequestConverter> converters =
                     AnnotationUtil.findDeclared(typeElement, RequestConverter.class);
             return ofRequestObject(annotatedElement, type, pathParams,
-                                   addToFirstIfExists(objectResolvers, converters),
-                                   description);
+                                   addToFirstIfExists(objectResolvers, converters), description);
         }
 
         // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -404,8 +401,7 @@ final class AnnotatedValueResolver {
         }
 
         if (implicitRequestObjectAnnotation) {
-            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
-                                   description);
+            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers, description);
         }
 
         return null;
@@ -430,12 +426,13 @@ final class AnnotatedValueResolver {
                element.isAnnotationPresent(RequestObject.class);
     }
 
-    private static void warnOnRedundantUse(Executable constructorOrMethod,
-                                           List<AnnotatedValueResolver> list) {
+    private static void warnOnDuplicateResolver(Executable constructorOrMethod,
+                                                List<AnnotatedValueResolver> list) {
         final Set<AnnotatedValueResolver> uniques = AnnotatedBeanFactoryRegistry.uniqueResolverSet();
         list.forEach(element -> {
             if (!uniques.add(element)) {
-                AnnotatedBeanFactoryRegistry.warnRedundantUse(element, constructorOrMethod.toGenericString());
+                AnnotatedBeanFactoryRegistry.warnDuplicateResolver(
+                        element, constructorOrMethod.toGenericString());
             }
         });
     }
@@ -444,11 +441,10 @@ final class AnnotatedValueResolver {
                                                          AnnotatedElement annotatedElement,
                                                          AnnotatedElement typeElement, Class<?> type,
                                                          @Nullable String description) {
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
-                .supportOptional(true)
                 .pathVariable(true)
                 .description(description)
                 .resolver(resolver(ctx -> ctx.context().pathParam(name)))
@@ -459,11 +455,10 @@ final class AnnotatedValueResolver {
                                                        AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
                                                        @Nullable String description) {
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
-                .supportOptional(true)
                 .supportDefault(true)
                 .supportContainer(true)
                 .description(description)
@@ -477,11 +472,10 @@ final class AnnotatedValueResolver {
                                                    AnnotatedElement annotatedElement,
                                                    AnnotatedElement typeElement, Class<?> type,
                                                    @Nullable String description) {
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(Header.class)
                 .httpElementName(name)
                 .typeElement(typeElement)
-                .supportOptional(true)
                 .supportDefault(true)
                 .supportContainer(true)
                 .description(description)
@@ -499,7 +493,7 @@ final class AnnotatedValueResolver {
         // be passed into the AnnotatedBeanFactoryRegistry#register.
         final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(type, pathParams,
                                                                                   objectResolvers);
-        return builder(annotatedElement, type)
+        return new Builder(annotatedElement, type)
                 .annotationType(RequestObject.class)
                 .description(description)
                 .aggregation(AggregationStrategy.ALWAYS)
@@ -530,45 +524,39 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofInjectableTypes0(AnnotatedElement annotatedElement,
                                                              Class<?> type, Type actual) {
         if (actual == RequestContext.class || actual == ServiceRequestContext.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.context())
                     .build();
         }
 
         if (actual == Request.class || actual == HttpRequest.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.request())
                     .build();
         }
 
         if (actual == HttpHeaders.class || actual == RequestHeaders.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.request().headers())
                     .build();
         }
 
         if (actual == AggregatedHttpRequest.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.aggregatedRequest())
                     .aggregation(AggregationStrategy.ALWAYS)
                     .build();
         }
 
         if (actual == QueryParams.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.queryParams())
                     .aggregation(AggregationStrategy.FOR_FORM_DATA)
                     .build();
         }
 
         if (actual == Cookies.class) {
-            return builder(annotatedElement, type)
-                    .supportOptional(true)
+            return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> {
                         final String value = ctx.request().headers().get(HttpHeaderNames.COOKIE);
                         if (value == null) {
@@ -637,10 +625,13 @@ final class AnnotatedValueResolver {
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
     resolver(List<RequestObjectResolver> objectResolvers, BeanFactoryId beanFactoryId) {
         return (resolver, ctx) -> {
+            boolean found = false;
             Object value = null;
             for (final RequestObjectResolver objectResolver : objectResolvers) {
                 try {
-                    value = objectResolver.convert(ctx, resolver.elementType(), beanFactoryId);
+                    value = objectResolver.convert(ctx, resolver.elementType(),
+                                                   resolver.parameterizedElementType(), beanFactoryId);
+                    found = true;
                     break;
                 } catch (FallthroughException ignore) {
                     // Do nothing.
@@ -648,12 +639,21 @@ final class AnnotatedValueResolver {
                     Exceptions.throwUnsafely(cause);
                 }
             }
-            if (value != null) {
-                return value;
+
+            if (!found) {
+                throw new IllegalArgumentException(
+                        "No suitable request converter found for a @" +
+                        RequestObject.class.getSimpleName() + " '" +
+                        resolver.elementType().getSimpleName() + '\'');
             }
-            throw new IllegalArgumentException("No suitable request converter found for a @" +
-                                               RequestObject.class.getSimpleName() + " '" +
-                                               resolver.elementType().getSimpleName() + '\'');
+
+            if (value == null && resolver.shouldExist()) {
+                throw new IllegalArgumentException(
+                        "A request converter converted the request into null, but the injection target " +
+                        "is neither an Optional nor annotated with @Nullable");
+            }
+
+            return value;
         };
     }
 
@@ -681,6 +681,8 @@ final class AnnotatedValueResolver {
     @Nullable
     private final Class<?> containerType;
     private final Class<?> elementType;
+    @Nullable
+    private final ParameterizedType parameterizedElementType;
 
     @Nullable
     private final Object defaultValue;
@@ -705,6 +707,7 @@ final class AnnotatedValueResolver {
                                    boolean isPathVariable, boolean shouldExist,
                                    boolean shouldWrapValueAsOptional,
                                    @Nullable Class<?> containerType, Class<?> elementType,
+                                   @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
                                    @Nullable String description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
@@ -716,6 +719,7 @@ final class AnnotatedValueResolver {
         this.shouldExist = shouldExist;
         this.shouldWrapValueAsOptional = shouldWrapValueAsOptional;
         this.elementType = requireNonNull(elementType, "elementType");
+        this.parameterizedElementType = parameterizedElementType;
         this.description = description;
         this.containerType = containerType;
         this.resolver = requireNonNull(resolver, "resolver");
@@ -771,6 +775,11 @@ final class AnnotatedValueResolver {
 
     Class<?> elementType() {
         return elementType;
+    }
+
+    @Nullable
+    ParameterizedType parameterizedElementType() {
+        return parameterizedElementType;
     }
 
     @Nullable
@@ -847,10 +856,6 @@ final class AnnotatedValueResolver {
                           .toString();
     }
 
-    private static Builder builder(AnnotatedElement annotatedElement, Type type) {
-        return new Builder(annotatedElement, type);
-    }
-
     private static final class Builder {
         private final AnnotatedElement annotatedElement;
         private final Type type;
@@ -861,7 +866,6 @@ final class AnnotatedValueResolver {
         private String httpElementName;
         private boolean pathVariable;
         private boolean supportContainer;
-        private boolean supportOptional;
         private boolean supportDefault;
         @Nullable
         private String description;
@@ -870,6 +874,7 @@ final class AnnotatedValueResolver {
         @Nullable
         private BeanFactoryId beanFactoryId;
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
+        private boolean warnedRedundantUse;
 
         private Builder(AnnotatedElement annotatedElement, Type type) {
             this.annotatedElement = requireNonNull(annotatedElement, "annotatedElement");
@@ -909,14 +914,6 @@ final class AnnotatedValueResolver {
          */
         private Builder supportContainer(boolean supportContainer) {
             this.supportContainer = supportContainer;
-            return this;
-        }
-
-        /**
-         * Sets whether the value type can be wrapped by {@link Optional}.
-         */
-        private Builder supportOptional(boolean supportOptional) {
-            this.supportOptional = supportOptional;
             return this;
         }
 
@@ -965,45 +962,16 @@ final class AnnotatedValueResolver {
             return this;
         }
 
-        private static Entry<Class<?>, Class<?>> resolveTypes(Type parameterizedType, Type type,
-                                                              boolean unwrapOptionalType) {
-            if (unwrapOptionalType) {
-                // Unwrap once again so that a pattern like 'Optional<List<?>>' can be supported.
-                assert parameterizedType instanceof ParameterizedType : String.valueOf(parameterizedType);
-                parameterizedType = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
-            }
-
-            final Class<?> elementType;
-            final Class<?> containerType;
-            if (parameterizedType instanceof ParameterizedType) {
-                try {
-                    elementType =
-                            (Class<?>) ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
-                } catch (Throwable cause) {
-                    throw new IllegalArgumentException("Invalid parameter type: " + parameterizedType, cause);
-                }
-                containerType = normalizeContainerType(
-                        (Class<?>) ((ParameterizedType) parameterizedType).getRawType());
-            } else {
-                elementType = unwrapOptionalType ? (Class<?>) parameterizedType : (Class<?>) type;
-                containerType = null;
-            }
-            return new SimpleImmutableEntry<>(containerType, validateElementType(elementType));
-        }
-
         private AnnotatedValueResolver build() {
             checkArgument(resolver != null, "'resolver' should be specified");
 
-            // Request convert may produce 'Optional<?>' value. But it is different from supporting
-            // 'Optional' type. So if the annotation is 'RequestObject', 'shouldWrapValueAsOptional'
-            // is always set as 'false'.
-            final boolean shouldWrapValueAsOptional = type == Optional.class &&
-                                                      annotationType != RequestObject.class;
-            if (!supportOptional && shouldWrapValueAsOptional) {
-                throw new IllegalArgumentException(
-                        '@' + Optional.class.getSimpleName() + " is not supported for: " +
-                        (annotationType != null ? annotationType.getSimpleName()
-                                                : type.getTypeName()));
+            final boolean isOptional = type == Optional.class;
+            final boolean isNullable = isNullable();
+            final Type originalParameterizedType = parameterizedTypeOf(typeElement);
+            final Type unwrappedParameterizedType = isOptional ? unwrapOptional(originalParameterizedType)
+                                                               : originalParameterizedType;
+            if (isOptional && isNullable) {
+                warnRedundantUse("Optional", "@Nullable");
             }
 
             final boolean shouldExist;
@@ -1013,34 +981,19 @@ final class AnnotatedValueResolver {
             if (aDefault != null) {
                 if (supportDefault) {
                     // Warn unusual usage. e.g. @Param @Default("a") Optional<String> param
-                    if (shouldWrapValueAsOptional) {
-                        // 'annotatedElement' can be one of constructor, field, method or parameter.
-                        // So, it may be printed verbosely but it's okay because it provides where this message
-                        // is caused.
-                        logger.warn("@{} was used with '{}'. " +
-                                    "Optional is redundant because the value is always present.",
-                                    Default.class.getSimpleName(), annotatedElement);
+                    if (isOptional) {
+                        warnRedundantUse("@Default", "Optional");
+                    } else if (isNullable) {
+                        warnRedundantUse("@Default", "@Nullable");
                     }
 
                     shouldExist = false;
                     defaultValue = getSpecifiedValue(aDefault.value());
                 } else {
                     // Warn if @Default exists in an unsupported place.
-                    final StringBuilder msg = new StringBuilder();
-                    msg.append('@');
-                    msg.append(Default.class.getSimpleName());
-                    msg.append(" is redundant for ");
-                    if (pathVariable) {
-                        msg.append("path variable '").append(httpElementName).append('\'');
-                    } else if (annotationType != null) {
-                        msg.append("annotation @").append(annotationType.getSimpleName());
-                    } else {
-                        msg.append("type '").append(type.getTypeName()).append('\'');
-                    }
-                    msg.append(" because the value is always present.");
-                    logger.warn(msg.toString());
+                    warnRedundantUse("@Default", null);
 
-                    shouldExist = !shouldWrapValueAsOptional;
+                    shouldExist = !isOptional;
                     // Set the default value to null just like it was not specified.
                     defaultValue = null;
                 }
@@ -1048,44 +1001,30 @@ final class AnnotatedValueResolver {
                 // Set the default value to null if it was not specified.
                 defaultValue = null;
 
-                if (shouldWrapValueAsOptional) {
+                if (isOptional) {
                     shouldExist = false;
                 } else {
                     // Allow `null` if annotated with `@Nullable`.
-                    boolean isNonNull = true;
-                    for (Annotation a : annotatedElement.getAnnotations()) {
-                        final String annotationTypeName = a.annotationType().getName();
-                        if (annotationTypeName.endsWith(".Nullable")) {
-                            isNonNull = false;
-                            break;
-                        }
-                    }
-
-                    shouldExist = isNonNull;
+                    shouldExist = !isNullable;
                 }
             }
 
             if (pathVariable && !shouldExist) {
-                logger.warn("Optional or @Nullable is redundant for path variable '{}' " +
-                            "because the value is always present.", httpElementName);
+                if (isOptional) {
+                    warnRedundantUse("a path variable", "Optional");
+                } else {
+                    warnRedundantUse("a path variable", "@Nullable");
+                }
             }
 
-            final Entry<Class<?>, Class<?>> types;
-            if (annotationType == Param.class || annotationType == Header.class) {
-                assert httpElementName != null;
+            final Class<?> containerType = getContainerType(unwrappedParameterizedType);
+            final Class<?> elementType;
+            final ParameterizedType parameterizedElementType;
 
-                // The value annotated with @Param or @Header should be converted to the desired type,
-                // so the type should be resolved here.
-                final Type parameterizedType = parameterizedTypeOf(typeElement);
-                types = resolveTypes(parameterizedType, type, shouldWrapValueAsOptional);
-
-                // Currently a container type such as 'List' and 'Set' is allowed to @Header annotation
-                // and HTTP parameters specified by @Param annotation.
-                if (!supportContainer && types.getKey() != null) {
-                    throw new IllegalArgumentException("Unsupported collection type: " + parameterizedType);
-                }
+            if (containerType != null) {
+                elementType = getElementType(unwrappedParameterizedType, isOptional);
+                parameterizedElementType = getParameterizedElementType(unwrappedParameterizedType);
             } else {
-                assert type.getClass() == Class.class : String.valueOf(type);
                 //
                 // Here, 'type' should be one of the following types:
                 // - RequestContext (or ServiceRequestContext)
@@ -1094,15 +1033,160 @@ final class AnnotatedValueResolver {
                 // - QueryParams (or HttpParameters)
                 // - User classes which can be converted by request converter
                 //
-                // So the container type should be 'null'.
-                //
-                types = new SimpleImmutableEntry<>(null, (Class<?>) type);
+                if (unwrappedParameterizedType instanceof Class) {
+                    elementType = (Class<?>) unwrappedParameterizedType;
+                    parameterizedElementType = null;
+                } else if (unwrappedParameterizedType instanceof ParameterizedType) {
+                    parameterizedElementType = (ParameterizedType) unwrappedParameterizedType;
+                    elementType = (Class<?>) parameterizedElementType.getRawType();
+                } else {
+                    throw new IllegalArgumentException("Unsupported parameter type: " +
+                                                       unwrappedParameterizedType.getTypeName());
+                }
             }
 
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
-                                              shouldWrapValueAsOptional, types.getKey(), types.getValue(),
-                                              defaultValue, description, resolver,
+                                              isOptional, containerType, elementType,
+                                              parameterizedElementType, defaultValue, description, resolver,
                                               beanFactoryId, aggregation);
+        }
+
+        private void warnRedundantUse(String whatWasUsed1, @Nullable String whatWasUsed2) {
+            if (warnedRedundantUse) {
+                return;
+            }
+
+            warnedRedundantUse = true;
+            final StringBuilder buf = new StringBuilder();
+            buf.append("Found a redundant ");
+            if (whatWasUsed2 != null) {
+                buf.append("combined ");
+            }
+            buf.append("use of ")
+               .append(whatWasUsed1);
+            if (whatWasUsed2 != null) {
+                buf.append(" and ").append(whatWasUsed2);
+            }
+            buf.append(" in '")
+               .append(typeElement)
+               .append('\'');
+
+            if (typeElement != annotatedElement) {
+                buf.append(" of '")
+                   .append(annotatedElement)
+                   .append('\'');
+            }
+
+            if (annotationType != null) {
+                buf.append(" (type: ")
+                   .append(annotationType.getSimpleName())
+                   .append(')');
+            }
+
+            logger.warn(buf.toString());
+        }
+
+        private boolean isNullable() {
+            for (Annotation a : annotatedElement.getAnnotations()) {
+                final String annotationTypeName = a.annotationType().getName();
+                if (annotationTypeName.endsWith(".Nullable")) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Nullable
+        private Class<?> getContainerType(Type parameterizedType) {
+            final Class<?> rawType = toRawType(parameterizedType);
+            if (pathVariable) {
+                if (Iterable.class.isAssignableFrom(rawType)) {
+                    throw new IllegalArgumentException(
+                            "Container type is not supported for a path variable: " + httpElementName +
+                            " (" + parameterizedType + ')');
+                }
+            }
+
+            if (!supportContainer) {
+                return null;
+            }
+
+            if (rawType == Iterable.class ||
+                rawType == List.class ||
+                rawType == Collection.class) {
+                return ArrayList.class;
+            }
+
+            if (rawType == Set.class) {
+                return LinkedHashSet.class;
+            }
+
+            if (List.class.isAssignableFrom(rawType) ||
+                Set.class.isAssignableFrom(rawType)) {
+                try {
+                    // Only if there is a default constructor.
+                    rawType.getConstructor();
+                    return rawType;
+                } catch (Throwable cause) {
+                    throw new IllegalArgumentException("Unsupported container type: " + rawType.getName(),
+                                                       cause);
+                }
+            }
+
+            return null;
+        }
+
+        private Class<?> getElementType(Type parameterizedType, boolean unwrapOptional) {
+            if (!(parameterizedType instanceof ParameterizedType)) {
+                return toRawType(unwrapOptional ? parameterizedType : type);
+            }
+
+            final Type elementType;
+            try {
+                elementType = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException(
+                        "Unsupported or invalid parameter type: " + parameterizedType, cause);
+            }
+            return toRawType(elementType);
+        }
+
+        @Nullable
+        private static ParameterizedType getParameterizedElementType(Type parameterizedType) {
+            if (!(parameterizedType instanceof ParameterizedType)) {
+                return null;
+            }
+
+            try {
+                final Type elementType =
+                        ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+                if (elementType instanceof ParameterizedType) {
+                    return (ParameterizedType) elementType;
+                }
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException(
+                        "Unsupported parameter type: " + parameterizedType, cause);
+            }
+
+            return null;
+        }
+
+        private static Type unwrapOptional(Type parameterizedType) {
+            // Unwrap once again so that a pattern like 'Optional<List<?>>' can be supported.
+            assert parameterizedType instanceof ParameterizedType : String.valueOf(parameterizedType);
+            parameterizedType = ((ParameterizedType) parameterizedType).getActualTypeArguments()[0];
+            return parameterizedType;
+        }
+
+        private static Class<?> toRawType(Type type) {
+            if (type instanceof Class) {
+                return (Class<?>) type;
+            }
+            if (type instanceof ParameterizedType) {
+                return (Class<?>) ((ParameterizedType) type).getRawType();
+            }
+
+            throw new IllegalArgumentException("Unsupported or invalid parameter type: " + type);
         }
     }
 
@@ -1291,18 +1375,20 @@ final class AnnotatedValueResolver {
     @FunctionalInterface
     interface RequestObjectResolver {
         static RequestObjectResolver of(RequestConverterFunction function) {
-            return (resolverContext, expectedResultType, beanFactoryId) -> {
+            return (resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
                 final AggregatedHttpRequest request = resolverContext.aggregatedRequest();
                 if (request == null) {
                     throw new IllegalArgumentException(
                             "Cannot convert this request to an object because it is not aggregated.");
                 }
-                return function.convertRequest(resolverContext.context(), request, expectedResultType);
+                return function.convertRequest(resolverContext.context(), request,
+                                               expectedResultType, expectedParameterizedResultType);
             };
         }
 
         @Nullable
         Object convert(ResolverContext resolverContext, Class<?> expectedResultType,
+                       @Nullable ParameterizedType expectedParameterizedResultType,
                        @Nullable BeanFactoryId beanFactoryId) throws Throwable;
     }
 

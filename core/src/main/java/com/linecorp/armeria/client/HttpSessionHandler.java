@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -79,6 +80,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
+    private final boolean useProxyConnection;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -119,7 +121,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
                        MeterRegistry meterRegistry, boolean useHttp1Pipelining,
-                       long idleTimeoutMillis, long pingIntervalMillis) {
+                       long idleTimeoutMillis, long pingIntervalMillis, ProxyConfig proxyConfig) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
@@ -129,6 +131,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
+
+        switch (proxyConfig.proxyType()) {
+            case DIRECT:
+                useProxyConnection = false;
+                break;
+            case SOCKS4:
+            case SOCKS5:
+            case CONNECT:
+                useProxyConnection = true;
+                break;
+            default:
+                throw new Error(); // Should never reach here.
+        }
     }
 
     @Override
@@ -330,9 +345,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (!sessionPromise.trySuccess(channel)) {
-                // Session creation has been failed already; close the connection.
-                ctx.close();
+            if (useProxyConnection) {
+                if (proxyDestinationAddress != null) {
+                    // ProxyConnectionEvent was already triggered.
+                    tryCompleteSessionPromise(ctx);
+                }
+            } else {
+                tryCompleteSessionPromise(ctx);
             }
             return;
         }
@@ -354,10 +373,21 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         if (evt instanceof ProxyConnectionEvent) {
             proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
+            if (protocol != null) {
+                // SessionProtocol event was already triggered.
+                tryCompleteSessionPromise(ctx);
+            }
             return;
         }
 
         logger.warn("{} Unexpected user event: {}", channel, evt);
+    }
+
+    private void tryCompleteSessionPromise(ChannelHandlerContext ctx) {
+        if (!sessionPromise.trySuccess(channel)) {
+            // Session creation has been failed already; close the connection.
+            ctx.close();
+        }
     }
 
     @Override

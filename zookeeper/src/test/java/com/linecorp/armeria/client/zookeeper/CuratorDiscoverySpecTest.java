@@ -29,7 +29,7 @@ class CuratorDiscoverySpecTest {
 
     @Test
     void decode() {
-        ZookeeperDiscoverySpec spec = ZookeeperDiscoverySpec.curator("foo");
+        ZooKeeperDiscoverySpec spec = ZooKeeperDiscoverySpec.curator("foo");
         ServiceInstance<?> instance = serviceInstance(false);
         Endpoint endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isNull(); // enabled is false;
@@ -38,12 +38,12 @@ class CuratorDiscoverySpecTest {
         endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 100));
 
-        spec = ZookeeperDiscoverySpec.builderForCurator("foo").useSsl(true).build();
+        spec = ZooKeeperDiscoverySpec.builderForCurator("foo").useSsl(true).build();
         endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));
         assertThat(endpoint).isEqualTo(Endpoint.of("foo.com", 200)); // useSsl
 
         final Endpoint bar = Endpoint.of("bar");
-        spec = ZookeeperDiscoverySpec.builderForCurator("foo")
+        spec = ZooKeeperDiscoverySpec.builderForCurator("foo")
                                      .converter(serviceInstance -> bar)
                                      .build();
         endpoint = spec.decode(CuratorXNodeValueCodec.INSTANCE.encode(instance));

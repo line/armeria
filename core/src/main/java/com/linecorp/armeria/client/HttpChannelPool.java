@@ -91,6 +91,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
+    private final ProxyConfig proxyConfig;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
@@ -122,7 +123,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            configureProxy(ch, clientFactory.proxyConfig(), sslCtx);
+                            configureProxy(ch, proxyConfig, sslCtx);
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
@@ -138,6 +139,7 @@ final class HttpChannelPool implements AsyncCloseable {
         useHttp1Pipelining = clientFactory.useHttp1Pipelining();
         idleTimeoutMillis = clientFactory.idleTimeoutMillis();
         pingIntervalMillis = clientFactory.pingIntervalMillis();
+        proxyConfig = clientFactory.proxyConfig();
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
@@ -170,8 +172,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 }
                 break;
             default:
-                logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig.proxyType());
-                return;
+                throw new Error(); // Should never reach here.
         }
         proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
         ch.pipeline().addLast(proxyHandler);
@@ -417,7 +418,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture, meterRegistry,
-                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis));
+                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis, proxyConfig));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,

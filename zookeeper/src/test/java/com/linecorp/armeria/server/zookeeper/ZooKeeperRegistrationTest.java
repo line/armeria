@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.zookeeper.ZookeeperDiscoverySpec;
+import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
@@ -50,15 +50,15 @@ class ZooKeeperRegistrationTest {
     static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
 
     @Test
-    void legacyZookeeperRegistrationSpec() throws Throwable {
+    void legacyZooKeeperRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(true);
-        // all servers start and with zNode created
+        // all servers start and with znode created
         await().untilAsserted(() -> sampleEndpoints.forEach(
                 endpoint -> zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port())));
 
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             for (Endpoint sampleEndpoint : sampleEndpoints) {
-                assertThat(ZookeeperDiscoverySpec.legacy().decode(zk.getData(
+                assertThat(ZooKeeperDiscoverySpec.legacy().decode(zk.getData(
                         Z_NODE + '/' + sampleEndpoint.host() + '_' + sampleEndpoint.port()).get()))
                         .isEqualTo(sampleEndpoint);
             }
@@ -100,11 +100,11 @@ class ZooKeeperRegistrationTest {
                                         .http(sampleEndpoints.get(i).port())
                                         .service("/", (ctx, req) -> HttpResponse.of(200))
                                         .build();
-            final ZookeeperRegistrationSpec registrationSpec;
+            final ZooKeeperRegistrationSpec registrationSpec;
             if (endpointRegistrationSpec) {
-                registrationSpec = ZookeeperRegistrationSpec.legacy(sampleEndpoints.get(i));
+                registrationSpec = ZooKeeperRegistrationSpec.legacy(sampleEndpoints.get(i));
             } else {
-                registrationSpec = ZookeeperRegistrationSpec.builderForCurator(CURATOR_X_SERVICE_NAME)
+                registrationSpec = ZooKeeperRegistrationSpec.builderForCurator(CURATOR_X_SERVICE_NAME)
                                                             .serviceId(String.valueOf(i))
                                                             .serviceAddress(CURATOR_X_ADDRESS)
                                                             .build();
@@ -123,7 +123,7 @@ class ZooKeeperRegistrationTest {
     @Test
     void curatorRegistrationSpec() throws Throwable {
         final List<Server> servers = startServers(false);
-        // all servers start and with zNode created
+        // all servers start and with znode created
         await().untilAsserted(() -> {
             for (int i = 0; i < 3; i++) {
                 zkInstance.assertExists(Z_NODE + '/' + CURATOR_X_SERVICE_NAME + '/' + i);
@@ -133,8 +133,8 @@ class ZooKeeperRegistrationTest {
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             for (int i = 0; i < sampleEndpoints.size(); i++) {
                 final CompletableFuture<ServiceInstance<?>> instanceCaptor = new CompletableFuture<>();
-                final ZookeeperDiscoverySpec discoverySpec =
-                        ZookeeperDiscoverySpec.builderForCurator(CURATOR_X_SERVICE_NAME)
+                final ZooKeeperDiscoverySpec discoverySpec =
+                        ZooKeeperDiscoverySpec.builderForCurator(CURATOR_X_SERVICE_NAME)
                                               .converter(serviceInstance -> {
                                          instanceCaptor.complete(serviceInstance);
                                          return null;

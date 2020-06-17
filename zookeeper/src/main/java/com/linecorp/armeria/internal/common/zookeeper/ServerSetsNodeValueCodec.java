@@ -19,29 +19,28 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 
-import org.apache.curator.x.discovery.ServiceInstance;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
+import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 
 /**
- * A codec for Curator Service Discovery.
+ * A codec for Finagle ServerSets.
  */
-public enum CuratorXNodeValueCodec {
+public enum ServerSetsNodeValueCodec {
     INSTANCE;
 
     private static final ObjectMapper mapper = new ObjectMapper().configure(
             DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private static final JavaType type = mapper.getTypeFactory().constructType(ServiceInstance.class);
+    private static final JavaType type = mapper.getTypeFactory().constructType(ServerSetsInstance.class);
 
     /**
-     * Decodes a znode value to a {@link ServiceInstance}.
+     * Decodes a znode value to a {@link ServerSetsInstance}.
      */
-    public ServiceInstance<?> decode(byte[] znodeValue) {
+    public ServerSetsInstance decode(byte[] znodeValue) {
         requireNonNull(znodeValue, "znodeValue");
         try {
             return mapper.readValue(znodeValue, type);
@@ -51,14 +50,15 @@ public enum CuratorXNodeValueCodec {
     }
 
     /**
-     * Encodes a single {@link ServiceInstance} into a byte array representation.
+     * Encodes a single {@link ServerSetsInstance} into a byte array representation.
      */
-    public byte[] encode(ServiceInstance<?> serviceInstance) {
+    public byte[] encode(ServerSetsInstance serverSetsInstance) {
         try {
-            return mapper.writeValueAsBytes(requireNonNull(serviceInstance, "serviceInstance"));
+            return mapper.writeValueAsBytes(requireNonNull(serverSetsInstance, "serverSetsInstance"));
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(
-                    "Failed to encode serviceInstance. serviceInstance: " + serviceInstance, e);
+            throw new RuntimeException("Failed to encode serverSetsInstance. serverSetsInstance: " +
+                                       serverSetsInstance, e);
         }
     }
 }
+
