@@ -153,7 +153,13 @@ public final class ServiceConfig {
     /**
      * Returns the default value of the {@link RequestLog#serviceName()} property which is used when
      * no service name was set via {@link RequestLogBuilder#name(String, String)}.
-     * If {@code null}, the path pattern of the {@link #route()} will be used instead.
+     * If {@code null}, one of the following values will be used instead:
+     * <ul>
+     *   <li>gRPC - a service name (e.g, {@code com.foo.GrpcService})</li>
+     *   <li>Thrift - a service type (e.g, {@code com.foo.ThriftService$AsyncIface} or
+     *       {@code com.foo.ThriftService$Iface})</li>
+     *   <li>{@link HttpService} and annotated service - an innermost class name</li>
+     * </ul>
      */
     @Nullable
     public String defaultServiceName() {
@@ -162,8 +168,14 @@ public final class ServiceConfig {
 
     /**
      * Returns the default value of the {@link RequestLog#name()} property which is used when no name was set
-     * via {@link RequestLogBuilder#name(String, String)}. If {@code null}, HTTP method name will be used
-     * instead.
+     * via {@link RequestLogBuilder#name(String, String)}.
+     * If {@code null}, one of the following values will be used instead:
+     * <ul>
+     *   <li>gRPC - A capitalized method name defined in {@code io.grpc.MethodDescriptor}
+     *       (e.g, {@code GetItems})</li>
+     *   <li>Thrift and annotated service - a method name (e.g, {@code getItems}</li>
+     *   <li>{@link HttpService} - an HTTP method name</li>
+     * </ul>
      */
     @Nullable
     public String defaultLogName() {

@@ -35,10 +35,13 @@ public abstract class AbstractUnwrappable<T extends Unwrappable> implements Unwr
 
     /**
      * Returns the object being decorated.
+     *
+     * @deprecated Use {@link #unwrap()} instead.
      */
+    @Deprecated
     @SuppressWarnings("unchecked")
     protected final <U extends T> U delegate() {
-        return (U) delegate;
+        return (U) unwrap();
     }
 
     @Override
@@ -47,20 +50,9 @@ public abstract class AbstractUnwrappable<T extends Unwrappable> implements Unwr
         return result != null ? result : delegate.as(type);
     }
 
-    /**
-     * Unwraps this {@link AbstractUnwrappable} recursively and returns the innermost object being
-     * decorated.
-     */
-    public Unwrappable unwrap() {
-        AbstractUnwrappable unwrappable = this;
-        while (true) {
-            final Unwrappable delegate = unwrappable.delegate();
-            if (delegate instanceof AbstractUnwrappable) {
-                unwrappable = (AbstractUnwrappable<?>) delegate;
-                continue;
-            }
-            return delegate;
-        }
+    @Override
+    public T unwrap() {
+        return delegate;
     }
 
     @Override

@@ -78,16 +78,20 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
 
     /**
      * Unwraps this {@link Service} recursively and returns the innermost object being
-     * decorated. For example:
+     * decorated. If this {@link Service} is the innermost object, this method returns itself.
+     * For example:
      * <pre>{@code
      * HttpService service1 = new MyService();
+     * assert service1.unwrap() == service1;
+     *
      * HttpService service2 = service1.decorate(LoggingService.newDecorator())
      *                                .decorate(AuthService.newDecorator());
      * assert service2.unwrap() == service1;
      * }</pre>
      */
+    @Override
     default Service<? extends Request, ? extends Response> unwrap() {
-        return this;
+        return (Service<? extends Request, ? extends Response>) Unwrappable.super.unwrap();
     }
 
     /**

@@ -50,11 +50,6 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
     }
 
     @Override
-    public final Service<? extends Request, ? extends Response> unwrap() {
-        return (Service<? extends Request, ? extends Response>) super.unwrap();
-    }
-
-    @Override
     public boolean shouldCachePath(String path, @Nullable String query, Route route) {
         return delegate().shouldCachePath(path, query, route);
     }

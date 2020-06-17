@@ -32,7 +32,9 @@ class UnwrappingServiceTest {
         final MyDecoratorB myDecoratorB = new MyDecoratorB(myDecoratorA);
         assertThat(myService.unwrap()).isSameAs(myService);
         assertThat(myDecoratorA.unwrap()).isSameAs(myService);
-        assertThat(myDecoratorB.unwrap()).isSameAs(myService);
+        assertThat(myDecoratorB.unwrap()).isSameAs(myDecoratorA);
+        assertThat(myDecoratorB.unwrap().unwrap()).isSameAs(myService);
+        assertThat(myDecoratorB.unwrap().unwrap().unwrap().unwrap()).isSameAs(myService);
     }
 
     private static final class MyService implements HttpService {

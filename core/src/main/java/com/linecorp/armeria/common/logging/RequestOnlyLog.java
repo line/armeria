@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 
@@ -175,23 +176,34 @@ public interface RequestOnlyLog extends RequestLogAccess {
     Scheme scheme();
 
     /**
-     * Returns the human-readable service name of the {@link Request}, such as RPC service name or
-     * innermost class name of annotated service. This property is often used as a meter tag or distributed
-     * trace's span name.
+     * Returns the human-readable service name of the {@link Request}, such as:
+     * <ul>
+     *   <li>gRPC - a service name (e.g, {@code com.foo.GrpcService})</li>
+     *   <li>Thrift - a service type (e.g, {@code com.foo.ThriftService$AsyncIface} or
+     *       {@code com.foo.ThriftService$Iface})</li>
+     *   <li>{@link HttpService} and annotated service - an innermost class name</li>
+     * </ul>
+     * This property is often used as a meter tag or distributed trace's span name.
      */
     @Nullable
     String serviceName();
 
     /**
-     * Returns the human-readable simple name of the {@link Request}, such as RPC method name or annotated
-     * service method name. This property is often used as a meter tag or distributed trace's span name.
+     * Returns the human-readable simple name of the {@link Request}, such as:
+     * <ul>
+     *   <li>gRPC - A capitalized method name defined in {@code io.grpc.MethodDescriptor}
+     *       (e.g, {@code GetItems})</li>
+     *   <li>Thrift and annotated service - a method name (e.g, {@code getItems}</li>
+     *   <li>{@link HttpService} - an HTTP method name</li>
+     * </ul>
+     * This property is often used as a meter tag or distributed trace's span name.
      */
     @Nullable
     String name();
 
     /**
-     * Returns the human-readable full name, which is the combination of {@link #serviceName()} and
-     * {@link #name()} concatenated with {@code '/'}, of the {@link Request}.
+     * Returns the human-readable full name, which is the concatenation of {@link #serviceName()} and
+     * {@link #name()} using {@code '/'}, of the {@link Request}.
      * This property is often used as a meter tag or distributed trace's span name.
      */
     @Nullable

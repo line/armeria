@@ -53,8 +53,10 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -708,7 +710,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.name = name;
-        fullName = name;
         updateFlags(RequestLogProperty.NAME);
     }
 
@@ -725,7 +726,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.serviceName = serviceName;
         this.name = name;
-        fullName = serviceName + '/' + name;
         updateFlags(RequestLogProperty.NAME);
     }
 
@@ -733,7 +733,18 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String fullName() {
         ensureAvailable(RequestLogProperty.NAME);
-        return fullName;
+        if (fullName != null) {
+            return fullName;
+        }
+        if (name == null) {
+            return null;
+        }
+
+        if (serviceName != null) {
+            return fullName = serviceName + '/' + name;
+        } else {
+            return fullName = name;
+        }
     }
 
     @Override
@@ -826,11 +837,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
-        int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
-        if (needToDeferName() && name == null) {
-            requestCompletionFlags &= ~RequestLogProperty.NAME.flag();
-        }
-
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
         updateFlags(RequestLogProperty.REQUEST_CONTENT);
@@ -839,6 +845,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             ctx.updateRpcRequest((RpcRequest) requestContent);
         }
 
+        final int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         if (isAvailable(requestCompletionFlags)) {
             setNamesIfAbsent();
         }
@@ -877,6 +884,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
         updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT);
+
+        if (!isAvailable(RequestLogProperty.NAME)) {
+            updateDeferredFlags(RequestLogProperty.NAME);
+        }
     }
 
     @Override
@@ -942,10 +953,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (requestCause != null) {
             flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE;
         } else {
-            int deferredFlags = this.deferredFlags;
-            if (needToDeferName() && name == null) {
-                deferredFlags |= RequestLogProperty.NAME.flag();
-            }
             flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         }
 
@@ -973,7 +980,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
         }
 
-        if (!needToDeferName()) {
+        // Set names if request content is not deferred or it was deferred but has been set
+        // before the request completion.
+        if (!isDeferRequestContentSet() ||
+            (isDeferRequestContentSet() && isAvailable(RequestLogProperty.REQUEST_CONTENT))) {
             setNamesIfAbsent();
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
@@ -997,7 +1007,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 final ServiceConfig config = ((ServiceRequestContext) ctx).config();
                 newServiceName = config.defaultServiceName();
                 if (newServiceName == null) {
-                    newServiceName = config.service().unwrap().getClass().getName();
+                    newServiceName = getInnermostServiceName(config.service());
                 }
                 newName = config.defaultLogName();
             }
@@ -1008,18 +1018,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             serviceName = newServiceName;
             name = newName;
-            if (serviceName != null) {
-                fullName = serviceName + '/' + name;
-            } else {
-                fullName = name;
-            }
 
             updateFlags(RequestLogProperty.NAME);
         }
     }
 
-    private boolean needToDeferName() {
-        return isDeferRequestContentSet() && !isAvailable(RequestLogProperty.REQUEST_CONTENT);
+    private static String getInnermostServiceName(HttpService service) {
+        Unwrappable unwrappable = service;
+        while (true) {
+            final Unwrappable delegate = unwrappable.unwrap();
+            if (delegate != unwrappable) {
+                unwrappable = delegate;
+                continue;
+            }
+            return delegate.getClass().getName();
+        }
     }
 
     // Response-side methods.
@@ -1789,7 +1802,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Nullable
         @Override
         public String fullName() {
-            return fullName;
+            return DefaultRequestLog.this.fullName();
         }
 
         @Override
