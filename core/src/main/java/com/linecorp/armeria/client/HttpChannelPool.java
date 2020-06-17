@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -85,6 +86,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     // Fields for creating a new connection:
     private final Bootstrap[] bootstraps;
+    private final MeterRegistry meterRegistry;
     private final int connectTimeoutMillis;
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
@@ -131,6 +133,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 SessionProtocol.HTTP, SessionProtocol.HTTPS,
                 SessionProtocol.H1, SessionProtocol.H1C,
                 SessionProtocol.H2, SessionProtocol.H2C);
+        meterRegistry = clientFactory.meterRegistry();
         connectTimeoutMillis = (Integer) baseBootstrap.config().options()
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         useHttp1Pipelining = clientFactory.useHttp1Pipelining();
@@ -414,8 +417,8 @@ final class HttpChannelPool implements AsyncCloseable {
         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
 
         ch.pipeline().addLast(
-                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture, useHttp1Pipelining,
-                                       idleTimeoutMillis, pingIntervalMillis, proxyConfig));
+                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture, meterRegistry,
+                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis, proxyConfig));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,

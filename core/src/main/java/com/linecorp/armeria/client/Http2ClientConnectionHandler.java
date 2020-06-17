@@ -18,9 +18,15 @@ package com.linecorp.armeria.client;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
@@ -36,15 +42,18 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     Http2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel,
-                                 HttpClientFactory clientFactory) {
+                                 HttpClientFactory clientFactory, SessionProtocol protocol) {
 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
         if (clientFactory.idleTimeoutMillis() > 0 || clientFactory.pingIntervalMillis() > 0) {
-            keepAliveHandler = new Http2ClientKeepAliveHandler(channel, encoder.frameWriter(),
-                                                               clientFactory.idleTimeoutMillis(),
-                                                               clientFactory.pingIntervalMillis());
+            final Timer keepAliveTimer =
+                    MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
+                                        ImmutableList.of(Tag.of("protocol", protocol.uriText())));
+            keepAliveHandler = new Http2ClientKeepAliveHandler(
+                    channel, encoder.frameWriter(), keepAliveTimer,
+                    clientFactory.idleTimeoutMillis(), clientFactory.pingIntervalMillis());
         } else {
             keepAliveHandler = null;
         }
