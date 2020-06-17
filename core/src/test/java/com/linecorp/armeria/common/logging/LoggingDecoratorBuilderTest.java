@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,12 +28,28 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestContext;
 
 class LoggingDecoratorBuilderTest {
 
-    private static final Function<? super HttpHeaders, ?> HEADER_SANITIZER = header -> "dummy header sanitizer";
-    private static final Function<Object, ?> CONTENT_SANITIZER = object -> "dummy content sanitizer";
-    private static final Function<? super Throwable, ?> CAUSE_SANITIZER = object -> "dummy cause sanitizer";
+    private static final BiFunction<? super RequestContext, ? super HttpHeaders, ?> HEADER_SANITIZER =
+            (ctx, headers) -> {
+                assertThat(ctx).isNotNull();
+                assertThat(headers).isNotNull();
+                return "dummy header sanitizer";
+            };
+    private static final BiFunction<? super RequestContext, Object, ?> CONTENT_SANITIZER =
+            (ctx, content) -> {
+                assertThat(ctx).isNotNull();
+                assertThat(content).isNotNull();
+                return "dummy content sanitizer";
+            };
+    private static final BiFunction<? super RequestContext, ? super Throwable, ?> CAUSE_SANITIZER =
+            (ctx, cause) -> {
+                assertThat(ctx).isNotNull();
+                assertThat(cause).isNotNull();
+                return "dummy cause sanitizer";
+            };
 
     private Builder builder;
 
@@ -84,7 +101,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void requestHeadersSanitizer() {
-        assertThatThrownBy(() -> builder.requestHeadersSanitizer(null))
+        assertThatThrownBy(() -> builder.requestHeadersSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
         assertThat(builder.requestHeadersSanitizer()).isEqualTo(Function.identity());
 
@@ -94,7 +111,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void responseHeadersSanitizer() {
-        assertThatThrownBy(() -> builder.responseHeadersSanitizer(null))
+        assertThatThrownBy(() -> builder.responseHeadersSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
         assertThat(builder.responseHeadersSanitizer()).isEqualTo(Function.identity());
 
@@ -104,7 +121,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void requestTrailersSanitizer() {
-        assertThatThrownBy(() -> builder.requestTrailersSanitizer(null))
+        assertThatThrownBy(() -> builder.requestTrailersSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
         assertThat(builder.requestTrailersSanitizer()).isEqualTo(Function.identity());
 
@@ -114,7 +131,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void responseTrailersSanitizer() {
-        assertThatThrownBy(() -> builder.responseTrailersSanitizer(null))
+        assertThatThrownBy(() -> builder.responseTrailersSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
         assertThat(builder.responseTrailersSanitizer()).isEqualTo(Function.identity());
 
@@ -124,7 +141,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void headerSanitizer() {
-        assertThatThrownBy(() -> builder.headersSanitizer(null))
+        assertThatThrownBy(() -> builder.headersSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
 
         builder.headersSanitizer(HEADER_SANITIZER);
@@ -136,7 +153,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void requestContentSanitizer() {
-        assertThatThrownBy(() -> builder.requestContentSanitizer(null))
+        assertThatThrownBy(() -> builder.requestContentSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
         assertThat(builder.requestContentSanitizer()).isEqualTo(Function.identity());
 
@@ -146,7 +163,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void responseContentSanitizer() {
-        assertThatThrownBy(() -> builder.responseContentSanitizer(null))
+        assertThatThrownBy(() -> builder.responseContentSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
         assertThat(builder.responseContentSanitizer()).isEqualTo(Function.identity());
 
@@ -156,7 +173,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void contentSanitizer() {
-        assertThatThrownBy(() -> builder.contentSanitizer(null))
+        assertThatThrownBy(() -> builder.contentSanitizer((BiFunction) null))
                 .isInstanceOf(NullPointerException.class);
 
         builder.contentSanitizer(CONTENT_SANITIZER);
@@ -166,7 +183,8 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void responseCauseSanitizer() {
-        assertThatThrownBy(() -> builder.responseCauseSanitizer(null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder.responseCauseSanitizer((BiFunction) null))
+                .isInstanceOf(NullPointerException.class);
         assertThat(builder.responseCauseSanitizer()).isEqualTo(Function.identity());
 
         builder.responseCauseSanitizer(CAUSE_SANITIZER);
