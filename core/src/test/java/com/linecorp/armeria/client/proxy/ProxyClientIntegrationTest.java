@@ -481,7 +481,7 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
-    void testConnectFailedExceptionNotPropagated() throws Exception {
+    void testProxyServerImmediateClose() throws Exception {
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
             ctx.close();
         });
