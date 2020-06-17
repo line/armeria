@@ -66,6 +66,8 @@ public class ArmeriaAutoConfiguration {
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(SessionProtocol.HTTP);
 
+    private static final String GRACEFUL_SHUTDOWN = "graceful";
+
     /**
      * Create a started {@link Server} bean.
      */
@@ -173,7 +175,7 @@ public class ArmeriaAutoConfiguration {
             @Value("${server.shutdown}") String shutdown,
             @Value("${spring.lifecycle.timeout-per-shutdown-phase:30s}") Duration duration) {
         return sb -> {
-            if ("graceful".equalsIgnoreCase(shutdown)) {
+            if (GRACEFUL_SHUTDOWN.equalsIgnoreCase(shutdown)) {
                 sb.gracefulShutdownTimeout(duration, duration);
             }
         };
