@@ -550,7 +550,8 @@ public class ProxyClientIntegrationTest {
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if (evt instanceof ProxySuccessEvent) {
                 // Sleep as much as defaultWriteTimeoutMillis in order to make sure that the first writing to the channel
-                // occurs after ProxySuccessEvent is triggered.
+                // occurs after ProxySuccessEvent is triggered. If the first writing happens before ProxySuccessEvent is
+                // triggered, the client would get WriteTimeoutException that makes the test fail.
                 Thread.sleep(Flags.defaultWriteTimeoutMillis());
             }
             super.userEventTriggered(ctx, evt);
