@@ -363,6 +363,7 @@ public class ProxyClientIntegrationTest {
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
+            await().timeout(Duration.ofSeconds(3)).until(responseFuture::isCompletedExceptionally);
             assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                     .hasRootCauseInstanceOf(ProxyConnectException.class);
