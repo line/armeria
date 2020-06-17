@@ -172,7 +172,7 @@ public enum BuiltInProperty {
      * <ul>
      *   <li>gRPC - A capitalized method name defined in {@code io.grpc.MethodDescriptor}
      *       (e.g, {@code GetItems})</li>
-     *   <li>Thrift and annotated service - a method name (e.g, {@code getItems}</li>
+     *   <li>Thrift and annotated service - a method name (e.g, {@code getItems})</li>
      *   <li>{@link HttpService} - an HTTP method name</li>
      * </ul>
      * This property is often used as a meter tag or distributed trace's span name.
