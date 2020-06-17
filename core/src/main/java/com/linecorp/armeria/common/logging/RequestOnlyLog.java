@@ -176,7 +176,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
     Scheme scheme();
 
     /**
-     * Returns the human-readable service name of the {@link Request}, such as:
+     * Returns the human-readable name of the service that served the {@link Request}, such as:
      * <ul>
      *   <li>gRPC - a service name (e.g, {@code com.foo.GrpcService})</li>
      *   <li>Thrift - a service type (e.g, {@code com.foo.ThriftService$AsyncIface} or
