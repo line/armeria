@@ -174,10 +174,10 @@ public class ArmeriaAutoConfiguration {
     public ArmeriaServerConfigurator gracefulShutdownServerConfigurator(
             @Value("${server.shutdown}") String shutdown,
             @Value("${spring.lifecycle.timeout-per-shutdown-phase:30s}") Duration duration) {
-        return sb -> {
-            if (GRACEFUL_SHUTDOWN.equalsIgnoreCase(shutdown)) {
-                sb.gracefulShutdownTimeout(duration, duration);
-            }
-        };
+        if (GRACEFUL_SHUTDOWN.equalsIgnoreCase(shutdown)) {
+            return sb -> sb.gracefulShutdownTimeout(duration, duration);
+        } else {
+            return sb -> {};
+        }
     }
 }

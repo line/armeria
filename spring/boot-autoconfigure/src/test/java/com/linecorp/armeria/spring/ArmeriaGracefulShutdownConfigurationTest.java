@@ -56,8 +56,8 @@ public class ArmeriaGracefulShutdownConfigurationTest {
 
     @Test
     public void testGracefulShutdown() throws Exception {
-        final long startTime = System.currentTimeMillis();
+        final long startTime = System.nanoTime();
         server.stop().join();
-        assertThat(System.currentTimeMillis() - startTime).isGreaterThanOrEqualTo(duration.toMillis());
+        assertThat(System.nanoTime() - startTime).isGreaterThanOrEqualTo(duration.toMillis());
     }
 }
