@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.logging;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -26,6 +27,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -65,18 +67,20 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
      * {@link LogLevel}s with the specified sanitizers.
      * If the logger is null, it means that the default logger is used.
      */
-    LoggingRpcClient(RpcClient delegate,
-                     @Nullable Logger logger,
-                     Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-                     Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-                     Function<? super HttpHeaders, ?> requestHeadersSanitizer,
-                     Function<Object, ?> requestContentSanitizer,
-                     Function<? super HttpHeaders, ?> requestTrailersSanitizer,
-                     Function<? super HttpHeaders, ?> responseHeadersSanitizer,
-                     Function<Object, ?> responseContentSanitizer,
-                     Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-                     Function<? super Throwable, ?> responseCauseSanitizer,
-                     Sampler<? super ClientRequestContext> sampler) {
+    LoggingRpcClient(
+            RpcClient delegate,
+            @Nullable Logger logger,
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer,
+            Sampler<? super ClientRequestContext> sampler) {
+
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
               requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
               responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,

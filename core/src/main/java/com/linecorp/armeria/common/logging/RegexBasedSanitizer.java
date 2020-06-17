@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.logging;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,10 +26,12 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.RequestContext;
+
 /**
  * Regex based sanitizer.
  */
-public final class RegexBasedSanitizer implements Function<Object, String> {
+public final class RegexBasedSanitizer implements BiFunction<RequestContext, Object, String> {
 
     /**
      * Returns a new instance created from the specified {@link Pattern}s.
@@ -59,7 +61,7 @@ public final class RegexBasedSanitizer implements Function<Object, String> {
 
     @Nullable
     @Override
-    public String apply(@Nullable Object input) {
+    public String apply(RequestContext ctx, @Nullable Object input) {
         if (input == null) {
             return null;
         }

@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -1267,9 +1267,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringRequestOnly(Function<? super RequestHeaders, ?> headersSanitizer,
-                                      Function<Object, ?> contentSanitizer,
-                                      Function<? super HttpHeaders, ?> trailersSanitizer) {
+    public String toStringRequestOnly(
+            BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> contentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
         requireNonNull(trailersSanitizer, "trailersSanitizer");
@@ -1369,9 +1371,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringResponseOnly(Function<? super ResponseHeaders, ?> headersSanitizer,
-                                       Function<Object, ?> contentSanitizer,
-                                       Function<? super HttpHeaders, ?> trailersSanitizer) {
+    public String toStringResponseOnly(
+            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> headersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> contentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1467,8 +1470,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return responseStr;
     }
 
-    private static <T> String sanitize(Function<? super T, ?> headersSanitizer, T requestHeaders) {
-        final Object sanitized = headersSanitizer.apply(requestHeaders);
+    private <T> String sanitize(BiFunction<? super RequestContext, ? super T, ?> headersSanitizer,
+                                T requestHeaders) {
+        final Object sanitized = headersSanitizer.apply(ctx, requestHeaders);
         return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
 
@@ -1725,9 +1729,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
-        public String toStringRequestOnly(Function<? super RequestHeaders, ?> headersSanitizer,
-                                          Function<Object, ?> contentSanitizer,
-                                          Function<? super HttpHeaders, ?> trailersSanitizer) {
+        public String toStringRequestOnly(
+                BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
+                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
+                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+
             return DefaultRequestLog.this.toStringRequestOnly(
                     headersSanitizer, contentSanitizer, trailersSanitizer);
         }
@@ -1798,20 +1804,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
-        public String toStringResponseOnly() {
-            return DefaultRequestLog.this.toStringResponseOnly();
-        }
+        public String toStringResponseOnly(
+                BiFunction<? super RequestContext, ? super ResponseHeaders, ?> headersSanitizer,
+                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
+                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
 
-        @Override
-        public String toStringResponseOnly(Function<? super HttpHeaders, ?> headersSanitizer,
-                                           Function<Object, ?> contentSanitizer) {
-            return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer);
-        }
-
-        @Override
-        public String toStringResponseOnly(Function<? super ResponseHeaders, ?> headersSanitizer,
-                                           Function<Object, ?> contentSanitizer,
-                                           Function<? super HttpHeaders, ?> trailersSanitizer) {
             return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer,
                                                                trailersSanitizer);
         }
