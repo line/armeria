@@ -153,22 +153,24 @@ class ServerMaxConnectionAgeTest {
             assertThat(opened).hasValueBetween(closed, closed + 1);
         }
 
-        assertThat(MoreMeters.measureAll(meterRegistry))
-                .hasEntrySatisfying(
-                        "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
-                        protocol.uriText() + '}',
-                        value -> {
-                            assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
-                        })
-                .hasEntrySatisfying(
-                        "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
-                        protocol.uriText() + '}',
-                        value -> {
-                            assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
-                        })
-                .hasEntrySatisfying(
-                        "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
-                        value -> assertThat(value).isEqualTo(maxClosedConnection));
+        await().untilAsserted(() -> {
+            assertThat(MoreMeters.measureAll(meterRegistry))
+                    .hasEntrySatisfying(
+                            "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
+                            protocol.uriText() + '}',
+                            value -> {
+                                assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                            })
+                    .hasEntrySatisfying(
+                            "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
+                            protocol.uriText() + '}',
+                            value -> {
+                                assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                            })
+                    .hasEntrySatisfying(
+                            "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
+                            value -> assertThat(value).isEqualTo(maxClosedConnection));
+        });
         clientFactory.close();
     }
 
