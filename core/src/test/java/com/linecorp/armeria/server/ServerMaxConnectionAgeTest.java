@@ -259,7 +259,7 @@ class ServerMaxConnectionAgeTest {
                     )
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
-                            value -> assertThat(value).isEqualTo(1));
+                            value -> assertThat(value).isEqualTo(closed.get()));
         });
     }
 
