@@ -179,7 +179,7 @@ public enum BuiltInProperty {
      */
     REQ_NAME("req.name", log -> log.isAvailable(RequestLogProperty.NAME) ? log.name() : null),
     /**
-     * {@code "req.serviceName"} - the human-readable name of the request, such as:
+     * {@code "req.serviceName"} - the human-readable name of the service that served the request, such as:
      * <ul>
      *   <li>gRPC - a service name (e.g, {@code com.foo.GrpcService})</li>
      *   <li>Thrift - a service type (e.g, {@code com.foo.ThriftService$AsyncIface} or
