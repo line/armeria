@@ -321,7 +321,7 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link BiFunction} to use to sanitize request, response and trailers before logging.
-     * It is common to have the {@link Function} that removes sensitive headers, like {@code "Cookie"} and
+     * It is common to have the {@link BiFunction} that removes sensitive headers, like {@code "Cookie"} and
      * {@code "Set-Cookie"}, before logging. This method is a shortcut for:
      * <pre>{@code
      * builder.requestHeadersSanitizer(headersSanitizer);
