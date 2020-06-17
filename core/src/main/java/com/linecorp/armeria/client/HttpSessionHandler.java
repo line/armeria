@@ -125,13 +125,16 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.pingIntervalMillis = pingIntervalMillis;
 
         switch (proxyConfig.proxyType()) {
+            case DIRECT:
+                useProxyConnection = false;
+                break;
             case SOCKS4:
             case SOCKS5:
             case CONNECT:
                 useProxyConnection = true;
                 break;
             default:
-                useProxyConnection = false;
+                throw new Error(); // Should never reach here.
         }
     }
 

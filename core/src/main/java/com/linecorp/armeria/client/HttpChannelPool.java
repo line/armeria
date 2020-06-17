@@ -169,8 +169,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 }
                 break;
             default:
-                logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig.proxyType());
-                return;
+                throw new Error(); // Should never reach here.
         }
         proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
         ch.pipeline().addLast(proxyHandler);
