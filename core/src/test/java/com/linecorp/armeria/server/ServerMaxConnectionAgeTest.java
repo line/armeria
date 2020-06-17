@@ -238,7 +238,9 @@ class ServerMaxConnectionAgeTest {
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                     .hasRootCauseInstanceOf(GoAwayReceivedException.class);
+        });
 
+        await().untilAsserted(() -> {
             assertThat(MoreMeters.measureAll(meterRegistry))
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
@@ -291,6 +293,7 @@ class ServerMaxConnectionAgeTest {
                                                          .connectionPoolListener(connectionPoolListener)
                                                          .useHttp1Pipelining(useHttp1PipeLine)
                                                          .idleTimeoutMillis(0)
+                                                         .tlsNoVerify()
                                                          .build();
         return WebClient.builder(uri)
                         .factory(clientFactory)
