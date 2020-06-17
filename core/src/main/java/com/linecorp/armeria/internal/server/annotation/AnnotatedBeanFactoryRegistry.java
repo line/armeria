@@ -116,11 +116,12 @@ final class AnnotatedBeanFactoryRegistry {
         });
     }
 
-    static void warnRedundantUse(AnnotatedValueResolver resolver, String genericString) {
+    static void warnDuplicateResolver(AnnotatedValueResolver resolver, String genericString) {
         assert resolver.annotationType() != null;
-        logger.warn("Found a redundant use of annotation in {}." +
-                    " httpElementName: {}, annotation: {}", genericString,
-                    resolver.httpElementName(), resolver.annotationType().getSimpleName());
+        logger.warn("Ignoring a duplicate injection target '@{}(\"{}\")' at '{}'",
+                    resolver.annotationType().getSimpleName(),
+                    resolver.httpElementName(),
+                    genericString);
     }
 
     @Nullable
@@ -238,7 +239,7 @@ final class AnnotatedBeanFactoryRegistry {
                     for (AnnotatedValueResolver resolver : resolvers) {
                         if (!uniques.add(resolver)) {
                             redundant = true;
-                            warnRedundantUse(resolver, method.toGenericString());
+                            warnDuplicateResolver(resolver, method.toGenericString());
                         }
                     }
                     if (redundant && resolvers.size() == 1) {
@@ -276,7 +277,7 @@ final class AnnotatedBeanFactoryRegistry {
                 if (uniques.add(resolver)) {
                     builder.put(field, resolver);
                 } else {
-                    warnRedundantUse(resolver, field.toGenericString());
+                    warnDuplicateResolver(resolver, field.toGenericString());
                 }
             }
         }

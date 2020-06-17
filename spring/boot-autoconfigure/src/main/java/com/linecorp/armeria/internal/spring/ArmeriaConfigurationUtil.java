@@ -21,18 +21,12 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,11 +56,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -76,7 +68,6 @@ import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
-import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.ExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleRequest;
@@ -90,7 +81,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.util.NetUtil;
 
 /**
  * A utility class which is used to configure a {@link ServerBuilder} with the {@link ArmeriaSettings} and
@@ -182,52 +172,6 @@ public final class ArmeriaConfigurationUtil {
             }
         }
         return true;
-    }
-
-    /**
-     * Adds {@link Port}s to the specified {@link ServerBuilder}.
-     */
-    public static void configurePorts(ServerBuilder server, List<Port> ports) {
-        requireNonNull(server, "server");
-        requireNonNull(ports, "ports");
-        ports.forEach(p -> {
-            final String ip = p.getIp();
-            final String iface = p.getIface();
-            final int port = p.getPort();
-            final List<SessionProtocol> protocols = firstNonNull(p.getProtocols(),
-                                                                 ImmutableList.of(SessionProtocol.HTTP));
-
-            if (ip == null) {
-                if (iface == null) {
-                    server.port(new ServerPort(port, protocols));
-                } else {
-                    try {
-                        final Enumeration<InetAddress> e = NetworkInterface.getByName(iface).getInetAddresses();
-                        while (e.hasMoreElements()) {
-                            server.port(new ServerPort(new InetSocketAddress(e.nextElement(), port),
-                                                       protocols));
-                        }
-                    } catch (SocketException e) {
-                        throw new IllegalStateException("Failed to find an iface: " + iface, e);
-                    }
-                }
-            } else if (iface == null) {
-                if (NetUtil.isValidIpV4Address(ip) || NetUtil.isValidIpV6Address(ip)) {
-                    final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(ip);
-                    try {
-                        server.port(new ServerPort(new InetSocketAddress(
-                                InetAddress.getByAddress(bytes), port), protocols));
-                    } catch (UnknownHostException e) {
-                        // Should never happen.
-                        throw new Error(e);
-                    }
-                } else {
-                    throw new IllegalStateException("invalid IP address: " + ip);
-                }
-            } else {
-                throw new IllegalStateException("A port cannot have both IP and iface: " + p);
-            }
-        });
     }
 
     /**

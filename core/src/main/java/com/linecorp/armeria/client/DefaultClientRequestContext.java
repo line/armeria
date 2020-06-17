@@ -522,6 +522,16 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public void timeoutNow() {
+        timeoutScheduler.timeoutNow();
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return timeoutScheduler.isTimedOut();
+    }
+
+    @Override
     public String toString() {
         final Channel ch = channel();
         final RequestLogAccess parent = log().parent();

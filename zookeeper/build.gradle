@@ -1,26 +1,13 @@
-final def DROPWIZARD_VERSION = '3.2.6'
-final def SNAPPY_VERSION = '1.1.7.5'
-
 dependencies {
     // Curator
     api 'org.apache.curator:curator-recipes'
+    api 'org.apache.curator:curator-x-discovery'
 
     // ZooKeeper
     api 'org.apache.zookeeper:zookeeper'
 
-    implementation("io.dropwizard.metrics:metrics-core") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly DROPWIZARD_VERSION
-        }
-    }
-    implementation("org.xerial.snappy:snappy-java") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SNAPPY_VERSION
-        }
-    }
-
     // ZooKeeper JUnit
     testImplementation 'org.dmonix.junit:zookeeper-junit'
+
+    testImplementation 'com.twitter:finagle-serversets_2.13'
 }

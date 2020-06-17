@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -176,16 +177,19 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         res.initTimeout();
-                        res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes));
+                        if (!res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes))) {
+                            fail(ctx, ClosedStreamException.get());
+                            return;
+                        }
                     } else {
-                        failWithUnexpectedMessageType(ctx, msg);
+                        failWithUnexpectedMessageType(ctx, msg, HttpResponse.class);
                     }
                     break;
                 case NEED_INFORMATIONAL_DATA:
                     if (msg instanceof LastHttpContent) {
                         state = State.NEED_HEADERS;
                     } else {
-                        failWithUnexpectedMessageType(ctx, msg);
+                        failWithUnexpectedMessageType(ctx, msg, LastHttpContent.class);
                     }
                     break;
                 case NEED_DATA_OR_TRAILERS:
@@ -205,8 +209,9 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
-                            } else {
-                                res.tryWrite(HttpData.wrap(data.retain()));
+                            } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
+                                fail(ctx, ClosedStreamException.get());
+                                return;
                             }
                         }
 
@@ -219,8 +224,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             state = State.NEED_HEADERS;
 
                             final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
-                            if (!trailingHeaders.isEmpty()) {
-                                res.tryWrite(ArmeriaHttpUtil.toArmeria(trailingHeaders));
+                            if (!trailingHeaders.isEmpty() &&
+                                !res.tryWrite(ArmeriaHttpUtil.toArmeria(trailingHeaders))) {
+                                fail(ctx, ClosedStreamException.get());
+                                return;
                             }
 
                             res.close();
@@ -230,7 +237,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             }
                         }
                     } else {
-                        failWithUnexpectedMessageType(ctx, msg);
+                        failWithUnexpectedMessageType(ctx, msg, HttpContent.class);
                     }
                     break;
                 case DISCARD:
@@ -241,9 +248,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         }
     }
 
-    private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg) {
+    private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
         fail(ctx, new ProtocolViolationException(
-                "unexpected message type: " + msg.getClass().getName()));
+                "unexpected message type: " + msg.getClass().getName() +
+                " (expected: " + expected.getName() + ')'));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {

@@ -70,8 +70,7 @@ tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${autoconfigureProjectDir}/src/main/resources"
 
-tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.compileTestThrift)
-tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.generateTestProto)
+tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.generateSources)
 
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.withType(Checkstyle) {

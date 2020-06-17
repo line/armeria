@@ -69,6 +69,7 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
@@ -143,7 +144,6 @@ public class ProxyClientIntegrationTest {
     static NettyServerExtension socksProxyServer = new NettyServerExtension() {
         @Override
         protected void configure(Channel ch) throws Exception {
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new SocksPortUnificationServerHandler());
             ch.pipeline().addLast(DYNAMIC_HANDLER);
             ch.pipeline().addLast(new Socks4ProxyServerHandler());
@@ -157,7 +157,6 @@ public class ProxyClientIntegrationTest {
     static NettyServerExtension httpProxyServer = new NettyServerExtension() {
         @Override
         protected void configure(Channel ch) throws Exception {
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
@@ -172,12 +171,11 @@ public class ProxyClientIntegrationTest {
         protected void configure(Channel ch) throws Exception {
             final SslContext sslContext = SslContextBuilder
                     .forServer(ssc.privateKey(), ssc.certificate()).build();
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
+            ch.pipeline().addLast(new SleepHandler());
             ch.pipeline().addLast(new IntermediaryProxyServerHandler("http"));
         }
     };
@@ -517,7 +515,7 @@ public class ProxyClientIntegrationTest {
         final String username = "username";
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
-                assertThat(username.equals(((DefaultSocks4CommandRequest) msg).userId()));
+                assertThat(username).isEqualTo(((DefaultSocks4CommandRequest) msg).userId());
             }
             ctx.fireChannelRead(msg);
         });
@@ -731,6 +729,21 @@ public class ProxyClientIntegrationTest {
             ctx.fireUserEventTriggered(new ProxySuccessEvent(
                     new InetSocketAddress(split[0], Integer.parseInt(split[1])),
                     new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK)));
+        }
+    }
+
+    private static final class SleepHandler extends ChannelInboundHandlerAdapter {
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if (evt instanceof ProxySuccessEvent) {
+                // Sleep as much as defaultWriteTimeoutMillis in order to make sure that the
+                // first writing to the channel occurs after ProxySuccessEvent is triggered.
+                // If the first writing happens before ProxySuccessEvent is triggered,
+                // the client would get WriteTimeoutException that makes the test fail.
+                Thread.sleep(Flags.defaultWriteTimeoutMillis());
+            }
+            super.userEventTriggered(ctx, evt);
         }
     }
 

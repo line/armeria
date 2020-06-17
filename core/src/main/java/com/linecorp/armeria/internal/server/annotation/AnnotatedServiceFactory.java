@@ -689,13 +689,13 @@ public final class AnnotatedServiceFactory {
                     return getInstance0(clazz);
                 } catch (Exception e) {
                     throw new IllegalStateException(
-                            "A class specified in @" + annotation.getClass().getSimpleName() +
+                            "A class specified in @" + annotation.annotationType().getSimpleName() +
                             " annotation must have an accessible default constructor: " + clazz.getName(), e);
                 }
             }));
         } catch (ClassCastException e) {
             throw new IllegalArgumentException(
-                    "A class specified in @" + annotation.getClass().getSimpleName() +
+                    "A class specified in @" + annotation.annotationType().getSimpleName() +
                     " annotation cannot be cast to " + expectedType, e);
         }
     }
@@ -730,11 +730,11 @@ public final class AnnotatedServiceFactory {
      */
     private static Object invokeValueMethod(Annotation a) {
         try {
-            final Method method = Iterables.getFirst(getMethods(a.getClass(), withName("value")), null);
+            final Method method = Iterables.getFirst(getMethods(a.annotationType(), withName("value")), null);
             assert method != null : "No 'value' method is found from " + a;
             return method.invoke(a);
         } catch (Exception e) {
-            throw new IllegalStateException("An annotation @" + a.getClass().getSimpleName() +
+            throw new IllegalStateException("An annotation @" + a.annotationType().getSimpleName() +
                                             " must have a 'value' method", e);
         }
     }

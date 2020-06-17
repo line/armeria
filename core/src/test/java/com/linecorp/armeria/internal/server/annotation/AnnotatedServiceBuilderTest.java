@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolverTest.Bean;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
@@ -76,7 +77,9 @@ class AnnotatedServiceBuilderTest {
                              @Param("e") Optional<Long> e,
                              @Param("f") Optional<Float> f,
                              @Param("g") Optional<Double> g,
-                             @Param("h") Optional<String> h) {}
+                             @Param("h") Optional<String> h,
+                             @Param("i") Optional<Object> i,
+                             @Param("j") Optional<Bean> j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -88,7 +91,9 @@ class AnnotatedServiceBuilderTest {
                              @Param("e") long e,
                              @Param("f") float f,
                              @Param("g") double g,
-                             @Param("h") String h) {}
+                             @Param("h") String h,
+                             @Param("i") Object i,
+                             @Param("j") Bean j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -100,7 +105,9 @@ class AnnotatedServiceBuilderTest {
                              @Param("e") List<Long> e,
                              @Param("f") List<Float> f,
                              @Param("g") List<Double> g,
-                             @Param("h") List<String> h) {}
+                             @Param("h") List<String> h,
+                             @Param("i") List<Object> i,
+                             @Param("j") List<Bean> j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -112,7 +119,9 @@ class AnnotatedServiceBuilderTest {
                              @Param("e") Set<Long> e,
                              @Param("f") Set<Float> f,
                              @Param("g") Set<Double> g,
-                             @Param("h") Set<String> h) {}
+                             @Param("h") Set<String> h,
+                             @Param("i") Set<Object> i,
+                             @Param("j") Set<Bean> j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -124,7 +133,9 @@ class AnnotatedServiceBuilderTest {
                              @Param("e") Optional<List<Long>> e,
                              @Param("f") Optional<List<Float>> f,
                              @Param("g") Optional<List<Double>> g,
-                             @Param("h") Optional<List<String>> h) {}
+                             @Param("h") Optional<List<String>> h,
+                             @Param("i") Optional<List<Object>> i,
+                             @Param("j") Optional<List<Bean>> j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -150,7 +161,9 @@ class AnnotatedServiceBuilderTest {
                              @Header("e") List<Long> e,
                              @Header("f") List<Float> f,
                              @Header("g") List<Double> g,
-                             @Header("h") List<String> h) {}
+                             @Header("h") List<String> h,
+                             @Header("i") List<Object> i,
+                             @Header("j") List<Bean> j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -162,7 +175,9 @@ class AnnotatedServiceBuilderTest {
                              @Header("e") Set<Long> e,
                              @Header("f") Set<Float> f,
                              @Header("g") Set<Double> g,
-                             @Header("h") Set<String> h) {}
+                             @Header("h") Set<String> h,
+                             @Header("i") Set<Object> i,
+                             @Header("j") Set<Bean> j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -174,7 +189,9 @@ class AnnotatedServiceBuilderTest {
                              @Header("e") Optional<List<Long>> e,
                              @Header("f") Optional<List<Float>> f,
                              @Header("g") Optional<List<Double>> g,
-                             @Header("h") Optional<List<String>> h) {}
+                             @Header("h") Optional<List<String>> h,
+                             @Header("i") Optional<List<Object>> i,
+                             @Header("j") Optional<List<Bean>> j) {}
         }).build();
 
         Server.builder().annotatedService(new Object() {
@@ -299,22 +316,12 @@ class AnnotatedServiceBuilderTest {
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/{name}")
-            public void root(@Param("name") Optional<AnnotatedServiceBuilderTest> name) {}
-        }).build()).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Get("/{name}")
             public void root(@Param("name") List<String> name) {}
         }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Get("/test")
-            public void root(@Param("name") Optional<AnnotatedServiceBuilderTest> name) {}
-        }).build()).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Get("/test")
-            public void root(@Header("name") List<Object> name) {}
+            @Get("/{name}")
+            public void root(@Param("name") Optional<List<String>> name) {}
         }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {

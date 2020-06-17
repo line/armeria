@@ -327,7 +327,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 servedFromCache = false;
                 numAttemptsSoFar = 1;
 
-                if (entry.address().equals(address) && entry.ttlMillis() == ttlMillis) {
+                if (address.equals(entry.address()) && entry.ttlMillis() == ttlMillis) {
                     scheduleRefresh(ttlMillis);
                 } else {
                     // Replace the old entry with the new one.

@@ -27,7 +27,10 @@ import com.linecorp.armeria.server.RoutingContext;
 /**
  * A general purpose {@link AbstractCompositeService} implementation. Useful when you do not want to define
  * a new dedicated {@link HttpService} type.
+ *
+ * @deprecated This class will be removed without a replacement.
  */
+@Deprecated
 public final class SimpleCompositeService
         extends AbstractCompositeService<HttpService, HttpRequest, HttpResponse> implements HttpService {
 

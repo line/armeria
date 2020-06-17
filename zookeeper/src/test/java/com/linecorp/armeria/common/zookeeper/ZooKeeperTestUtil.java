@@ -19,21 +19,26 @@ package com.linecorp.armeria.common.zookeeper;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
 
 public final class ZooKeeperTestUtil {
 
-    public static Set<Endpoint> sampleEndpoints() {
-        final int[] ports = unusedPorts(3);
-        return ImmutableSet.of(Endpoint.of("127.0.0.1", ports[0]).withWeight(2),
-                               Endpoint.of("127.0.0.1", ports[1]).withWeight(4),
-                               Endpoint.of("127.0.0.1", ports[2]).withWeight(2));
+    private static final Random random = new Random();
+
+    public static List<Endpoint> sampleEndpoints(int count) {
+        final int[] ports = unusedPorts(count);
+        final Builder<Endpoint> builder = ImmutableList.builder();
+        for (int i = 0; i < count; i++) {
+            builder.add(Endpoint.of("127.0.0.1", ports[i]).withWeight(random.nextInt(10000) + 1));
+        }
+        return builder.build();
     }
 
     private static int[] unusedPorts(int numPorts) {

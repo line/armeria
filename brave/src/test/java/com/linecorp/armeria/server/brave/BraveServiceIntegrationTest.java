@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -30,9 +29,7 @@ import org.junit.After;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -49,9 +46,6 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
 
     @Nullable
     private Server server;
-    @Nullable
-    final ListeningExecutorService executorService =
-            MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2));
 
     @Override
     protected CurrentTraceContext.Builder currentTraceContextBuilder() {
@@ -109,7 +103,8 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     HttpResponse asyncResponse(Consumer<CompletableFuture<HttpResponse>> completeResponse) {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture);
-        executorService.submit(() -> completeResponse.accept(responseFuture));
+        CommonPools.workerGroup().next().submit(
+                () -> completeResponse.accept(responseFuture));
         return res;
     }
 
@@ -139,7 +134,6 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         if (server != null) {
             server.stop();
         }
-        executorService.shutdownNow();
     }
 
     @Override

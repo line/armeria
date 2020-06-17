@@ -32,6 +32,7 @@ task copyFiles(type: Copy) {
     include '**/*ExampleHeaders.java'
     include '**/*ExampleRequest.java'
     include '**/*RegistrationBean.java'
+    include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaConfigurationUtil.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'

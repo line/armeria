@@ -23,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import javax.annotation.Nullable;
@@ -130,7 +131,7 @@ class PublisherBasedStreamMessageTest {
         });
 
         // We do call onError(t) first before completing the future.
-        await().untilAsserted(() -> assertThat(p.whenComplete().isCompletedExceptionally()));
+        await().untilAsserted(() -> assertThat(p.whenComplete()).isCompletedExceptionally());
     }
 
     private static final class AbortTest {
@@ -192,7 +193,7 @@ class PublisherBasedStreamMessageTest {
 
         void verify(@Nullable Throwable cause) {
             // Ensure subscription.cancel() has been invoked.
-            Mockito.verify(subscription).cancel();
+            Mockito.verify(subscription, timeout(3000)).cancel();
 
             // Ensure completionFuture is complete exceptionally.
             assertThat(publisher.whenComplete()).isCompletedExceptionally();

@@ -208,6 +208,7 @@ public final class DefaultServiceRequestContext
         return clientAddress;
     }
 
+    @Deprecated
     @Override
     public ServiceRequestContext newDerivedContext(RequestId id,
                                                    @Nullable HttpRequest req,
@@ -330,6 +331,11 @@ public final class DefaultServiceRequestContext
     @Override
     public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
         this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
+    }
+
+    @Override
+    public void timeoutNow() {
+        timeoutScheduler.timeoutNow();
     }
 
     @Override

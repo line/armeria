@@ -329,7 +329,7 @@ public final class HealthCheckService implements TransientHttpService {
 
                     // Send the initial ack (102 Processing) to let the client know that the request
                     // was accepted.
-                    res.tryWrite(ping);
+                    res.write(ping);
 
                     // Send pings (102 Processing) periodically afterwards.
                     final ScheduledFuture<?> pingFuture;
