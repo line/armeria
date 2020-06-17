@@ -177,27 +177,24 @@ Armeria will try to convert the value appropriately if the parameter type is not
 `IllegalArgumentException` will be raised if the conversion fails or the parameter type is not
 one of the following supported types:
 
-- `boolean` or `Boolean`
-- `byte` or `Byte`
-- `short` or `Short`
-- `integer` or `Integer`
-- `long` or `Long`
-- `float` or `Float`
-- `double` or `Double`
-- `String`, `CharSequence` or `AsciiString`
-- `Enum`
-- `UUID`
-- `Duration`
-- `Instant`
-- `LocalDate`
-- `LocalDateTime`
-- `LocalTime`
-- `OffsetDateTime`
-- `OffsetTime`
-- `Period`
-- `ZonedDateTime`
-- `ZoneId`
-- `ZoneOffset`
+- Primitive types and their wrapper types:
+  - `boolean` or `Boolean`
+  - `byte` or `Byte`
+  - `short` or `Short`
+  - `integer` or `Integer`
+  - `long` or `Long`
+  - `float` or `Float`
+  - `double` or `Double`
+- Well-known JDK classes:
+  - `String`, `CharSequence` or `AsciiString`
+  - `Enum`
+  - `UUID`
+  - `java.time` package classes
+    - `Instant`
+    - `Duration` and  `Period`
+    - `LocalDate`, `LocalDateTime` and `LocalTime`,
+    - `OffsetDateTime` and `OffsetTime`
+    - `ZonedDateTime`, `ZoneId` and `ZoneOffset`
 
 Note that you can omit the value of <type://@Param> if you compiled your code with `-parameters` javac
 option. In this case the variable name is used as the value.
