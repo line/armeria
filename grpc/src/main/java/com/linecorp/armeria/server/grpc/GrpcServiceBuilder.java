@@ -314,6 +314,7 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
+                isProtoReflectionServiceSet,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? new UnframedGrpcService(grpcService) : grpcService;
     }

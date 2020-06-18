@@ -26,14 +26,19 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -63,6 +68,7 @@ import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
+import io.grpc.Server;
 import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
@@ -74,6 +80,8 @@ import io.grpc.Status;
 final class FramedGrpcService extends AbstractHttpService implements GrpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
+    @Nullable
+    static Server dummyServer;
 
     private final HandlerRegistry registry;
     private final Set<Route> routes;
@@ -86,6 +94,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
+    private final boolean useProtoReflectionService;
     private final String advertisedEncodingsHeader;
 
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
@@ -102,6 +111,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
+                      boolean useProtoReflectionService,
                       int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
@@ -113,6 +123,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
+        this.useProtoReflectionService = useProtoReflectionService;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
@@ -242,6 +253,76 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     public void serviceAdded(ServiceConfig cfg) {
         if (maxInboundMessageSizeBytes == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
             maxInboundMessageSizeBytes = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
+        }
+
+        if (useProtoReflectionService && dummyServer == null) {
+            final Map<String, ServerServiceDefinition> grpcServices =
+                    cfg.server().config().virtualHosts().stream()
+                       .flatMap(host -> host.serviceConfigs().stream())
+                       .map(serviceConfig -> serviceConfig.service().as(FramedGrpcService.class))
+                       .filter(Objects::nonNull)
+                       .flatMap(service -> service.services().stream())
+                       // Armeria allows the same service to be registered multiple times at different
+                       // paths, but proto reflection service only supports a single instance of each
+                       // service so we dedupe here.
+                       .collect(toImmutableMap(def -> def.getServiceDescriptor().getName(),
+                                               Function.identity(),
+                                               (a, b) -> a));
+            dummyServer = new Server() {
+                @Override
+                public Server start() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public List<ServerServiceDefinition> getServices() {
+                    return ImmutableList.copyOf(grpcServices.values());
+                }
+
+                @Override
+                public List<ServerServiceDefinition> getImmutableServices() {
+                    // NB: This will probably go away in favor of just getServices above, so we
+                    // implement both the same.
+                    // https://github.com/grpc/grpc-java/issues/4600
+                    return getServices();
+                }
+
+                @Override
+                public List<ServerServiceDefinition> getMutableServices() {
+                    // Armeria does not have the concept of mutable services.
+                    return ImmutableList.of();
+                }
+
+                @Override
+                public Server shutdown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Server shutdownNow() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isShutdown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isTerminated() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean awaitTermination(long timeout, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public void awaitTermination() {
+                    throw new UnsupportedOperationException();
+                }
+            };
         }
     }
 
