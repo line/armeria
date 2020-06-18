@@ -15,25 +15,38 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import static com.linecorp.armeria.internal.common.zookeeper.ZookeeperPathUtil.validatePath;
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperPathUtil.validatePath;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
-final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec {
+final class LegacyZooKeeperRegistrationSpec implements ZooKeeperRegistrationSpec {
 
+    private static final byte[] EMPTY_BYTE = new byte[0];
+
+    @Nullable
     private final Endpoint endpoint;
     private final String path;
 
-    LegacyZookeeperRegistrationSpec(Endpoint endpoint) {
-        this.endpoint = requireNonNull(endpoint, "endpoint");
-        validatePath(endpoint.host(), "endpoint.host()");
-        path = '/' + endpoint.host() + '_' + endpoint.port();
+    LegacyZooKeeperRegistrationSpec() {
+        this(null);
     }
 
+    LegacyZooKeeperRegistrationSpec(@Nullable Endpoint endpoint) {
+        this.endpoint = endpoint;
+        if (endpoint != null) {
+            validatePath(endpoint.host(), "endpoint.host()");
+            path = '/' + endpoint.host() + '_' + endpoint.port();
+        } else {
+            path = "/";
+        }
+    }
+
+    @Nullable
     Endpoint endpoint() {
         return endpoint;
     }
@@ -44,15 +57,24 @@ final class LegacyZookeeperRegistrationSpec implements ZookeeperRegistrationSpec
     }
 
     @Override
+    public boolean isSequential() {
+        return false;
+    }
+
+    @Override
     public byte[] encodedInstance() {
+        if (endpoint == null) {
+            return EMPTY_BYTE;
+        }
         return LegacyNodeValueCodec.INSTANCE.encode(endpoint);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("endpoint", endpoint)
                           .add("path", path)
+                          .add("isSequential", isSequential())
                           .toString();
     }
 }

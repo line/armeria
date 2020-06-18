@@ -203,7 +203,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                         return;
                     }
 
-                    addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch));
+                    addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch, H2));
                     protocol = H2;
                 } else {
                     if (httpPreference != HttpPreference.HTTP1_REQUIRED) {
@@ -285,7 +285,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         if (attemptUpgrade) {
-            final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch);
+            final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, H2C);
             if (clientFactory.useHttp2Preface()) {
                 pipeline.addLast(new DowngradeHandler());
                 pipeline.addLast(http2Handler);
@@ -598,8 +598,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         ctx.close();
     }
 
-    private Http2ClientConnectionHandler newHttp2ConnectionHandler(Channel ch) {
-        return new Http2ClientConnectionHandlerBuilder(ch, clientFactory)
+    private Http2ClientConnectionHandler newHttp2ConnectionHandler(Channel ch, SessionProtocol protocol) {
+        return new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol)
                 .server(false)
                 .validateHeaders(false)
                 .initialSettings(http2Settings())

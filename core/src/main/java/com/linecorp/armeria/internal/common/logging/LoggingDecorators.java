@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.common.logging;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -44,9 +45,9 @@ public final class LoggingDecorators {
     public static void logRequest(
             Logger logger, RequestOnlyLog log,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-            Function<? super RequestHeaders, ?> requestHeadersSanitizer,
-            Function<Object, ?> requestContentSanitizer,
-            Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer) {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         if (requestLogLevel.isEnabled(logger)) {
@@ -67,13 +68,14 @@ public final class LoggingDecorators {
             Logger logger, RequestLog log,
             Function<? super RequestLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-            Function<? super RequestHeaders, ?> requestHeadersSanitizer,
-            Function<Object, ?> requestContentSanitizer,
-            Function<? super HttpHeaders, ?> requestTrailersSanitizer,
-            Function<? super ResponseHeaders, ?> responseHeadersSanitizer,
-            Function<Object, ?> responseContentSanitizer,
-            Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-            Function<? super Throwable, ?> responseCauseSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer) {
+
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
         final Throwable responseCause = log.responseCause();
 
@@ -98,7 +100,7 @@ public final class LoggingDecorators {
                                                                  requestTrailersSanitizer));
                 }
 
-                final Object sanitizedResponseCause = responseCauseSanitizer.apply(responseCause);
+                final Object sanitizedResponseCause = responseCauseSanitizer.apply(ctx, responseCause);
                 if (sanitizedResponseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
                     return;

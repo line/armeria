@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -24,10 +27,12 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
@@ -264,9 +269,15 @@ public interface RequestOnlyLog extends RequestLogAccess {
 
     /**
      * Returns the string representation of the {@link Request}, with no sanitization of headers or content.
+     * This method is a shortcut for:
+     * <pre>{@code
+     * toStringRequestOnly((ctx, headers) -> headers,
+     *                     (ctx, content) -> content,
+     *                     (ctx, trailers) -> trailers);
+     * }</pre>
      */
     default String toStringRequestOnly() {
-        return toStringRequestOnly(Function.identity(), Function.identity(), Function.identity());
+        return toStringRequestOnly(Functions.second(), Functions.second(), Functions.second());
     }
 
     /**
@@ -275,11 +286,45 @@ public interface RequestOnlyLog extends RequestLogAccess {
      * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>
      *
-     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
-     *                         {@link Function} is what is actually logged as headers.
-     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
-     *                         {@link Function} is what is actually logged as content.
+     * @param headersSanitizer a {@link BiFunction} for sanitizing HTTP headers for logging. The result of
+     *                         the {@link BiFunction} is what is actually logged as headers.
+     * @param contentSanitizer a {@link BiFunction} for sanitizing request content for logging. The result of
+     *                         the {@link BiFunction} is what is actually logged as content.
      */
+    default String toStringRequestOnly(
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> headersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> contentSanitizer) {
+        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+    }
+
+    /**
+     * Returns the string representation of the {@link Request}.
+     *
+     * @param headersSanitizer a {@link BiFunction} for sanitizing HTTP headers for logging. The result of
+     *                         the {@link BiFunction} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of
+     *                         the {@link BiFunction} is what is actually logged as content.
+     * @param trailersSanitizer a {@link BiFunction} for sanitizing HTTP trailers for logging. The result of
+     *                          the {@link BiFunction} is what is actually logged as trailers.
+     */
+    String toStringRequestOnly(BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
+                               BiFunction<? super RequestContext, Object, ?> contentSanitizer,
+                               BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer);
+
+    /**
+     * Returns the string representation of the {@link Request}. This method is a shortcut for:
+     * <pre>{@code
+     * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+     * }</pre>
+     *
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of
+     *                         the {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of
+     *                         the {@link Function} is what is actually logged as content.
+     *
+     * @deprecated Use {@link #toStringRequestOnly(BiFunction, BiFunction)}.
+     */
+    @Deprecated
     default String toStringRequestOnly(Function<? super HttpHeaders, ?> headersSanitizer,
                                        Function<Object, ?> contentSanitizer) {
         return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
@@ -288,14 +333,24 @@ public interface RequestOnlyLog extends RequestLogAccess {
     /**
      * Returns the string representation of the {@link Request}.
      *
-     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
-     *                         {@link Function} is what is actually logged as headers.
-     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
-     *                         {@link Function} is what is actually logged as content.
-     * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
-     *                          {@link Function} is what is actually logged as trailers.
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of
+     *                         the {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of
+     *                         the {@link Function} is what is actually logged as content.
+     * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of
+     *                          the {@link Function} is what is actually logged as trailers.
+     *
+     * @deprecated Use {@link #toStringRequestOnly(BiFunction, BiFunction, BiFunction)}.
      */
-    String toStringRequestOnly(Function<? super RequestHeaders, ?> headersSanitizer,
-                               Function<Object, ?> contentSanitizer,
-                               Function<? super HttpHeaders, ?> trailersSanitizer);
+    @Deprecated
+    default String toStringRequestOnly(Function<? super RequestHeaders, ?> headersSanitizer,
+                                       Function<Object, ?> contentSanitizer,
+                                       Function<? super HttpHeaders, ?> trailersSanitizer) {
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requireNonNull(trailersSanitizer, "trailersSanitizer");
+        return toStringRequestOnly((ctx, headers) -> headersSanitizer.apply(headers),
+                                   (ctx, content) -> contentSanitizer.apply(content),
+                                   (ctx, trailers) -> trailersSanitizer.apply(trailers));
+    }
 }

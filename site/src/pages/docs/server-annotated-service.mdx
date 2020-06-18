@@ -138,13 +138,13 @@ public class MyAnnotatedService {
 
     // Handles a request which contains 'client-type: android' header.
     @Get("/users")
-    @ConditionalHeader("client-type=android")
+    @MatchesHeader("client-type=android")
     public User getUsers1() { ... }
 
     // Handles a request which contains 'client-type' header.
     // Any values of the 'client-type' header are accepted.
     @Get("/users")
-    @ConditionalHeader("client-type")
+    @MatchesHeader("client-type")
     public User getUsers2() { ... }
 
     // Handles a request which doesn't contain 'client-type' header.
@@ -184,9 +184,10 @@ one of the following supported types:
 - `long` or `Long`
 - `float` or `Float`
 - `double` or `Double`
-- `String`
+- `String`, `CharSequence` or `AsciiString`
 - `Enum`
 - `UUID`
+- `Period`
 
 Note that you can omit the value of <type://@Param> if you compiled your code with `-parameters` javac
 option. In this case the variable name is used as the value.

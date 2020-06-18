@@ -22,10 +22,10 @@ import org.apache.zookeeper.common.PathUtils;
 /**
  * A utility class for ZooKeeper path.
  */
-public final class ZookeeperPathUtil {
+public final class ZooKeeperPathUtil {
 
     /**
-     * Validates a Zookeeper path.
+     * Validates a ZooKeeper path.
      */
     public static String validatePath(String path, String name) {
         requireNonNull(path, name);
@@ -41,5 +41,5 @@ public final class ZookeeperPathUtil {
         return path;
     }
 
-    private ZookeeperPathUtil() {}
+    private ZooKeeperPathUtil() {}
 }

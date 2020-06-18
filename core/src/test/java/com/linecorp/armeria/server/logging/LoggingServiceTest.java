@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
@@ -255,12 +256,18 @@ class LoggingServiceTest {
         final String sanitizedResponseHeaders = "sanitizedResponseHeaders";
         final String sanitizedResponseContent = "sanitizedResponseContent";
         final String sanitizedResponseTrailers = "sanitizedResponseTrailer";
-        final Function<HttpHeaders, ?> requestHeadersSanitizer = headers -> sanitizedRequestHeaders;
-        final Function<Object, ?> requestContentSanitizer = content -> sanitizedRequestContent;
-        final Function<HttpHeaders, ?> requestTrailersSanitizer = trailers -> sanitizedRequestTrailers;
-        final Function<HttpHeaders, ?> responseHeadersSanitizer = headers -> sanitizedResponseHeaders;
-        final Function<Object, ?> responseContentSanitizer = content -> sanitizedResponseContent;
-        final Function<HttpHeaders, ?> responseTrailersSanitizer = trailers -> sanitizedResponseTrailers;
+        final BiFunction<RequestContext, HttpHeaders, ?> requestHeadersSanitizer =
+                (ctx, headers) -> sanitizedRequestHeaders;
+        final BiFunction<RequestContext, Object, ?> requestContentSanitizer =
+                (ctx, content) -> sanitizedRequestContent;
+        final BiFunction<RequestContext, HttpHeaders, ?> requestTrailersSanitizer =
+                (ctx, trailers) -> sanitizedRequestTrailers;
+        final BiFunction<RequestContext, HttpHeaders, ?> responseHeadersSanitizer =
+                (ctx, headers) -> sanitizedResponseHeaders;
+        final BiFunction<RequestContext, Object, ?> responseContentSanitizer =
+                (ctx, content) -> sanitizedResponseContent;
+        final BiFunction<RequestContext, HttpHeaders, ?> responseTrailersSanitizer =
+                (ctx, trailers) -> sanitizedResponseTrailers;
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx.logBuilder().requestContent(new Object(), new Object());
@@ -300,7 +307,8 @@ class LoggingServiceTest {
     @Test
     void sanitizeExceptionIntoException() throws Exception {
         final Exception sanitizedResponseCause = new Exception("sanitized");
-        final Function<Throwable, Throwable> responseCauseSanitizer = cause -> sanitizedResponseCause;
+        final BiFunction<RequestContext, Throwable, Throwable> responseCauseSanitizer =
+                (ctx, cause) -> sanitizedResponseCause;
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx.logBuilder().endResponse(new Exception("not sanitized"));
@@ -328,7 +336,8 @@ class LoggingServiceTest {
     @Test
     void sanitizeExceptionIntoString() throws Exception {
         final String sanitizedResponseCause = "sanitizedResponseCause";
-        final Function<Throwable, String> responseCauseSanitizer = cause -> sanitizedResponseCause;
+        final BiFunction<RequestContext, Throwable, String> responseCauseSanitizer =
+                (ctx, cause) -> sanitizedResponseCause;
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx.logBuilder().endResponse(new Exception("not sanitized"));
@@ -401,7 +410,7 @@ class LoggingServiceTest {
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
                               .requestContentSanitizer(RegexBasedSanitizer.of(
-                                                       Pattern.compile("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")))
+                                                       Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
                               .newDecorator().apply(delegate);
 
         assertThat(ctx.logBuilder().toString()).contains("333-490-4499");

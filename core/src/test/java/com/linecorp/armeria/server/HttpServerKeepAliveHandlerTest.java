@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.withinPercentage;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
@@ -48,12 +49,15 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AttributeMap;
 
 class HttpServerKeepAliveHandlerTest {
@@ -141,6 +145,7 @@ class HttpServerKeepAliveHandlerTest {
     void closeByClientIdleTimeout(SessionProtocol protocol) throws InterruptedException {
         final long clientIdleTimeout = 2000;
         final WebClient client = newWebClient(clientIdleTimeout, server.uri(protocol));
+        final MeterRegistry meterRegistry = client.options().factory().meterRegistry();
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/").aggregate().join();
@@ -150,6 +155,10 @@ class HttpServerKeepAliveHandlerTest {
         await().untilAtomic(counter, Matchers.is(0));
         final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
         assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
+        assertThat(MoreMeters.measureAll(meterRegistry))
+                .hasEntrySatisfying(
+                        "armeria.client.connections.lifespan#total{protocol=" + protocol.uriText() + '}',
+                        value -> assertThat(value * 1000).isCloseTo(elapsed, withinPercentage(25)));
     }
 
     @Test
@@ -218,6 +227,7 @@ class HttpServerKeepAliveHandlerTest {
     private WebClient newWebClient(long clientIdleTimeout, long pingIntervalMillis, long responseTimeout,
                                    URI uri) {
         final ClientFactory factory = ClientFactory.builder()
+                                                   .meterRegistry(new SimpleMeterRegistry())
                                                    .idleTimeoutMillis(clientIdleTimeout)
                                                    .pingIntervalMillis(pingIntervalMillis)
                                                    .connectionPoolListener(listener)

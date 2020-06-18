@@ -269,6 +269,7 @@ public class DefaultTimeoutController implements TimeoutController {
         return timeoutFuture;
     }
 
+    @Nullable
     @VisibleForTesting
     TimeoutTask timeoutTask() {
         return timeoutTask;

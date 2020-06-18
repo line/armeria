@@ -189,15 +189,24 @@ class RequestContextExportingAppenderTest {
             rcea.start();
             logger.trace("foo");
             assertThat(rcea).isNotNull();
-            assertThat(rcea.exporter().builtIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
-            assertThat(rcea.exporter().requestHeaders()).containsExactly(HttpHeaderNames.USER_AGENT);
+            assertThat(rcea.exporter().builtIns()).containsExactlyInAnyOrder(
+                    BuiltInProperty.REMOTE_HOST,
+                    BuiltInProperty.REMOTE_IP,
+                    BuiltInProperty.REMOTE_PORT
+            );
+            assertThat(rcea.exporter().requestHeaders()).containsExactlyInAnyOrder(
+                    HttpHeaderNames.USER_AGENT,
+                    HttpHeaderNames.CONTENT_TYPE
+            );
             assertThat(rcea.exporter().responseHeaders()).containsExactly(HttpHeaderNames.SET_COOKIE);
 
             final AttributeKey<Object> fooAttr = AttributeKey.valueOf("com.example.AttrKeys#FOO");
             final AttributeKey<Object> barAttr = AttributeKey.valueOf("com.example.AttrKeys#BAR");
+            final AttributeKey<Object> bazAttr = AttributeKey.valueOf("com.example.AttrKeys#BAZ");
             assertThat(rcea.exporter().attributes()).containsOnly(new SimpleEntry<>("attrs.foo", fooAttr),
                                                                   new SimpleEntry<>("attrs.bar", barAttr),
-                                                                  new SimpleEntry<>("attrs.qux", barAttr));
+                                                                  new SimpleEntry<>("attrs.qux", barAttr),
+                                                                  new SimpleEntry<>("attrs.baz", bazAttr));
         } finally {
             // Revert to the original configuration.
             final JoranConfigurator configurator = new JoranConfigurator();

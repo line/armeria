@@ -19,8 +19,11 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.Gender.MALE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
+import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
+import java.time.Period;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -99,13 +102,24 @@ class AnnotatedServiceRequestConverterTest {
         }
 
         @Post("/convert3")
-        public String convert3(@RequestConverter(TestRequestConverterOptional1.class)
-                                       Optional<RequestJsonObj1> obj1,
-                               @RequestConverter(TestRequestConverterOptional2.class)
-                                       Optional<RequestJsonObj2> obj2) {
+        public String convert3(@RequestConverter(TestRequestConverter1.class) Optional<RequestJsonObj1> obj1,
+                               @RequestConverter(TestRequestConverter2.class) Optional<RequestJsonObj2> obj2) {
             assertThat(obj1.isPresent()).isTrue();
             assertThat(obj2.isPresent()).isTrue();
             return obj2.get().strVal();
+        }
+
+        @Post("/convert4")
+        @RequestConverter(NullReturningConverter.class)
+        public void convert4(Optional<String> optional, @Nullable String nullable) {
+            assertThat(optional).isEmpty();
+            assertThat(nullable).isNull();
+        }
+
+        @Post("/convert5")
+        @RequestConverter(NullReturningConverter.class)
+        public void convert5(String nonnull) {
+            fail("Should not reach here");
         }
     }
 
@@ -203,6 +217,12 @@ class AnnotatedServiceRequestConverterTest {
         public UUID defaultUUID(@Param UUID uuid) {
             assertThat(uuid).isNotNull();
             return uuid;
+        }
+
+        @Get("/default/period/:period")
+        public Period defaultPeriod(@Param Period period) {
+            assertThat(period).isNotNull();
+            return period;
         }
     }
 
@@ -302,8 +322,10 @@ class AnnotatedServiceRequestConverterTest {
         static class AliceRequestConverter implements RequestConverterFunction {
             @Nullable
             @Override
-            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                         Class<?> expectedResultType) throws Exception {
+            public Object convertRequest(
+                    ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                    @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
                 if (expectedResultType == Alice.class) {
                     final String age = ctx.pathParam("age");
                     assert age != null;
@@ -316,8 +338,10 @@ class AnnotatedServiceRequestConverterTest {
         static class BobRequestConverter implements RequestConverterFunction {
             @Nullable
             @Override
-            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                         Class<?> expectedResultType) throws Exception {
+            public Object convertRequest(
+                    ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                    @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
                 if (expectedResultType == Bob.class) {
                     final String age = ctx.pathParam("age");
                     assert age != null;
@@ -575,8 +599,10 @@ class AnnotatedServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj1 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
                 return mapper.readValue(request.contentUtf8(), RequestJsonObj1.class);
             }
@@ -588,45 +614,41 @@ class AnnotatedServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj1 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
                 final RequestJsonObj1 obj1 = mapper.readValue(request.contentUtf8(),
                                                               RequestJsonObj1.class);
                 return new RequestJsonObj1(obj1.intVal() + 1, obj1.strVal() + 'a');
             }
+
             return RequestConverterFunction.fallthrough();
         }
     }
 
     public static class TestRequestConverter2 implements RequestConverterFunction {
         @Override
-        public RequestJsonObj2 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj2 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj2.class)) {
-                return new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD));
+                return new RequestJsonObj2(request.headers().method().name());
             }
+
             return RequestConverterFunction.fallthrough();
         }
     }
 
-    public static class TestRequestConverterOptional1 implements RequestConverterFunction {
-        private final ObjectMapper mapper = new ObjectMapper();
-
+    public static class NullReturningConverter implements RequestConverterFunction {
+        @Nullable
         @Override
-        public Optional<RequestJsonObj1> convertRequest(ServiceRequestContext ctx,
-                                                        AggregatedHttpRequest request,
-                                                        Class<?> expectedResultType) throws Exception {
-            return Optional.of(mapper.readValue(request.contentUtf8(), RequestJsonObj1.class));
-        }
-    }
-
-    public static class TestRequestConverterOptional2 implements RequestConverterFunction {
-        @Override
-        public Optional<RequestJsonObj2> convertRequest(ServiceRequestContext ctx,
-                                                        AggregatedHttpRequest request,
-                                                        Class<?> expectedResultType) throws Exception {
-            return Optional.of(new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD)));
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+            return null;
         }
     }
 
@@ -654,6 +676,15 @@ class AnnotatedServiceRequestConverterTest {
         response = client.post("/1/convert3", content1).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(HttpMethod.POST.name());
+
+        // Conversion to null
+        response = client.post("/1/convert4", content1).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        // Conversion to null that will fail with 400 Bad Request,
+        // because the injection target is not annotated with @Nullable.
+        response = client.post("/1/convert5", content1).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -920,6 +951,14 @@ class AnnotatedServiceRequestConverterTest {
         final UUID uuid = UUID.randomUUID();
         final AggregatedHttpResponse response = client.get("/2/default/uuid/" + uuid).aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo(uuid.toString());
+    }
+
+    @Test
+    void testDefaultRequestConverter_period() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final Period period = Period.of(2020, 1, 1);
+        final AggregatedHttpResponse response = client.get("/2/default/period/" + period).aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo(period.toString());
     }
 
     @Test
