@@ -159,13 +159,15 @@ class ServerMaxConnectionAgeTest {
                             "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
                             protocol.uriText() + '}',
                             value -> {
-                                assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                                assertThat(value * 1000)
+                                        .isBetween(MAX_CONNECTION_AGE - 200D, MAX_CONNECTION_AGE * 2D);
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
                             protocol.uriText() + '}',
                             value -> {
-                                assertThat(value * 1000).isCloseTo(MAX_CONNECTION_AGE, withinPercentage(25));
+                                assertThat(value * 1000)
+                                        .isBetween(MAX_CONNECTION_AGE - 100D, MAX_CONNECTION_AGE * 2D);
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
