@@ -91,7 +91,6 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-
     GrpcServiceBuilder() {}
 
     /**
