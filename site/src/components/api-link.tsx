@@ -25,9 +25,13 @@ const TypeLink: React.FC<TypeLinkProps> = (props) => {
     }
   }
 
-  const title = simpleName;
+  let title = '';
   if (simpleName.indexOf('#') > 0) {
-    simpleName = simpleName.replace(/ *\([^)]*\)*/, '()');
+    const replaced = simpleName.replace('#', '.');
+    title = replaced;
+    simpleName = replaced.replace(/ *\([^)]*\)*/, '()');
+  } else {
+    title = simpleName;
   }
 
   const simpleTypeNameWithHref = props.href ? (
