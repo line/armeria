@@ -248,4 +248,12 @@ public interface CircuitBreakerRule {
      */
     CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
                                                                   @Nullable Throwable cause);
+
+    /**
+     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
+     * successful or not.
+     */
+    default boolean requiresResponseTrailers() {
+        return false;
+    }
 }

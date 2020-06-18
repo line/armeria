@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
@@ -101,6 +102,23 @@ class RetryRuleBuilderTest {
         final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx3.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.GATEWAY_TIMEOUT));
         assertBackoff(rule.shouldRetry(ctx3, null)).isNull();
+    }
+
+    @Test
+    void onResponseTrailers() {
+        final Backoff backoff = Backoff.fixed(1000);
+        final RetryRule rule =
+                RetryRule.builder()
+                         .onResponseTrailers(trailers -> trailers.containsInt("grpc-status", 3))
+                         .thenBackoff(backoff);
+
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().responseTrailers(HttpHeaders.of("grpc-status", 3));
+        assertBackoff(rule.shouldRetry(ctx1, null)).isSameAs(backoff);
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().responseTrailers(HttpHeaders.of("grpc-status", 0));
+        assertBackoff(rule.shouldRetry(ctx2, null)).isNull();
     }
 
     @Test
