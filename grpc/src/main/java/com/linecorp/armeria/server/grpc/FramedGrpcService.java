@@ -80,8 +80,6 @@ import io.grpc.Status;
 final class FramedGrpcService extends AbstractHttpService implements GrpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
-    @Nullable
-    static Server dummyServer;
 
     private final HandlerRegistry registry;
     private final Set<Route> routes;
@@ -90,11 +88,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final Set<SerializationFormat> supportedSerializationFormats;
     @Nullable
     private final MessageMarshaller jsonMarshaller;
+    @Nullable
+    private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
     private final int maxOutboundMessageSizeBytes;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
-    private final boolean useProtoReflectionService;
     private final String advertisedEncodingsHeader;
 
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
@@ -107,11 +106,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       CompressorRegistry compressorRegistry,
                       Set<SerializationFormat> supportedSerializationFormats,
                       Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer,
+                      @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
                       int maxOutboundMessageSizeBytes,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
-                      boolean useProtoReflectionService,
                       int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
@@ -120,10 +119,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.useClientTimeoutHeader = useClientTimeoutHeader;
         jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats, jsonMarshallerCustomizer);
+        this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
-        this.useProtoReflectionService = useProtoReflectionService;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
@@ -255,7 +254,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             maxInboundMessageSizeBytes = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
         }
 
-        if (useProtoReflectionService && dummyServer == null) {
+        if (protoReflectionServiceInterceptor != null) {
             final Map<String, ServerServiceDefinition> grpcServices =
                     cfg.server().config().virtualHosts().stream()
                        .flatMap(host -> host.serviceConfigs().stream())
@@ -268,62 +267,66 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                        .collect(toImmutableMap(def -> def.getServiceDescriptor().getName(),
                                                Function.identity(),
                                                (a, b) -> a));
-            dummyServer = new Server() {
-                @Override
-                public Server start() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public List<ServerServiceDefinition> getServices() {
-                    return ImmutableList.copyOf(grpcServices.values());
-                }
-
-                @Override
-                public List<ServerServiceDefinition> getImmutableServices() {
-                    // NB: This will probably go away in favor of just getServices above, so we
-                    // implement both the same.
-                    // https://github.com/grpc/grpc-java/issues/4600
-                    return getServices();
-                }
-
-                @Override
-                public List<ServerServiceDefinition> getMutableServices() {
-                    // Armeria does not have the concept of mutable services.
-                    return ImmutableList.of();
-                }
-
-                @Override
-                public Server shutdown() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public Server shutdownNow() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public boolean isShutdown() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public boolean isTerminated() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public boolean awaitTermination(long timeout, TimeUnit unit) {
-                    throw new UnsupportedOperationException();
-                }
-
-                @Override
-                public void awaitTermination() {
-                    throw new UnsupportedOperationException();
-                }
-            };
+            protoReflectionServiceInterceptor.setServer(newDummyServer(grpcServices));
         }
+    }
+
+    private static Server newDummyServer(Map<String, ServerServiceDefinition> grpcServices) {
+        return new Server() {
+            @Override
+            public Server start() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<ServerServiceDefinition> getServices() {
+                return ImmutableList.copyOf(grpcServices.values());
+            }
+
+            @Override
+            public List<ServerServiceDefinition> getImmutableServices() {
+                // NB: This will probably go away in favor of just getServices above, so we
+                // implement both the same.
+                // https://github.com/grpc/grpc-java/issues/4600
+                return getServices();
+            }
+
+            @Override
+            public List<ServerServiceDefinition> getMutableServices() {
+                // Armeria does not have the concept of mutable services.
+                return ImmutableList.of();
+            }
+
+            @Override
+            public Server shutdown() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Server shutdownNow() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public boolean isShutdown() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public boolean isTerminated() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public boolean awaitTermination(long timeout, TimeUnit unit) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void awaitTermination() {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
     @Override

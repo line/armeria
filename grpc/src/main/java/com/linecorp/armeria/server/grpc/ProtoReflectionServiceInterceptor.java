@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import javax.annotation.Nullable;
+
 import io.grpc.Context;
 import io.grpc.Contexts;
 import io.grpc.InternalServer;
@@ -28,17 +30,20 @@ import io.grpc.ServerInterceptor;
 
 final class ProtoReflectionServiceInterceptor implements ServerInterceptor {
 
-    static final ProtoReflectionServiceInterceptor INSTANCE = new ProtoReflectionServiceInterceptor();
-
-    private ProtoReflectionServiceInterceptor() {}
+    @Nullable
+    private Server server;
 
     @Override
     public <I, O> Listener<I> interceptCall(ServerCall<I, O> call, Metadata headers,
                                             ServerCallHandler<I, O> next) {
-        final Server server = FramedGrpcService.dummyServer;
+        // Should set server before calling this
         assert server != null;
 
         final Context context = Context.current().withValue(InternalServer.SERVER_CONTEXT_KEY, server);
         return Contexts.interceptCall(context, call, headers, next);
+    }
+
+    public void setServer(Server server) {
+        this.server = server;
     }
 }

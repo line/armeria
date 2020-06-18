@@ -72,6 +72,9 @@ public final class GrpcServiceBuilder {
     @Nullable
     private CompressorRegistry compressorRegistry;
 
+    @Nullable
+    private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
     private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
@@ -88,7 +91,6 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    private boolean isProtoReflectionServiceSet;
 
     GrpcServiceBuilder() {}
 
@@ -107,13 +109,12 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
         if (bindableService instanceof ProtoReflectionService) {
-            checkState(!isProtoReflectionServiceSet,
+            checkState(protoReflectionServiceInterceptor == null,
                        "Attempting to add a ProtoReflectionService but one is already present. " +
                        "ProtoReflectionService must only be added once.");
-            isProtoReflectionServiceSet = true;
-            return addService(ServerInterceptors.intercept(bindableService,
-                                                           ProtoReflectionServiceInterceptor.INSTANCE));
-          }
+            protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
+            return addService(ServerInterceptors.intercept(bindableService, protoReflectionServiceInterceptor));
+        }
 
         return addService(bindableService.bindService());
     }
@@ -310,11 +311,11 @@ public final class GrpcServiceBuilder {
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
                 jsonMarshallerCustomizer,
+                protoReflectionServiceInterceptor,
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                isProtoReflectionServiceSet,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? new UnframedGrpcService(grpcService) : grpcService;
     }
