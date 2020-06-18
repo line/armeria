@@ -360,7 +360,7 @@ public class ProxyClientIntegrationTest {
         await().until(() -> responseFutures.stream().allMatch(CompletableFuture::isDone));
         assertThat(responseFutures.stream().map(CompletableFuture::join))
                 .allMatch(response -> response.contentUtf8().equals(SUCCESS_RESPONSE));
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        assertThat(numSuccessfulProxyRequests).isGreaterThanOrEqualTo(1);
         clientFactory.close();
     }
 
