@@ -159,14 +159,14 @@ class ServerMaxConnectionAgeTest {
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 1000.0);
+                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 1000.0);
+                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
@@ -250,14 +250,14 @@ class ServerMaxConnectionAgeTest {
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 1000.0);
+                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 1000.0);
+                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
                             }
                     )
                     .hasEntrySatisfying(
