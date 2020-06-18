@@ -15,7 +15,17 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
@@ -47,7 +57,17 @@ final class AnnotatedServiceTypeUtil {
                     .put(Double.TYPE, Double::valueOf)
                     .put(Double.class, Double::valueOf)
                     .put(UUID.class, UUID::fromString)
+                    .put(Duration.class, Duration::parse)
+                    .put(Instant.class, Instant::parse)
+                    .put(LocalDate.class, LocalDate::parse)
+                    .put(LocalDateTime.class, LocalDateTime::parse)
+                    .put(LocalTime.class, LocalTime::parse)
+                    .put(OffsetDateTime.class, OffsetDateTime::parse)
+                    .put(OffsetTime.class, OffsetTime::parse)
                     .put(Period.class, Period::parse)
+                    .put(ZonedDateTime.class, ZonedDateTime::parse)
+                    .put(ZoneId.class, ZoneId::of)
+                    .put(ZoneOffset.class, ZoneOffset::of)
                     .put(AsciiString.class, AsciiString::new)
                     .put(String.class, Function.identity())
                     .put(CharSequence.class, Function.identity())
