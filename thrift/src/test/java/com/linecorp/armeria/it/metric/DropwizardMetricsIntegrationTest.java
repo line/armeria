@@ -128,7 +128,7 @@ class DropwizardMetricsIntegrationTest {
                             CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, property);
         return MetricRegistry.name(name,
                                    "hostnamePattern:*", "httpStatus:" + status,
-                                   "method:hello", result, "route:exact:/helloservice");
+                                   "method:hello", result, "service:" + Iface.class.getName());
     }
 
     private static String serverMetricNameWithStatus(String property, int status) {
@@ -142,7 +142,8 @@ class DropwizardMetricsIntegrationTest {
     private static String clientMetricName(String property, int status, String result) {
         final String name = "armeriaClientHelloService" +
                             CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, property);
-        return MetricRegistry.name(name, "httpStatus:" + status, "method:hello", result);
+        return MetricRegistry.name(name, "httpStatus:" + status, "method:hello", result,
+                                   "service:" + Iface.class.getName());
     }
 
     private static String clientMetricNameWithStatus(String prop, int status) {

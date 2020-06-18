@@ -92,12 +92,6 @@ public interface MeterIdPrefixFunction {
             private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
                 final RequestContext ctx = log.context();
 
-                String methodName = log.name();
-                if (methodName == null) {
-                    final RequestHeaders requestHeaders = log.requestHeaders();
-                    methodName = requestHeaders.method().name();
-                }
-
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
                     tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "hostnamePattern"
@@ -105,11 +99,15 @@ public interface MeterIdPrefixFunction {
                                               sCtx.config().virtualHost().hostnamePattern()));
                 }
 
+                String methodName = log.name();
+                if (methodName == null) {
+                    final RequestHeaders requestHeaders = log.requestHeaders();
+                    methodName = requestHeaders.method().name();
+                }
                 tagListBuilder.add(Tag.of("method", methodName));
-
-                if (ctx instanceof ServiceRequestContext) {
-                    final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                    tagListBuilder.add(Tag.of("route", sCtx.config().route().meterTag()));
+                final String serviceName = log.serviceName();
+                if (serviceName != null) {
+                    tagListBuilder.add(Tag.of("service", serviceName));
                 }
             }
         };

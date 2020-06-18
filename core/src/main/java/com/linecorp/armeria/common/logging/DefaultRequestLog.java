@@ -53,8 +53,11 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
@@ -137,7 +140,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private Scheme scheme;
     @Nullable
+    private String serviceName;
+    @Nullable
     private String name;
+    @Nullable
+    private String fullName;
 
     @Nullable
     private RequestHeaders requestHeaders;
@@ -455,9 +462,14 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> serializationFormat(log.scheme().serializationFormat()));
         child.whenAvailable(RequestLogProperty.NAME)
              .thenAccept(log -> {
+                 final String serviceName = log.serviceName();
                  final String name = log.name();
                  if (name != null) {
-                     name(name);
+                     if (serviceName != null) {
+                         name(serviceName, name);
+                     } else {
+                         name(name);
+                     }
                  }
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
@@ -674,6 +686,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return scheme;
     }
 
+    @Nullable
+    @Override
+    public String serviceName() {
+        ensureAvailable(RequestLogProperty.NAME);
+        return serviceName;
+    }
+
     @Override
     @Nullable
     public String name() {
@@ -685,12 +704,47 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public void name(String name) {
         requireNonNull(name, "name");
         checkArgument(!name.isEmpty(), "name is empty.");
+
         if (isAvailable(RequestLogProperty.NAME)) {
             return;
         }
 
         this.name = name;
         updateFlags(RequestLogProperty.NAME);
+    }
+
+    @Override
+    public void name(String serviceName, String name) {
+        requireNonNull(serviceName, "serviceName");
+        checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
+        requireNonNull(name, "name");
+        checkArgument(!name.isEmpty(), "name is empty.");
+
+        if (isAvailable(RequestLogProperty.NAME)) {
+            return;
+        }
+
+        this.serviceName = serviceName;
+        this.name = name;
+        updateFlags(RequestLogProperty.NAME);
+    }
+
+    @Nullable
+    @Override
+    public String fullName() {
+        ensureAvailable(RequestLogProperty.NAME);
+        if (fullName != null) {
+            return fullName;
+        }
+        if (name == null) {
+            return null;
+        }
+
+        if (serviceName != null) {
+            return fullName = serviceName + '/' + name;
+        } else {
+            return fullName = name;
+        }
     }
 
     @Override
@@ -790,6 +844,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (requestContent instanceof RpcRequest && ctx.rpcRequest() == null) {
             ctx.updateRpcRequest((RpcRequest) requestContent);
         }
+
+        final int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
+        if (isAvailable(requestCompletionFlags)) {
+            setNamesIfAbsent();
+        }
     }
 
     @Override
@@ -825,6 +884,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
         updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT);
+
+        if (!isAvailable(RequestLogProperty.NAME)) {
+            updateDeferredFlags(RequestLogProperty.NAME);
+        }
     }
 
     @Override
@@ -917,24 +980,59 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
         }
 
-        if (name == null) {
-            String newName = null;
-            final RpcRequest rpcReq = ctx.rpcRequest();
-            if (rpcReq != null) {
-                newName = rpcReq.method();
-            } else if (requestContent instanceof RpcRequest) {
-                newName = ((RpcRequest) requestContent).method();
-            }
-
-            if (newName == null && ctx instanceof ServiceRequestContext) {
-                newName = ((ServiceRequestContext) ctx).config().defaultLogName();
-            }
-
-            name = newName;
+        // Set names if request content is not deferred or it was deferred but has been set
+        // before the request completion.
+        if (!isDeferRequestContentSet() ||
+            (isDeferRequestContentSet() && isAvailable(RequestLogProperty.REQUEST_CONTENT))) {
+            setNamesIfAbsent();
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
         updateFlags(flags);
+    }
+
+    private void setNamesIfAbsent() {
+        if (name == null) {
+            String newServiceName = null;
+            String newName = null;
+            RpcRequest rpcReq = ctx.rpcRequest();
+            if (rpcReq == null && requestContent instanceof RpcRequest) {
+                rpcReq = (RpcRequest) requestContent;
+            }
+
+            if (rpcReq != null) {
+                newServiceName = rpcReq.serviceType().getName();
+                newName = rpcReq.method();
+            } else if (ctx instanceof ServiceRequestContext) {
+                final ServiceConfig config = ((ServiceRequestContext) ctx).config();
+                newServiceName = config.defaultServiceName();
+                if (newServiceName == null) {
+                    newServiceName = getInnermostServiceName(config.service());
+                }
+                newName = config.defaultLogName();
+            }
+
+            if (newName == null) {
+                newName = ctx.method().name();
+            }
+
+            serviceName = newServiceName;
+            name = newName;
+
+            updateFlags(RequestLogProperty.NAME);
+        }
+    }
+
+    private static String getInnermostServiceName(HttpService service) {
+        Unwrappable unwrappable = service;
+        while (true) {
+            final Unwrappable delegate = unwrappable.unwrap();
+            if (delegate != unwrappable) {
+                unwrappable = delegate;
+                continue;
+            }
+            return delegate.getClass().getName();
+        }
     }
 
     // Response-side methods.
@@ -1695,8 +1793,20 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Nullable
         @Override
+        public String serviceName() {
+            return serviceName;
+        }
+
+        @Nullable
+        @Override
         public String name() {
             return name;
+        }
+
+        @Nullable
+        @Override
+        public String fullName() {
+            return DefaultRequestLog.this.fullName();
         }
 
         @Override

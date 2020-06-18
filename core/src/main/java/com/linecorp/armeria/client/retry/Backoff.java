@@ -155,6 +155,17 @@ public interface Backoff extends Unwrappable {
     }
 
     /**
+     * Undecorates this {@link Backoff} and returns the object being decorated.
+     * If this {@link Backoff} is the innermost object, this method returns itself.
+     *
+     * @see Unwrappable
+     */
+    @Override
+    default Backoff unwrap() {
+        return (Backoff) Unwrappable.super.unwrap();
+    }
+
+    /**
      * Returns a {@link Backoff} that adds a random jitter value to the original delay using
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
      * The {@code jitterRate} is used to calculate the lower and upper bound of the ultimate delay.
