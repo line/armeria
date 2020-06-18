@@ -52,6 +52,7 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.protobuf.services.ProtoReflectionService;
 
@@ -87,8 +88,7 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    @Nullable
-    private ProtoReflectionService protoReflectionService;
+    private boolean isProtoReflectionServiceSet;
 
     GrpcServiceBuilder() {}
 
@@ -107,11 +107,13 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
         if (bindableService instanceof ProtoReflectionService) {
-            checkState(protoReflectionService == null,
+            checkState(!isProtoReflectionServiceSet,
                        "Attempting to add a ProtoReflectionService but one is already present. " +
                        "ProtoReflectionService must only be added once.");
-            protoReflectionService = (ProtoReflectionService) bindableService;
-        }
+            isProtoReflectionServiceSet = true;
+            return addService(ServerInterceptors.intercept(bindableService,
+                                                           ProtoReflectionServiceInterceptor.INSTANCE));
+          }
 
         return addService(bindableService.bindService());
     }
@@ -312,7 +314,6 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                protoReflectionService,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? new UnframedGrpcService(grpcService) : grpcService;
     }
