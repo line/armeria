@@ -30,7 +30,7 @@ import reactor.core.publisher.Flux;
 
 class PublisherBasedHttpResponseTest {
 
-    private static AtomicBoolean exceptionIsRaised = new AtomicBoolean();
+    private static final AtomicBoolean exceptionIsRaised = new AtomicBoolean();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
