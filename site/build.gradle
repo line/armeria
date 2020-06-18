@@ -6,6 +6,8 @@ import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import java.util.stream.Collectors
 
+import org.jsoup.Jsoup
+
 buildscript {
     repositories {
         gradlePluginPortal()
@@ -13,6 +15,7 @@ buildscript {
     }
     dependencies {
         classpath "com.github.node-gradle:gradle-node-plugin:${managedVersions['com.github.node-gradle:gradle-node-plugin']}"
+        classpath 'org.jsoup:jsoup:1.13.1'
     }
 }
 
@@ -131,36 +134,25 @@ class ApiIndexTask extends DefaultTask {
             def simpleClassName = fqcn.substring(fqcn.lastIndexOf('.') + 1)
             result.add([simpleClassName, href])
 
-            def br = new BufferedReader(new FileReader(path.toFile()))
-            def line = br.readLine()
-            // Read a file to retrieve the links of methods.
-            while (line != null) {
-                if (line.startsWith('<h3><a id="')) {
-                    // The length of `<h3><a id="` is 10
-                    def methodSignatureEndingIndex = line.indexOf('"', 11)
-                    def methodSignature = line.substring(11, methodSignatureEndingIndex)
-                    if (methodSignature.startsWith('&lt;init&gt;')) { // Ignore constructor for now.
-                        break;
-                    }
-                    def hrefWithMethod = href + '#' + methodSignature
+            def doc = Jsoup.parse(path.toFile(), 'UTF-8')
+            doc.select('.detail > h3 > a:not([id^=<init>])').each {
+                def methodSignature = it.attr("id")
+                def hrefWithMethod = href + '#' + methodSignature
 
-                    def split = methodSignature.split("\\(|\\)|,")
-                    if (split.length != 1) {
-                        // Make the type of parameters from FQCN to Simple class name in order to use as a key.
-                        def parameters = ''
-                        for (int i = 1; i < split.length; i++) {
-                            parameters += ',' + split[i].substring(split[i].lastIndexOf('.') + 1)
-                        }
-                        methodSignature = split[0] + '(' + parameters.substring(1) + ')'
+                def split = methodSignature.split('\\(|\\)|,')
+                if (split.length != 1) {
+                    // Make the type of parameters from FQCN to Simple class name in order to use as a key.
+                    def parameters = ''
+                    for (int i = 1; i < split.length; i++) {
+                        parameters += ',' + split[i].substring(split[i].lastIndexOf('.') + 1)
                     }
-
-                    result.add([fqcn + '#' + methodSignature, hrefWithMethod])
-                    result.add([simpleClassName + '#' + methodSignature, hrefWithMethod])
+                    methodSignature = split[0] + '(' + parameters.substring(1) + ')'
                 }
-                line = br.readLine()
+
+                result.add([fqcn + '#' + methodSignature, hrefWithMethod])
+                result.add([simpleClassName + '#' + methodSignature, hrefWithMethod])
             }
 
-            br.close()
             return result.stream()
         }).collect(Collectors.toMap({ e -> e[0] }, { e -> e[1] }, { a, b -> a }, { new TreeMap()}))
 
