@@ -58,6 +58,6 @@ public class ArmeriaGracefulShutdownConfigurationTest {
     public void testGracefulShutdown() throws Exception {
         final long startTime = System.nanoTime();
         server.stop().join();
-        assertThat(System.nanoTime() - startTime).isGreaterThanOrEqualTo(duration.toMillis());
+        assertThat(System.nanoTime() - startTime).isGreaterThanOrEqualTo(duration.toNanos());
     }
 }
