@@ -163,5 +163,4 @@ class AnnotatedServiceRequestLogNameTest {
             return "OK";
         }
     }
-
 }
