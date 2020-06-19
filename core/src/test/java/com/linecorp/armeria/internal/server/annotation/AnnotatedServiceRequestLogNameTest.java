@@ -29,7 +29,9 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class AnnotatedServiceRequestLogNameTest {
@@ -40,17 +42,8 @@ class AnnotatedServiceRequestLogNameTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService(new Object() {
-                @Get("/ok")
-                public String foo() {
-                    return "OK";
-                }
-
-                @Get("/fail_early")
-                public String bar() {
-                    return "Not OK";
-                }
-            });
+            sb.annotatedService(new FooService());
+            sb.annotatedService("/serviceName", new BarService());
 
             sb.decorator((delegate, ctx, req) -> {
                 logs.add(ctx.log());
@@ -82,4 +75,56 @@ class AnnotatedServiceRequestLogNameTest {
         assertThat(log.name()).isEqualTo("bar");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    @Test
+    void defaultServiceName() throws Exception {
+        WebClient.of(server.httpUri()).get("/ok").aggregate().join();
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo(FooService.class.getName());
+    }
+
+    @Test
+    void customServiceNameWithClass() throws Exception {
+        WebClient.of(server.httpUri()).get("/serviceName/foo").aggregate().join();
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("MyBarService");
+    }
+
+    @Test
+    void customServiceNameWithMethod() throws Exception {
+        WebClient.of(server.httpUri()).get("/serviceName/bar").aggregate().join();
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("SecuredBarService");
+    }
+
+    private static class FooService {
+        @Get("/ok")
+        public String foo() {
+            return "OK";
+        }
+
+        @Get("/fail_early")
+        public String bar() {
+            return "Not OK";
+        }
+    }
+
+    @ServiceName("MyBarService")
+    private static class BarService {
+        @Get("/foo")
+        public String foo() {
+            return "OK";
+        }
+
+        @ServiceName("SecuredBarService")
+        @Get("/bar")
+        public String secured(ServiceRequestContext ctx) {
+            ctx.log();
+            return "OK";
+        }
+    }
+
 }

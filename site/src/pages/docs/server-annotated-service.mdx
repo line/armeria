@@ -1373,5 +1373,41 @@ public class MyAnnotatedService {
     public HttpResponse update() { ... }
 }
 ```
+
+## Specifying the default service name
+
+The default name of service that served a request is the innermost class name of an annotated service.
+The service name is often used as a meter tag or distributed trace's span name.
+If you want to customize the default service name, then you can override the name by annotating
+a class or method with <type://@ServiceName>.
+
+For example:
+
+```java
+public class MyService {
+    @Get("/")
+    public String get(ServiceRequestContext ctx) {
+        assert ctx.log().partial().serviceName() == MyService.class.getName();
+    }
+}
+
+@ServiceName("my-service")
+public class MyService {
+    @Get("/")
+    public String get(ServiceRequestContext ctx) {
+        assert ctx.log().partial().serviceName() == "my-service";
+    }
+
+    @ServiceName("my-post-service")
+    @Post("/")
+    public String post(ServiceRequestContext ctx) {
+        assert ctx.log().partial().serviceName() == "my-post-service";
+    }
+}
+```
+
+Please refer to
+[Request properties](https://line.github.io/armeria/docs/advanced-structured-logging#request-properties)
+for more information about RPC and HTTP service names.
     
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html

@@ -72,6 +72,7 @@ import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
@@ -109,6 +110,7 @@ public class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
+    private final String defaultServiceName;
 
     AnnotatedService(Object object, Method method,
                      List<AnnotatedValueResolver> resolvers,
@@ -139,6 +141,16 @@ public class AnnotatedService implements HttpService {
             responseType = ResponseType.COMPLETION_STAGE;
         } else {
             responseType = ResponseType.OTHER_OBJECTS;
+        }
+
+        ServiceName serviceName = method.getAnnotation(ServiceName.class);
+        if (serviceName == null) {
+            serviceName = object.getClass().getAnnotation(ServiceName.class);
+        }
+        if (serviceName != null) {
+            defaultServiceName = serviceName.value();
+        } else {
+            defaultServiceName = method.getDeclaringClass().getName();
         }
 
         this.method.setAccessible(true);
@@ -197,7 +209,7 @@ public class AnnotatedService implements HttpService {
     }
 
     public String serviceName() {
-        return method.getDeclaringClass().getName();
+        return defaultServiceName;
     }
 
     public String methodName() {
