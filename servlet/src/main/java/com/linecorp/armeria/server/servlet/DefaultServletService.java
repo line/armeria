@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.servlet;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.servlet.http.HttpServlet;
+import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpService;
@@ -43,39 +42,33 @@ final class DefaultServletService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        requireNonNull(ctx, "ctx");
-        requireNonNull(req, "req");
-        final HttpResponseWriter res = HttpResponse.streaming();
-        req.aggregate().handleAsync((aReq, cause) -> {
+        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+        req.aggregate().handle((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
-                    res.close();
-                }
+                future.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return null;
             }
-            process(ctx, res, aReq);
+            process(ctx, aReq, future);
             return null;
-        }, ctx.blockingTaskExecutor());
-        return res;
+        });
+        return HttpResponse.from(future);
     }
 
-    private void process(ServiceRequestContext ctx, HttpResponseWriter res, AggregatedHttpRequest req) {
-        requireNonNull(res, "res");
-        try {
-            final ServletRequestDispatcher dispatcher = servletContext.getRequestDispatcher(ctx.path());
-            if (dispatcher == null) {
-                if (res.tryWrite(ResponseHeaders.of(HttpStatus.NOT_FOUND))) {
-                    res.close();
-                }
-                return;
-            }
-            dispatcher.dispatch(new DefaultServletHttpRequest(ctx, servletContext, req),
-                                new DefaultServletHttpResponse(servletContext, res));
-        } catch (Throwable throwable) {
-            logger.error("Servlet process failed: ", throwable);
-        } finally {
-            res.close();
+    private void process(ServiceRequestContext ctx, AggregatedHttpRequest req,
+                         CompletableFuture<HttpResponse> resFuture) {
+        final ServletRequestDispatcher dispatcher = servletContext.getRequestDispatcher(ctx.path());
+        if (dispatcher == null) {
+            resFuture.complete(HttpResponse.of(HttpStatus.NOT_FOUND));
+            return;
         }
+        ctx.blockingTaskExecutor().execute(() -> {
+            try {
+                dispatcher.dispatch(new DefaultServletHttpRequest(ctx, servletContext, req),
+                                    new DefaultServletHttpResponse(servletContext, resFuture));
+            } catch (Throwable t) {
+                resFuture.complete(HttpResponse.ofFailure(t));
+            }
+        });
     }
 }

@@ -25,16 +25,16 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
 final class DefaultServletOutputStream extends ServletOutputStream {
+
     private final DefaultServletHttpResponse response;
 
     DefaultServletOutputStream(DefaultServletHttpResponse response) {
-        requireNonNull(response, "response");
         this.response = response;
     }
 
     @Override
     public boolean isReady() {
-        return response.getResponseWriter().isOpen();
+        return response.isReady();
     }
 
     @Override
@@ -45,10 +45,6 @@ final class DefaultServletOutputStream extends ServletOutputStream {
     @Override
     public void close() throws IOException {
         response.close();
-    }
-
-    @Override
-    public void flush() throws IOException {
     }
 
     @Override
@@ -64,11 +60,5 @@ final class DefaultServletOutputStream extends ServletOutputStream {
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
         response.write(Arrays.copyOfRange(b, off, len));
-    }
-
-    @Override
-    public void write(byte[] b) throws IOException {
-        requireNonNull(b, "b");
-        write(b, 0, b.length);
     }
 }

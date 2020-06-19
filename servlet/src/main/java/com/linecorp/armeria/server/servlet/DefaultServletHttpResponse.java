@@ -28,21 +28,18 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -51,55 +48,53 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import io.netty.util.AsciiString;
 
 final class DefaultServletHttpResponse implements HttpServletResponse {
-    private static final Logger logger = LoggerFactory.getLogger(DefaultServletHttpRequest.class);
+
+    private final DefaultServletContext servletContext;
+    private final CompletableFuture<HttpResponse> resFuture;
+    private final DefaultServletOutputStream outputStream;
+    private final PrintWriter writer;
+    private final ResponseHeadersBuilder headersBuilder;
 
     private final List<String> cookies = new ArrayList<>();
-    private final DefaultServletOutputStream outputStream;
-    private final ResponseHeadersBuilder headersBuilder = ResponseHeaders.builder();
-    private final PrintWriter writer;
-    private final HttpResponseWriter responseWriter;
-    private final DefaultServletContext servletContext;
 
-    private ByteArrayOutputStream content = new ByteArrayOutputStream();
-    private AtomicBoolean isWritten = new AtomicBoolean(false);
+    private final ByteArrayOutputStream content = new ByteArrayOutputStream();
 
     private boolean usingOutputStream;
 
     private boolean usingWriter;
 
-    DefaultServletHttpResponse(DefaultServletContext servletContext, HttpResponseWriter responseWriter) {
-        requireNonNull(servletContext, "servletContext");
-        requireNonNull(responseWriter, "responseWriter");
-        this.responseWriter = responseWriter;
+    DefaultServletHttpResponse(DefaultServletContext servletContext, CompletableFuture<HttpResponse> resFuture) {
         this.servletContext = servletContext;
+        this.resFuture = resFuture;
         outputStream = new DefaultServletOutputStream(this);
         writer = new PrintWriter(outputStream);
-        headersBuilder.contentType(MediaType.HTML_UTF_8);
-        setCharacterEncoding(servletContext.getResponseCharacterEncoding());
+        final MediaType contentType = MediaType.HTML_UTF_8.withCharset(
+                Charset.forName(servletContext.getResponseCharacterEncoding()));
+        headersBuilder = ResponseHeaders.builder(HttpStatus.OK).contentType(contentType);
     }
 
-    HttpResponseWriter getResponseWriter() {
-        return responseWriter;
+    boolean isReady() {
+        return !resFuture.isDone();
     }
 
     void close() {
-        if (isWritten.compareAndSet(false, true)) {
-            if (responseWriter.tryWrite(headersBuilder.setObject(HttpHeaderNames.SET_COOKIE, cookies)
-                                                      .status(HttpStatus.OK).build())) {
-                if (responseWriter.tryWrite(HttpData.copyOf(content.toByteArray()))) {
-                    responseWriter.close();
-                }
-            }
+        if (resFuture.isDone()) {
+            return;
+        }
+
+        if (!cookies.isEmpty()) {
+            headersBuilder.set(HttpHeaderNames.SET_COOKIE, cookies);
+        }
+        if (content.size() == 0) {
+            resFuture.complete(HttpResponse.of(
+                    headersBuilder.removeAndThen(HttpHeaderNames.CONTENT_TYPE).build()));
+        } else {
+            resFuture.complete(HttpResponse.of(headersBuilder.build(), HttpData.wrap(content.toByteArray())));
         }
     }
 
-    void write(byte[] data) {
-        requireNonNull(data, "data");
-        try {
-            content.write(data);
-        } catch (IOException e) {
-            logger.error("Write data failed", e);
-        }
+    void write(byte[] data) throws IOException {
+        content.write(data);
     }
 
     @Override
@@ -155,15 +150,17 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
 
     @Override
     public void sendError(int sc, @Nullable String msg) throws IOException {
-        final ResponseHeaders headers = ResponseHeaders.builder(sc).contentType(MediaType.HTML_UTF_8).build();
-        if (responseWriter.tryWrite(headers)) {
-            if (msg != null) {
-                if (!responseWriter.tryWrite(HttpData.ofUtf8(msg))) {
-                    return;
-                }
-            }
-            responseWriter.close();
+        if (resFuture.isDone()) {
+            throw new IllegalStateException("response already sent");
         }
+        final ResponseHeaders headers = ResponseHeaders.builder(sc).contentType(MediaType.HTML_UTF_8).build();
+        final HttpResponse res;
+        if (msg == null) {
+            res = HttpResponse.of(headers);
+        } else {
+            res = HttpResponse.of(headers, HttpData.ofUtf8(msg));
+        }
+        resFuture.complete(res);
     }
 
     @Override
@@ -173,11 +170,12 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
 
     @Override
     public void sendRedirect(String location) throws IOException {
-        requireNonNull(location, "location");
-        if (responseWriter.tryWrite(
-                ResponseHeaders.of(HttpStatus.FOUND, HttpHeaderNames.LOCATION, location))) {
-            responseWriter.close();
+        if (resFuture.isDone()) {
+            throw new IllegalStateException("response already sent");
         }
+        requireNonNull(location, "location");
+        resFuture.complete(HttpResponse.of(
+                ResponseHeaders.of(HttpStatus.FOUND, HttpHeaderNames.LOCATION, location)));
     }
 
     @Override
@@ -229,11 +227,12 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     @Override
     @Nullable
     public String getContentType() {
-        return getHeader(HttpHeaderNames.CONTENT_TYPE.toString());
+        return headersBuilder.get(HttpHeaderNames.CONTENT_TYPE);
     }
 
     @Override
     public void setStatus(int sc) {
+        // Should validate sc.
         headersBuilder.status(sc);
     }
 
@@ -241,7 +240,7 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     @Deprecated
     public void setStatus(int sc, @Nullable String sm) {
         if (sm == null) {
-            headersBuilder.status(HttpStatus.valueOf(sc));
+            headersBuilder.status(sc);
         } else {
             headersBuilder.status(new HttpStatus(sc, sm));
         }
