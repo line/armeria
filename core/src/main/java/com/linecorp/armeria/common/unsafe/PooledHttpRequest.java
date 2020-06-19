@@ -49,7 +49,7 @@ public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage 
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
+     * the trailers of the request are received fully.
      */
     default CompletableFuture<PooledAggregatedHttpRequest> aggregateWithPooledObjects() {
         return aggregateWithPooledObjects(defaultSubscriberExecutor());

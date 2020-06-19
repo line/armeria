@@ -50,7 +50,7 @@ public abstract class SimplePooledDecoratingHttpClient extends SimpleDecoratingH
     }
 
     /**
-     * Execute the {@code req} with the given {@code ctx}.
+     * Executes the {@code req} with the given {@code ctx}.
      *
      * @see SimpleDecoratingHttpClient#execute(ClientRequestContext, HttpRequest)
      */

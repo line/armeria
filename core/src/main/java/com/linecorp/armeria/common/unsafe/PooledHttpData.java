@@ -70,10 +70,10 @@ import io.netty.buffer.Unpooled;
  *
  * }</pre>
  *
- * <p>In this example, it is the initial {@code try (HttpData content = ...} that ensures the data is released.
- * Calls to methods on {@link HttpData} will all work and can be called any number of times within this block.
- * If called after the block, or a manual call to {@link PooledHttpData#close}, these methods will fail or
- * corrupt data.
+ * <p>In this example, it is the initial {@code try (PooledHttpData content = ...} that ensures the data is
+ * released. Calls to methods on {@link HttpData} will all work and can be called any number of times within
+ * this block. If called after the block, or a manual call to {@link PooledHttpData#close()}, these methods will
+ * fail or corrupt data.
  *
  * <h3>Even more advanced usage</h3>
  *

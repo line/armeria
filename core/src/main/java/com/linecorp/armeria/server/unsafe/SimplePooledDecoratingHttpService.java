@@ -52,7 +52,7 @@ public abstract class SimplePooledDecoratingHttpService extends SimpleDecorating
     }
 
     /**
-     * Execute the {@code req} with the given {@code ctx}.
+     * Executes the {@code req} with the given {@code ctx}.
      *
      * @see SimpleDecoratingHttpService#serve(ServiceRequestContext, HttpRequest)
      */

@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * An {@link AggregatedHttpRequest} using pooled buffers for the content. Make sure to call
- * {@link AutoCloseable#close()} on this response or the {@code content} to release pooled resources.
+ * {@link AutoCloseable#close()} on this request or the {@code content} to release pooled resources.
  */
 public interface PooledAggregatedHttpRequest extends AggregatedHttpRequest, SafeCloseable {
 
