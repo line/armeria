@@ -28,7 +28,7 @@ let firstRender = true;
 
 const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
   // Redirect to the new URL if at the old URL.
-  const hrefMatches = props.location.href.match(
+  const hrefMatches = props.location.href?.match(
     /:\/\/line\.github\.io\/armeria(.*)/,
   );
   let redirectUrl;
