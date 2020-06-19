@@ -35,6 +35,8 @@ import java.util.regex.Pattern;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -61,6 +63,7 @@ import com.linecorp.armeria.server.annotation.Description;
         "com.linecorp.armeria.server.annotation.Options",
         "com.linecorp.armeria.server.annotation.Patch",
 })
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class DocumentationProcessor extends AbstractProcessor {
     private static final Splitter LINEBREAK_SPLITTER = Splitter.on(Pattern.compile("\\R"))
                                                                .trimResults()

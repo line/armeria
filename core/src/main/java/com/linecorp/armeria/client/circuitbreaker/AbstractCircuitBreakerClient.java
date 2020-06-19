@@ -126,7 +126,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
             circuitBreaker = mapping.get(ctx, req);
         } catch (Throwable t) {
             logger.warn("Failed to get a circuit breaker from mapping", t);
-            return delegate().execute(ctx, req);
+            return unwrap().execute(ctx, req);
         }
 
         if (circuitBreaker.canRequest()) {

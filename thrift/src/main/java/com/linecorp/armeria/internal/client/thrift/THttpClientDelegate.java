@@ -145,7 +145,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             ctx.logBuilder().deferResponseContent();
 
             final CompletableFuture<AggregatedHttpResponse> future =
-                    delegate().execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
+                    unwrap().execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
 
             future.handle((res, cause) -> {
                 if (cause != null) {

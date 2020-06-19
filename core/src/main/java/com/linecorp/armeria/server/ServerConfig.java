@@ -43,8 +43,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.DomainNameMapping;
-import io.netty.util.DomainNameMappingBuilder;
+import io.netty.util.DomainWildcardMappingBuilder;
+import io.netty.util.Mapping;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -61,7 +61,7 @@ public final class ServerConfig {
     private final List<ServerPort> ports;
     private final VirtualHost defaultVirtualHost;
     private final List<VirtualHost> virtualHosts;
-    private final DomainNameMapping<VirtualHost> virtualHostMapping;
+    private final Mapping<String, VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
     private final EventLoopGroup workerGroup;
@@ -197,8 +197,8 @@ public final class ServerConfig {
         }
 
         // Set virtual host definitions and initialize their domain name mapping.
-        final DomainNameMappingBuilder<VirtualHost> mappingBuilder =
-                new DomainNameMappingBuilder<>(defaultVirtualHost);
+        final DomainWildcardMappingBuilder<VirtualHost> mappingBuilder =
+                new DomainWildcardMappingBuilder<>(defaultVirtualHost);
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
         for (VirtualHost h : virtualHosts) {
             if (h == null) {

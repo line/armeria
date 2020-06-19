@@ -408,7 +408,7 @@ public class AnnotatedService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             try {
-                final HttpResponse response = delegate().serve(ctx, req);
+                final HttpResponse response = unwrap().serve(ctx, req);
                 if (response instanceof ExceptionFilteredHttpResponse) {
                     return response;
                 }

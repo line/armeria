@@ -19,19 +19,20 @@ package com.linecorp.armeria.common.brave;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
-import zipkin2.Span;
-import zipkin2.reporter.Reporter;
+import brave.handler.MutableSpan;
+import brave.handler.SpanHandler;
+import brave.propagation.TraceContext;
 
-public final class SpanCollectingReporter implements Reporter<Span> {
+public final class SpanCollector extends SpanHandler {
 
-    private final BlockingQueue<Span> spans = new LinkedTransferQueue<>();
+    private final BlockingQueue<MutableSpan> spans = new LinkedTransferQueue<>();
 
     @Override
-    public void report(Span span) {
-        spans.add(span);
+    public boolean end(TraceContext context, MutableSpan span, Cause cause) {
+        return spans.add(span);
     }
 
-    public BlockingQueue<Span> spans() {
+    public BlockingQueue<MutableSpan> spans() {
         return spans;
     }
 }

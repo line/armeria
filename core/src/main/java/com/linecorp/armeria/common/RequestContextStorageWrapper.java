@@ -39,17 +39,17 @@ public class RequestContextStorageWrapper
     @Nullable
     @Override
     public <T extends RequestContext> T push(RequestContext toPush) {
-        return delegate().push(toPush);
+        return unwrap().push(toPush);
     }
 
     @Override
     public void pop(RequestContext current, @Nullable RequestContext toRestore) {
-        delegate().pop(current, toRestore);
+        unwrap().pop(current, toRestore);
     }
 
     @Nullable
     @Override
     public <T extends RequestContext> T currentOrNull() {
-        return delegate().currentOrNull();
+        return unwrap().currentOrNull();
     }
 }

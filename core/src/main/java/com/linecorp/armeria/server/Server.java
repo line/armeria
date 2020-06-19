@@ -81,7 +81,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.DomainNameMapping;
+import io.netty.util.Mapping;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -104,7 +104,7 @@ public final class Server implements ListenableAsyncCloseable {
 
     private final ServerConfig config;
     @Nullable
-    private final DomainNameMapping<SslContext> sslContexts;
+    private final Mapping<String, SslContext> sslContexts;
 
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
@@ -115,7 +115,7 @@ public final class Server implements ListenableAsyncCloseable {
     @VisibleForTesting
     ServerBootstrap serverBootstrap;
 
-    Server(ServerConfig config, @Nullable DomainNameMapping<SslContext> sslContexts) {
+    Server(ServerConfig config, @Nullable Mapping<String, SslContext> sslContexts) {
         this.config = requireNonNull(config, "config");
         this.sslContexts = sslContexts;
         startStop = new ServerStartStopSupport(config.startStopExecutor());

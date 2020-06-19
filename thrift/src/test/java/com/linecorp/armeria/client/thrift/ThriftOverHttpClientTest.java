@@ -376,7 +376,7 @@ class ThriftOverHttpClientTest {
         }
 
         for (String ignored : names) {
-            assertThat(serverReceivedNames.take()).isIn(names);
+            assertThat(serverReceivedNames.take()).isIn((Object[]) names);
         }
     }
 
@@ -416,7 +416,7 @@ class ThriftOverHttpClientTest {
         }
 
         for (String ignored : names) {
-            assertThat(serverReceivedNames.take()).isIn(names);
+            assertThat(serverReceivedNames.take()).isIn((Object[]) names);
         }
     }
 
@@ -456,7 +456,7 @@ class ThriftOverHttpClientTest {
         }
 
         for (String ignored : names) {
-            assertThat(serverReceivedNames.take()).isIn(names);
+            assertThat(serverReceivedNames.take()).isIn((Object[]) names);
         }
     }
 

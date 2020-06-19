@@ -91,8 +91,6 @@ public final class VirtualHostBuilder {
     private String defaultHostname;
     private String hostnamePattern = "*";
     @Nullable
-    private SslContext sslContext;
-    @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
     private Boolean tlsSelfSigned;
@@ -166,7 +164,7 @@ public final class VirtualHostBuilder {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
-        return tls(keyCertChainFile, keyFile, (String) null);
+        return tls(keyCertChainFile, keyFile, null);
     }
 
     /**
@@ -278,8 +276,7 @@ public final class VirtualHostBuilder {
 
     private VirtualHostBuilder tls(Supplier<SslContextBuilder> sslContextBuilderSupplier) {
         requireNonNull(sslContextBuilderSupplier, "sslContextBuilderSupplier");
-        checkState(sslContext == null && this.sslContextBuilderSupplier == null,
-                   "TLS has been configured already.");
+        checkState(this.sslContextBuilderSupplier == null, "TLS has been configured already.");
         this.sslContextBuilderSupplier = sslContextBuilderSupplier;
         return this;
     }
@@ -893,15 +890,10 @@ public final class VirtualHostBuilder {
             boolean sslContextFromThis = false;
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
-            if (this.sslContext != null) {
-                sslContext = this.sslContext;
-                sslContextFromThis = true;
-            } else if (sslContextBuilderSupplier != null) {
+            if (sslContextBuilderSupplier != null) {
                 sslContext = buildSslContext(sslContextBuilderSupplier, tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
-            } else if (template.sslContext != null) {
-                sslContext = template.sslContext;
             } else if (template.sslContextBuilderSupplier != null) {
                 sslContext = buildSslContext(template.sslContextBuilderSupplier, template.tlsCustomizers);
                 releaseSslContextOnFailure = true;

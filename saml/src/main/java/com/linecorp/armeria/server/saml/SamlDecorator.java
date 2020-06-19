@@ -111,7 +111,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
             if (cause == null && result) {
                 // Already authenticated.
                 try {
-                    return delegate().serve(ctx, req);
+                    return unwrap().serve(ctx, req);
                 } catch (Exception e) {
                     return Exceptions.throwUnsafely(e);
                 }

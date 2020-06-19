@@ -152,9 +152,8 @@ public final class UnaryGrpcClient {
                                    }
 
                                    try {
-                                       return delegate().execute(ctx, HttpRequest.of(req.headers(), framed))
-                                                        .aggregateWithPooledObjects(ctx.eventLoop(),
-                                                                                    ctx.alloc());
+                                       return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
+                                                      .aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
                                    } catch (Exception e) {
                                        throw new ArmeriaStatusException(StatusCodes.INTERNAL,
                                                                         "Error executing request.");

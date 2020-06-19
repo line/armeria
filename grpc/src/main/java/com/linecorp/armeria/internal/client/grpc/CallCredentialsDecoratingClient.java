@@ -94,7 +94,7 @@ final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
                         ctx.mutateAdditionalRequestHeaders(
                                 headers -> MetadataUtil.fillHeaders(metadata, headers));
                         try {
-                            response.complete(delegate().execute(ctx, req));
+                            response.complete(unwrap().execute(ctx, req));
                         } catch (Exception e) {
                             response.completeExceptionally(e);
                         }

@@ -41,11 +41,11 @@ final class FunctionalDecoratingRpcClient extends SimpleDecoratingRpcClient {
 
     @Override
     public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-        return function.execute(delegate(), ctx, req);
+        return function.execute((RpcClient) unwrap(), ctx, req);
     }
 
     @Override
     public String toString() {
-        return FunctionalDecoratingRpcClient.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
+        return FunctionalDecoratingRpcClient.class.getSimpleName() + '(' + unwrap() + ", " + function + ')';
     }
 }

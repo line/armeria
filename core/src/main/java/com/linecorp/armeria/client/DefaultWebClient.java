@@ -103,4 +103,9 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         req.abort(cause);
         return HttpResponse.ofFailure(cause);
     }
+
+    @Override
+    public HttpClient unwrap() {
+        return (HttpClient) super.unwrap();
+    }
 }

@@ -542,7 +542,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final RpcResponse reply;
 
         try (SafeCloseable ignored = ctx.push()) {
-            reply = delegate().serve(ctx, call);
+            reply = unwrap().serve(ctx, call);
         } catch (Throwable cause) {
             handleException(ctx, RpcResponse.ofFailure(cause), res, serializationFormat, seqId, func, cause);
             return;

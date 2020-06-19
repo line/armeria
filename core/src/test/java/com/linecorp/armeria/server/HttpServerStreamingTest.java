@@ -117,7 +117,7 @@ class HttpServerStreamingTest {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             ctx.setMaxRequestLength(serverMaxRequestLength);
-                            return delegate().serve(ctx, req);
+                            return unwrap().serve(ctx, req);
                         }
                     };
             sb.decorator(decorator);
