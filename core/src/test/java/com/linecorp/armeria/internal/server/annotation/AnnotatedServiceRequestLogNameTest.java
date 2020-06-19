@@ -110,6 +110,7 @@ class AnnotatedServiceRequestLogNameTest {
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("MyBarService");
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -119,6 +120,7 @@ class AnnotatedServiceRequestLogNameTest {
         assertThat(response.contentUtf8()).isEqualTo("OK");
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("SecuredBarService");
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -129,6 +131,7 @@ class AnnotatedServiceRequestLogNameTest {
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("DecoratedService");
         assertThat(log.name()).isEqualTo(HttpMethod.GET.name());
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
     }
 
     private static class FooService {
