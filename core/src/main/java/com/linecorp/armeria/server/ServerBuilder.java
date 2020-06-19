@@ -80,7 +80,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
@@ -1495,8 +1494,8 @@ public final class ServerBuilder {
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
 
-            final DomainWildcardMappingBuilder<SslContext>
-                    mappingBuilder = new DomainWildcardMappingBuilder<>(defaultSslContext);
+            final DomainMappingBuilder<SslContext>
+                    mappingBuilder = new DomainMappingBuilder<>(defaultSslContext);
             for (VirtualHost h : virtualHosts) {
                 final SslContext sslCtx = h.sslContext();
                 if (sslCtx != null) {

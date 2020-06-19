@@ -38,7 +38,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.Mapping;
 
 /**
@@ -169,7 +168,7 @@ public final class VirtualHost {
         // Pretty convoluted way to validate but it's done only once and
         // we don't need to duplicate the pattern matching logic.
         final Mapping<String, Boolean> mapping =
-                new DomainWildcardMappingBuilder<>(Boolean.FALSE).add(hostnamePattern, Boolean.TRUE).build();
+                new DomainMappingBuilder<>(Boolean.FALSE).add(hostnamePattern, Boolean.TRUE).build();
 
         if (!mapping.map(defaultHostname)) {
             throw new IllegalArgumentException(

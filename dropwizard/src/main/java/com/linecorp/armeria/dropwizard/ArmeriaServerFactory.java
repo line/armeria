@@ -21,11 +21,11 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
-import javax.validation.constraints.NotEmpty;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.thread.ThreadPool;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,8 +64,10 @@ class ArmeriaServerFactory extends AbstractServerFactory {
     @Nullable
     private transient ServerBuilder serverBuilder;
 
+    @SuppressWarnings("deprecation")
     @NotEmpty
     private String applicationContextPath = "/application";
+    @SuppressWarnings("deprecation")
     @NotEmpty
     private String adminContextPath = "/admin";
     @JsonProperty
