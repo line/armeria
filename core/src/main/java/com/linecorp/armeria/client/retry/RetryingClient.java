@@ -254,7 +254,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (requiresResponseTrailers) {
             response.aggregate().handle((aggregated, cause) -> {
                 handleResponse(ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
-                               cause != null ? response : aggregated.toHttpResponse());
+                               cause != null ? HttpResponse.ofFailure(cause) : aggregated.toHttpResponse());
                 return null;
             });
         } else {
