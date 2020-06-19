@@ -98,7 +98,6 @@ class PooledWebClientTest {
                         // This effectively relies on an implementation detail for the test behavior but should
                         // be fine in practice.
                         assertThat(response.content().content().isDirect()).isTrue();
-                        assertThat(executor.inEventLoop()).isTrue();
                     }
                 }).join();
     }
@@ -114,7 +113,6 @@ class PooledWebClientTest {
                         // This effectively relies on an implementation detail for the test behavior but should
                         // be fine in practice.
                         assertThat(response.content().content().isDirect()).isTrue();
-                        assertThat(executor.inEventLoop()).isTrue();
                         assertThat(response.content().content().alloc()).isSameAs(alloc);
                     }
                 }).join();
