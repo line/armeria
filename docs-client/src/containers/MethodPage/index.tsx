@@ -117,8 +117,15 @@ function isSingleExactPathMapping(method: Method): boolean {
   );
 }
 
+const requestBodyAllowedHttpMethods: string[] = [
+  'POST',
+  'PUT',
+  'PATCH',
+  'DELETE',
+];
+
 function needsToUseRequestBody(httpMethod: string) {
-  return httpMethod === 'POST' || httpMethod === 'PUT';
+  return requestBodyAllowedHttpMethods.includes(httpMethod);
 }
 
 type Props = OwnProps &
