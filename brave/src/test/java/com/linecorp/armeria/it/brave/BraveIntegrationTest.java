@@ -86,7 +86,7 @@ import brave.sampler.Sampler;
 
 class BraveIntegrationTest {
 
-    private static final ReporterImpl spanHandler = new ReporterImpl();
+    private static final SpanHandlerImpl spanHandler = new SpanHandlerImpl();
 
     private static HelloService.Iface fooClient;
     private static HelloService.Iface fooClientWithoutTracing;
@@ -551,7 +551,7 @@ class BraveIntegrationTest {
         }
     }
 
-    private static class ReporterImpl extends SpanHandler {
+    private static class SpanHandlerImpl extends SpanHandler {
         private final BlockingQueue<MutableSpan> spans = new LinkedBlockingQueue<>();
 
         @Override

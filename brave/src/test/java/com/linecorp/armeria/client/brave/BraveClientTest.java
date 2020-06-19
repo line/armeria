@@ -146,7 +146,7 @@ class BraveClientTest {
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
 
-        // check remote service name, lower-cased
+        // check remote service name
         assertThat(span.remoteServiceName()).isEqualTo("fooService");
     }
 
