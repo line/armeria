@@ -2,9 +2,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
-    // If you want to change `org.jetbrains.kotlin.jvm` version, 
+    // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.3.71' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.3.72' apply false
+
+    id 'net.ltgt.errorprone' version '1.2.1' apply false
 }
 
 allprojects {
@@ -69,6 +71,16 @@ task checkJavaVersion {
 
 // Configure all Java projects
 configure(projectsWithFlags('java')) {
+
+    // Error Prone compiler
+    if (!rootProject.hasProperty('noLint')) {
+        apply plugin: 'net.ltgt.errorprone'
+
+        dependencies {
+            errorprone 'com.google.errorprone:error_prone_core'
+        }
+    }
+
     // Common dependencies
     dependencies {
         // All projects currently require ':core' (except itself)

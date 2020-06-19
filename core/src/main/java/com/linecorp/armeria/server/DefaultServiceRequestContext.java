@@ -174,6 +174,19 @@ public final class DefaultServiceRequestContext
         this.additionalResponseTrailers = additionalResponseTrailers;
     }
 
+    @Nullable
+    @Override
+    public <V> V attr(AttributeKey<V> key) {
+        // Don't check the root attributes; root is always null.
+        return ownAttr(key);
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        // Don't check the root attributes; root is always null.
+        return ownAttrs();
+    }
+
     @Nonnull
     @Override
     public <A extends SocketAddress> A remoteAddress() {
@@ -195,6 +208,7 @@ public final class DefaultServiceRequestContext
         return clientAddress;
     }
 
+    @Deprecated
     @Override
     public ServiceRequestContext newDerivedContext(RequestId id,
                                                    @Nullable HttpRequest req,
@@ -317,6 +331,11 @@ public final class DefaultServiceRequestContext
     @Override
     public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
         this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
+    }
+
+    @Override
+    public void timeoutNow() {
+        timeoutScheduler.timeoutNow();
     }
 
     @Override

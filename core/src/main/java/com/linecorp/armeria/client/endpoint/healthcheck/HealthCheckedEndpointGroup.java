@@ -81,8 +81,6 @@ import io.netty.util.concurrent.Future;
  */
 public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
-    static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
-
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
     private static final ThreadLocal<Boolean> isRefreshingContexts = new ThreadLocal<>();
 

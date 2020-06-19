@@ -107,20 +107,17 @@ class RetryingClientWithLoggingTest {
     @Test
     void retryingThenLogging() throws InterruptedException {
         successLogIndex = 3;
-        final RetryStrategyWithContent<HttpResponse> retryStrategy =
-                (ctx, response) -> response.aggregate().handle((msg, cause) -> {
-                    if ("hello".equals(msg.contentUtf8())) {
-                        return null;
-                    }
-                    return Backoff.ofDefault();
+        final RetryRuleWithContent<HttpResponse> retryRule =
+                RetryRuleWithContent.onResponse(response -> {
+                    return response.aggregate().thenApply(content -> !"hello".equals(content.contentUtf8()));
                 });
+
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(loggingDecorator())
-                                          .decorator(RetryingClient.builder(retryStrategy)
-                                                                   .newDecorator())
+                                          .decorator(RetryingClient.builder(retryRule).newDecorator())
                                           .decorator((delegate, ctx, req) -> {
                                               final RequestLogBuilder logBuilder = ctx.logBuilder();
-                                              logBuilder.name("foo");
+                                              logBuilder.name("FooService", "foo");
                                               logBuilder.requestContent("bar", null);
                                               logBuilder.deferRequestContentPreview();
                                               logBuilder.deferResponseContent();
@@ -143,7 +140,9 @@ class RetryingClientWithLoggingTest {
         await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex + 1));
         // Let's just check the first request log.
         final RequestLog requestLog = logResult.get(0);
+        assertThat(requestLog.serviceName()).isEqualTo("FooService");
         assertThat(requestLog.name()).isEqualTo("foo");
+        assertThat(requestLog.fullName()).isEqualTo("FooService/foo");
         assertThat(requestLog.requestContent()).isEqualTo("bar");
         assertThat(requestLog.requestContentPreview()).isEqualTo("baz");
 
@@ -157,11 +156,11 @@ class RetryingClientWithLoggingTest {
     @Test
     void loggingThenRetrying() throws Exception {
         successLogIndex = 1;
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(RetryingClient.newDecorator(
-                                                  RetryStrategy.onServerErrorStatus()))
-                                          .decorator(loggingDecorator())
-                                          .build();
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(RetryingClient.newDecorator(RetryRule.failsafe()))
+                         .decorator(loggingDecorator())
+                         .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back

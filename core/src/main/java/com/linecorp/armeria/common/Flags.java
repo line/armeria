@@ -15,10 +15,14 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
@@ -43,6 +47,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -84,6 +89,9 @@ public final class Flags {
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
 
+    @Nullable
+    private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES;
+
     static {
         final String spec = getNormalized("verboseExceptions", DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
             if ("true".equals(val) || "false".equals(val)) {
@@ -113,6 +121,37 @@ public final class Flags {
             default:
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
                 VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
+        }
+
+        final List<Predicate<InetAddress>> preferredIpV4Addresses =
+        CSV_SPLITTER.splitToList(getNormalized("preferredIpV4Addresses", "", unused -> true))
+                    .stream()
+                    .map(cidr -> {
+                        try {
+                            return InetAddressPredicates.ofCidr(cidr);
+                        } catch (Exception e) {
+                            logger.warn("Failed to parse a preferred IPv4: {}", cidr);
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(toImmutableList());
+        switch (preferredIpV4Addresses.size()) {
+            case 0:
+                PREFERRED_IP_V4_ADDRESSES = null;
+                break;
+            case 1:
+                PREFERRED_IP_V4_ADDRESSES = preferredIpV4Addresses.get(0);
+                break;
+            default:
+                PREFERRED_IP_V4_ADDRESSES = inetAddress -> {
+                    for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses) {
+                        if (preferredIpV4Addr.test(inetAddress)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
         }
     }
 
@@ -201,6 +240,12 @@ public final class Flags {
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
             getLong("defaultPingIntervalMillis",
                     DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
+    private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
+            getLong("defaultMaxServerConnectionAgeMillis",
+                    DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -718,6 +763,22 @@ public final class Flags {
     }
 
     /**
+     * Returns the default server-side max age of a connection for keep-alive in milliseconds.
+     * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of the time since the connection was established.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerConnectionAgeMillis=<integer>} JVM option
+     * to override the default value. If the specified value was smaller than 1 second,
+     * bumps the max connection age to 1 second.
+     *
+     * @see ServerBuilder#maxConnectionAgeMillis(long)
+     */
+    public static long defaultMaxServerConnectionAgeMillis() {
+        return DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS;
+    }
+
+    /**
      * Returns the default value of the {@link ServerBuilder#http2InitialConnectionWindowSize(int)} and
      * {@link ClientFactoryBuilder#http2InitialConnectionWindowSize(int)} option.
      * Note that this value has effect only if a user did not specify it.
@@ -928,6 +989,22 @@ public final class Flags {
      */
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
+    }
+
+    /**
+     * Returns the {@link Predicate} that is used to choose the non-loopback IP v4 address in
+     * {@link SystemInfo#defaultNonLoopbackIpV4Address()}.
+     *
+     * <p>The default value of this flag is {@code null}, which means all valid IPv4 addresses are
+     * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
+     * to override the default value. The {@code csv} should be
+     * <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing(CIDR)</a>s or
+     * exact IP addresses separated by commas. For example,
+     * {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
+     */
+    @Nullable
+    public static Predicate<InetAddress> preferredIpV4Addresses() {
+        return PREFERRED_IP_V4_ADDRESSES;
     }
 
     /**

@@ -24,15 +24,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.actuate.autoconfigure.web.server.LocalManagementPort;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -42,7 +40,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,6 +58,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
+import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
 import io.prometheus.client.exporter.common.TextFormat;
@@ -70,13 +68,13 @@ import reactor.test.StepVerifier;
  * This uses {@link com.linecorp.armeria.spring.ArmeriaAutoConfiguration} for integration tests.
  * {@code application-autoConfTest.yml} will be loaded with minimal settings to make it work.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-public class ArmeriaSpringActuatorAutoConfigurationTest {
+@Timeout(unit = TimeUnit.MILLISECONDS, value = 30_000L)
+class ArmeriaSpringActuatorAutoConfigurationTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> JSON_MAP =
@@ -103,7 +101,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @SpringBootApplication
-    public static class TestConfiguration {
+    static class TestConfiguration {
         @Bean
         public SettableHealthIndicator settableHealth() {
             return new SettableHealthIndicator();
@@ -117,9 +115,6 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
     private static final long TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
-
     @Inject
     private Server server;
 
@@ -128,22 +123,17 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
     private WebClient client;
 
-    @Before
-    public void setUp() {
-        client = WebClient.builder(newUrl("h2c"))
+    @BeforeEach
+    void setUp() {
+        client = WebClient.builder(newUrl("h2c", server.activeLocalPort()))
                           .responseTimeoutMillis(TIMEOUT_MILLIS)
                           .maxResponseLength(0)
                           .build();
         settableHealth.setHealth(Health.up().build());
     }
 
-    private String newUrl(String scheme) {
-        final int port = server.activeLocalPort();
-        return scheme + "://127.0.0.1:" + port;
-    }
-
     @Test
-    public void testHealth() throws Exception {
+    void testHealth() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
@@ -153,7 +143,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testHealth_down() throws Exception {
+    void testHealth_down() throws Exception {
         settableHealth.setHealth(Health.down().build());
         final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
@@ -163,14 +153,14 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testOptions() throws Exception {
+    void testOptions() throws Exception {
         final AggregatedHttpResponse res = client.options("/internal/actuator/health").aggregate().get();
         // CORS not enabled by default.
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @Test
-    public void testLoggers() throws Exception {
+    void testLoggers() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         AggregatedHttpResponse res = client.get(loggerPath).aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -194,7 +184,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testPrometheus() throws Exception {
+    void testPrometheus() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator/prometheus").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.parse(TextFormat.CONTENT_TYPE_004));
@@ -202,7 +192,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testHeapDump() throws Exception {
+    void testHeapDump() throws Exception {
         final HttpResponse res = client.get("/internal/actuator/heapdump");
         final AtomicLong remainingBytes = new AtomicLong();
         StepVerifier.create(res)
@@ -231,7 +221,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testLinks() throws Exception {
+    void testLinks() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
@@ -240,7 +230,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testMissingMediaType() throws Exception {
+    void testMissingMediaType() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         final AggregatedHttpResponse res =
                 client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath),
@@ -250,7 +240,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testInvalidMediaType() throws Exception {
+    void testInvalidMediaType() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         final AggregatedHttpResponse res =
                 client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath,
@@ -260,37 +250,30 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         assertThat(res.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
 
-    @RunWith(SpringRunner.class)
+    @Nested
     @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
     @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
     @DirtiesContext
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    public static class ArmeriaSpringActuatorAutoConfigurationCorsTest {
+    @Timeout(10)
+    class ArmeriaSpringActuatorAutoConfigurationCorsTest {
 
         @SpringBootApplication
-        public static class TestConfiguration {}
-
-        @Rule
-        public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+        class TestConfiguration {}
 
         @Inject
         private Server server;
 
         private WebClient client;
 
-        @Before
-        public void setUp() {
-            client = WebClient.of(newUrl("h2c"));
-        }
-
-        private String newUrl(String scheme) {
-            final int port = server.activeLocalPort();
-            return scheme + "://127.0.0.1:" + port;
+        @BeforeEach
+        void setUp() {
+            client = WebClient.of(newUrl("h2c", server.activeLocalPort()));
         }
 
         @Test
-        public void testOptions() {
+        void testOptions() {
             final HttpRequest req = HttpRequest.of(RequestHeaders.of(
                     HttpMethod.OPTIONS, "/internal/actuator/health",
                     HttpHeaderNames.ORIGIN, "https://example.com",
@@ -304,5 +287,53 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
             assertThat(res.headers().contains(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE)).isTrue();
             assertThat(res.status()).isNotEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         }
+    }
+
+    @Nested
+    @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
+    @ActiveProfiles({ "local", "secureTest" })
+    @DirtiesContext
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    class ArmeriaSpringActuatorAutoConfigurationSecureTest {
+
+        @SpringBootApplication
+        class TestConfiguration {}
+
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+
+        @Test
+        void normal() throws Exception {
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int statusCode = actuatorPort.equals(port) ? 200 : 404;
+                      assertStatus(port, "/actuator", statusCode);
+                      assertStatus(port, "/actuator/health", statusCode);
+                      assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, statusCode);
+                      assertStatus(port, "/actuator/prometheus", statusCode);
+                      assertStatus(port, settings.getDocsPath(), statusCode);
+                      assertStatus(port, settings.getHealthCheckPath(), statusCode);
+                      assertStatus(port, settings.getMetricsPath(), statusCode);
+                  });
+        }
+    }
+
+    private static void assertStatus(int port, String url, int statusCode) {
+        final WebClient client = WebClient.of(newUrl("http", port));
+        final HttpResponse response = client.get(url);
+
+        final AggregatedHttpResponse httpResponse = response.aggregate().join();
+        assertThat(httpResponse.status().code()).isEqualTo(statusCode);
+    }
+
+    private static String newUrl(String scheme, int port) {
+        return scheme + "://127.0.0.1:" + port;
     }
 }

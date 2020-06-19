@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static com.linecorp.armeria.internal.common.PercentDecoder.decodeComponent;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -28,10 +29,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth1aTokenBuilder;
 
 import io.netty.util.AsciiString;
 
@@ -65,7 +67,7 @@ final class OAuth1aTokenExtractor implements Function<RequestHeaders, OAuth1aTok
             return null;
         }
 
-        final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+        final OAuth1aTokenBuilder builder = OAuth1aToken.builder();
         for (String token : matcher.group("parameters").split(",")) {
             final int sep = token.indexOf('=');
             if (sep == -1 || token.charAt(sep + 1) != '"' || token.charAt(token.length() - 1) != '"') {
@@ -74,9 +76,9 @@ final class OAuth1aTokenExtractor implements Function<RequestHeaders, OAuth1aTok
             }
             final String key = token.substring(0, sep);
             final String value = token.substring(sep + 2, token.length() - 1);
-            builder.put(key, value);
+            builder.put(decodeComponent(key), decodeComponent(value));
         }
 
-        return OAuth1aToken.of(builder.build());
+        return builder.build();
     }
 }

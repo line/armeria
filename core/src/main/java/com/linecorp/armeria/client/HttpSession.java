@@ -51,8 +51,13 @@ interface HttpSession {
         }
 
         @Override
-        public int unfinishedResponses() {
-            return 0;
+        public boolean hasUnfinishedResponses() {
+            return false;
+        }
+
+        @Override
+        public boolean incrementNumUnfinishedResponses() {
+            return false;
         }
 
         @Override
@@ -95,15 +100,9 @@ interface HttpSession {
 
     InboundTrafficController inboundTrafficController();
 
-    int unfinishedResponses();
+    boolean hasUnfinishedResponses();
 
-    default boolean hasUnfinishedResponses() {
-        return unfinishedResponses() != 0;
-    }
-
-    default int maxUnfinishedResponses() {
-        return Integer.MAX_VALUE;
-    }
+    boolean incrementNumUnfinishedResponses();
 
     void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                 HttpRequest req, DecodedHttpResponse res);

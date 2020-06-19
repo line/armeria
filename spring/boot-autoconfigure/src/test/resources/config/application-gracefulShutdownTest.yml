@@ -1,0 +1,9 @@
+armeria:
+  ports:
+    - port: 0
+server:
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 3s

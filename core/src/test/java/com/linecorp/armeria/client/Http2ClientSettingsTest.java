@@ -218,7 +218,7 @@ public class Http2ClientSettingsTest {
         }
     }
 
-    private static byte[] readBytes(InputStream in, int length) throws IOException {
+    static byte[] readBytes(InputStream in, int length) throws IOException {
         final byte[] buf = new byte[length];
         ByteStreams.readFully(in, buf);
         return buf;

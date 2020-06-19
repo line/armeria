@@ -84,7 +84,7 @@ class HttpHeadersTest {
 
     @Test
     void testSetObject() {
-        final String expectedDate = "Mon, 3 Dec 2007 10:15:30 GMT";
+        final String expectedDate = "Mon, 03 Dec 2007 10:15:30 GMT";
         final Instant instant = Instant.parse("2007-12-03T10:15:30.00Z");
         final Date date = new Date(instant.toEpochMilli());
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));

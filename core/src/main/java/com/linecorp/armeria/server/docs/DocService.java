@@ -301,6 +301,7 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
                              docString(parent.name() + '/' + field.name(), field.docString(), docStrings));
     }
 
+    @Nullable
     private static String docString(
             String key, @Nullable String currentDocString, Map<String, String> docStrings) {
         return currentDocString != null ? currentDocString : docStrings.get(key);

@@ -70,7 +70,10 @@ import io.micrometer.core.instrument.MeterRegistry;
  *
  * @see AbstractCompositeServiceBuilder
  * @see CompositeServiceEntry
+ *
+ * @deprecated This class will be removed without replacement.
  */
+@Deprecated
 public abstract class AbstractCompositeService<T extends Service<I, O>, I extends Request, O extends Response>
         implements Service<I, O> {
 
@@ -187,6 +190,7 @@ public abstract class AbstractCompositeService<T extends Service<I, O>, I extend
             this.mappedPath = mappedPath;
         }
 
+        @Deprecated
         @Override
         public ServiceRequestContext newDerivedContext(RequestId id,
                                                        @Nullable HttpRequest req,

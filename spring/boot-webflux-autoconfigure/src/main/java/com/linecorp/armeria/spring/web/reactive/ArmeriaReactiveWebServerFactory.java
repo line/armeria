@@ -18,10 +18,10 @@ package com.linecorp.armeria.spring.web.reactive;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureTls;
@@ -203,7 +203,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        return new ArmeriaWebServer(server, protocol, address, port);
+        return new ArmeriaWebServer(server, protocol, address, port, beanFactory);
     }
 
     private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,

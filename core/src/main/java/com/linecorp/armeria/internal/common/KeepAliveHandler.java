@@ -46,6 +46,7 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -71,6 +72,7 @@ public abstract class KeepAliveHandler {
 
     private final Channel channel;
     private final String name;
+    private final Timer keepAliveTimer;
 
     @Nullable
     private ScheduledFuture<?> connectionIdleTimeout;
@@ -83,6 +85,11 @@ public abstract class KeepAliveHandler {
     private long lastPingIdleTime;
     private boolean firstPingIdleEvent = true;
 
+    @Nullable
+    private ScheduledFuture<?> maxConnectionAgeFuture;
+    private final long maxConnectionAgeNanos;
+    private boolean isMaxConnectionAgeExceeded;
+
     private boolean isInitialized;
     private PingState pingState = PingState.IDLE;
 
@@ -91,19 +98,28 @@ public abstract class KeepAliveHandler {
     @Nullable
     private Future<?> shutdownFuture;
 
-    protected KeepAliveHandler(Channel channel, String name, long idleTimeoutMillis, long pingIntervalMillis) {
+    protected KeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
+                               long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis) {
         this.channel = channel;
         this.name = name;
+        this.keepAliveTimer = keepAliveTimer;
 
         if (idleTimeoutMillis <= 0) {
             connectionIdleTimeNanos = 0;
         } else {
             connectionIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(idleTimeoutMillis);
         }
+
         if (pingIntervalMillis <= 0) {
             pingIdleTimeNanos = 0;
         } else {
             pingIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis);
+        }
+
+        if (maxConnectionAgeMillis <= 0) {
+            maxConnectionAgeNanos = 0;
+        } else {
+            maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         }
     }
 
@@ -114,8 +130,13 @@ public abstract class KeepAliveHandler {
             return;
         }
         isInitialized = true;
-        lastConnectionIdleTime = lastPingIdleTime = System.nanoTime();
 
+        final long connectionStartTimeNanos = System.nanoTime();
+        ctx.channel().closeFuture().addListener(unused -> {
+            keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
+        });
+
+        lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;
         if (connectionIdleTimeNanos > 0) {
             connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
                                                         connectionIdleTimeNanos, TimeUnit.NANOSECONDS);
@@ -123,6 +144,10 @@ public abstract class KeepAliveHandler {
         if (pingIdleTimeNanos > 0) {
             pingIdleTimeout = executor().schedule(new PingIdleTimeoutTask(ctx),
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
+        }
+        if (maxConnectionAgeNanos > 0) {
+            maxConnectionAgeFuture = executor().schedule(() -> isMaxConnectionAgeExceeded = true,
+                                                         maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -136,7 +161,12 @@ public abstract class KeepAliveHandler {
             pingIdleTimeout.cancel(false);
             pingIdleTimeout = null;
         }
+        if (maxConnectionAgeFuture != null) {
+            maxConnectionAgeFuture.cancel(false);
+            maxConnectionAgeFuture = null;
+        }
         pingState = PingState.SHUTDOWN;
+        isMaxConnectionAgeExceeded = true;
         cancelFutures();
     }
 
@@ -170,6 +200,14 @@ public abstract class KeepAliveHandler {
         }
         pingState = PingState.IDLE;
         cancelFutures();
+    }
+
+    public final boolean isClosing() {
+        return pingState == PingState.SHUTDOWN;
+    }
+
+    public final boolean isMaxConnectionAgeExceeded() {
+        return isMaxConnectionAgeExceeded;
     }
 
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);

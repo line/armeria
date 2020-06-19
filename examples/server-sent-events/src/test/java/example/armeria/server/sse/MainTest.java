@@ -56,7 +56,7 @@ class MainTest {
                     .expectNext(HttpData.ofUtf8("data:2\n\n"))
                     .expectNext(HttpData.ofUtf8("data:3\n\n"))
                     .expectNext(HttpData.ofUtf8("data:4\n\n"))
-                    .assertNext(o -> assertThat(o.isEndOfStream()))
+                    .assertNext(o -> assertThat(o.isEndOfStream()).isTrue())
                     .expectComplete()
                     .verify();
 
@@ -68,7 +68,7 @@ class MainTest {
                     .expectNext(HttpData.ofUtf8("id:2\ndata:7\nretry:5000\n\n"))
                     .expectNext(HttpData.ofUtf8("id:3\ndata:8\nretry:5000\n\n"))
                     .expectNext(HttpData.ofUtf8("id:4\ndata:9\nretry:5000\n\n"))
-                    .assertNext(o -> assertThat(o.isEndOfStream()))
+                    .assertNext(o -> assertThat(o.isEndOfStream()).isTrue())
                     .expectComplete()
                     .verify();
     }

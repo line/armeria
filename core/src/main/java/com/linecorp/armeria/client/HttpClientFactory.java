@@ -30,6 +30,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
@@ -231,8 +234,10 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     @Override
-    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol) {
-        return eventLoopScheduler.acquire(endpoint, sessionProtocol);
+    public ReleasableHolder<EventLoop> acquireEventLoop(SessionProtocol sessionProtocol,
+                                                        EndpointGroup endpointGroup,
+                                                        @Nullable Endpoint endpoint) {
+        return eventLoopScheduler.acquire(sessionProtocol, endpointGroup, endpoint);
     }
 
     @Override

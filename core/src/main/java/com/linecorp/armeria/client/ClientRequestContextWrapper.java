@@ -17,8 +17,6 @@
 package com.linecorp.armeria.client;
 
 import java.time.Duration;
-import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -31,9 +29,6 @@ import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.util.AttributeKey;
 
 /**
  * Wraps an existing {@link ClientRequestContext}.
@@ -48,25 +43,9 @@ public class ClientRequestContextWrapper
         super(delegate);
     }
 
-    @Nullable
-    @Override
-    public ServiceRequestContext root() {
-        return delegate().root();
-    }
-
-    @Override
-    public <V> V ownAttr(AttributeKey<V> key) {
-        return delegate().ownAttr(key);
-    }
-
-    @Override
-    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
-        return delegate().ownAttrs();
-    }
-
     @Override
     public ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req,
-                                                  @Nullable RpcRequest rpcReq, Endpoint endpoint) {
+                                                  @Nullable RpcRequest rpcReq, @Nullable Endpoint endpoint) {
         return delegate().newDerivedContext(id, req, rpcReq, endpoint);
     }
 
@@ -165,5 +144,15 @@ public class ClientRequestContextWrapper
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         delegate().additionalRequestHeaders();
+    }
+
+    @Override
+    public void timeoutNow() {
+        delegate().timeoutNow();
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return delegate().isTimedOut();
     }
 }

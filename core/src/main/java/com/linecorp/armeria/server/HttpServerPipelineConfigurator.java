@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.SessionProtocol.H1;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
@@ -35,13 +39,18 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -160,16 +169,27 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
-        final KeepAliveHandler keepAliveHandler =
-                idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(p.channel(), idleTimeoutMillis) : null;
+        final KeepAliveHandler keepAliveHandler;
+        if (idleTimeoutMillis > 0) {
+            final Timer keepAliveTimer = newKeepAliveTimer(H1C);
+            keepAliveHandler = new Http1ServerKeepAliveHandler(
+                    p.channel(), keepAliveTimer, idleTimeoutMillis, config.maxConnectionAgeMillis());
+        } else {
+            keepAliveHandler = null;
+        }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), SessionProtocol.H1C, keepAliveHandler, config.isDateHeaderEnabled(),
-                config.isServerHeaderEnabled()
+                p.channel(), H1C, keepAliveHandler,
+                config.isDateHeaderEnabled(), config.isServerHeaderEnabled()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
         p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, responseEncoder,
-                                        SessionProtocol.H1C, proxiedAddresses));
+                                        H1C, proxiedAddresses));
+    }
+
+    private Timer newKeepAliveTimer(SessionProtocol protocol) {
+        return MoreMeters.newTimer(config.meterRegistry(), "armeria.server.connections.lifespan",
+                                   ImmutableList.of(Tag.of("protocol", protocol.uriText())));
     }
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
@@ -180,9 +200,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
-        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config,
-                                                       gracefulShutdownSupport,
-                                                       scheme.toString())
+        final Timer keepAliveTimer = newKeepAliveTimer(scheme == SCHEME_HTTP ? H2C : H2);
+        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
+                                                       gracefulShutdownSupport, scheme.toString())
                 .server(true)
                 .initialSettings(http2Settings())
                 .build();
@@ -391,26 +411,29 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null,
-                                            SessionProtocol.H2, proxiedAddresses));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null, H2, proxiedAddresses));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
             final long idleTimeoutMillis = config.idleTimeoutMillis();
-            final KeepAliveHandler keepAliveHandler =
-                    idleTimeoutMillis > 0 ? new Http1ServerKeepAliveHandler(ch, idleTimeoutMillis) : null;
+            final KeepAliveHandler keepAliveHandler;
+            if (idleTimeoutMillis > 0) {
+                keepAliveHandler = new Http1ServerKeepAliveHandler(
+                        ch, newKeepAliveTimer(H1), idleTimeoutMillis, config.maxConnectionAgeMillis());
+            } else {
+                keepAliveHandler = null;
+            }
+
             final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
-                    ch, SessionProtocol.H1, keepAliveHandler, config.isDateHeaderEnabled(),
-                    config.isServerHeaderEnabled());
+                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer,
-                                            SessionProtocol.H1, proxiedAddresses));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer, H1, proxiedAddresses));
         }
 
         @Override

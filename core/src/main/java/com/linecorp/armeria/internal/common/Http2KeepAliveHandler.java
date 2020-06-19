@@ -33,6 +33,7 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.Flags;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -69,9 +70,10 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
 
     private long lastPingPayload;
 
-    protected Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
-                                    String name, long idleTimeoutMillis, long pingIntervalMillis) {
-        super(channel, name, idleTimeoutMillis, pingIntervalMillis);
+    protected Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, String name,
+                                    Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
+                                    long maxConnectionAgeMillis) {
+        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis);
         this.channel = requireNonNull(channel, "channel");
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
     }

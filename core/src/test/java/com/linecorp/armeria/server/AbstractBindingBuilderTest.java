@@ -114,6 +114,6 @@ class AbstractBindingBuilderTest {
     void nonEmptyMethod() {
         assertThatThrownBy(() -> new AbstractBindingBuilder() {}.methods(ImmutableList.of()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("methods can't be empty");
+                .hasMessageContaining("methods can't be empty.");
     }
 }

@@ -152,6 +152,7 @@ public final class ServerBuilder {
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
 
     static {
         RequestContextUtil.init();
@@ -172,6 +173,7 @@ public final class ServerBuilder {
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
+    private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -497,6 +499,34 @@ public final class ServerBuilder {
     public ServerBuilder pingInterval(Duration pingInterval) {
         pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
         return this;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     *
+     * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
+     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     */
+    public ServerBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
+        checkArgument(maxConnectionAgeMillis >= MIN_MAX_CONNECTION_AGE_MILLIS || maxConnectionAgeMillis == 0,
+                      "maxConnectionAgeMillis: %s (expected: >= %s or == 0)",
+                      maxConnectionAgeMillis, MIN_MAX_CONNECTION_AGE_MILLIS);
+        this.maxConnectionAgeMillis = maxConnectionAgeMillis;
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAge} since the connection was established.
+     *
+     * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
+     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     */
+    public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
+        return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
     }
 
     /**
@@ -1478,15 +1508,23 @@ public final class ServerBuilder {
 
         if (pingIntervalMillis > 0) {
             pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
-            if (pingIntervalMillis >= idleTimeoutMillis) {
+            if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
                 pingIntervalMillis = 0;
+            }
+        }
+
+        if (maxConnectionAgeMillis > 0) {
+            maxConnectionAgeMillis = Math.max(maxConnectionAgeMillis, MIN_MAX_CONNECTION_AGE_MILLIS);
+            if (idleTimeoutMillis == 0 || idleTimeoutMillis > maxConnectionAgeMillis) {
+                idleTimeoutMillis = maxConnectionAgeMillis;
             }
         }
 
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, http2InitialConnectionWindowSize,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
+                http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,

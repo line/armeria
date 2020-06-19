@@ -39,46 +39,46 @@ import com.linecorp.armeria.common.Response;
 public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
     @Nullable
-    private final RetryStrategy retryStrategy;
+    private final RetryRule retryRule;
 
     @Nullable
-    private final RetryStrategyWithContent<O> retryStrategyWithContent;
+    private final RetryRuleWithContent<O> retryRuleWithContent;
 
     private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
     private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
 
     /**
-     * Creates a new builder with the specified {@link RetryStrategy}.
+     * Creates a new builder with the specified {@link RetryRule}.
      */
-    protected AbstractRetryingClientBuilder(RetryStrategy retryStrategy) {
-        this(requireNonNull(retryStrategy, "retryStrategy"), null);
+    AbstractRetryingClientBuilder(RetryRule retryRule) {
+        this(requireNonNull(retryRule, "retryRule"), null);
     }
 
     /**
-     * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     * Creates a new builder with the specified {@link RetryRuleWithContent}.
      */
-    protected AbstractRetryingClientBuilder(RetryStrategyWithContent<O> retryStrategyWithContent) {
-        this(null, requireNonNull(retryStrategyWithContent, "retryStrategyWithContent"));
+    AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent) {
+        this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"));
     }
 
-    private AbstractRetryingClientBuilder(@Nullable RetryStrategy retryStrategy,
-                                          @Nullable RetryStrategyWithContent<O> retryStrategyWithContent) {
-        this.retryStrategy = retryStrategy;
-        this.retryStrategyWithContent = retryStrategyWithContent;
+    private AbstractRetryingClientBuilder(@Nullable RetryRule retryRule,
+                                          @Nullable RetryRuleWithContent<O> retryRuleWithContent) {
+        this.retryRule = retryRule;
+        this.retryRuleWithContent = retryRuleWithContent;
     }
 
-    RetryStrategy retryStrategy() {
-        checkState(retryStrategy != null, "retryStrategy is not set.");
-        return retryStrategy;
+    RetryRule retryRule() {
+        checkState(retryRule != null, "retryRule is not set.");
+        return retryRule;
     }
 
-    RetryStrategyWithContent<O> retryStrategyWithContent() {
-        checkState(retryStrategyWithContent != null, "retryStrategyWithContent is not set.");
-        return retryStrategyWithContent;
+    RetryRuleWithContent<O> retryRuleWithContent() {
+        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+        return retryRuleWithContent;
     }
 
     /**
-     * Sets the maximum number of total attempts. If unspecified, the value from
+     * Sets the maximum allowed number of total attempts. If unspecified, the value from
      * {@link Flags#defaultMaxTotalAttempts()} will be used.
      *
      * @return {@code this} to support method chaining.
@@ -103,7 +103,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      *
      * @return {@code this} to support method chaining.
      *
-     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
+     * @see <a href="https://line.github.io/armeria/docs/client-retry#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
     public AbstractRetryingClientBuilder<O> responseTimeoutMillisForEachAttempt(
@@ -125,7 +125,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      *
      * @return {@code this} to support method chaining.
      *
-     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
+     * @see <a href="https://line.github.io/armeria/docs/client-retry#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
     public AbstractRetryingClientBuilder<O> responseTimeoutForEachAttempt(
@@ -143,8 +143,8 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
     ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("retryStrategy", retryStrategy)
-                          .add("retryStrategyWithContent", retryStrategyWithContent)
+                          .add("retryRule", retryRule)
+                          .add("retryRuleWithContent", retryRuleWithContent)
                           .add("maxTotalAttempts", maxTotalAttempts)
                           .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
     }

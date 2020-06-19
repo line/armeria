@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandlerBuilder;
 
 import io.netty.channel.Channel;
@@ -27,16 +28,19 @@ final class Http2ClientConnectionHandlerBuilder
                                                       Http2ClientConnectionHandlerBuilder> {
 
     private final HttpClientFactory clientFactory;
+    private final SessionProtocol protocol;
 
-    Http2ClientConnectionHandlerBuilder(Channel ch, HttpClientFactory clientFactory) {
+    Http2ClientConnectionHandlerBuilder(Channel ch, HttpClientFactory clientFactory, SessionProtocol protocol) {
         super(ch);
         this.clientFactory = clientFactory;
+        this.protocol = protocol;
     }
 
     @Override
     protected Http2ClientConnectionHandler build(Http2ConnectionDecoder decoder,
                                                  Http2ConnectionEncoder encoder,
                                                  Http2Settings initialSettings) throws Exception {
-        return new Http2ClientConnectionHandler(decoder, encoder, initialSettings, channel(), clientFactory);
+        return new Http2ClientConnectionHandler(
+                decoder, encoder, initialSettings, channel(), clientFactory, protocol);
     }
 }

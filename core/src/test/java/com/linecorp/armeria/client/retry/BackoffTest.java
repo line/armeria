@@ -19,11 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class BackoffTest {
+class BackoffTest {
     @Test
-    public void withoutDelay() throws Exception {
+    void withoutDelay() throws Exception {
         final Backoff backoff = Backoff.withoutDelay();
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(0);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(0);
@@ -31,7 +31,7 @@ public class BackoffTest {
     }
 
     @Test
-    public void fixed() throws Exception {
+    void fixed() throws Exception {
         final Backoff backoff = Backoff.fixed(100);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(100);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(100);
@@ -39,7 +39,7 @@ public class BackoffTest {
     }
 
     @Test
-    public void exponential() throws Exception {
+    void exponential() throws Exception {
         Backoff backoff = Backoff.exponential(10, 50);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(10);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(20);
@@ -56,7 +56,7 @@ public class BackoffTest {
     }
 
     @Test
-    public void fibonacci() throws Exception {
+    void fibonacci() throws Exception {
         final Backoff backoff = Backoff.fibonacci(10, 120);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(10);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(10);
@@ -66,7 +66,7 @@ public class BackoffTest {
     }
 
     @Test
-    public void withJitter() throws Exception {
+    void withJitter() throws Exception {
         final Random random = new Random(1);
         final Backoff backoff = Backoff.fixed(1000).withJitter(-0.3, 0.3, () -> random);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(1240);
@@ -75,10 +75,22 @@ public class BackoffTest {
     }
 
     @Test
-    public void withMaxAttempts() throws Exception {
+    void withMaxAttempts() throws Exception {
         final Backoff backoff = Backoff.fixed(100).withMaxAttempts(2);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(100);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(-1);
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(-1);
+    }
+
+    @Test
+    void unwrap() {
+        final Backoff backoff = Backoff.fixed(100);
+        assertThat(backoff.unwrap()).isSameAs(backoff);
+
+        final Backoff backoffWithMaxAttempts = backoff.withMaxAttempts(2);
+        assertThat(backoffWithMaxAttempts).isNotSameAs(backoff);
+
+        final Backoff unwrapped = backoffWithMaxAttempts.unwrap();
+        assertThat(unwrapped).isSameAs(backoff);
     }
 }

@@ -112,14 +112,14 @@ public final class ClientUtil {
     }
 
     private static void fail(ClientRequestContext ctx, Throwable cause) {
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.endRequest(cause);
+        logBuilder.endResponse(cause);
+
         final HttpRequest req = ctx.request();
         if (req != null) {
             req.abort(cause);
         }
-
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.endRequest(cause);
-        logBuilder.endResponse(cause);
     }
 
     private ClientUtil() {}

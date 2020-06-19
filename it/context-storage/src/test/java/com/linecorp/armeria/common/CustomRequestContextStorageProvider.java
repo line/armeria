@@ -48,32 +48,33 @@ public final class CustomRequestContextStorageProvider implements RequestContext
 
     @Override
     public RequestContextStorage newStorage() {
-        return new RequestContextStorage() {
+        return new CustomRequestContextStorage();
+    }
 
-            @Nullable
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T extends RequestContext> T push(RequestContext toPush) {
-                requireNonNull(toPush, "toPush");
-                pushCalled.incrementAndGet();
-                final InternalThreadLocalMap map = InternalThreadLocalMap.get();
-                final RequestContext oldCtx = context.get(map);
-                context.set(map, toPush);
-                return (T) oldCtx;
-            }
+    static final class CustomRequestContextStorage implements RequestContextStorage {
+        @Nullable
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T extends RequestContext> T push(RequestContext toPush) {
+            requireNonNull(toPush, "toPush");
+            pushCalled.incrementAndGet();
+            final InternalThreadLocalMap map = InternalThreadLocalMap.get();
+            final RequestContext oldCtx = context.get(map);
+            context.set(map, toPush);
+            return (T) oldCtx;
+        }
 
-            @Override
-            public void pop(RequestContext current, @Nullable RequestContext toRestore) {
-                popCalled.incrementAndGet();
-                context.set(toRestore);
-            }
+        @Override
+        public void pop(RequestContext current, @Nullable RequestContext toRestore) {
+            popCalled.incrementAndGet();
+            context.set(toRestore);
+        }
 
-            @Nullable
-            @Override
-            @SuppressWarnings("unchecked")
-            public <T extends RequestContext> T currentOrNull() {
-                return (T) context.get();
-            }
-        };
+        @Nullable
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T extends RequestContext> T currentOrNull() {
+            return (T) context.get();
+        }
     }
 }

@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -161,8 +162,15 @@ public interface ClientFactory extends ListenableAsyncCloseable {
      * Acquires an {@link EventLoop} that is expected to handle a connection to the specified {@link Endpoint}.
      * The caller must release the returned {@link EventLoop} back by calling {@link ReleasableHolder#release()}
      * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
+     *
+     * @param sessionProtocol the {@link SessionProtocol} of the connection
+     * @param endpointGroup the {@link EndpointGroup} where {@code endpoint} belongs to.
+     * @param endpoint the {@link Endpoint} where a request is being sent.
+     *                 {@code null} if the {@link Endpoint} is not known yet.
      */
-    ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol);
+    ReleasableHolder<EventLoop> acquireEventLoop(SessionProtocol sessionProtocol,
+                                                 EndpointGroup endpointGroup,
+                                                 @Nullable Endpoint endpoint);
 
     /**
      * Returns the {@link MeterRegistry} that collects various stats.

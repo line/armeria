@@ -1,0 +1,14 @@
+import loadable from '@loadable/component';
+export const ArticleList = loadable(() => import('../../components/article-list'));
+
+# Articles and slides
+
+<Tip>
+
+Got some articles or slides to share? 😊
+[Edit this JSON file](https://github.com/line/armeria/blob/master/site/src/pages/community/articles.json)
+to send a pull request.
+
+</Tip>
+
+<ArticleList dataSource={props.pageContext.companion} />

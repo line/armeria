@@ -68,15 +68,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public boolean isTimedOut() {
-        return false;
-    }
-
-    @Override
     public InetAddress clientAddress() {
         return delegate().clientAddress();
     }
 
+    @Deprecated
     @Override
     public ServiceRequestContext newDerivedContext(RequestId id,
                                                    @Nullable HttpRequest req,
@@ -150,6 +146,16 @@ public class ServiceRequestContextWrapper
     @Override
     public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
         delegate().setRequestTimeoutHandler(requestTimeoutHandler);
+    }
+
+    @Override
+    public void timeoutNow() {
+        delegate().timeoutNow();
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return delegate().isTimedOut();
     }
 
     @Override

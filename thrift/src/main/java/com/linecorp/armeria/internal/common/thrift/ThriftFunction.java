@@ -356,7 +356,7 @@ public final class ThriftFunction {
             final Class<?> fieldIdEnumType =
                     Class.forName(fieldIdEnumTypeName, false, funcClass.getClassLoader());
             return (TFieldIdEnum[]) requireNonNull(fieldIdEnumType.getEnumConstants(),
-                                                   "field enum may not be empty");
+                                                   "field enum may not be empty.");
         } catch (Exception e) {
             throw new IllegalStateException("cannot determine the arg fields of method: " + methodName, e);
         }

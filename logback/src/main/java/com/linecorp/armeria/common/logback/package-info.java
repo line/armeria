@@ -17,7 +17,7 @@
 /**
  * <a href="https://logback.qos.ch/">Logback</a> integration.
  *
- * <p>Read '<a href="https://line.github.io/armeria/server-basics.html">Logging contextual information</a>'
+ * <p>Read '<a href="https://line.github.io/armeria/docs/server-basics">Logging contextual information</a>'
  * for more information.
  */
 @NonNullByDefault

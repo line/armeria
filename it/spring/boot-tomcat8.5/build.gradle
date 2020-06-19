@@ -1,21 +1,28 @@
-final def SPRING_BOOT_VERSION = '2.1.13.RELEASE'
-final def TOMCAT_VERSION = '8.5.53'
+final def SPRING_BOOT_VERSION = '2.1.14.RELEASE'
+final def SPRING_VERSION = '5.1.15.RELEASE'
+final def TOMCAT_VERSION = '8.5.55'
 
 dependencies {
     implementation project(':spring:boot-starter')
     implementation project(':tomcat8.5')
-    implementation("org.springframework.boot:spring-boot-starter") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
+
+    [ 'spring-boot-starter', 'spring-boot-autoconfigure', 'spring-boot-starter-web' ].each {
+        implementation("org.springframework.boot:$it") {
+            version {
+                // Will fail the build if the override doesn't work
+                strictly SPRING_BOOT_VERSION
+            }
+            exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
         }
     }
-    implementation("org.springframework.boot:spring-boot-starter-web") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
+
+    [ 'spring-beans', 'spring-web' ].each {
+        implementation("org.springframework:$it") {
+            version {
+                // Will fail the build if the override doesn't work
+                strictly SPRING_VERSION
+            }
         }
-        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
 
     [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {

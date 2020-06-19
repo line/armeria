@@ -29,7 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,13 +54,13 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
-import com.google.common.collect.Iterables;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
@@ -170,16 +172,44 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     /**
-     * Returns the primary {@link ServerPort} that this {@link Server} is listening to. This method is useful
-     * when a {@link Server} listens to only one {@link ServerPort}.
+     * Returns the primary {@link ServerPort} that this {@link Server} is listening to. If this {@link Server}
+     * has both a local port and a non-local port, the non-local port is returned.
      *
      * @return the primary {@link ServerPort}, or {@code null} if this {@link Server} did not start.
      */
     @Nullable
     public ServerPort activePort() {
+        return activePort0(null);
+    }
+
+    /**
+     * Returns the primary {@link ServerPort} which serves the given {@link SessionProtocol}
+     * that this {@link Server} is listening to. If this {@link Server} has both a local port and
+     * a non-local port, the non-local port is returned.
+     *
+     * @return the primary {@link ServerPort}, or {@code null} if there is no active port available for
+     *         the given {@link SessionProtocol}.
+     */
+    @Nullable
+    public ServerPort activePort(SessionProtocol protocol) {
+        return activePort0(requireNonNull(protocol, "protocol"));
+    }
+
+    @Nullable
+    private ServerPort activePort0(@Nullable SessionProtocol protocol) {
+        ServerPort candidate = null;
         synchronized (activePorts) {
-            return Iterables.getFirst(activePorts.values(), null);
+            for (ServerPort serverPort : activePorts.values()) {
+                if (protocol == null || serverPort.hasProtocol(protocol)) {
+                    if (!isLocalPort(serverPort)) {
+                        return serverPort;
+                    } else if (candidate == null) {
+                        candidate = serverPort;
+                    }
+                }
+            }
         }
+        return candidate;
     }
 
     /**
@@ -205,7 +235,8 @@ public final class Server implements ListenableAsyncCloseable {
     private int activeLocalPort0(@Nullable SessionProtocol protocol) {
         synchronized (activePorts) {
             return activePorts.values().stream()
-                              .filter(activePort -> isLocalPort(activePort, protocol))
+                              .filter(activePort -> (protocol == null || activePort.hasProtocol(protocol)) &&
+                                                    isLocalPort(activePort))
                               .findFirst()
                               .orElseThrow(() -> new IllegalStateException(
                                       (protocol == null ? "no active local ports: "
@@ -326,6 +357,18 @@ public final class Server implements ListenableAsyncCloseable {
      */
     public int numConnections() {
         return connectionLimitingHandler.numConnections();
+    }
+
+    /**
+     * Waits until the result of {@link CompletableFuture} which is completed after the {@link #close()} or
+     * {@link #closeAsync()} operation is completed.
+     */
+    public void blockUntilShutdown() throws InterruptedException {
+        try {
+            whenClosed().get();
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.toString(), Exceptions.peel(e));
+        }
     }
 
     /**
@@ -678,7 +721,7 @@ public final class Server implements ListenableAsyncCloseable {
                 }
 
                 if (logger.isInfoEnabled()) {
-                    if (isLocalPort(actualPort, null)) {
+                    if (isLocalPort(actualPort)) {
                         port.protocols().forEach(p -> logger.info(
                                 "Serving {} at {} - {}://127.0.0.1:{}/",
                                 p.name(), localAddress, p.uriText(), localAddress.getPort()));
@@ -704,17 +747,8 @@ public final class Server implements ListenableAsyncCloseable {
         return "armeria-boss-" + protocolNames + '-' + localHostName + ':' + localAddr.getPort();
     }
 
-    private static boolean isLocalPort(ServerPort serverPort, @Nullable SessionProtocol protocol) {
+    private static boolean isLocalPort(ServerPort serverPort) {
         final InetAddress address = serverPort.localAddress().getAddress();
-
-        if (!address.isAnyLocalAddress() && !address.isLoopbackAddress()) {
-            return false;
-        }
-
-        if (protocol == null) {
-            return true;
-        }
-
-        return serverPort.hasProtocol(protocol);
+        return address.isAnyLocalAddress() || address.isLoopbackAddress();
     }
 }

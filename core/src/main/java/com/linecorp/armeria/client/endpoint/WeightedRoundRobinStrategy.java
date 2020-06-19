@@ -22,6 +22,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
@@ -125,11 +127,11 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
                 // prepare immutable endpoints
                 this.endpoints = Streams.stream(endpoints)
-                        .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
-                        .sorted(Comparator.comparing(Endpoint::weight)
-                                .thenComparing(Endpoint::host)
-                                .thenComparingInt(Endpoint::port))
-                        .collect(toImmutableList());
+                                        .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
+                                        .sorted(Comparator.comparing(Endpoint::weight)
+                                                          .thenComparing(Endpoint::host)
+                                                          .thenComparingInt(Endpoint::port))
+                                        .collect(toImmutableList());
                 final long numEndpoints = this.endpoints.size();
 
                 // get min weight, max weight and number of distinct weight
@@ -156,9 +158,8 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 long rest = numEndpoints;
                 for (Endpoint endpoint : this.endpoints) {
                     if (currentGroup == null || currentGroup.weight != endpoint.weight()) {
-                        totalWeight += currentGroup == null ?
-                                endpoint.weight() * rest
-                                : (endpoint.weight() - currentGroup.weight) * rest;
+                        totalWeight += currentGroup == null ? endpoint.weight() * rest
+                                                            : (endpoint.weight() - currentGroup.weight) * rest;
                         currentGroup = new EndpointsGroupByWeight(
                                 numEndpoints - rest, endpoint.weight(), totalWeight
                         );
@@ -173,9 +174,10 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 this.weighted = minWeight != maxWeight;
             }
 
+            @Nullable
             Endpoint selectEndpoint(int currentSequence) {
                 if (endpoints.isEmpty()) {
-                    throw EmptyEndpointGroupException.get();
+                    return null;
                 }
 
                 if (weighted) {

@@ -620,7 +620,7 @@ public final class Clients {
      * {@code isUndefinedUri(WebClient.of().uri())} will return {@code true}.
      */
     public static boolean isUndefinedUri(URI uri) {
-        return uri == WebClientBuilder.UNDEFINED_URI;
+        return uri == AbstractWebClientBuilder.UNDEFINED_URI;
     }
 
     private Clients() {}

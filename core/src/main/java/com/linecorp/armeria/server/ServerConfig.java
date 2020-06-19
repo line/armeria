@@ -38,9 +38,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.internal.common.metric.ExecutorServiceMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
@@ -71,6 +71,7 @@ public final class ServerConfig {
 
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
+    private final long maxConnectionAgeMillis;
 
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -109,7 +110,7 @@ public final class ServerConfig {
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
-            int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis,
+            int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
@@ -136,6 +137,7 @@ public final class ServerConfig {
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
+        this.maxConnectionAgeMillis = maxConnectionAgeMillis;
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
@@ -155,11 +157,9 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (!ExecutorServiceMetrics.isMonitoredExecutor(blockingTaskExecutor)) {
-            blockingTaskExecutor =
-                    ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                                   "blockingTaskExecutor", "armeria.executor");
-        }
+        blockingTaskExecutor =
+                ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
+                                               "blockingTaskExecutor", "armeria");
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
@@ -421,6 +421,13 @@ public final class ServerConfig {
      */
     public long pingIntervalMillis() {
         return pingIntervalMillis;
+    }
+
+    /**
+     * Returns the maximum allowed age of a connection in milliseconds for keep-alive.
+     */
+    public long maxConnectionAgeMillis() {
+        return maxConnectionAgeMillis;
     }
 
     /**

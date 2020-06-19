@@ -63,6 +63,7 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 
 class ArmeriaHttpUtilTest {
+
     @Test
     void testConcatPaths() throws Exception {
         assertThat(concatPaths(null, "a")).isEqualTo("/a");
@@ -180,7 +181,6 @@ class ArmeriaHttpUtilTest {
                                           .build();
 
         final Http2Headers out = toNettyHttp2ClientHeader(in);
-        System.err.println(out.getAll(HttpHeaderNames.COOKIE));
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
     }
@@ -498,6 +498,14 @@ class ArmeriaHttpUtilTest {
                 "",
                 null);
         bad.forEach(path -> assertThat(ArmeriaHttpUtil.isAbsoluteUri(path)).isFalse());
+    }
+
+    @Test
+    void serverHeader() {
+        final String pattern = "Armeria/(\\d+).(\\d+).(\\d+)(-SNAPSHOT)?";
+        assertThat("Armeria/1.0.0").containsPattern(pattern);
+        assertThat("Armeria/1.0.0-SNAPSHOT").containsPattern(pattern);
+        assertThat(ArmeriaHttpUtil.SERVER_HEADER).containsPattern(pattern);
     }
 
     private static ServerConfig serverConfig() {

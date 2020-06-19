@@ -35,7 +35,6 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
@@ -46,6 +45,8 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+
+    private boolean sentConnectionCloseHeader;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
                              @Nullable KeepAliveHandler keepAliveHandler,
@@ -63,14 +64,19 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return newClosedSessionFuture();
         }
 
-        final HttpObject converted = convertHeaders(headers, endStream, isTrailersEmpty);
+        final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty);
         if (headers.status().isInformational()) {
             return write(id, converted, false);
+        }
+
+        if (keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
+            converted.headers().set(HttpHeaderNames.CONNECTION, "close");
+            sentConnectionCloseHeader = true;
         }
         return writeNonInformationalHeaders(id, converted, endStream);
     }
 
-    private HttpObject convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
+    private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
         final int statusCode = headers.status().code();
         final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
 
@@ -103,6 +109,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             convertHeaders(headers, res.headers(), isTrailersEmpty);
             maybeSetTransferEncoding(res);
         }
+
         return res;
     }
 
@@ -151,5 +158,9 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     protected boolean isPing(int id) {
         return false;
+    }
+
+    boolean isSentConnectionCloseHeader() {
+        return sentConnectionCloseHeader;
     }
 }

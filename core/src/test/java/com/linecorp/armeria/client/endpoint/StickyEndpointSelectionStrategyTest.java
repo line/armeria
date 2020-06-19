@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.function.ToLongFunction;
 
@@ -85,8 +84,7 @@ class StickyEndpointSelectionStrategyTest {
         assertThat(dynamicGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isEqualTo(ep4);
 
         dynamicGroup.removeEndpoint(ep4);
-        assertThatThrownBy(() -> dynamicGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1")))
-                .isInstanceOf(EmptyEndpointGroupException.class);
+        assertThat(dynamicGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isNull();
     }
 
     private static ClientRequestContext contextWithHeader(String k, String v) {

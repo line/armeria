@@ -17,7 +17,10 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.withinPercentage;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -26,28 +29,60 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AttributeMap;
 
 class HttpServerKeepAliveHandlerTest {
 
+    private static final ch.qos.logback.classic.Logger rootLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+
     private static final long serverIdleTimeout = 20000;
     private static final long serverPingInterval = 10000;
+
+    @Mock
+    private Appender<ILoggingEvent> appender;
+
+    @Captor
+    private ArgumentCaptor<ILoggingEvent> loggingEventCaptor;
+
+    @BeforeEach
+    void setupLogger() {
+        rootLogger.addAppender(appender);
+    }
+
+    @AfterEach
+    void cleanupLogger() {
+        rootLogger.detachAppender(appender);
+    }
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -61,13 +96,26 @@ class HttpServerKeepAliveHandlerTest {
     };
 
     @RegisterExtension
-    static ServerExtension serverWithNoIdleTimeout = new ServerExtension() {
+    static ServerExtension serverWithNoKeepAlive = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.idleTimeoutMillis(0);
             sb.pingIntervalMillis(0);
-            sb.decorator(LoggingService.newDecorator())
-              .service("/streaming", (ctx, req) -> HttpResponse.streaming());
+            sb.requestTimeoutMillis(1000);
+            sb.service("/", (ctx, req) -> HttpResponse.of("OK"));
+            sb.service("/streaming", (ctx, req) -> HttpResponse.streaming());
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension serverWithNoIdleTimeout = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.idleTimeoutMillis(0);
+            sb.pingIntervalMillis(serverPingInterval);
+            sb.decorator(LoggingService.newDecorator());
+            sb.service("/", (ctx, req) -> HttpResponse.of("OK"));
+            sb.service("/streaming", (ctx, req) -> HttpResponse.streaming());
         }
     };
 
@@ -97,6 +145,7 @@ class HttpServerKeepAliveHandlerTest {
     void closeByClientIdleTimeout(SessionProtocol protocol) throws InterruptedException {
         final long clientIdleTimeout = 2000;
         final WebClient client = newWebClient(clientIdleTimeout, server.uri(protocol));
+        final MeterRegistry meterRegistry = client.options().factory().meterRegistry();
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/").aggregate().join();
@@ -106,6 +155,10 @@ class HttpServerKeepAliveHandlerTest {
         await().untilAtomic(counter, Matchers.is(0));
         final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
         assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
+        assertThat(MoreMeters.measureAll(meterRegistry))
+                .hasEntrySatisfying(
+                        "armeria.client.connections.lifespan#total{protocol=" + protocol.uriText() + '}',
+                        value -> assertThat(value * 1000).isCloseTo(elapsed, withinPercentage(25)));
     }
 
     @Test
@@ -127,27 +180,75 @@ class HttpServerKeepAliveHandlerTest {
     @ParameterizedTest
     @CsvSource({ "H1C", "H2C" })
     void shouldCloseConnectionWheNoActiveRequests(SessionProtocol protocol) throws InterruptedException {
-        final long clientIdleTimeout = 2000;
-        final WebClient client = newWebClient(clientIdleTimeout, serverWithNoIdleTimeout.uri(protocol));
+        final long clientIdleTimeout = 10000;
+        final long tolerance = 3000;
+        final WebClient client = newWebClient(clientIdleTimeout, 0, 0, serverWithNoKeepAlive.uri(protocol));
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/streaming").aggregate().join();
         assertThat(counter).hasValue(1);
 
-        // After the request is closed by RequestTimeoutException,
-        // if no requests is in progress, the connection should be closed by idle timeout scheduler
-        await().untilAtomic(counter, Matchers.is(0));
+        // After the request is closed by server side RequestTimeoutException,
+        // if no requests is in progress, the connection should be closed by client idle timeout scheduler
+        await().timeout(Duration.ofMillis(clientIdleTimeout + tolerance))
+               .untilAtomic(counter, Matchers.is(0));
         final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
-        assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
+        assertThat(elapsed).isBetween(clientIdleTimeout - tolerance, clientIdleTimeout * 2 + tolerance);
     }
 
-    private WebClient newWebClient(long clientIdleTimeout, URI uri) {
+    @Test
+    void serverShouldSendPingWithNoIdleTimeout() throws InterruptedException {
+        final long clientIdleTimeout = 0;
+        final long clientPingInterval = 0;
+        final long responseTimeout = 0;
+        final WebClient client = newWebClient(clientIdleTimeout,
+                                              clientPingInterval,
+                                              responseTimeout,
+                                              serverWithNoIdleTimeout.uri(SessionProtocol.H2C));
+
+        client.get("/").aggregate().join();
+        assertThat(counter).hasValue(1);
+        await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
+    }
+
+    @CsvSource({ "H1C", "H2C" })
+    @ParameterizedTest
+    void clientShouldSendPingWithNoIdleTimeout(SessionProtocol protocol) throws InterruptedException {
+        final long clientIdleTimeout = 0;
+        final long clientPingInterval = 10000;
+        final long responseTimeout = 0;
+        final WebClient client = newWebClient(clientIdleTimeout, clientPingInterval,
+                                              responseTimeout, serverWithNoKeepAlive.uri(protocol));
+
+        client.get("/").aggregate().join();
+        await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
+    }
+
+    private WebClient newWebClient(long clientIdleTimeout, long pingIntervalMillis, long responseTimeout,
+                                   URI uri) {
         final ClientFactory factory = ClientFactory.builder()
+                                                   .meterRegistry(new SimpleMeterRegistry())
                                                    .idleTimeoutMillis(clientIdleTimeout)
+                                                   .pingIntervalMillis(pingIntervalMillis)
                                                    .connectionPoolListener(listener)
                                                    .build();
         return WebClient.builder(uri)
                         .factory(factory)
+                        .responseTimeoutMillis(responseTimeout)
                         .build();
+    }
+
+    private WebClient newWebClient(long clientIdleTimeout, URI uri) {
+        return newWebClient(clientIdleTimeout,
+                            Flags.defaultPingIntervalMillis(),
+                            Flags.defaultResponseTimeoutMillis(),
+                            uri);
+    }
+
+    private void assertPing() {
+        verify(appender, atLeastOnce()).doAppend(loggingEventCaptor.capture());
+        assertThat(loggingEventCaptor.getAllValues()).anyMatch(event -> {
+            return event.getLevel() == Level.DEBUG && event.getMessage().contains("PING write successful");
+        });
     }
 }

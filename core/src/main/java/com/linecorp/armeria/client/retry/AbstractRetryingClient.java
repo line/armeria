@@ -70,10 +70,13 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
     @Nullable
-    private final RetryStrategy retryStrategy;
+    private final RetryRule retryRule;
 
     @Nullable
-    private final RetryStrategyWithContent<O> retryStrategyWithContent;
+    private final RetryRule fromRetryRuleWithContent;
+
+    @Nullable
+    private final RetryRuleWithContent<O> retryRuleWithContent;
 
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
@@ -81,31 +84,36 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected AbstractRetryingClient(Client<I, O> delegate, RetryStrategy retryStrategy,
-                                     int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, requireNonNull(retryStrategy, "retryStrategyWithoutContent"), null,
+    AbstractRetryingClient(Client<I, O> delegate, RetryRule retryRule,
+                           int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+        this(delegate, requireNonNull(retryRule, "retryRule"), null,
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected AbstractRetryingClient(Client<I, O> delegate,
-                                     RetryStrategyWithContent<O> retryStrategyWithContent,
-                                     int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, null, requireNonNull(retryStrategyWithContent, "retryStrategyWithContent"),
+    AbstractRetryingClient(Client<I, O> delegate,
+                           RetryRuleWithContent<O> retryRuleWithContent,
+                           int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+        this(delegate, null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    private AbstractRetryingClient(Client<I, O> delegate, @Nullable RetryStrategy retryStrategy,
-                                   @Nullable RetryStrategyWithContent<O> retryStrategyWithContent,
+    private AbstractRetryingClient(Client<I, O> delegate, @Nullable RetryRule retryRule,
+                                   @Nullable RetryRuleWithContent<O> retryRuleWithContent,
                                    int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         super(delegate);
-        this.retryStrategy = retryStrategy;
-        this.retryStrategyWithContent = retryStrategyWithContent;
+        this.retryRule = retryRule;
+        this.retryRuleWithContent = retryRuleWithContent;
+        if (retryRuleWithContent != null) {
+            fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
+        } else {
+            fromRetryRuleWithContent = null;
+        }
 
         checkArgument(maxTotalAttempts > 0, "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
         this.maxTotalAttempts = maxTotalAttempts;
@@ -138,23 +146,28 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
-     * Returns the {@link RetryStrategy}.
+     * Returns the {@link RetryRule}.
      *
-     * @throws IllegalStateException if the {@link RetryStrategy} is not set
+     * @throws IllegalStateException if the {@link RetryRule} is not set
      */
-    protected RetryStrategy retryStrategy() {
-        checkState(retryStrategy != null, "retryStrategy is not set.");
-        return retryStrategy;
+    protected final RetryRule retryRule() {
+        checkState(retryRule != null, "retryRule is not set.");
+        return retryRule;
     }
 
     /**
-     * Returns the {@link RetryStrategyWithContent}.
+     * Returns the {@link RetryRuleWithContent}.
      *
-     * @throws IllegalStateException if the {@link RetryStrategyWithContent} is not set
+     * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
      */
-    protected RetryStrategyWithContent<O> retryStrategyWithContent() {
-        checkState(retryStrategyWithContent != null, "retryStrategyWithContent is not set.");
-        return retryStrategyWithContent;
+    protected final RetryRuleWithContent<O> retryRuleWithContent() {
+        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+        return retryRuleWithContent;
+    }
+
+    RetryRule fromRetryRuleWithContent() {
+        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+        return fromRetryRuleWithContent;
     }
 
     /**
@@ -175,6 +188,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                         // future is cancelled when the client factory is closed.
                         actionOnException.accept(new IllegalStateException(
                                 ClientFactory.class.getSimpleName() + " has been closed."));
+                    } else if (future.cause() != null) {
+                        // Other unexpected exceptions.
+                        actionOnException.accept(future.cause());
                     }
                 });
             }
@@ -288,9 +304,14 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         // serializationFormat is always not null, so this is fine.
         logBuilder.serializationFormat(partial.serializationFormat());
         if (parentLog.isAvailable(RequestLogProperty.NAME)) {
+            final String serviceName = partial.serviceName();
             final String name = partial.name();
             if (name != null) {
-                logBuilder.name(name);
+                if (serviceName != null) {
+                    logBuilder.name(serviceName, name);
+                } else {
+                    logBuilder.name(name);
+                }
             }
         }
 

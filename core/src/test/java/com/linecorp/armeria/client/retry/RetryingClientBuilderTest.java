@@ -20,26 +20,39 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
 
-public class RetryingClientBuilderTest {
+class RetryingClientBuilderTest {
 
     @Test
-    public void cannotSetContentPreviewLengthWhenRetryStrategyIsUsed() {
-        final RetryStrategy strategy = (ctx, cause) -> CompletableFuture.completedFuture(null);
-        assertThatThrownBy(() -> RetryingClient.builder(strategy)
-                                               .contentPreviewLength(1024))
+    void cannotSetContentPreviewLengthWhenRetryStrategyIsUsed() {
+        final RetryRule rule = (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.noRetry());
+        assertThatThrownBy(() -> RetryingClient.builder(rule).contentPreviewLength(1024))
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void contentPreviewLengthCannotBeZero() {
-        final RetryStrategyWithContent<HttpResponse> strategy =
-                (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
-        assertThatThrownBy(() -> RetryingClient.builder(strategy)
-                                               .contentPreviewLength(0))
+    void contentPreviewLengthCannotBeZero() {
+        final RetryRuleWithContent<HttpResponse> rule =
+                (ctx, response, cause) -> response.aggregate().handle((unused1, unused2) -> null);
+        assertThatThrownBy(() -> RetryingClient.builder(rule).contentPreviewLength(0))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void buildWithMaxContentLength() {
+        final RetryRuleWithContent<HttpResponse> rule = RetryRuleWithContent.onResponse(unused -> null);
+
+        RetryingClient.builder(rule, 1);
+        RetryingClient.builder(rule).contentPreviewLength(10);
+
+        assertThatThrownBy(() -> RetryingClient.builder(rule, -1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("maxContentLength: -1 (expected: > 0)");
+        assertThatThrownBy(() -> RetryingClient.builder(rule, 1).contentPreviewLength(10))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("maxContentLength is already set by");
     }
 }

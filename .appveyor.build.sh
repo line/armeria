@@ -43,7 +43,7 @@ java11)
   TEST_JAVA_VERSION='11'
   COVERAGE=1
   ;;
-java13)
+java13|site)
   TEST_JRE_URL="$JRE13_URL"
   TEST_JRE_VERSION="$JRE13_VERSION"
   TEST_JAVA_VERSION='13'
@@ -142,7 +142,11 @@ if [[ "$COVERAGE" -eq 1 ]]; then
 fi
 
 msg "Building .."
-echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 checkstyle build
+if [[ "$PROFILE" != 'site' ]]; then
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 lint build
+else
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:lint :site:site
+fi
 
 if [[ "$COVERAGE" -eq 1 ]]; then
   # Send coverage reports to CodeCov.io.

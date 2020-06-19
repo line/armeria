@@ -106,6 +106,10 @@ class HttpServerRequestTimeoutTest {
                                                                    Duration.ofMillis(150)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
+              .service("/timeout-now", (ctx, req) -> {
+                  ctx.timeoutNow();
+                  return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
+              })
               .serviceUnder("/timeout-by-decorator", (ctx, req) -> HttpResponse.streaming())
               .decorator("/timeout-by-decorator/deadline", (delegate, ctx, req) -> {
                   ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
@@ -123,13 +127,17 @@ class HttpServerRequestTimeoutTest {
         }
     };
 
-    WebClient clientWithoutTimeout;
+    WebClient client;
+    WebClient withoutTimeoutServerClient;
 
     @BeforeEach
     void setUp() {
-        clientWithoutTimeout = WebClient.builder(server.httpUri())
-                                        .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
-                                        .build();
+        client = WebClient.builder(server.httpUri())
+                          .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                          .build();
+        withoutTimeoutServerClient = WebClient.builder(serverWithoutTimeout.httpUri())
+                                              .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                                              .build();
     }
 
     @ParameterizedTest
@@ -138,28 +146,28 @@ class HttpServerRequestTimeoutTest {
             "/extend-timeout-from-start, 200",
     })
     void setRequestTimeoutAfter(String path, int status) {
-        final AggregatedHttpResponse response = clientWithoutTimeout.get(path).aggregate().join();
+        final AggregatedHttpResponse response = client.get(path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(status);
     }
 
     @Test
     void requestTimeout_503() {
         final AggregatedHttpResponse response =
-                clientWithoutTimeout.get("/timeout-before-writing").aggregate().join();
+                client.get("/timeout-before-writing").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
     void requestTimeout_reset_stream() {
-        assertThatThrownBy(() -> clientWithoutTimeout.get("/timeout-while-writing").aggregate().join())
+        assertThatThrownBy(() -> client.get("/timeout-while-writing").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ClosedStreamException.class);
     }
 
     @Test
     void setRequestTimeoutAfterNoTimeout() {
-        final AggregatedHttpResponse response = clientWithoutTimeout.get(
-                serverWithoutTimeout.httpUri() + "/extend-timeout-from-now").aggregate().join();
+        final AggregatedHttpResponse response = withoutTimeoutServerClient.get(
+                "/extend-timeout-from-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
     }
 
@@ -172,7 +180,7 @@ class HttpServerRequestTimeoutTest {
     })
     void extendRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =
-                clientWithoutTimeout.get(server.httpUri() + path).aggregate().join();
+                client.get(path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
     }
 
@@ -184,7 +192,14 @@ class HttpServerRequestTimeoutTest {
     })
     void limitRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =
-                clientWithoutTimeout.get(serverWithoutTimeout.httpUri() + path).aggregate().join();
+                withoutTimeoutServerClient.get(path).aggregate().join();
+        assertThat(response.status().code()).isEqualTo(503);
+    }
+
+    @Test
+    void timeoutNow() {
+        final AggregatedHttpResponse response =
+                withoutTimeoutServerClient.get("/timeout-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
     }
 }

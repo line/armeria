@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -28,6 +29,7 @@ import org.slf4j.MDC;
 import org.slf4j.Marker;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
@@ -50,7 +52,7 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory;
  * A <a href="https://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current
  * {@link RequestContext} to {@link MDC}.
  *
- * <p>Read '<a href="https://line.github.io/armeria/advanced-logging.html">Logging contextual information</a>'
+ * <p>Read '<a href="https://line.github.io/armeria/docs/advanced-logging">Logging contextual information</a>'
  * for more information.
  */
 public final class RequestContextExportingAppender
@@ -63,6 +65,8 @@ public final class RequestContextExportingAppender
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
         }
     }
+
+    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
     private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
@@ -134,6 +138,7 @@ public final class RequestContextExportingAppender
      */
     public void setExport(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
+        checkArgument(!mdcKey.isEmpty(), "mdcKey must not be empty");
         builder.addKeyPattern(mdcKey);
     }
 
@@ -144,7 +149,11 @@ public final class RequestContextExportingAppender
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
-        builder.addKeyPattern(mdcKeys);
+        KEY_SPLITTER.split(mdcKeys)
+                    .forEach(mdcKey -> {
+                        checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
+                        builder.addKeyPattern(mdcKey);
+                    });
     }
 
     private void ensureNotStarted() {

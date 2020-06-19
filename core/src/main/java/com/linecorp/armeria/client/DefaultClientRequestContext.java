@@ -30,7 +30,6 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -184,13 +183,7 @@ public final class DefaultClientRequestContext
     @Nullable
     private static ServiceRequestContext serviceRequestContext() {
         final RequestContext current = RequestContext.currentOrNull();
-        if (current instanceof ServiceRequestContext) {
-            return (ServiceRequestContext) current;
-        }
-        if (current instanceof ClientRequestContext) {
-            return ((ClientRequestContext) current).root();
-        }
-        return null;
+        return current != null ? current.root() : null;
     }
 
     /**
@@ -206,6 +199,7 @@ public final class DefaultClientRequestContext
         assert !initialized;
         initialized = true;
 
+        Throwable cause = null;
         try {
             if (endpointGroup instanceof Endpoint) {
                 this.endpointGroup = null;
@@ -219,27 +213,26 @@ public final class DefaultClientRequestContext
                 runThreadLocalContextCustomizers();
                 updateEndpoint(endpointGroup.select(this));
             }
-
-            if (eventLoop == null) {
-                final ReleasableHolder<EventLoop> releasableEventLoop =
-                        options().factory().acquireEventLoop(endpoint, sessionProtocol());
-                eventLoop = releasableEventLoop.get();
-                log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
-            }
-
-            return true;
         } catch (Throwable t) {
-            if (eventLoop == null) {
-                // Always set the eventLoop because it can be used in a decorator.
-                eventLoop = CommonPools.workerGroup().next();
-            }
-            failEarly(t);
+            cause = t;
         }
 
-        return false;
+        if (eventLoop == null) {
+            final ReleasableHolder<EventLoop> releasableEventLoop =
+                    options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
+            eventLoop = releasableEventLoop.get();
+            log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
+        }
+
+        if (cause != null) {
+            failEarly(cause);
+            return false;
+        }
+
+        return true;
     }
 
-    private void updateEndpoint(Endpoint endpoint) {
+    private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
         autoFillSchemeAndAuthority();
     }
@@ -255,16 +248,16 @@ public final class DefaultClientRequestContext
     }
 
     private void failEarly(Throwable cause) {
+        final RequestLogBuilder logBuilder = logBuilder();
+        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
+        logBuilder.endRequest(wrapped);
+        logBuilder.endResponse(wrapped);
+
         final HttpRequest req = request();
         if (req != null) {
             autoFillSchemeAndAuthority();
             req.abort(cause);
         }
-
-        final RequestLogBuilder logBuilder = logBuilder();
-        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
-        logBuilder.endRequest(wrapped);
-        logBuilder.endResponse(wrapped);
     }
 
     private void autoFillSchemeAndAuthority() {
@@ -289,7 +282,7 @@ public final class DefaultClientRequestContext
                                         RequestId id,
                                         @Nullable HttpRequest req,
                                         @Nullable RpcRequest rpcReq,
-                                        Endpoint endpoint) {
+                                        @Nullable Endpoint endpoint) {
         super(ctx.meterRegistry(), ctx.sessionProtocol(), id, ctx.method(), ctx.path(), ctx.query(),
               req, rpcReq, ctx.root());
 
@@ -304,7 +297,7 @@ public final class DefaultClientRequestContext
         eventLoop = ctx.eventLoop();
         options = ctx.options();
         endpointGroup = ctx.endpointGroup();
-        updateEndpoint(requireNonNull(endpoint, "endpoint"));
+        updateEndpoint(endpoint);
         fragment = ctx.fragment();
         root = ctx.root();
 
@@ -346,7 +339,7 @@ public final class DefaultClientRequestContext
     public ClientRequestContext newDerivedContext(RequestId id,
                                                   @Nullable HttpRequest req,
                                                   @Nullable RpcRequest rpcReq,
-                                                  Endpoint endpoint) {
+                                                  @Nullable Endpoint endpoint) {
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint);
     }
 
@@ -526,6 +519,16 @@ public final class DefaultClientRequestContext
     @Override
     public RequestLogBuilder logBuilder() {
         return log;
+    }
+
+    @Override
+    public void timeoutNow() {
+        timeoutScheduler.timeoutNow();
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return timeoutScheduler.isTimedOut();
     }
 
     @Override

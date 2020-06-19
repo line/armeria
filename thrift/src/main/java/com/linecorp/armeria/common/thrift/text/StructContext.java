@@ -55,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.util.SystemInfo;
 
@@ -66,6 +67,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 final class StructContext extends PairContext {
     private static final Logger log = LoggerFactory.getLogger(StructContext.class);
     private static final Supplier<Class<?>> thriftMessageClassFinder;
+    private static final Map<String, Class<?>> fieldMetaDataClassCache = new MapMaker().weakValues().makeMap();
 
     static {
         Supplier<Class<?>> supplier = null;
@@ -197,10 +199,22 @@ final class StructContext extends PairContext {
                 } else {
                     // Workaround a bug where the generated 'FieldMetaData' does not provide
                     // a fully qualified class name.
-                    final String fqcn = clazz.getPackage().getName() + '.' + elementMetaData.getTypedefName();
-                    try {
-                        classMap.put(fieldName, Class.forName(fqcn));
-                    } catch (ClassNotFoundException ignored) {
+                    final String typedefName = elementMetaData.getTypedefName();
+                    if (typedefName != null) {
+                        final String fqcn = clazz.getPackage().getName() + '.' + typedefName;
+                        Class<?> fieldClass = fieldMetaDataClassCache.get(fqcn);
+                        if (fieldClass == null) {
+                            fieldClass = fieldMetaDataClassCache.computeIfAbsent(fqcn, key -> {
+                                try {
+                                    return Class.forName(key);
+                                } catch (ClassNotFoundException ignored) {
+                                    return StructContext.class;
+                                }
+                            });
+                        }
+                        if (fieldClass != StructContext.class) {
+                            classMap.put(fieldName, fieldClass);
+                        }
                     }
                 }
 

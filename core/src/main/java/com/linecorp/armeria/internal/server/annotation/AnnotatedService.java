@@ -77,7 +77,7 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/server-annotated-service.html#annotated-http-service">
+ * <a href="https://line.github.io/armeria/docs/server-annotated-service">
  * Annotated HTTP Service</a> to use this.
  */
 public class AnnotatedService implements HttpService {
@@ -196,7 +196,11 @@ public class AnnotatedService implements HttpService {
         }
     }
 
-    public String logName() {
+    public String serviceName() {
+        return method.getDeclaringClass().getName();
+    }
+
+    public String methodName() {
         return method.getName();
     }
 
@@ -227,7 +231,7 @@ public class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        ctx.logBuilder().name(logName());
+        ctx.logBuilder().name(serviceName(), methodName());
 
         final CompletableFuture<AggregatedHttpRequest> f;
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {

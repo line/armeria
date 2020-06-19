@@ -191,7 +191,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             }
         }
 
-        ctx.logBuilder().name(methodName);
+        final int methodIndex = methodName.lastIndexOf('/') + 1;
+        ctx.logBuilder().name(method.getMethodDescriptor().getServiceName(), methodName.substring(methodIndex));
         ctx.logBuilder().deferRequestContent();
         ctx.logBuilder().deferResponseContent();
 

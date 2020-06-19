@@ -333,7 +333,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
 
       const headerOptions = Object.keys(headers)
-        .map(name => {
+        .map((name) => {
           return `-H '${name}: ${headers[name]}'`;
         })
         .join(' ');

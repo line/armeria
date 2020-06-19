@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import javax.annotation.Nullable;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -36,7 +38,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelector;
 @State(Scope.Thread)
 public class WeightedRoundRobinStrategyBenchmark {
 
-    final int numEndpoints = 500;
+    private static final int numEndpoints = 500;
 
     // normal round robin, all weight: 300
     EndpointGroup groupSameWeight;
@@ -57,7 +59,7 @@ public class WeightedRoundRobinStrategyBenchmark {
         Endpoint generate(int id);
     }
 
-    private List<Endpoint> generateEndpoints(EndpointGenerator e) {
+    private static List<Endpoint> generateEndpoints(EndpointGenerator e) {
         final List<Endpoint> result = new ArrayList<>();
         for (int i = 0; i < numEndpoints; i++) {
             result.add(e.generate(i));
@@ -94,26 +96,31 @@ public class WeightedRoundRobinStrategyBenchmark {
                               .withWeight(id + 1)));
     }
 
+    @Nullable
     @Benchmark
     public Endpoint sameWeight() throws Exception {
         return groupSameWeight.select(null);
     }
 
+    @Nullable
     @Benchmark
     public Endpoint randomMainly1Max30() throws Exception {
         return groupRandomMainly1Max30.select(null);
     }
 
+    @Nullable
     @Benchmark
     public Endpoint randomMax10() throws Exception {
         return groupRandomMax10.select(null);
     }
 
+    @Nullable
     @Benchmark
     public Endpoint randomMax100() throws Exception {
         return groupRandomMax100.select(null);
     }
 
+    @Nullable
     @Benchmark
     public Endpoint unique() throws Exception {
         return groupUnique.select(null);

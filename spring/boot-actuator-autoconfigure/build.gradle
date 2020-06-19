@@ -3,6 +3,12 @@ dependencies {
     api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
 
+    // TODO(anuraaga): Consider removing these since this module does not have related functionality.
+    optionalApi 'io.micrometer:micrometer-registry-prometheus'
+    optionalApi 'io.dropwizard.metrics:metrics-json'
+
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
@@ -14,7 +20,10 @@ dependencies {
 task copyFiles(type: Copy) {
     from "${rootProject.projectDir}/spring/boot-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
+    include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaServerConfigurator.java'
+    include '**/ArmeriaSettings.java'
+    include '**/Ssl.java'
 }
 
 tasks.compileJava.dependsOn(copyFiles)

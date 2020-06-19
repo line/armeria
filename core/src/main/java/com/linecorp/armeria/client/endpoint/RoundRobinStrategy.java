@@ -56,7 +56,7 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
             final int currentSequence = sequence.getAndIncrement();
 
             if (endpoints.isEmpty()) {
-                throw EmptyEndpointGroupException.get();
+                return null;
             }
             return endpoints.get(Math.abs(currentSequence % endpoints.size()));
         }

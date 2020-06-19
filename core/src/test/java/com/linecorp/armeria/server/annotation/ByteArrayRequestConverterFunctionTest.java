@@ -40,7 +40,7 @@ class ByteArrayRequestConverterFunctionTest {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
 
-        final Object result = function.convertRequest(ctx, req, byte[].class);
+        final Object result = function.convertRequest(ctx, req, byte[].class, null);
         assertThat(result).isInstanceOf(byte[].class);
     }
 
@@ -49,7 +49,7 @@ class ByteArrayRequestConverterFunctionTest {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
 
-        final Object result = function.convertRequest(ctx, req, HttpData.class);
+        final Object result = function.convertRequest(ctx, req, HttpData.class, null);
         assertThat(result).isInstanceOf(HttpData.class);
     }
 }

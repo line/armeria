@@ -109,6 +109,7 @@ public enum HttpMethod {
     UNKNOWN;
 
     private static final Set<HttpMethod> knownMethods; // ImmutableEnumSet
+    private static final Set<HttpMethod> idempotentMethods = Sets.immutableEnumSet(GET, HEAD, PUT, DELETE);
 
     static {
         final Set<HttpMethod> allMethods = EnumSet.allOf(HttpMethod.class);
@@ -137,6 +138,14 @@ public enum HttpMethod {
         }
 
         return false;
+    }
+
+    /**
+     * Returns the <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
+     * HTTP methods - {@link #GET}, {@link #HEAD}, {@link #PUT} and {@link #DELETE}.
+     */
+    public static Set<HttpMethod> idempotentMethods() {
+        return idempotentMethods;
     }
 
     /**

@@ -15,16 +15,25 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+
+import io.netty.util.AsciiString;
 
 final class AnnotatedServiceTypeUtil {
 
@@ -37,8 +46,8 @@ final class AnnotatedServiceTypeUtil {
                     .put(Byte.class, Byte::valueOf)
                     .put(Short.TYPE, Short::valueOf)
                     .put(Short.class, Short::valueOf)
-                    .put(Boolean.TYPE, Boolean::valueOf)
-                    .put(Boolean.class, Boolean::valueOf)
+                    .put(Boolean.TYPE, AnnotatedServiceTypeUtil::parseBoolean)
+                    .put(Boolean.class, AnnotatedServiceTypeUtil::parseBoolean)
                     .put(Integer.TYPE, Integer::valueOf)
                     .put(Integer.class, Integer::valueOf)
                     .put(Long.TYPE, Long::valueOf)
@@ -47,50 +56,31 @@ final class AnnotatedServiceTypeUtil {
                     .put(Float.class, Float::valueOf)
                     .put(Double.TYPE, Double::valueOf)
                     .put(Double.class, Double::valueOf)
-                    .put(String.class, Function.identity())
                     .put(UUID.class, UUID::fromString)
+                    .put(Duration.class, Duration::parse)
+                    .put(Instant.class, Instant::parse)
+                    .put(LocalDate.class, LocalDate::parse)
+                    .put(LocalDateTime.class, LocalDateTime::parse)
+                    .put(LocalTime.class, LocalTime::parse)
+                    .put(OffsetDateTime.class, OffsetDateTime::parse)
+                    .put(OffsetTime.class, OffsetTime::parse)
+                    .put(Period.class, Period::parse)
+                    .put(ZonedDateTime.class, ZonedDateTime::parse)
+                    .put(ZoneId.class, ZoneId::of)
+                    .put(ZoneOffset.class, ZoneOffset::of)
+                    .put(AsciiString.class, AsciiString::new)
+                    .put(String.class, Function.identity())
+                    .put(CharSequence.class, Function.identity())
+                    .put(Object.class, Function.identity())
                     .build();
 
-    /**
-     * Normalizes the specified container {@link Class}. Throws {@link IllegalArgumentException}
-     * if it is not able to be normalized.
-     */
-    static Class<?> normalizeContainerType(Class<?> containerType) {
-        if (containerType == Iterable.class ||
-            containerType == List.class ||
-            containerType == Collection.class) {
-            return ArrayList.class;
-        }
-        if (containerType == Set.class) {
-            return LinkedHashSet.class;
-        }
-        if (List.class.isAssignableFrom(containerType) ||
-            Set.class.isAssignableFrom(containerType)) {
-            try {
-                // Only if there is a default constructor.
-                containerType.getConstructor();
-                return containerType;
-            } catch (Throwable cause) {
-                throw new IllegalArgumentException("Unsupported container type: " + containerType.getName(),
-                                                   cause);
-            }
-        }
-        throw new IllegalArgumentException("Unsupported container type: " + containerType.getName());
-    }
-
-    /**
-     * Validates whether the specified element {@link Class} is supported.
-     * Throws {@link IllegalArgumentException} if it is not supported.
-     */
-    static Class<?> validateElementType(Class<?> clazz) {
-        if (clazz.isEnum()) {
-            return clazz;
-        }
-        if (supportedElementTypes.containsKey(clazz)) {
-            return clazz;
-        }
-        throw new IllegalArgumentException("Parameter type '" + clazz.getName() + "' is not supported.");
-    }
+    private static final Map<String, Boolean> stringToBooleanMap =
+            ImmutableMap.<String, Boolean>builder()
+                    .put("true", true)
+                    .put("1", true)
+                    .put("false", false)
+                    .put("0", false)
+                    .build();
 
     /**
      * Converts the given {@code str} to {@code T} type object. e.g., "42" -> 42.
@@ -113,6 +103,14 @@ final class AnnotatedServiceTypeUtil {
 
         throw new IllegalArgumentException(
                 "Can't convert '" + str + "' to type '" + clazz.getSimpleName() + "'.");
+    }
+
+    private static Boolean parseBoolean(String s) {
+        final Boolean result = stringToBooleanMap.get(Ascii.toLowerCase(s));
+        if (result == null) {
+            throw new IllegalArgumentException("must be one of " + stringToBooleanMap.keySet() + ": " + s);
+        }
+        return result;
     }
 
     private AnnotatedServiceTypeUtil() {}

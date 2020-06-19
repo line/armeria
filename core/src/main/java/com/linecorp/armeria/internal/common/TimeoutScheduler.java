@@ -161,6 +161,19 @@ public final class TimeoutScheduler {
         }
     }
 
+    public void timeoutNow() {
+        final TimeoutController timeoutController = this.timeoutController;
+        if (timeoutController != null) {
+            if (eventLoop.inEventLoop()) {
+                timeoutController.timeoutNow();
+            } else {
+                eventLoop.execute(timeoutController::timeoutNow);
+            }
+        } else {
+            addPendingTimeoutTask(TimeoutController::timeoutNow);
+        }
+    }
+
     public boolean isTimedOut() {
         if (timeoutController == null) {
             return false;

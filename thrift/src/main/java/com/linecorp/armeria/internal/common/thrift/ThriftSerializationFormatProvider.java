@@ -48,7 +48,12 @@ public final class ThriftSerializationFormatProvider extends SerializationFormat
                           create("x-thrift", "TTEXT"),
                           create("x-thrift", "TTEXT").withCharset(UTF_8),
                           create("vnd.apache.thrift.text"),
-                          create("vnd.apache.thrift.text").withCharset(UTF_8)));
+                          create("vnd.apache.thrift.text").withCharset(UTF_8)),
+                new Entry("ttext-named-enum",
+                          create("x-thrift", "TTEXT_NAMED_ENUM"),
+                          create("x-thrift", "TTEXT_NAMED_ENUM").withCharset(UTF_8),
+                          create("vnd.apache.thrift.text_named_enum"),
+                          create("vnd.apache.thrift.text_named_enum").withCharset(UTF_8)));
     }
 
     private static MediaType create(String subtype) {

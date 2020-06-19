@@ -1,5 +1,5 @@
 final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
-final def MICROMETER_VERSION = '1.3.6'
+final def MICROMETER_VERSION = '1.3.9'
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
@@ -14,6 +14,7 @@ dependencies {
             }
         }
     }
+
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
     optionalApi("io.micrometer:micrometer-registry-prometheus") {
         version {
@@ -53,18 +54,23 @@ dependencies {
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
 def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot-autoconfigure"
-tasks.compileJava.source "${autoconfigureProjectDir}/src/main/java"
-tasks.processResources.from "${autoconfigureProjectDir}/src/main/resources"
+// Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.
+task copyFiles(type: Copy) {
+    from "${autoconfigureProjectDir}/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+    exclude '**/ArmeriaBeanPostProcessor.java'
+    exclude '**/ArmeriaBeanPostProcessorConfiguration.java'
+    exclude '**/package-info.java'
+}
+
+tasks.compileJava.dependsOn(copyFiles)
 tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
         "${autoconfigureProjectDir}/gen-src/test/grpc",
         "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
-tasks.sourcesJar.from "${autoconfigureProjectDir}/src/main/java"
 tasks.sourcesJar.from "${autoconfigureProjectDir}/src/main/resources"
-tasks.javadoc.source "${autoconfigureProjectDir}/src/main/java"
 
-tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.compileTestThrift)
-tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.generateTestProto)
+tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.generateSources)
 
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.withType(Checkstyle) {
