@@ -33,18 +33,18 @@ import java.lang.annotation.Target;
  * >     }
  * > }
  *
+ * > // Override the default service name by the class annotation
  * > @ServiceName("my-service")
  * > public class MyService {
  * >     @Get("/")
  * >     public String get(ServiceRequestContext ctx) {
- * >         // Override the default service name by the class annotation
  * >         assert ctx.log().partial().serviceName() == "my-service";
  * >     }
  *
+ * >     // Override the default service name by the method annotation
  * >     @ServiceName("my-post-service")
  * >     @Post("/")
  * >     public String post(ServiceRequestContext ctx) {
- * >         // Override the default service name by the method annotation
  * >         assert ctx.log().partial().serviceName() == "my-post-service";
  * >     }
  * > }
