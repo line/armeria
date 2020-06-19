@@ -154,5 +154,13 @@ public interface RetryRuleWithContent<T extends Response> {
      *              the content of the {@link Response}. {@code null} if there's no exception.
      */
     CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable T response,
-                                                                         @Nullable Throwable cause);
+                                               @Nullable Throwable cause);
+
+    /**
+     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
+     * successful or not.
+     */
+    default boolean requiresResponseTrailers() {
+        return false;
+    }
 }

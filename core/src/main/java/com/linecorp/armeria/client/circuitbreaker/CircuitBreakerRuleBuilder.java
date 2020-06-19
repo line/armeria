@@ -22,12 +22,16 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.SUCCESS_DECISION;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -70,13 +74,13 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    exceptionFilter(), false);
-        return build(ruleFilter, decision);
+                                                    responseTrailersFilter(), exceptionFilter(), false);
+        return build(ruleFilter, decision, responseTrailersFilter() != null);
     }
 
     static CircuitBreakerRule build(
             BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
-            CircuitBreakerDecision decision) {
+            CircuitBreakerDecision decision, boolean requiresResponseTrailers) {
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {
             decisionFuture = SUCCESS_DECISION;
@@ -88,11 +92,21 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
             decisionFuture = NEXT_DECISION;
         }
 
-        return ruleFilter.andThen(matched -> matched ? decisionFuture : NEXT_DECISION)::apply;
+        return new CircuitBreakerRule() {
+            @Override
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+                                                                                 @Nullable Throwable cause) {
+                return ruleFilter.apply(ctx, cause) ? decisionFuture : NEXT_DECISION;
+            }
+
+            @Override
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
+            }
+        };
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
-
     /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRule}.
      * If the specified {@code responseHeadersFilter} returns {@code true},
@@ -103,6 +117,17 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     public CircuitBreakerRuleBuilder onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
         return (CircuitBreakerRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseTrailersFilter} for a {@link CircuitBreakerRule}.
+     * If the specified {@code responseTrailersFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @Override
+    public CircuitBreakerRuleBuilder onResponseTrailers(Predicate<? super HttpHeaders> responseTrailersFilter) {
+        return (CircuitBreakerRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
     }
 
     /**

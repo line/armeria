@@ -24,8 +24,6 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.HttpResponse;
@@ -96,16 +94,5 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
     @Nullable
     protected final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter() {
         return responseFilter;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("exceptionFilter", exceptionFilter())
-                          .add("requestHeadersFilter", requestHeadersFilter())
-                          .add("responseHeadersFilter", responseHeadersFilter())
-                          .add("responseFilter", responseFilter)
-                          .toString();
     }
 }

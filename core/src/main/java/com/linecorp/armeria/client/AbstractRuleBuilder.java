@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -49,6 +50,8 @@ public abstract class AbstractRuleBuilder {
 
     @Nullable
     private Predicate<ResponseHeaders> responseHeadersFilter;
+    @Nullable
+    private Predicate<HttpHeaders> responseTrailersFilter;
     @Nullable
     private Predicate<Throwable> exceptionFilter;
 
@@ -72,6 +75,22 @@ public abstract class AbstractRuleBuilder {
             @SuppressWarnings("unchecked")
             final Predicate<ResponseHeaders> cast = (Predicate<ResponseHeaders>) responseHeadersFilter;
             this.responseHeadersFilter = cast;
+        }
+        return this;
+    }
+
+    /**
+     * Adds the specified {@code responseTrailersFilter}.
+     */
+    public AbstractRuleBuilder onResponseTrailers(
+            Predicate<? super HttpHeaders> responseTrailersFilter) {
+        requireNonNull(responseTrailersFilter, "responseTrailersFilter");
+        if (this.responseTrailersFilter != null) {
+            this.responseTrailersFilter = this.responseTrailersFilter.or(responseTrailersFilter);
+        } else {
+            @SuppressWarnings("unchecked")
+            final Predicate<HttpHeaders> cast = (Predicate<HttpHeaders>) responseTrailersFilter;
+            this.responseTrailersFilter = cast;
         }
         return this;
     }
@@ -180,6 +199,14 @@ public abstract class AbstractRuleBuilder {
     @Nullable
     protected final Predicate<ResponseHeaders> responseHeadersFilter() {
         return responseHeadersFilter;
+    }
+
+    /**
+     * Returns the {@link Predicate} of a response trailers.
+     */
+    @Nullable
+    protected final Predicate<HttpHeaders> responseTrailersFilter() {
+        return responseTrailersFilter;
     }
 
     /**

@@ -242,35 +242,38 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)
             throws Exception {
+        final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         final HttpResponse response;
         try {
             response = delegate().execute(ctx, req);
         } catch (Throwable cause) {
-            final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
             reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
             throw cause;
         }
 
         final CompletableFuture<HttpResponse> responseFuture =
-                ctx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenApply(log -> {
-                    final Throwable cause =
-                            log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+                ctx.log()
+                   .whenAvailable(rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
+                                                                  : RequestLogProperty.RESPONSE_HEADERS)
+                   .thenApply(log -> {
+                       final Throwable cause =
+                               log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
 
-                    if (needsContentInRule && cause == null) {
-                        try (HttpResponseDuplicator duplicator =
-                                     response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength())) {
-                            final TruncatingHttpResponse truncatingHttpResponse =
-                                    new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
-                            reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
-                                    ctx, truncatingHttpResponse, null));
-                            return duplicator.duplicate();
-                        }
-                    } else {
-                        final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
-                        reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
-                        return response;
-                    }
-                });
+                       if (needsContentInRule && cause == null) {
+                           try (HttpResponseDuplicator duplicator =
+                                        response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength())) {
+                               final TruncatingHttpResponse truncatingHttpResponse =
+                                       new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
+                               reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
+                                       ctx, truncatingHttpResponse, null));
+                               return duplicator.duplicate();
+                           }
+                       } else {
+                           reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
+                           return response;
+                       }
+                   });
+
         return HttpResponse.from(responseFuture);
     }
 }

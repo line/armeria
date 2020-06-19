@@ -53,6 +53,7 @@ class AbstractRuleBuilderTest {
                                                           Modifier.isPublic(method.getModifiers()) &&
                                                           method.getName().startsWith("on") &&
                                                           !"onResponseHeaders".equals(method.getName()) &&
+                                                          !"onResponseTrailers".equals(method.getName()) &&
                                                           !"onUnprocessed".equals(method.getName()) &&
                                                           !method.isVarArgs());
 
