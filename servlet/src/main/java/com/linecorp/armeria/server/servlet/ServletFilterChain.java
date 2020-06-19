@@ -15,57 +15,38 @@
  */
 package com.linecorp.armeria.server.servlet;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.servlet.FilterChain;
+import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-/**
- * The servlet filter chain.
- */
 final class ServletFilterChain implements FilterChain {
 
-    private final List<DefaultFilterRegistration> filterRegistrationList = new ArrayList<>();
     private final DefaultServletRegistration servletRegistration;
+    private boolean initialized;
 
-    private int pos;
-
-    /**
-     * Get new instance.
-     */
     ServletFilterChain(DefaultServletRegistration servletRegistration) {
-        requireNonNull(servletRegistration, "servletRegistration");
         this.servletRegistration = servletRegistration;
     }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response)
             throws IOException, ServletException {
-        requireNonNull(request, "request");
-        requireNonNull(response, "response");
-
-        if (pos == 0) {
-            servletRegistration.getServlet().init(servletRegistration.getServletConfig());
+        final Servlet servlet = servletRegistration.getServlet();
+        if (initialized) {
+            servlet.service(request, response);
+            return;
         }
 
-        if (pos < filterRegistrationList.size()) {
-            pos++;
-            filterRegistrationList.get(pos).getFilter().doFilter(request, response, this);
-        } else {
-            servletRegistration.getServlet().service(request, response);
+        synchronized (servlet) {
+            if (!initialized) {
+                initialized = true;
+                servlet.init(servletRegistration.getServletConfig());
+            }
         }
-    }
-
-    /**
-     * Get filter registration list.
-     */
-    List<DefaultFilterRegistration> getFilterRegistrationList() {
-        return filterRegistrationList;
+        servlet.service(request, response);
     }
 }

@@ -102,11 +102,4 @@ final class ServletRequestDispatcher implements RequestDispatcher {
     String getName() {
         return name;
     }
-
-    /**
-     * Clear filter registration list.
-     */
-    void clearFilter() {
-        filterChain.getFilterRegistrationList().clear();
-    }
 }

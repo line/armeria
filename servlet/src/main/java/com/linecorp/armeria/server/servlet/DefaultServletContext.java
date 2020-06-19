@@ -65,7 +65,6 @@ final class DefaultServletContext implements ServletContext {
 
     private final LogLevel level;
     private final UrlMapper<DefaultServletRegistration> servletUrlMapper = new UrlMapper<>(true);
-    private final UrlMapper<DefaultFilterRegistration> filterUrlMapper = new UrlMapper<>(false);
     private final Map<String, Object> attributeMap = new HashMap<>();
     private final String contextPath;
     private final String servletContextName;
@@ -74,7 +73,6 @@ final class DefaultServletContext implements ServletContext {
     private boolean initialized;
     private Map<String, String> initParamMap = new HashMap<>();
     private Map<String, DefaultServletRegistration> servletRegistrationMap = new HashMap<>();
-    private Map<String, DefaultFilterRegistration> filterRegistrationMap = new HashMap<>();
     private Map<String, String> mimeMappings = new HashMap<>();
     private Set<SessionTrackingMode> sessionTrackingModeSet = defaultSessionTrackingModeSet;
     private String requestCharacterEncoding = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
@@ -116,7 +114,6 @@ final class DefaultServletContext implements ServletContext {
         initialized = true;
         initParamMap = ImmutableMap.copyOf(initParamMap);
         servletRegistrationMap = ImmutableMap.copyOf(servletRegistrationMap);
-        filterRegistrationMap = ImmutableMap.copyOf(filterRegistrationMap);
         sessionTrackingModeSet = ImmutableSet.copyOf(sessionTrackingModeSet);
         mimeMappings = ImmutableMap.copyOf(mimeMappings);
     }
@@ -407,17 +404,17 @@ final class DefaultServletContext implements ServletContext {
     }
 
     @Override
-    public DefaultFilterRegistration addFilter(String filterName, String className) {
+    public FilterRegistration.Dynamic addFilter(String filterName, String className) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public DefaultFilterRegistration addFilter(String filterName, Filter filter) {
+    public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public DefaultFilterRegistration addFilter(String filterName, Class<? extends Filter> filterClass) {
+    public FilterRegistration.Dynamic addFilter(String filterName, Class<? extends Filter> filterClass) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -426,15 +423,16 @@ final class DefaultServletContext implements ServletContext {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Nullable
     @Override
     public FilterRegistration getFilterRegistration(String filterName) {
         requireNonNull(filterName, "filterName");
-        return filterRegistrationMap.get(filterName);
+        return null;
     }
 
     @Override
-    public Map<String, DefaultFilterRegistration> getFilterRegistrations() {
-        return filterRegistrationMap;
+    public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
+        return ImmutableMap.of();
     }
 
     @Override

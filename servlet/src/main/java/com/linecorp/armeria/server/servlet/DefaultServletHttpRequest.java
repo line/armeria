@@ -52,7 +52,6 @@ import javax.servlet.http.Part;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -68,9 +67,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
 
-/**
- * The servlet request.
- */
 final class DefaultServletHttpRequest implements HttpServletRequest {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletHttpRequest.class);
     private static final SimpleDateFormat[] FORMATS_TEMPLATE = {
@@ -159,14 +155,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
             logger.debug("Failed to decode query string: {}", query, e);
             return QueryParams.of();
         }
-    }
-
-    /**
-     * Get aggregated http request.
-     */
-    @VisibleForTesting
-    AggregatedHttpRequest getHttpRequest() {
-        return httpRequest;
     }
 
     /**

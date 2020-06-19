@@ -73,19 +73,13 @@ public class ServletServiceTest {
     public static ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final HashMap mapping = new HashMap();
-            mapping.put("avi", "video/x-msvideo");
-            mapping.put("bmp", "image/bmp");
-            sb.http(0);
             final ServletBuilder servletBuilder = new ServletBuilder(sb);
-            sb = servletBuilder
-                    .servlet("/home", TestServlet.class.getName())
-                    .requestEncoding(HttpConstants.DEFAULT_CHARSET.name())
-                    .responseEncoding(HttpConstants.DEFAULT_CHARSET.name())
-                    .attribute("attribute1", "value1")
-                    .initParameter("param1", "value1")
-                    .mimeMapping(mapping)
-                    .build();
+            servletBuilder.servlet("/home", TestServlet.class.getName())
+                          .attribute("attribute1", "value1")
+                          .initParameter("param1", "value1")
+                          .mimeMapping("avi", "video/x-msvideo")
+                          .mimeMapping("bmp", "image/bmp")
+                          .build();
         }
     };
 
@@ -268,25 +262,6 @@ public class ServletServiceTest {
                 assertThat(Objects.isNull(request.getServletContext().getFilterRegistration(
                         "authenticate"))).isEqualTo(true);
 
-                final DefaultFilterRegistration filterRegistration =
-                        new DefaultFilterRegistration("authenticate", new TestFilter(),
-                                                      new UrlMapper<>(false),
-                                                      ImmutableMap.copyOf(new HashMap<>()));
-                assertThat(filterRegistration.getInitParameters().size()).isEqualTo(0);
-                assertThat(filterRegistration.getInitParameter("param1")).isEqualTo(null);
-                assertThat(Objects.isNull(filterRegistration.getFilter())).isEqualTo(false);
-                assertThat(filterRegistration.getName()).isEqualTo("authenticate");
-                assertThat(filterRegistration.getClassName()).isEqualTo(
-                        "com.linecorp.armeria.server.servlet.ServletServiceTest$TestFilter");
-                assertThat(Objects.isNull(filterRegistration.getServletNameMappings())).isEqualTo(false);
-                assertThat(Objects.isNull(filterRegistration.getUrlPatternMappings())).isEqualTo(false);
-                final List dispatchers = new ArrayList();
-                dispatchers.add(DispatcherType.REQUEST);
-                filterRegistration.addMappingForServletNames(EnumSet.copyOf(dispatchers),
-                                                             true, "/home", "/");
-                filterRegistration.addMappingForUrlPatterns(EnumSet.copyOf(dispatchers),
-                                                            true, "/home", "/");
-
                 final DefaultServletRegistration servletRegistration = (DefaultServletRegistration) request
                         .getServletContext().getServletRegistration("/home");
                 assertThat(servletRegistration.getInitParameters().size()).isEqualTo(0);
@@ -322,7 +297,6 @@ public class ServletServiceTest {
                 assertThat(urlMapper.getMapping("/test")).isEqualTo("/test");
                 assertThat(urlMapper.getMapping("/test/path/info")).isEqualTo("/test/*");
                 assertThat(urlMapper.getMapping("/test/path/info.html")).isEqualTo("/test/*.html");
-                dispatcher.clearFilter();
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
@@ -338,8 +312,6 @@ public class ServletServiceTest {
                 assertThat(request.getParameterMap().containsKey("application")).isEqualTo(true);
                 assertThat(request.getParameterMap().get("app")).isEqualTo(null);
                 assertThat(request.getParameterMap().containsKey("null")).isEqualTo(false);
-                assertThat(Objects.isNull(
-                        ((DefaultServletHttpRequest) request).getHttpRequest())).isEqualTo(false);
                 assertThat(
                         Collections.list(request.getParameterNames()).contains("application")).isEqualTo(true);
                 assertThat(request.getParameterValues("application")[0]).isEqualTo("Armeria Servlet");
