@@ -75,7 +75,7 @@ final class DefaultServletContext implements ServletContext {
     private Map<String, String> initParamMap = new HashMap<>();
     private Map<String, DefaultServletRegistration> servletRegistrationMap = new HashMap<>();
     private Map<String, DefaultFilterRegistration> filterRegistrationMap = new HashMap<>();
-    private MimeMappings mimeMappings = new MimeMappings();
+    private Map<String, String> mimeMappings = new HashMap<>();
     private Set<SessionTrackingMode> sessionTrackingModeSet = defaultSessionTrackingModeSet;
     private String requestCharacterEncoding = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
     private String responseCharacterEncoding = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
@@ -118,16 +118,17 @@ final class DefaultServletContext implements ServletContext {
         servletRegistrationMap = ImmutableMap.copyOf(servletRegistrationMap);
         filterRegistrationMap = ImmutableMap.copyOf(filterRegistrationMap);
         sessionTrackingModeSet = ImmutableSet.copyOf(sessionTrackingModeSet);
+        mimeMappings = ImmutableMap.copyOf(mimeMappings);
     }
 
-    /**
-     * Add a new mime mapping.
-     */
-    void setMimeMapping(Map<String, String> mappings) {
-        requireNonNull(mimeMappings, "mimeMappings");
-        mappings.forEach((k, v) -> {
-            mimeMappings.add(k, v);
-        });
+    void mimeMapping(String extension, String mimeType) {
+        requireNonNull(extension, "extension");
+        requireNonNull(mimeType, "mimeType");
+        mimeMappings.put(extension, mimeType);
+    }
+
+    void mimeMappings(Map<String, String> mappings) {
+        mimeMappings.putAll(requireNonNull(mappings, "mappings"));
     }
 
     /**

@@ -37,7 +37,6 @@ public class ServletBuilder {
     private final String contextPath;
 
     private boolean rootServletAdded;
-    private Map<String, String> mappings = new LinkedHashMap<>();
 
     /**
      * Creates a new instance.
@@ -75,7 +74,6 @@ public class ServletBuilder {
             serverBuilder.service(path, (ctx, req) -> HttpResponse.of(HttpStatus.NOT_FOUND));
         }
         servletContext.init();
-        servletContext.setMimeMapping(mappings);
         return serverBuilder;
     }
 
@@ -133,11 +131,18 @@ public class ServletBuilder {
     }
 
     /**
-     * Add a new mime mapping.
+     * Adds a mime mapping.
      */
-    public ServletBuilder mimeMapping(Map<String, String> mappings) {
-        requireNonNull(mappings, "mappings");
-        this.mappings = mappings;
+    public ServletBuilder mimeMapping(String extension, String mimeType) {
+        servletContext.mimeMapping(extension, mimeType);
+        return this;
+    }
+
+    /**
+     * Adds mime mappings.
+     */
+    public ServletBuilder mimeMappings(Map<String, String> mappings) {
+        servletContext.mimeMappings(mappings);
         return this;
     }
 
