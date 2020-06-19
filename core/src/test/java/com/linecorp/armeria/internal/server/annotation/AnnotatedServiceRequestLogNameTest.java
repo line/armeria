@@ -20,13 +20,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
+import javax.annotation.Nullable;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -44,6 +50,12 @@ class AnnotatedServiceRequestLogNameTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService(new FooService());
             sb.annotatedService("/serviceName", new BarService());
+            sb.annotatedService("/decorated", new BarService(), service -> {
+                return service.decorate((delegate, ctx, req) -> {
+                    ctx.logBuilder().name("DecoratedService", ctx.method().name());
+                    return delegate.serve(ctx, req);
+                });
+            });
 
             sb.decorator((delegate, ctx, req) -> {
                 logs.add(ctx.log());
@@ -58,9 +70,17 @@ class AnnotatedServiceRequestLogNameTest {
         }
     };
 
+    @Nullable
+    private WebClient client;
+
+    @BeforeEach
+    void setUp() {
+        client = WebClient.of(server.httpUri());
+    }
+
     @Test
     void logNameShouldBeSet() throws Exception {
-        WebClient.of(server.httpUri()).get("/ok").aggregate().join();
+        client.get("/ok").aggregate().join();
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.name()).isEqualTo("foo");
@@ -69,7 +89,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void logNameShouldBeSetOnEarlyFailure() throws Exception {
-        WebClient.of(server.httpUri()).get("/fail_early").aggregate().join();
+        client.get("/fail_early").aggregate().join();
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.name()).isEqualTo("bar");
@@ -78,7 +98,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void defaultServiceName() throws Exception {
-        WebClient.of(server.httpUri()).get("/ok").aggregate().join();
+        client.get("/ok").aggregate().join();
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo(FooService.class.getName());
@@ -86,7 +106,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void customServiceNameWithClass() throws Exception {
-        WebClient.of(server.httpUri()).get("/serviceName/foo").aggregate().join();
+        client.get("/serviceName/foo").aggregate().join();
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("MyBarService");
@@ -94,15 +114,28 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void customServiceNameWithMethod() throws Exception {
-        WebClient.of(server.httpUri()).get("/serviceName/bar").aggregate().join();
+        final AggregatedHttpResponse response = client.get("/serviceName/bar").aggregate().join();
 
+        assertThat(response.contentUtf8()).isEqualTo("OK");
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("SecuredBarService");
     }
 
+    @Test
+    void customServiceNameWithDecorator() throws Exception {
+        final AggregatedHttpResponse response = client.get("/decorated/foo").aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("DecoratedService");
+        assertThat(log.name()).isEqualTo(HttpMethod.GET.name());
+    }
+
     private static class FooService {
         @Get("/ok")
-        public String foo() {
+        public String foo(ServiceRequestContext ctx) {
+            assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
+                    .isEqualTo(FooService.class.getName());
             return "OK";
         }
 
@@ -122,7 +155,8 @@ class AnnotatedServiceRequestLogNameTest {
         @ServiceName("SecuredBarService")
         @Get("/bar")
         public String secured(ServiceRequestContext ctx) {
-            ctx.log();
+            assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
+                    .isEqualTo("SecuredBarService");
             return "OK";
         }
     }
