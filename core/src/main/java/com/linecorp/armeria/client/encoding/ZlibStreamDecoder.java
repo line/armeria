@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.encoding;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -87,6 +87,6 @@ class ZlibStreamDecoder implements StreamDecoder {
             return HttpData.empty();
         }
 
-        return new ByteBufHttpData(decoded, false);
+        return PooledHttpData.wrap(decoded);
     }
 }

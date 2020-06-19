@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -76,8 +76,8 @@ class HttpDecodedResponseTest {
 
     @Test
     void pooledPayload_unpooledDrain() {
-        final ByteBufHttpData payload = new ByteBufHttpData(
-                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
+        final PooledHttpData payload = PooledHttpData.wrap(
+                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD)).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, false);
@@ -99,8 +99,8 @@ class HttpDecodedResponseTest {
 
     @Test
     void pooledPayload_pooledDrain() {
-        final ByteBufHttpData payload = new ByteBufHttpData(
-                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
+        final PooledHttpData payload = PooledHttpData.wrap(
+                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD)).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, true);
@@ -117,8 +117,8 @@ class HttpDecodedResponseTest {
             future = decoded.drainAll();
         }
         return future.join().stream()
-                .filter(o -> o instanceof ByteBufHttpData)
-                .map(o -> ((ByteBufHttpData) o).content())
+                .filter(o -> o instanceof PooledHttpData)
+                .map(o -> ((PooledHttpData) o).content())
                 .findFirst()
                 .get();
     }

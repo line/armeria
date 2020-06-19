@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static java.util.Objects.requireNonNull;
 
@@ -33,8 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -96,7 +95,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private final DefaultClientRequestContext ctx;
     private final EndpointGroup endpointGroup;
-    private final HttpClient httpClient;
+    private final PooledHttpClient httpClient;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
     private final CallOptions callOptions;
@@ -123,7 +122,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     ArmeriaClientCall(
             DefaultClientRequestContext ctx,
             EndpointGroup endpointGroup,
-            HttpClient httpClient,
+            PooledHttpClient httpClient,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
             int maxOutboundMessageSizeBytes,
@@ -213,7 +212,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        res.subscribe(responseReader, ctx.eventLoop(), WITH_POOLED_OBJECTS);
+        res.subscribe(responseReader, ctx.eventLoop());
         res.whenComplete().handleAsync(responseReader, ctx.eventLoop());
         responseListener.onReady();
     }

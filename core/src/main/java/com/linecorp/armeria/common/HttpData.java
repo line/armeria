@@ -29,12 +29,10 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.util.ReferenceCountUtil;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
@@ -99,13 +97,12 @@ public interface HttpData extends HttpObject {
      * {@link ByteBuf#retain()} first.
      *
      * @return a new {@link HttpData}. {@link #empty()} if the readable bytes of {@code buf} is 0.
+     *
+     * @deprecated Use {@link PooledHttpData#wrap(ByteBuf)}.
      */
+    @Deprecated
     static HttpData wrap(ByteBuf buf) {
-        requireNonNull(buf, "buf");
-        if (!buf.isReadable()) {
-            return empty();
-        }
-        return new ByteBufHttpData(buf, false);
+        return PooledHttpData.wrap(buf);
     }
 
     /**
@@ -346,12 +343,6 @@ public interface HttpData extends HttpObject {
 
     /**
      * Returns a new {@link InputStream} that is sourced from this data.
-     *
-     * <p>Note, if this {@link HttpData} is pooled (e.g., it is the result of a call to
-     * {@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}), then this {@link InputStream} will
-     * increase the reference count of the underlying buffer. Make sure to call {@link InputStream#close()},
-     * usually using a try-with-resources invocation, to release this extra reference. And as usual, don't
-     * forget to call {@link ReferenceCountUtil#release(Object)} on this {@link HttpData} itself too.
      */
     default InputStream toInputStream() {
         return new FastByteArrayInputStream(array());
@@ -385,5 +376,12 @@ public interface HttpData extends HttpObject {
     /**
      * Returns a new {@link HttpData} whose HTTP/2 {@code endOfStream} flag is set.
      */
-    HttpData withEndOfStream();
+    default HttpData withEndOfStream() {
+        return withEndOfStream(true);
+    }
+
+    /**
+     * Returns a new {@link HttpData} whose HTTP/2 {@code endOfStream} flag is set to {@code endOfStream}.
+     */
+    HttpData withEndOfStream(boolean endOfStream);
 }

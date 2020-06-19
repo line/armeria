@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,11 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -85,7 +89,7 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
                         merged.writeBytes(data.array());
                     }
                 }
-                content = new ByteBufHttpData(merged, true);
+                content = PooledHttpData.wrap(merged).withEndOfStream();
             } else {
                 final byte[] merged = new byte[contentLength];
                 for (int i = 0, offset = 0; i < contentList.size(); i++) {

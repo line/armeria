@@ -61,6 +61,8 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -74,7 +76,6 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -352,20 +353,20 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
-            if (cause != null) {
-                final HttpResponse errorRes;
-                if (ctx.config().verboseResponses()) {
-                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                                               MediaType.PLAIN_TEXT_UTF_8,
-                                               Exceptions.traceText(cause));
-                } else {
-                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-                responseFuture.complete(errorRes);
-                return null;
-            }
-
+        PooledHttpRequest.of(req).aggregateWithPooledObjects(
+                ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
+                    if (cause != null) {
+                        final HttpResponse errorRes;
+                        if (ctx.config().verboseResponses()) {
+                            errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                                       MediaType.PLAIN_TEXT_UTF_8,
+                                                       Exceptions.traceText(cause));
+                        } else {
+                            errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                        }
+                        responseFuture.complete(errorRes);
+                        return null;
+                    }
             decodeAndInvoke(ctx, aReq, serializationFormat, responseFuture);
             return null;
         }).exceptionally(CompletionActions::log);
@@ -671,7 +672,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
 
-            final HttpData encoded = new ByteBufHttpData(buf, false);
+            final HttpData encoded = PooledHttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {
@@ -718,7 +719,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
 
-            final HttpData encoded = new ByteBufHttpData(buf, false);
+            final HttpData encoded = PooledHttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {

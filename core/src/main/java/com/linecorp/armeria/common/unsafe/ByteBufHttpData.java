@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,35 +14,47 @@
  * under the License.
  */
 
-package com.linecorp.armeria.unsafe;
+package com.linecorp.armeria.common.unsafe;
 
 import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AbstractHttpData;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 
 /**
  * An {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
  * general use.
+ *
+ * @deprecated Use {@link PooledHttpData}.
  */
-@UnstableApi
-public final class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
+@Deprecated
+public final class ByteBufHttpData extends AbstractHttpData implements PooledHttpData {
+
+    private static final AtomicIntegerFieldUpdater<ByteBufHttpData>
+            closedUpdater = AtomicIntegerFieldUpdater.newUpdater(ByteBufHttpData.class, "closed");
+
+    static final ByteBufHttpData EMPTY = new ByteBufHttpData(
+            new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT), false);
 
     private final ByteBuf buf;
     private final boolean endOfStream;
     private final int length;
+
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `closedUpdater`
+    private volatile int closed;
 
     /**
      * Constructs a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
@@ -169,11 +181,22 @@ public final class ByteBufHttpData extends AbstractHttpData implements ByteBufHo
 
     @Override
     public InputStream toInputStream() {
-        return new ByteBufInputStream(buf.retainedDuplicate(), true);
+        return new ByteBufInputStream(buf.duplicate(), false);
     }
 
     @Override
-    public ByteBufHttpData withEndOfStream() {
-        return new ByteBufHttpData(buf, true);
+    public ByteBufHttpData withEndOfStream(boolean endOfStream) {
+        if (endOfStream == this.endOfStream) {
+            return this;
+        }
+        return new ByteBufHttpData(buf, endOfStream);
+    }
+
+    @Override
+    public void close() {
+        if (!closedUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
+        release();
     }
 }

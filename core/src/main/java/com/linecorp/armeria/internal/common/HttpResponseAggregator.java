@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -26,10 +26,16 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
+public final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
 
     @Nullable
     private List<ResponseHeaders> informationals; // needs aggregation as well
@@ -39,8 +45,8 @@ final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpR
 
     private boolean receivedMessageHeaders;
 
-    HttpResponseAggregator(CompletableFuture<AggregatedHttpResponse> future,
-                           @Nullable ByteBufAllocator alloc) {
+    public HttpResponseAggregator(CompletableFuture<AggregatedHttpResponse> future,
+                                  @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         trailers = HttpHeaders.of();
     }

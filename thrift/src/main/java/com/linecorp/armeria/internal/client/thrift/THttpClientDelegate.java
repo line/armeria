@@ -45,7 +45,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -60,18 +60,20 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.unsafe.PooledAggregatedHttpResponse;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
 import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.util.ReferenceCountUtil;
 
 final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpResponse, RpcRequest, RpcResponse>
         implements RpcClient {
@@ -85,14 +87,14 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
 
     THttpClientDelegate(HttpClient httpClient,
                         SerializationFormat serializationFormat) {
-        super(httpClient);
+        super(PooledHttpClient.of(httpClient));
         this.serializationFormat = serializationFormat;
         protocolFactory = ThriftProtocolFactories.get(serializationFormat);
         mediaType = serializationFormat.mediaType();
     }
 
     @Override
-    public RpcResponse execute(ClientRequestContext ctx, RpcRequest call) throws Exception {
+    public RpcResponse execute(ClientRequestContext ctx, RpcRequest call) {
         final int seqId = nextSeqId.incrementAndGet();
         final String method = call.method();
         final List<Object> args = call.params();
@@ -139,13 +141,16 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                                   .authority(endpoint != null ? endpoint.authority() : "UNKNOWN")
                                   .contentType(mediaType)
                                   .build(),
-                    new ByteBufHttpData(buf, true));
+                    PooledHttpData.wrap(buf).withEndOfStream());
 
             ctx.updateRequest(httpReq);
             ctx.logBuilder().deferResponseContent();
 
-            final CompletableFuture<AggregatedHttpResponse> future =
-                    unwrap().execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
+            assert unwrap() instanceof PooledHttpClient;
+            final PooledHttpClient client = (PooledHttpClient) unwrap();
+            final CompletableFuture<PooledAggregatedHttpResponse> future =
+                    client.execute(ctx, PooledHttpRequest.of(httpReq))
+                          .aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
 
             future.handle((res, cause) -> {
                 if (cause != null) {
@@ -153,7 +158,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                     return null;
                 }
 
-                try {
+                try (SafeCloseable unused = res) {
                     final HttpStatus status = res.status();
                     if (status.code() != HttpStatus.OK.code()) {
                         handlePreDecodeException(
@@ -167,8 +172,6 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                     } catch (Throwable t) {
                         handlePreDecodeException(ctx, reply, func, t);
                     }
-                } finally {
-                    ReferenceCountUtil.safeRelease(res.content());
                 }
 
                 return null;

@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 
@@ -49,9 +50,9 @@ class GrpcClientUnwrapTest {
         // The outermost decorator of the client must be returned,
         // because the search begins from outside to inside.
         // In the current setup, the outermost `Unwrappable` and `Client` are
-        // `ArmeriaChannel` and `RetryingClient` respectively.
+        // `ArmeriaChannel` and `PooledHttpClient` respectively.
         assertThat(Clients.unwrap(client, Unwrappable.class)).isInstanceOf(ArmeriaChannel.class);
-        assertThat(Clients.unwrap(client, Client.class)).isInstanceOf(RetryingClient.class);
+        assertThat(Clients.unwrap(client, Client.class)).isInstanceOf(PooledHttpClient.class);
 
         assertThat(Clients.unwrap(client, DecodingClient.class)).isNull();
     }
