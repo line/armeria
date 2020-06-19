@@ -116,8 +116,8 @@ class AnnotatedServiceRequestLogNameTest {
     @Test
     void customServiceNameWithMethod() throws Exception {
         final AggregatedHttpResponse response = client.get("/serviceName/bar").aggregate().join();
-
         assertThat(response.contentUtf8()).isEqualTo("OK");
+
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("SecuredBarService");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
@@ -126,8 +126,8 @@ class AnnotatedServiceRequestLogNameTest {
     @Test
     void customServiceNameWithDecorator() throws Exception {
         final AggregatedHttpResponse response = client.get("/decorated/foo").aggregate().join();
-
         assertThat(response.contentUtf8()).isEqualTo("OK");
+
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("DecoratedService");
         assertThat(log.name()).isEqualTo(HttpMethod.GET.name());
