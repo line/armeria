@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.unsafe;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
@@ -38,7 +40,7 @@ public abstract class SimplePooledDecoratingHttpService extends SimpleDecorating
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
     protected SimplePooledDecoratingHttpService(HttpService delegate) {
-        super(PooledHttpService.of(delegate));
+        super(PooledHttpService.of(requireNonNull(delegate, "delegate")));
     }
 
     @Override
@@ -48,7 +50,7 @@ public abstract class SimplePooledDecoratingHttpService extends SimpleDecorating
 
     @Override
     public final PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
-        return PooledHttpResponse.of(serve(delegate(), ctx, req));
+        return PooledHttpResponse.of(serve((PooledHttpService) unwrap(), ctx, req));
     }
 
     /**

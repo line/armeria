@@ -44,7 +44,7 @@ class PooledWebClientTest {
     public static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/hello", ((ctx, req) -> HttpResponse.of("payload")));
+            sb.service("/hello", (ctx, req) -> HttpResponse.of("payload"));
         }
     };
 
@@ -75,7 +75,7 @@ class PooledWebClientTest {
     void aggregateWithPooledObjects() {
         final EventLoop executor = eventLoop.get();
         client.get("/hello").aggregateWithPooledObjects().thenAccept(
-                (response) -> {
+                response -> {
                     try (PooledAggregatedHttpResponse unused = response) {
                         assertThat(response.contentUtf8()).isEqualTo("payload");
                         // If the aggregator did not subscribe for pooled buffers, this will be a heap buffer.
@@ -91,7 +91,7 @@ class PooledWebClientTest {
     void aggregateWithPooledObjects_eventExecutor() {
         final EventLoop executor = eventLoop.get();
         client.get("/hello").aggregateWithPooledObjects(executor).thenAccept(
-                (response) -> {
+                response -> {
                     try (PooledAggregatedHttpResponse unused = response) {
                         assertThat(response.contentUtf8()).isEqualTo("payload");
                         // If the aggregator did not subscribe for pooled buffers, this will be a heap buffer.
@@ -107,7 +107,7 @@ class PooledWebClientTest {
     void aggregateWithPooledObjects_eventExecutorAndAlloc() {
         final EventLoop executor = eventLoop.get();
         client.get("/hello").aggregateWithPooledObjects(executor, alloc).thenAccept(
-                (response) -> {
+                response -> {
                     try (PooledAggregatedHttpResponse unused = response) {
                         assertThat(response.contentUtf8()).isEqualTo("payload");
                         // If the aggregator did not subscribe for pooled buffers, this will be a heap buffer.

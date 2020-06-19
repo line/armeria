@@ -34,12 +34,12 @@ final class DefaultPooledHttpService extends AbstractUnwrappable<HttpService> im
     @Override
     public PooledHttpResponse serve(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         // Always a wrapped non-pooled service, make sure it gets a normal request.
-        assert !(delegate() instanceof PooledHttpService);
-        return PooledHttpResponse.of(delegate().serve(ctx, req));
+        assert !(unwrap() instanceof PooledHttpService);
+        return PooledHttpResponse.of(unwrap().serve(ctx, req));
     }
 
     @Override
     public boolean shouldCachePath(String path, @Nullable String query, Route route) {
-        return delegate().shouldCachePath(path, query, route);
+        return unwrap().shouldCachePath(path, query, route);
     }
 }

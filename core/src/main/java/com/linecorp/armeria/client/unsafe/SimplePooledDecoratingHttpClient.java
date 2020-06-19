@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.unsafe;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -36,17 +38,17 @@ public abstract class SimplePooledDecoratingHttpClient extends SimpleDecoratingH
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     protected SimplePooledDecoratingHttpClient(HttpClient delegate) {
-        super(PooledHttpClient.of(delegate));
+        super(PooledHttpClient.of(requireNonNull(delegate, "delegate")));
     }
 
     @Override
     public final HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        return execute(delegate(), ctx, PooledHttpRequest.of(req));
+        return execute((PooledHttpClient) unwrap(), ctx, PooledHttpRequest.of(req));
     }
 
     @Override
     public final PooledHttpResponse execute(ClientRequestContext ctx, PooledHttpRequest req) throws Exception {
-        return PooledHttpResponse.of(execute(delegate(), ctx, req));
+        return PooledHttpResponse.of(execute((PooledHttpClient) unwrap(), ctx, req));
     }
 
     /**
