@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.time.Period;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -143,6 +144,7 @@ public class AnnotatedDocServiceTest {
         addBeanMethodInfo(methodInfos);
         addMultiMethodInfo(methodInfos);
         addJsonMethodInfo(methodInfos);
+        addPeriodMethodInfo(methodInfos);
         final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
@@ -307,6 +309,19 @@ public class AnnotatedDocServiceTest {
         methods.add(methodInfo2);
     }
 
+    private static void addPeriodMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/period")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(
+                FieldInfo.builder("period", TypeSignature.ofBase("Period"))
+                         .requirement(REQUIRED).location(QUERY).build());
+        final MethodInfo methodInfo = new MethodInfo(
+                "period", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
     private static void addExamples(JsonNode json) {
         // Add the global example.
         ((ArrayNode) json.get("exampleHttpHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
@@ -468,6 +483,11 @@ public class AnnotatedDocServiceTest {
         @Put
         public String json(JsonRequest request) {
            return request.bar;
+        }
+
+        @Get("/period")
+        public HttpResponse period(@Param Period period) {
+            return HttpResponse.of(200);
         }
     }
 

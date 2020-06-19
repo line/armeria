@@ -53,10 +53,11 @@ class RequestMetricSupportTest {
         //                 As a result, `activeRequestPrefix()` will be invoked only after
         //                 a request is completed, i.e. active request count will be inaccurate,
         //                 especially for streaming requests.
-        ctx.logBuilder().name("POST");
+        ctx.logBuilder().name("FooService", "POST");
 
         Map<String, Double> measurements = measureAll(registry);
-        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST}", 1.0);
+        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=FooService}",
+                                               1.0);
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestLength(123);
@@ -68,21 +69,34 @@ class RequestMetricSupportTest {
 
         measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{method=POST}", 0.0)
-                .containsEntry("foo.requests#count{http.status=200,method=POST,result=success}", 1.0)
-                .containsEntry("foo.requests#count{http.status=200,method=POST,result=failure}", 0.0)
-                .containsEntry("foo.connection.acquisition.duration#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("foo.dns.resolution.duration#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("foo.socket.connect.duration#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("foo.pending.acquisition.duration#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("foo.request.length#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("foo.request.length#total{http.status=200,method=POST}", 123.0)
-                .containsEntry("foo.response.duration#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("foo.response.length#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("foo.response.length#total{http.status=200,method=POST}", 456.0)
-                .containsEntry("foo.total.duration#count{http.status=200,method=POST}", 1.0)
+                .containsEntry("foo.active.requests#value{method=POST,service=FooService}", 0.0)
+                .containsEntry("foo.requests#count{http.status=200,method=POST,result=success," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.requests#count{http.status=200,method=POST,result=failure," +
+                               "service=FooService}", 0.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.dns.resolution.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.socket.connect.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.pending.acquisition.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.request.length#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.request.length#total{http.status=200,method=POST," +
+                               "service=FooService}", 123.0)
+                .containsEntry("foo.response.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.response.length#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
+                .containsEntry("foo.response.length#total{http.status=200,method=POST," +
+                               "service=FooService}", 456.0)
+                .containsEntry("foo.total.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
                 // This metric is inserted only when RetryingClient is Used.
-                .doesNotContainKey("foo.actual.requests#count{http.status=200,method=POST}");
+                .doesNotContainKey("foo.actual.requests#count{http.status=200,method=POST," +
+                                   "service=FooService}");
     }
 
     private static ClientConnectionTimings newConnectionTimings() {
@@ -231,6 +245,7 @@ class RequestMetricSupportTest {
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
                                      .build();
+        final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
@@ -244,20 +259,20 @@ class RequestMetricSupportTest {
 
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{hostname.pattern=*,method=POST," +
-                               "route=exact:/foo}", 0.0)
+                .containsEntry("foo.active.requests#value{hostname.pattern=*,method=POST," + serviceTag + '}',
+                               0.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "result=success,route=exact:/foo}", 0.0)
+                               "result=success," + serviceTag + '}', 0.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "result=failure,route=exact:/foo}", 1.0)
+                               "result=failure," + serviceTag + '}', 1.0)
                 .containsEntry("foo.timeouts#count{cause=RequestTimeoutException,hostname.pattern=*," +
-                               "http.status=503,method=POST,route=exact:/foo}", 1.0)
+                               "http.status=503,method=POST," + serviceTag + '}', 1.0)
                 .containsEntry("foo.response.duration#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "route=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.response.length#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "route=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.total.duration#count{hostname.pattern=*,http.status=503,method=POST," +
-                               "route=exact:/foo}", 1.0);
+                               serviceTag + '}', 1.0);
     }
 
     @Test
@@ -272,9 +287,10 @@ class RequestMetricSupportTest {
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
 
-        ctx.logBuilder().name("baz");
+        ctx.logBuilder().name("BarService", "baz");
 
-        assertThat(measureAll(registry)).containsEntry("bar.active.requests#value{method=baz}", 1.0);
+        assertThat(measureAll(registry))
+                .containsEntry("bar.active.requests#value{method=baz,service=BarService}", 1.0);
     }
 
     @Test
@@ -284,6 +300,7 @@ class RequestMetricSupportTest {
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
                                      .build();
+        final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET, MeterIdPrefixFunction.ofDefault("foo"), true);
         sctx.logBuilder().endRequest();
@@ -313,16 +330,16 @@ class RequestMetricSupportTest {
                 .containsEntry("bar.total.duration#count{http.status=200,method=POST}", 1.0)
                 // serviceRequestContext
                 .containsEntry("foo.active.requests#value{hostname.pattern=*,method=POST," +
-                               "route=exact:/foo}", 0.0)
+                               serviceTag + '}', 0.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "result=success,route=exact:/foo}", 1.0)
+                               "result=success," + serviceTag + '}', 1.0)
                 .containsEntry("foo.requests#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "result=failure,route=exact:/foo}", 0.0)
+                               "result=failure," + serviceTag + '}', 0.0)
                 .containsEntry("foo.response.duration#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "route=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.response.length#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "route=exact:/foo}", 1.0)
+                               serviceTag + '}', 1.0)
                 .containsEntry("foo.total.duration#count{hostname.pattern=*,http.status=200,method=POST," +
-                               "route=exact:/foo}", 1.0);
+                               serviceTag + '}', 1.0);
     }
 }

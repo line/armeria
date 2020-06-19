@@ -24,6 +24,17 @@ import static org.reflections.ReflectionUtils.getAllMethods;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -97,8 +108,8 @@ class AnnotatedValueResolverTest {
         request = HttpRequest.of(originalHeaders);
 
         final RoutingResultBuilder builder = RoutingResult.builder()
-                                                         .path(path)
-                                                         .query(query);
+                                                          .path(path)
+                                                          .query(query);
         pathParams.forEach(param -> builder.rawParam(param, param));
 
         context = ServiceRequestContext.builder(request)
@@ -361,22 +372,23 @@ class AnnotatedValueResolverTest {
 
     static class Service {
         void method1(@Param String var1,
-                            @Param String param1,
-                            @Param @Default("1") int param2,
-                            @Param @Default("1") List<Integer> param3,
-                            @Header List<String> header1,
-                            @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
-                            @Header String header2,
-                            @Header @Default("defaultValue") List<String> header3,
-                            @Header @Default("defaultValue") String header4,
-                            @Param CaseInsensitiveEnum enum1,
-                            @Param @Default("enum2") CaseInsensitiveEnum enum2,
-                            @Param("sensitive") CaseSensitiveEnum enum3,
-                            @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
-                            ServiceRequestContext ctx,
-                            HttpRequest request,
-                            @RequestObject OuterBean outerBean,
-                            Cookies cookies) {}
+                     @Param String param1,
+                     @Param @Default("1") int param2,
+                     @Param @Default("1") List<Integer> param3,
+                     @Header List<String> header1,
+                     @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
+                     @Header String header2,
+                     @Header @Default("defaultValue") List<String> header3,
+                     @Header @Default("defaultValue") String header4,
+                     @Param CaseInsensitiveEnum enum1,
+                     @Param @Default("enum2") CaseInsensitiveEnum enum2,
+                     @Param("sensitive") CaseSensitiveEnum enum3,
+                     @Param("SENSITIVE") @Default("SENSITIVE") CaseSensitiveEnum enum4,
+                     @Param @Default("P1Y2M3W4D") Period period,
+                     ServiceRequestContext ctx,
+                     HttpRequest request,
+                     @RequestObject OuterBean outerBean,
+                     Cookies cookies) {}
 
         void dummy1() {}
 
@@ -387,6 +399,18 @@ class AnnotatedValueResolverTest {
 
         @Get("/r3/:var1")
         void redundant3(@Param Optional<String> var1) {}
+
+        void time(@Param @Default("PT20.345S") Duration duration,
+                  @Param @Default("2007-12-03T10:15:30.00Z") Instant instant,
+                  @Param @Default("2007-12-03") LocalDate localDate,
+                  @Param @Default("2007-12-03T10:15:30") LocalDateTime localDateTime,
+                  @Param @Default("10:15") LocalTime localTime,
+                  @Param @Default("2007-12-03T10:15:30+01:00") OffsetDateTime offsetDateTime,
+                  @Param @Default("10:15:30+01:00") OffsetTime offsetTime,
+                  @Param @Default("P1Y2M3W4D") Period period,
+                  @Param @Default("2007-12-03T10:15:30+01:00[Europe/Paris]") ZonedDateTime zonedDateTime,
+                  @Param @Default("America/New_York") ZoneId zoneId,
+                  @Param @Default("+01:00:00") ZoneOffset zoneOffset) {}
     }
 
     interface Bean {
@@ -423,6 +447,28 @@ class AnnotatedValueResolverTest {
         OuterBean outerBean();
 
         Cookies cookies();
+
+        Duration duration();
+
+        Instant instant();
+
+        LocalDate localDate();
+
+        LocalDateTime localDateTime();
+
+        LocalTime localTime();
+
+        OffsetDateTime offsetDateTime();
+
+        OffsetTime offsetTime();
+
+        Period period();
+
+        ZonedDateTime zonedDateTime();
+
+        ZoneId zoneId();
+
+        ZoneOffset zoneOffset();
     }
 
     static class FieldBean implements Bean {
@@ -479,6 +525,50 @@ class AnnotatedValueResolverTest {
         OuterBean outerBean;
 
         Cookies cookies;
+
+        @Param
+        @Default("PT20.345S")
+        Duration duration;
+
+        @Param
+        @Default("2007-12-03T10:15:30.00Z")
+        Instant instant;
+
+        @Param
+        @Default("2007-12-03")
+        LocalDate localDate;
+
+        @Param
+        @Default("2007-12-03T10:15:30")
+        LocalDateTime localDateTime;
+
+        @Param
+        @Default("10:15")
+        LocalTime localTime;
+
+        @Param
+        @Default("2007-12-03T10:15:30+01:00")
+        OffsetDateTime offsetDateTime;
+
+        @Param
+        @Default("10:15:30+01:00")
+        OffsetTime offsetTime;
+
+        @Param
+        @Default("P1Y2M3W4D")
+        Period period;
+
+        @Param
+        @Default("2007-12-03T10:15:30+01:00[Europe/Paris]")
+        ZonedDateTime zonedDateTime;
+
+        @Param
+        @Default("America/New_York")
+        ZoneId zoneId;
+
+        @Param
+        @Default("+01:00:00")
+        ZoneOffset zoneOffset;
 
         String notInjected1;
 
@@ -566,6 +656,61 @@ class AnnotatedValueResolverTest {
         public Cookies cookies() {
             return cookies;
         }
+
+        @Override
+        public Duration duration() {
+            return duration;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+
+        @Override
+        public LocalDate localDate() {
+            return localDate;
+        }
+
+        @Override
+        public LocalDateTime localDateTime() {
+            return localDateTime;
+        }
+
+        @Override
+        public LocalTime localTime() {
+            return localTime;
+        }
+
+        @Override
+        public OffsetDateTime offsetDateTime() {
+            return offsetDateTime;
+        }
+
+        @Override
+        public OffsetTime offsetTime() {
+            return offsetTime;
+        }
+
+        @Override
+        public Period period() {
+            return period;
+        }
+
+        @Override
+        public ZonedDateTime zonedDateTime() {
+            return zonedDateTime;
+        }
+
+        @Override
+        public ZoneId zoneId() {
+            return zoneId;
+        }
+
+        @Override
+        public ZoneOffset zoneOffset() {
+            return zoneOffset;
+        }
     }
 
     static class ConstructorBean implements Bean {
@@ -586,6 +731,17 @@ class AnnotatedValueResolverTest {
         final HttpRequest request;
         final OuterBean outerBean;
         final Cookies cookies;
+        final Duration duration;
+        final Instant instant;
+        final LocalDate localDate;
+        final LocalDateTime localDateTime;
+        final LocalTime localTime;
+        final OffsetDateTime offsetDateTime;
+        final OffsetTime offsetTime;
+        final Period period;
+        final ZonedDateTime zonedDateTime;
+        final ZoneId zoneId;
+        final ZoneOffset zoneOffset;
 
         ConstructorBean(@Param String var1,
                         @Param String param1,
@@ -603,7 +759,18 @@ class AnnotatedValueResolverTest {
                         ServiceRequestContext ctx,
                         HttpRequest request,
                         @RequestObject OuterBean outerBean,
-                        Cookies cookies) {
+                        Cookies cookies,
+                        @Param @Default("PT20.345S") Duration duration,
+                        @Param @Default("2007-12-03T10:15:30.00Z") Instant instant,
+                        @Param @Default("2007-12-03") LocalDate localDate,
+                        @Param @Default("2007-12-03T10:15:30") LocalDateTime localDateTime,
+                        @Param @Default("10:15") LocalTime localTime,
+                        @Param @Default("2007-12-03T10:15:30+01:00") OffsetDateTime offsetDateTime,
+                        @Param @Default("10:15:30+01:00") OffsetTime offsetTime,
+                        @Param @Default("P1Y2M3W4D") Period period,
+                        @Param @Default("2007-12-03T10:15:30+01:00[Europe/Paris]") ZonedDateTime zonedDateTime,
+                        @Param @Default("America/New_York") ZoneId zoneId,
+                        @Param @Default("+01:00:00") ZoneOffset zoneOffset) {
             this.var1 = var1;
             this.param1 = param1;
             this.param2 = param2;
@@ -621,6 +788,17 @@ class AnnotatedValueResolverTest {
             this.request = request;
             this.outerBean = outerBean;
             this.cookies = cookies;
+            this.duration = duration;
+            this.instant = instant;
+            this.localDate = localDate;
+            this.localDateTime = localDateTime;
+            this.localTime = localTime;
+            this.offsetDateTime = offsetDateTime;
+            this.offsetTime = offsetTime;
+            this.period = period;
+            this.zonedDateTime = zonedDateTime;
+            this.zoneId = zoneId;
+            this.zoneOffset = zoneOffset;
         }
 
         @Override
@@ -707,6 +885,61 @@ class AnnotatedValueResolverTest {
         public Cookies cookies() {
             return cookies;
         }
+
+        @Override
+        public Duration duration() {
+            return duration;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+
+        @Override
+        public LocalDate localDate() {
+            return localDate;
+        }
+
+        @Override
+        public LocalDateTime localDateTime() {
+            return localDateTime;
+        }
+
+        @Override
+        public LocalTime localTime() {
+            return localTime;
+        }
+
+        @Override
+        public OffsetDateTime offsetDateTime() {
+            return offsetDateTime;
+        }
+
+        @Override
+        public OffsetTime offsetTime() {
+            return offsetTime;
+        }
+
+        @Override
+        public Period period() {
+            return period;
+        }
+
+        @Override
+        public ZonedDateTime zonedDateTime() {
+            return zonedDateTime;
+        }
+
+        @Override
+        public ZoneId zoneId() {
+            return zoneId;
+        }
+
+        @Override
+        public ZoneOffset zoneOffset() {
+            return zoneOffset;
+        }
     }
 
     static class SetterBean implements Bean {
@@ -727,6 +960,17 @@ class AnnotatedValueResolverTest {
         HttpRequest request;
         OuterBean outerBean;
         Cookies cookies;
+        Duration duration;
+        Instant instant;
+        LocalDate localDate;
+        LocalDateTime localDateTime;
+        LocalTime localTime;
+        OffsetDateTime offsetDateTime;
+        OffsetTime offsetTime;
+        Period period;
+        ZonedDateTime zonedDateTime;
+        ZoneId zoneId;
+        ZoneOffset zoneOffset;
 
         @Param
         void setVar1(String var1) {
@@ -801,6 +1045,52 @@ class AnnotatedValueResolverTest {
             this.cookies = cookies;
         }
 
+        public void setDuration(@Param @Default("PT20.345S") Duration duration) {
+            this.duration = duration;
+        }
+
+        public void setInstant(@Param @Default("2007-12-03T10:15:30.00Z") Instant instant) {
+            this.instant = instant;
+        }
+
+        public void setLocalDate(@Param @Default("2007-12-03") LocalDate localDate) {
+            this.localDate = localDate;
+        }
+
+        public void setLocalDateTime(@Param @Default("2007-12-03T10:15:30") LocalDateTime localDateTime) {
+            this.localDateTime = localDateTime;
+        }
+
+        public void setLocalTime(@Param @Default("10:15") LocalTime localTime) {
+            this.localTime = localTime;
+        }
+
+        public void setOffsetDateTime(
+                @Param @Default("2007-12-03T10:15:30+01:00") OffsetDateTime offsetDateTime) {
+            this.offsetDateTime = offsetDateTime;
+        }
+
+        public void setOffsetTime(@Param @Default("10:15:30+01:00") OffsetTime offsetTime) {
+            this.offsetTime = offsetTime;
+        }
+
+        void setPeriod(@Param @Default("P1Y2M3W4D") Period period) {
+            this.period = period;
+        }
+
+        public void setZonedDateTime(
+                @Param @Default("2007-12-03T10:15:30+01:00[Europe/Paris]") ZonedDateTime zonedDateTime) {
+            this.zonedDateTime = zonedDateTime;
+        }
+
+        public void setZoneId(@Param @Default("America/New_York") ZoneId zoneId) {
+            this.zoneId = zoneId;
+        }
+
+        public void setZoneOffset(@Param @Default("+01:00:00") ZoneOffset zoneOffset) {
+            this.zoneOffset = zoneOffset;
+        }
+
         @Override
         public String var1() {
             return var1;
@@ -885,6 +1175,61 @@ class AnnotatedValueResolverTest {
         public Cookies cookies() {
             return cookies;
         }
+
+        @Override
+        public Duration duration() {
+            return duration;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+
+        @Override
+        public LocalDate localDate() {
+            return localDate;
+        }
+
+        @Override
+        public LocalDateTime localDateTime() {
+            return localDateTime;
+        }
+
+        @Override
+        public LocalTime localTime() {
+            return localTime;
+        }
+
+        @Override
+        public OffsetDateTime offsetDateTime() {
+            return offsetDateTime;
+        }
+
+        @Override
+        public OffsetTime offsetTime() {
+            return offsetTime;
+        }
+
+        @Override
+        public Period period() {
+            return period;
+        }
+
+        @Override
+        public ZonedDateTime zonedDateTime() {
+            return zonedDateTime;
+        }
+
+        @Override
+        public ZoneId zoneId() {
+            return zoneId;
+        }
+
+        @Override
+        public ZoneOffset zoneOffset() {
+            return zoneOffset;
+        }
     }
 
     static class MixedBean implements Bean {
@@ -905,6 +1250,17 @@ class AnnotatedValueResolverTest {
         HttpRequest request;
         final OuterBean outerBean;
         final Cookies cookies;
+        final Duration duration;
+        final Instant instant;
+        final LocalDate localDate;
+        final LocalDateTime localDateTime;
+        final LocalTime localTime;
+        final OffsetDateTime offsetDateTime;
+        final OffsetTime offsetTime;
+        final Period period;
+        final ZonedDateTime zonedDateTime;
+        final ZoneId zoneId;
+        final ZoneOffset zoneOffset;
 
         MixedBean(@Param String var1,
                   @Param String param1,
@@ -915,7 +1271,18 @@ class AnnotatedValueResolverTest {
                   @Param("sensitive") CaseSensitiveEnum enum3,
                   ServiceRequestContext ctx,
                   @RequestObject OuterBean outerBean,
-                  Cookies cookies) {
+                  Cookies cookies,
+                  @Param @Default("PT20.345S") Duration duration,
+                  @Param @Default("2007-12-03T10:15:30.00Z") Instant instant,
+                  @Param @Default("2007-12-03") LocalDate localDate,
+                  @Param @Default("2007-12-03T10:15:30") LocalDateTime localDateTime,
+                  @Param @Default("10:15") LocalTime localTime,
+                  @Param @Default("2007-12-03T10:15:30+01:00") OffsetDateTime offsetDateTime,
+                  @Param @Default("10:15:30+01:00") OffsetTime offsetTime,
+                  @Param @Default("P1Y2M3W4D") Period period,
+                  @Param @Default("2007-12-03T10:15:30+01:00[Europe/Paris]") ZonedDateTime zonedDateTime,
+                  @Param @Default("America/New_York") ZoneId zoneId,
+                  @Param @Default("+01:00:00") ZoneOffset zoneOffset) {
             this.var1 = var1;
             this.param1 = param1;
             this.header1 = header1;
@@ -926,6 +1293,17 @@ class AnnotatedValueResolverTest {
             this.ctx = ctx;
             this.outerBean = outerBean;
             this.cookies = cookies;
+            this.duration = duration;
+            this.instant = instant;
+            this.localDate = localDate;
+            this.localDateTime = localDateTime;
+            this.localTime = localTime;
+            this.offsetDateTime = offsetDateTime;
+            this.offsetTime = offsetTime;
+            this.period = period;
+            this.zonedDateTime = zonedDateTime;
+            this.zoneId = zoneId;
+            this.zoneOffset = zoneOffset;
         }
 
         void setParam2(@Param @Default("1") int param2) {
@@ -1039,6 +1417,61 @@ class AnnotatedValueResolverTest {
         @Override
         public Cookies cookies() {
             return cookies;
+        }
+
+        @Override
+        public Duration duration() {
+            return duration;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+
+        @Override
+        public LocalDate localDate() {
+            return localDate;
+        }
+
+        @Override
+        public LocalDateTime localDateTime() {
+            return localDateTime;
+        }
+
+        @Override
+        public LocalTime localTime() {
+            return localTime;
+        }
+
+        @Override
+        public OffsetDateTime offsetDateTime() {
+            return offsetDateTime;
+        }
+
+        @Override
+        public OffsetTime offsetTime() {
+            return offsetTime;
+        }
+
+        @Override
+        public Period period() {
+            return period;
+        }
+
+        @Override
+        public ZonedDateTime zonedDateTime() {
+            return zonedDateTime;
+        }
+
+        @Override
+        public ZoneId zoneId() {
+            return zoneId;
+        }
+
+        @Override
+        public ZoneOffset zoneOffset() {
+            return zoneOffset;
         }
     }
 

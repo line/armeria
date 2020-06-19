@@ -181,7 +181,6 @@ class ArmeriaHttpUtilTest {
                                           .build();
 
         final Http2Headers out = toNettyHttp2ClientHeader(in);
-        System.err.println(out.getAll(HttpHeaderNames.COOKIE));
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
     }

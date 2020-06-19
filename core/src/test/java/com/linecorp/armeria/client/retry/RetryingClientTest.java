@@ -63,6 +63,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -155,6 +156,17 @@ class RetryingClientTest {
                     } else {
                         return HttpResponse.of("Succeeded after retry");
                     }
+                }
+            });
+
+            sb.service("/trailers-then-success", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    final boolean success = reqCount.getAndIncrement() >= 1;
+                    return HttpResponse.of(
+                            ResponseHeaders.of(200),
+                            HttpData.ofUtf8(success ? "Succeeded after retry" : "See the trailers"),
+                            HttpHeaders.of("grpc-status", success ? 0 : 3));
                 }
             });
 
@@ -297,6 +309,18 @@ class RetryingClientTest {
     void retryWhenStatusMatched() {
         final WebClient client = client(RetryRule.builder().onServerErrorStatus().onException().thenBackoff());
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
+    void retryWhenTrailerMatched() {
+        final WebClient client =
+                client(RetryRule.builder()
+                                .onResponseTrailers(trailers -> {
+                                    return trailers.getInt("grpc-status", -1) != 0;
+                                })
+                                .thenBackoff());
+        final AggregatedHttpResponse res = client.get("/trailers-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 

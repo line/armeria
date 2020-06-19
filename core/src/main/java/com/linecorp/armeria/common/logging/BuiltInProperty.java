@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -167,10 +168,28 @@ public enum BuiltInProperty {
      */
     REQ_METHOD("req.method", log -> log.context().method().name()),
     /**
-     * {@code "req.name"} - the human-readable name of the request, such as RPC method name or annotated
-     * service method name. This property is often used as a meter tag or distributed trace's span name.
+     * {@code "req.name"} - the human-readable name of the request, such as:
+     * <ul>
+     *   <li>gRPC - A capitalized method name defined in {@code io.grpc.MethodDescriptor}
+     *       (e.g, {@code GetItems})</li>
+     *   <li>Thrift and annotated service - a method name (e.g, {@code getItems})</li>
+     *   <li>{@link HttpService} - an HTTP method name</li>
+     * </ul>
+     * This property is often used as a meter tag or distributed trace's span name.
      */
     REQ_NAME("req.name", log -> log.isAvailable(RequestLogProperty.NAME) ? log.name() : null),
+    /**
+     * {@code "req.serviceName"} - the human-readable name of the service that served the request, such as:
+     * <ul>
+     *   <li>gRPC - a service name (e.g, {@code com.foo.GrpcService})</li>
+     *   <li>Thrift - a service type (e.g, {@code com.foo.ThriftService$AsyncIface} or
+     *       {@code com.foo.ThriftService$Iface})</li>
+     *   <li>{@link HttpService} and annotated service - an innermost class name</li>
+     * </ul>
+     * This property is often used as a meter tag or distributed trace's span name.
+     */
+    REQ_SERVICE_NAME("req.serviceName",
+                     log -> log.isAvailable(RequestLogProperty.NAME) ? log.serviceName() : null),
 
     /**
      * {@code "req.content_length"} - the byte-length of the request content. Unavailable if the current

@@ -36,6 +36,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Nullable
+    private String defaultServiceName;
+    @Nullable
     private String defaultLogName;
     @Nullable
     private Long requestTimeoutMillis;
@@ -48,6 +50,11 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
+
+    ServiceConfigSetters defaultServiceName(String defaultServiceName) {
+        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        return this;
+    }
 
     ServiceConfigSetters defaultLogName(String defaultLogName) {
         this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
@@ -118,14 +125,30 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
      */
     ServiceConfigBuilder toServiceConfigBuilder(Route route, HttpService service) {
         final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
+
+        final AnnotatedService annotatedService;
+        if (defaultServiceName == null || defaultLogName == null) {
+            annotatedService = service.as(AnnotatedService.class);
+        } else {
+            annotatedService = null;
+        }
+
+        if (defaultServiceName != null) {
+            serviceConfigBuilder.defaultServiceName(defaultServiceName);
+        } else {
+            if (annotatedService != null) {
+                serviceConfigBuilder.defaultServiceName(annotatedService.serviceName());
+            }
+        }
+
         if (defaultLogName != null) {
             serviceConfigBuilder.defaultLogName(defaultLogName);
         } else {
-            final AnnotatedService annotatedService = service.as(AnnotatedService.class);
             if (annotatedService != null) {
-                serviceConfigBuilder.defaultLogName(annotatedService.logName());
+                serviceConfigBuilder.defaultLogName(annotatedService.methodName());
             }
         }
+
         if (requestTimeoutMillis != null) {
             serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
         }

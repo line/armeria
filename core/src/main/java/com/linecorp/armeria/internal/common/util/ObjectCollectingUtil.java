@@ -42,6 +42,7 @@ public final class ObjectCollectingUtil {
      * The {@link Class} instance of {@code reactor.core.publisher.Mono} of
      * <a href="https://projectreactor.io/">Project Reactor</a>.
      */
+    @Nullable
     private static final Class<?> MONO_CLASS;
 
     static {
