@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -101,10 +103,11 @@ class VirtualHostBuilderTest {
         assertThat(defaultVirtualHost).isEqualTo(server.config().defaultVirtualHost());
     }
 
-    @Test
-    void virtualHostWithDefaultHostnameAndHostnamePattern() {
+    @ParameterizedTest
+    @CsvSource({ "foo, foo", "bar, *.bar", "a.baz, *.baz" })
+    void virtualHostWithDefaultHostnameAndHostnamePattern(String defaultHostname, String hostnamePattern) {
         final ServerBuilder sb = Server.builder();
-        final Server server = sb.virtualHost("foo", "*")
+        final Server server = sb.virtualHost(defaultHostname, hostnamePattern)
                                 .service("/test", (ctx, req) -> HttpResponse.of(OK))
                                 .and()
                                 .build();
@@ -113,8 +116,8 @@ class VirtualHostBuilderTest {
         assertThat(virtualHosts.size()).isEqualTo(2);
 
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
-        assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
+        assertThat(virtualHost.hostnamePattern()).isEqualTo(hostnamePattern);
+        assertThat(virtualHost.defaultHostname()).isEqualTo(defaultHostname);
 
         final VirtualHost defaultVirtualHost = virtualHosts.get(1);
         assertThat(defaultVirtualHost).isEqualTo(server.config().defaultVirtualHost());
@@ -132,7 +135,7 @@ class VirtualHostBuilderTest {
         assertThat(virtualHosts.size()).isEqualTo(2);
 
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*.foo");
         assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
     }
 

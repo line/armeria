@@ -54,7 +54,7 @@ import io.netty.util.Mapping;
  */
 public final class VirtualHost {
 
-    private static final Pattern HOSTNAME_PATTERN = Pattern.compile(
+    static final Pattern HOSTNAME_PATTERN = Pattern.compile(
             "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
     /**
