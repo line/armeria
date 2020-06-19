@@ -25,25 +25,14 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-/**
- * Url mapping
- * Mapping specification
- * In the web application deployment descriptor.
- */
 final class UrlMapper<T> {
     private final boolean singlePattern;
     private final List<Element<T>> elementList = new ArrayList<>();
 
-    /**
-     * Creates a new instance.
-     */
     UrlMapper(boolean singlePattern) {
         this.singlePattern = singlePattern;
     }
 
-    /**
-     * Add mapping.
-     */
     void addMapping(String urlPattern, T object, String objectName) {
         requireNonNull(urlPattern, "urlPattern");
         requireNonNull(object, "object");
@@ -65,9 +54,6 @@ final class UrlMapper<T> {
         }
     }
 
-    /**
-     * Gets a mapping object.
-     */
     @Nullable
     Element<T> getMapping(String absoluteUri) {
         requireNonNull(absoluteUri, "absoluteUri");
@@ -88,9 +74,6 @@ final class UrlMapper<T> {
                                 .orElse(null));
     }
 
-    /**
-     * Class element.
-     */
     static class Element<T> {
         String pattern;
         T object;
@@ -117,17 +100,11 @@ final class UrlMapper<T> {
             path = joiner.toString();
         }
 
-        /**
-         * Get object.
-         */
         T getObject() {
             return object;
         }
     }
 
-    /**
-     * Normalize path.
-     */
     static String normalizePath(String path) {
         requireNonNull(path, "path");
         if (!path.isEmpty() && path.charAt(path.length() - 1) == '/') {

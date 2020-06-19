@@ -24,9 +24,6 @@ import java.util.Arrays;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
-/**
- * Servlets output streams (wrapper classes) that control access to the flow.
- */
 final class DefaultServletOutputStream extends ServletOutputStream {
     private final DefaultServletHttpResponse response;
 

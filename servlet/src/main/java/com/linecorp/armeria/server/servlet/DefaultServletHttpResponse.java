@@ -50,9 +50,6 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 
 import io.netty.util.AsciiString;
 
-/**
- * Servlet response.
- */
 final class DefaultServletHttpResponse implements HttpServletResponse {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletHttpRequest.class);
 
@@ -66,14 +63,8 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     private ByteArrayOutputStream content = new ByteArrayOutputStream();
     private AtomicBoolean isWritten = new AtomicBoolean(false);
 
-    /**
-     * Using output stream flag.
-     */
     private boolean usingOutputStream;
 
-    /**
-     * Using writer flag.
-     */
     private boolean usingWriter;
 
     DefaultServletHttpResponse(DefaultServletContext servletContext, HttpResponseWriter responseWriter) {
@@ -87,16 +78,10 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         setCharacterEncoding(servletContext.getResponseCharacterEncoding());
     }
 
-    /**
-     * Get response writer.
-     */
     HttpResponseWriter getResponseWriter() {
         return responseWriter;
     }
 
-    /**
-     * Write data to response writer.
-     */
     void close() {
         if (isWritten.compareAndSet(false, true)) {
             if (responseWriter.tryWrite(headersBuilder.setObject(HttpHeaderNames.SET_COOKIE, cookies)
@@ -108,9 +93,6 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         }
     }
 
-    /**
-     * Write {@link HttpData} to client.
-     */
     void write(byte[] data) {
         requireNonNull(data, "data");
         try {

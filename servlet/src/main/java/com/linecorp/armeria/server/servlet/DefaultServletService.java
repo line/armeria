@@ -31,26 +31,16 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-/**
- * An {@link HttpService} which handles {@link HttpRequest} and forward to Servlet APIs,
- * and write {@link HttpResponse} to client.
- */
 final class DefaultServletService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletService.class);
 
     private final DefaultServletContext servletContext;
 
-    /**
-     * A class which helps a {@link DefaultServletService} have a {@link HttpServlet}.
-     */
     DefaultServletService(DefaultServletContext servletContext) {
         requireNonNull(servletContext, "servletContext");
         this.servletContext = servletContext;
     }
 
-    /**
-     * handles {@link HttpRequest} and forward to Servlet APIs.
-     */
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         requireNonNull(ctx, "ctx");

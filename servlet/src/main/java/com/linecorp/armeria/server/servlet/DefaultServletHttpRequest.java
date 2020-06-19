@@ -121,9 +121,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         parameters = builder.build();
     }
 
-    /**
-     * Parse {@link QueryParams} from {@link AggregatedHttpRequest}.
-     */
     private static QueryParams queryParamsOf(@Nullable String query,
                                              @Nullable MediaType contentType,
                                              @Nullable AggregatedHttpRequest message) {
@@ -157,9 +154,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         }
     }
 
-    /**
-     * Parse cookie.
-     */
     @Nullable
     private Cookie[] decodeCookie() {
         final String cookieValue = httpRequest.headers().get(HttpHeaderNames.COOKIE);
@@ -183,9 +177,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         }
     }
 
-    /**
-     * Parse path info.
-     */
     @Nullable
     private String decodePathInfo() {
         final int index = getContextPath().length() + servletPath.length();

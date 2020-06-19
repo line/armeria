@@ -25,37 +25,22 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-/**
- * Servlet request scheduling.
- */
 final class ServletRequestDispatcher implements RequestDispatcher {
     private final String path;
     private final String name;
     private final ServletFilterChain filterChain;
 
-    /**
-     * Match mapping.
-     */
     final UrlMapper.Element<DefaultServletRegistration> mapperElement;
 
-    /**
-     * Creates a new instance.
-     */
     ServletRequestDispatcher(ServletFilterChain filterChain, String path,
                              @Nullable UrlMapper.Element<DefaultServletRegistration> element) {
         this(filterChain, path, path, element);
     }
 
-    /**
-     * Creates a new instance.
-     */
     ServletRequestDispatcher(ServletFilterChain filterChain, String name) {
         this(filterChain, name, name, null);
     }
 
-    /**
-     * Creates a new instance.
-     */
     ServletRequestDispatcher(ServletFilterChain filterChain, String path, String name,
                              @Nullable UrlMapper.Element<DefaultServletRegistration> element) {
         requireNonNull(filterChain, "filterChain");
@@ -77,11 +62,6 @@ final class ServletRequestDispatcher implements RequestDispatcher {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * Dispatch servlet request and servlet response.
-     * @param request request.
-     * @param response response.
-     */
     void dispatch(ServletRequest request, ServletResponse response)
             throws ServletException, IOException {
         requireNonNull(request, "request");
@@ -89,16 +69,10 @@ final class ServletRequestDispatcher implements RequestDispatcher {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Get path.
-     */
     String getPath() {
         return path;
     }
 
-    /**
-     * Get name.
-     */
     String getName() {
         return name;
     }

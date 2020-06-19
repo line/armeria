@@ -37,9 +37,6 @@ import javax.servlet.ServletSecurityElement;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-/**
- * The servlet supportPipeline.
- */
 final class DefaultServletRegistration implements Dynamic {
     private final String servletName;
     private final Servlet servlet;
@@ -48,9 +45,6 @@ final class DefaultServletRegistration implements Dynamic {
     private final Set<String> mappingSet = new HashSet<>();
     private final Map<String, String> initParameterMap;
 
-    /**
-     * Creates a new instance.
-     */
     DefaultServletRegistration(String servletName, Servlet servlet, DefaultServletContext servletContext,
                                UrlMapper<DefaultServletRegistration> urlMapper,
                                Map<String, String> initParameterMap) {
@@ -88,16 +82,10 @@ final class DefaultServletRegistration implements Dynamic {
         addMapping(servletName);
     }
 
-    /**
-     * Get servlet config.
-     */
     ServletConfig getServletConfig() {
         return servletConfig;
     }
 
-    /**
-     * Get servlet.
-     */
     Servlet getServlet() {
         return servlet;
     }

@@ -55,9 +55,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.servlet.UrlMapper.Element;
 
-/**
- * Servlet context (lifetime same as server).
- */
 final class DefaultServletContext implements ServletContext {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletContext.class);
     private static final Set<SessionTrackingMode> defaultSessionTrackingModeSet =
@@ -78,16 +75,10 @@ final class DefaultServletContext implements ServletContext {
     private String requestCharacterEncoding = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
     private String responseCharacterEncoding = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
 
-    /**
-     * Creates a new instance.
-     */
     DefaultServletContext(String contextPath) {
         this(contextPath, LogLevel.DEBUG);
     }
 
-    /**
-     * Creates a new instance.
-     */
     DefaultServletContext(String contextPath, LogLevel level) {
         requireNonNull(contextPath, "contextPath");
         requireNonNull(level, "level");
@@ -100,9 +91,6 @@ final class DefaultServletContext implements ServletContext {
         }
     }
 
-    /**
-     * Check servlet context is initialized.
-     */
     boolean isInitialized() {
         return initialized;
     }
