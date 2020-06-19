@@ -5,7 +5,7 @@
 boms:
   - com.fasterxml.jackson:jackson-bom:2.11.0
   - io.dropwizard.metrics:metrics-bom:4.1.9
-  - io.grpc:grpc-bom:1.29.0
+  - io.grpc:grpc-bom:1.30.0
   - io.micrometer:micrometer-bom:1.5.1
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.50.Final
@@ -107,7 +107,7 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protobuf-java: { version: &PROTOBUF_VERSION '3.11.4' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.12.0' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
