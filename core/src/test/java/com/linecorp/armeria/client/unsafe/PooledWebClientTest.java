@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -33,7 +35,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoop;
 
@@ -50,7 +51,20 @@ class PooledWebClientTest {
     @RegisterExtension
     public static final EventLoopExtension eventLoop = new EventLoopExtension(true);
 
+    private static PooledByteBufAllocator alloc;
+
     private PooledWebClient client;
+
+    @BeforeAll
+    static void createAlloc() {
+        alloc = new PooledByteBufAllocator(true);
+    }
+
+    @AfterAll
+    static void destroyAlloc() {
+        alloc.trimCurrentThreadCache();
+        alloc = null;
+    }
 
     @BeforeEach
     void setUp() {
@@ -91,8 +105,6 @@ class PooledWebClientTest {
 
     @Test
     void aggregateWithPooledObjects_eventExecutorAndAlloc() {
-        final ByteBufAllocator alloc = new PooledByteBufAllocator(true);
-
         final EventLoop executor = eventLoop.get();
         client.get("/hello").aggregateWithPooledObjects(executor, alloc).thenAccept(
                 (response) -> {
