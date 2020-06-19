@@ -66,4 +66,9 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         return execute(HttpMethod.POST, pathAndQuery.path(), null, serviceName, call,
                        (ctx, cause) -> RpcResponse.ofFailure(cause));
     }
+
+    @Override
+    public RpcClient unwrap() {
+        return (RpcClient) super.unwrap();
+    }
 }

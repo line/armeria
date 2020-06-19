@@ -71,7 +71,7 @@ public class PooledResponseBufferBenchmark {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final HttpResponse res = delegate().serve(ctx, req);
+            final HttpResponse res = unwrap().serve(ctx, req);
             final HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
@@ -106,7 +106,7 @@ public class PooledResponseBufferBenchmark {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final HttpResponse res = delegate().serve(ctx, req);
+            final HttpResponse res = unwrap().serve(ctx, req);
             final HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override

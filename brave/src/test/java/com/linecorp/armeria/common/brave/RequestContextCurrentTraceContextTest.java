@@ -19,8 +19,6 @@ package com.linecorp.armeria.common.brave;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -147,7 +145,7 @@ class RequestContextCurrentTraceContextTest {
     public void newScope_respondsToPing() {
         final PingPongExtra extra = new PingPongExtra();
         final TraceContext extraContext = TraceContext.newBuilder().traceId(1).spanId(1)
-                                                      .extra(Collections.singletonList(extra)).build();
+                                                      .addExtra(extra).build();
 
         try (Scope traceContextScope = currentTraceContext.newScope(extraContext)) {
             assertThat(traceContextScope).hasToString("NoopScope");
@@ -160,7 +158,7 @@ class RequestContextCurrentTraceContextTest {
         final PingPongExtra extra = new PingPongExtra();
 
         final TraceContext context = TraceContext.newBuilder().traceId(1).spanId(1)
-                                                 .extra(Collections.singletonList(extra)).build();
+                                                 .addExtra(extra).build();
 
         TraceContextUtil.PingPongExtra.maybeSetPong(context);
 

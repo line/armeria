@@ -128,7 +128,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
             throws Exception {
         final RpcResponse response;
         try {
-            response = delegate().execute(ctx, req);
+            response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
             reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
                     ctx, null, cause));

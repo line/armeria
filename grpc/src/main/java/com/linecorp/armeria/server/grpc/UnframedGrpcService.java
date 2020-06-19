@@ -119,13 +119,13 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
-            return delegate().serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
                 // Framed request, so just delegate.
-                return delegate().serve(ctx, req);
+                return unwrap().serve(ctx, req);
             }
         }
 
@@ -133,7 +133,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
-            return delegate().serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
 
         if (method.getType() != MethodType.UNARY) {
@@ -212,7 +212,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
         final HttpResponse grpcResponse;
         try {
-            grpcResponse = delegate().serve(ctx, grpcRequest);
+            grpcResponse = unwrap().serve(ctx, grpcRequest);
         } catch (Exception e) {
             res.completeExceptionally(e);
             return;

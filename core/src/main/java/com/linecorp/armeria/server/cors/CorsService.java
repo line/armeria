@@ -113,7 +113,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
             return forbidden();
         }
 
-        return new FilteredHttpResponse(delegate().serve(ctx, req)) {
+        return new FilteredHttpResponse(unwrap().serve(ctx, req)) {
             @Override
             protected HttpObject filter(HttpObject obj) {
                 if (!(obj instanceof ResponseHeaders)) {

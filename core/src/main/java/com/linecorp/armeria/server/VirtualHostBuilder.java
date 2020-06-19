@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
+import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
@@ -89,9 +91,8 @@ public final class VirtualHostBuilder {
 
     @Nullable
     private String defaultHostname;
-    private String hostnamePattern = "*";
     @Nullable
-    private SslContext sslContext;
+    private String hostnamePattern;
     @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
@@ -155,6 +156,22 @@ public final class VirtualHostBuilder {
             throw new UnsupportedOperationException(
                     "Cannot set hostnamePattern for the default virtual host builder");
         }
+
+        checkArgument(!hostnamePattern.isEmpty(), "hostnamePattern is empty.");
+
+        final boolean validHostnamePattern;
+        if (hostnamePattern.charAt(0) == '*') {
+            validHostnamePattern =
+                    hostnamePattern.length() >= 3 &&
+                    hostnamePattern.charAt(1) == '.' &&
+                    HOSTNAME_PATTERN.matcher(hostnamePattern.substring(2)).matches();
+        } else {
+            validHostnamePattern = HOSTNAME_PATTERN.matcher(hostnamePattern).matches();
+        }
+
+        checkArgument(validHostnamePattern,
+                      "hostnamePattern: %s (expected: *.<hostname> or <hostname>)", hostnamePattern);
+
         this.hostnamePattern = normalizeHostnamePattern(hostnamePattern);
         return this;
     }
@@ -166,7 +183,7 @@ public final class VirtualHostBuilder {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
-        return tls(keyCertChainFile, keyFile, (String) null);
+        return tls(keyCertChainFile, keyFile, null);
     }
 
     /**
@@ -278,8 +295,7 @@ public final class VirtualHostBuilder {
 
     private VirtualHostBuilder tls(Supplier<SslContextBuilder> sslContextBuilderSupplier) {
         requireNonNull(sslContextBuilderSupplier, "sslContextBuilderSupplier");
-        checkState(sslContext == null && this.sslContextBuilderSupplier == null,
-                   "TLS has been configured already.");
+        checkState(this.sslContextBuilderSupplier == null, "TLS has been configured already.");
         this.sslContextBuilderSupplier = sslContextBuilderSupplier;
         return this;
     }
@@ -812,16 +828,19 @@ public final class VirtualHostBuilder {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
-            if ("*".equals(hostnamePattern)) {
-                defaultHostname = SystemInfo.hostname();
-            } else if (hostnamePattern.startsWith("*.")) {
-                defaultHostname = hostnamePattern.substring(2);
+            if (hostnamePattern != null) {
+                defaultHostname = hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
+                                                                   : hostnamePattern;
             } else {
-                defaultHostname = hostnamePattern;
+                defaultHostname = SystemInfo.hostname();
             }
-        } else {
-            ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
         }
+
+        if (hostnamePattern == null) {
+            hostnamePattern = defaultVirtualHost ? "*" : "*." + defaultHostname;
+        }
+
+        ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
 
         // Retrieve all settings as a local copy. Use default builder's properties if not set.
         final long requestTimeoutMillis =
@@ -893,15 +912,10 @@ public final class VirtualHostBuilder {
             boolean sslContextFromThis = false;
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
-            if (this.sslContext != null) {
-                sslContext = this.sslContext;
-                sslContextFromThis = true;
-            } else if (sslContextBuilderSupplier != null) {
+            if (sslContextBuilderSupplier != null) {
                 sslContext = buildSslContext(sslContextBuilderSupplier, tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
-            } else if (template.sslContext != null) {
-                sslContext = template.sslContext;
             } else if (template.sslContextBuilderSupplier != null) {
                 sslContext = buildSslContext(template.sslContextBuilderSupplier, template.tlsCustomizers);
                 releaseSslContextOnFailure = true;

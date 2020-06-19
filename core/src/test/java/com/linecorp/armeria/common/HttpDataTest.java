@@ -164,16 +164,16 @@ class HttpDataTest {
     @Test
     void toReader() throws Exception {
         final Reader in = HttpData.ofUtf8("가A").toReader(StandardCharsets.UTF_8);
-        assertThat(in.read()).isEqualTo((int) '가');
-        assertThat(in.read()).isEqualTo((int) 'A');
+        assertThat(in.read()).isEqualTo('가');
+        assertThat(in.read()).isEqualTo('A');
         assertThat(in.read()).isEqualTo(-1);
     }
 
     @Test
     void toReaderUtf8() throws Exception {
         final Reader in = HttpData.ofUtf8("あB").toReaderUtf8();
-        assertThat(in.read()).isEqualTo((int) 'あ');
-        assertThat(in.read()).isEqualTo((int) 'B');
+        assertThat(in.read()).isEqualTo('あ');
+        assertThat(in.read()).isEqualTo('B');
         assertThat(in.read()).isEqualTo(-1);
     }
 
@@ -184,7 +184,7 @@ class HttpDataTest {
         assertThat(in.read()).isEqualTo(65533);
         assertThat(in.read()).isEqualTo(65533);
         assertThat(in.read()).isEqualTo(65533);
-        assertThat(in.read()).isEqualTo((int) 'C');
+        assertThat(in.read()).isEqualTo('C');
         assertThat(in.read()).isEqualTo(-1);
     }
 

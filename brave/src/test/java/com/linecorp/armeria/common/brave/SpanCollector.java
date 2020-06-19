@@ -14,23 +14,25 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.brave;
+package com.linecorp.armeria.common.brave;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 
-import brave.propagation.Propagation;
-import io.netty.util.AsciiString;
+import brave.handler.MutableSpan;
+import brave.handler.SpanHandler;
+import brave.propagation.TraceContext;
 
-/**
- * Converter from {@link String} to {@link AsciiString} which is used by Brave to marshall trace information
- * into Armeria's {@link HttpHeaders}.
- */
-public enum AsciiStringKeyFactory implements Propagation.KeyFactory<AsciiString> {
-    INSTANCE;
+public final class SpanCollector extends SpanHandler {
+
+    private final BlockingQueue<MutableSpan> spans = new LinkedTransferQueue<>();
 
     @Override
-    public AsciiString create(String name) {
-        return HttpHeaderNames.of(name);
+    public boolean end(TraceContext context, MutableSpan span, Cause cause) {
+        return spans.add(span);
+    }
+
+    public BlockingQueue<MutableSpan> spans() {
+        return spans;
     }
 }

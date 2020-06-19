@@ -64,8 +64,10 @@ class ArmeriaServerFactory extends AbstractServerFactory {
     @Nullable
     private transient ServerBuilder serverBuilder;
 
+    @SuppressWarnings("deprecation")
     @NotEmpty
     private String applicationContextPath = "/application";
+    @SuppressWarnings("deprecation")
     @NotEmpty
     private String adminContextPath = "/admin";
     @JsonProperty
