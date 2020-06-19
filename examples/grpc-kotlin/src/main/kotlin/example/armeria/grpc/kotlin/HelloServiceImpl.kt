@@ -43,7 +43,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
     /**
      * Sends a [HelloReply] using `blockingTaskExecutor`.
      *
-     * @see [Blocking service implementation](https://line.github.io/armeria/docs/server-grpc#blocking-service-implementation)
+     * @see [Blocking service implementation](https://armeria.dev/docs/server-grpc#blocking-service-implementation)
      */
     override suspend fun blockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
         try { // Simulate a blocking API call.

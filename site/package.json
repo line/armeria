@@ -11,7 +11,7 @@
   },
   "scripts": {
     "clean": "gatsby clean",
-    "build": "cross-env NODE_OPTIONS='--max-old-space-size=2560' gatsby build --prefix-paths",
+    "build": "cross-env NODE_OPTIONS='--max-old-space-size=2560' gatsby build",
     "develop": "gatsby develop",
     "lint": "eslint --ext json,js,jsx,ts,tsx .",
     "lint:fix": "eslint --fix --ext json,js,jsx,ts,tsx .",
