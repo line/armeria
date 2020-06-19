@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,25 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.server;
 
-package com.linecorp.armeria.common.brave;
+import io.netty.util.DomainWildcardMappingBuilder;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedTransferQueue;
+final class DomainMappingBuilder<V> extends DomainWildcardMappingBuilder<V> {
 
-import zipkin2.Span;
-import zipkin2.reporter.Reporter;
-
-public final class SpanCollectingReporter implements Reporter<Span> {
-
-    private final BlockingQueue<Span> spans = new LinkedTransferQueue<>();
-
-    @Override
-    public void report(Span span) {
-        spans.add(span);
+    DomainMappingBuilder(V defaultValue) {
+        super(defaultValue);
     }
 
-    public BlockingQueue<Span> spans() {
-        return spans;
+    @Override
+    public DomainWildcardMappingBuilder<V> add(String hostname, V output) {
+        super.add(hostname, output);
+        if (hostname.startsWith("*.")) {
+            super.add(hostname.substring(2), output);
+        }
+        return this;
     }
 }

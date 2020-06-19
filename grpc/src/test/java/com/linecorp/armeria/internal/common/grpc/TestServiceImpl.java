@@ -534,7 +534,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final HttpResponse res = delegate().serve(ctx, req);
+            final HttpResponse res = unwrap().serve(ctx, req);
             return new FilteredHttpResponse(res) {
                 private boolean headersReceived;
 

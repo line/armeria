@@ -176,7 +176,7 @@ class RetryingClientWithLoggingTest {
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
                 ctx.log().whenRequestComplete().thenAccept(log -> listener.accept(log.partial()));
                 ctx.log().whenComplete().thenAccept(listener);
-                return delegate().execute(ctx, req);
+                return unwrap().execute(ctx, req);
             }
         };
     }

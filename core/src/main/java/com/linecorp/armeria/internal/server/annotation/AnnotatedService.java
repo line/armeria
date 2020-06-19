@@ -77,8 +77,7 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/docs/server-annotated-service">
- * Annotated HTTP Service</a> to use this.
+ * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
 public class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
@@ -411,7 +410,7 @@ public class AnnotatedService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             try {
-                final HttpResponse response = delegate().serve(ctx, req);
+                final HttpResponse response = unwrap().serve(ctx, req);
                 if (response instanceof ExceptionFilteredHttpResponse) {
                     return response;
                 }

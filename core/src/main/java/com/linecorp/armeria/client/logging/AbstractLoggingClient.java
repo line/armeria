@@ -129,7 +129,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
             ctx.log().whenRequestComplete().thenAccept(requestLogger);
             ctx.log().whenComplete().thenAccept(responseLogger);
         }
-        return delegate().execute(ctx, req);
+        return unwrap().execute(ctx, req);
     }
 
     private class RequestLogger implements Consumer<RequestOnlyLog> {

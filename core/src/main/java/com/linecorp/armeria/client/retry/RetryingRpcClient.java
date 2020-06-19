@@ -121,7 +121,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                     mutator -> mutator.add(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1)));
         }
 
-        final RpcResponse res = executeWithFallback(delegate(), derivedCtx,
+        final RpcResponse res = executeWithFallback(unwrap(), derivedCtx,
                                                     (context, cause) -> RpcResponse.ofFailure(cause));
 
         res.handle((unused1, cause) -> {

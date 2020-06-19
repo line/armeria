@@ -113,4 +113,9 @@ public interface RequestContextStorage extends Unwrappable {
      */
     @Nullable
     <T extends RequestContext> T currentOrNull();
+
+    @Override
+    default RequestContextStorage unwrap() {
+        return this;
+    }
 }

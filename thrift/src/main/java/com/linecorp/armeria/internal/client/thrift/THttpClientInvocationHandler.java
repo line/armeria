@@ -137,10 +137,10 @@ final class THttpClientInvocationHandler
             try {
                 final RpcResponse reply;
                 if (fragment != null) {
-                    reply = delegate().executeMultiplexed(
+                    reply = unwrap().executeMultiplexed(
                             path, params.clientType(), fragment, method.getName(), args);
                 } else {
-                    reply = delegate().execute(path, params.clientType(), method.getName(), args);
+                    reply = unwrap().execute(path, params.clientType(), method.getName(), args);
                 }
 
                 final ClientRequestContext ctx = captor.get();

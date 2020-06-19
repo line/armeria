@@ -216,7 +216,7 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
 
         final HttpResponse grpcResponse;
         try {
-            grpcResponse = delegate().serve(ctx, grpcRequest);
+            grpcResponse = unwrap().serve(ctx, grpcRequest);
         } catch (Exception e) {
             res.completeExceptionally(e);
             return;

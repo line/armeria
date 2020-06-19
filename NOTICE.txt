@@ -3,7 +3,7 @@ Armeria
 
 Please visit the official web site for more information:
 
-  * https://line.github.io/armeria/
+  * https://armeria.dev/
 
 Copyright 2015 LINE Corporation
 

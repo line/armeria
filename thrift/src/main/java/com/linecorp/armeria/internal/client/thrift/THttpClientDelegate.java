@@ -146,8 +146,8 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             ctx.updateRequest(httpReq);
             ctx.logBuilder().deferResponseContent();
 
-            assert delegate() instanceof PooledHttpClient;
-            final PooledHttpClient client = delegate();
+            assert unwrap() instanceof PooledHttpClient;
+            final PooledHttpClient client = (PooledHttpClient) unwrap();
             final CompletableFuture<PooledAggregatedHttpResponse> future =
                     client.execute(ctx, PooledHttpRequest.of(httpReq))
                           .aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());

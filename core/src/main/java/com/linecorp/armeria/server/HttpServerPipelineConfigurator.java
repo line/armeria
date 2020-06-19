@@ -76,7 +76,7 @@ import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
-import io.netty.util.DomainNameMapping;
+import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -106,7 +106,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private final ServerConfig config;
     private final ServerPort port;
     @Nullable
-    private final DomainNameMapping<SslContext> sslContexts;
+    private final Mapping<String, SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     /**
@@ -114,7 +114,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
      */
     HttpServerPipelineConfigurator(
             ServerConfig config, ServerPort port,
-            @Nullable DomainNameMapping<SslContext> sslContexts,
+            @Nullable Mapping<String, SslContext> sslContexts,
             GracefulShutdownSupport gracefulShutdownSupport) {
 
         this.config = requireNonNull(config, "config");

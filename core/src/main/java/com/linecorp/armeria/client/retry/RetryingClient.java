@@ -248,7 +248,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                                   initialAttempt);
         ctx.logBuilder().addChild(derivedCtx.log());
 
-        final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
+        final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
         if (requiresResponseTrailers) {

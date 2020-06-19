@@ -426,7 +426,7 @@ class HttpServerTest {
                                 pendingRequestLogs.decrementAndGet();
                                 requestLogs.add(log);
                             });
-                            return delegate().serve(ctx, req);
+                            return unwrap().serve(ctx, req);
                         }
                     };
             sb.decorator(decorator);
