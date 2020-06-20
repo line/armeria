@@ -73,6 +73,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -292,12 +293,13 @@ public class ProxyClientIntegrationTest {
     void testSelectFailureFallsBackToDirect() throws Exception {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
-            public ProxyConfig select(Endpoint endpoint) {
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
                 throw new RuntimeException("select exception");
             }
 
             @Override
-            public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
                 fail("connectFailed should not be called");
             }
         });
@@ -320,12 +322,13 @@ public class ProxyClientIntegrationTest {
     void testNullProxyConfigFallsBackToDirect() throws Exception {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
-            public ProxyConfig select(Endpoint endpoint) {
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
                 return null;
             }
 
             @Override
-            public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
                 fail("connectFailed should not be called");
             }
         });
@@ -351,12 +354,13 @@ public class ProxyClientIntegrationTest {
         });
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
-            public ProxyConfig select(Endpoint endpoint) {
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
                 return ProxyConfig.socks4(socksProxyServer.address());
             }
 
             @Override
-            public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
                 throw new RuntimeException("connectFailed exception");
             }
         });
@@ -549,13 +553,14 @@ public class ProxyClientIntegrationTest {
         final InetSocketAddress proxyAddress = new InetSocketAddress("127.0.0.1", unusedPort);
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
-            public ProxyConfig select(Endpoint endpoint) {
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 return ProxyConfig.socks4(proxyAddress);
             }
 
             @Override
-            public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 assertThat(sa).isEqualTo(proxyAddress);
                 assertThat(throwable).isInstanceOf(ConnectException.class);
@@ -594,13 +599,14 @@ public class ProxyClientIntegrationTest {
         final InetSocketAddress proxyAddress = socksProxyServer.address();
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
-            public ProxyConfig select(Endpoint endpoint) {
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 return ProxyConfig.socks4(proxyAddress);
             }
 
             @Override
-            public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 assertThat(sa).isEqualTo(proxyAddress);
                 assertThat(throwable).isInstanceOf(ProxyConnectException.class);
@@ -634,13 +640,14 @@ public class ProxyClientIntegrationTest {
         final InetSocketAddress proxyAddress = socksProxyServer.address();
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
-            public ProxyConfig select(Endpoint endpoint) {
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 return ProxyConfig.socks4(proxyAddress);
             }
 
             @Override
-            public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 assertThat(sa).isEqualTo(proxyAddress);
                 assertThat(throwable).isInstanceOf(ConnectException.class);
@@ -861,9 +868,9 @@ public class ProxyClientIntegrationTest {
         }
 
         @Override
-        public ProxyConfig select(Endpoint endpoint) {
+        public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
             try {
-                return inner.select(endpoint);
+                return inner.select(protocol, endpoint);
             } catch (AssertionError e) {
                 result.set(false);
                 throw e;
@@ -871,9 +878,10 @@ public class ProxyClientIntegrationTest {
         }
 
         @Override
-        public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+        public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                  SocketAddress sa, Throwable throwable) {
             try {
-                inner.connectFailed(endpoint, sa, throwable);
+                inner.connectFailed(protocol, endpoint, sa, throwable);
             } catch (AssertionError e) {
                 result.set(false);
                 throw e;

@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.StaticProxyConfigSelector;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
 import io.netty.channel.ChannelOption;
@@ -192,7 +193,8 @@ class ClientFactoryBuilderTest {
     void defaultProxySelectorShouldBeStaticDirect() {
         try (ClientFactory factory = ClientFactory.ofDefault()) {
             assertThat(factory.options().proxyConfigSelector()).isInstanceOf(StaticProxyConfigSelector.class);
-            assertThat(factory.options().proxyConfigSelector().select(Endpoint.of("any.uri"))).isEqualTo(
+            assertThat(factory.options().proxyConfigSelector().select(
+                    SessionProtocol.HTTP, Endpoint.of("any.uri"))).isEqualTo(
                     ProxyConfig.direct());
         }
     }

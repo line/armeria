@@ -409,19 +409,20 @@ final class HttpChannelPool implements AsyncCloseable {
             if (future.isSuccess()) {
                 initSession(desiredProtocol, future, sessionPromise);
             } else {
-                invokeProxyConnectFailed(poolKey, future.cause());
+                invokeProxyConnectFailed(desiredProtocol, poolKey, future.cause());
                 sessionPromise.tryFailure(future.cause());
             }
         });
     }
 
-    void invokeProxyConnectFailed(PoolKey poolKey, Throwable cause) {
+    void invokeProxyConnectFailed(SessionProtocol protocol, PoolKey poolKey, Throwable cause) {
         try {
             final ProxyConfig proxyConfig = poolKey.proxyConfig;
             if (proxyConfig.proxyType() != ProxyType.DIRECT) {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
-                proxyConfigSelector.connectFailed(Endpoint.of(poolKey.host, poolKey.port), proxyAddress, cause);
+                proxyConfigSelector.connectFailed(protocol, Endpoint.of(poolKey.host, poolKey.port),
+                                                  proxyAddress, cause);
             }
         } catch (Throwable t) {
             logger.warn("Exception while invoking proxy connectFailed for <{}> ", poolKey, t);
@@ -451,7 +452,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture, meterRegistry,
-                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis));
+                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis,
+                                       desiredProtocol));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,

@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * A simple class which wraps a {@link ProxySelector}. This class may have some limitations, most notably:
@@ -42,7 +43,6 @@ import com.linecorp.armeria.client.Endpoint;
  */
 final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     private static final Logger logger = LoggerFactory.getLogger(WrappingProxyConfigSelector.class);
-    private static final String HTTP_SCHEME = "http";
 
     private static InetSocketAddress resolve(InetSocketAddress inetSocketAddress) {
         if (!inetSocketAddress.isUnresolved()) {
@@ -84,9 +84,10 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     }
 
     @Override
-    public ProxyConfig select(Endpoint endpoint) {
+    public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+        requireNonNull(protocol, "protocol");
         requireNonNull(endpoint, "endpoint");
-        final List<Proxy> proxies = proxySelector.select(endpoint.toUri(HTTP_SCHEME));
+        final List<Proxy> proxies = proxySelector.select(endpoint.toUri(protocol));
         if (proxies == null || proxies.isEmpty()) {
             return ProxyConfig.direct();
         }
@@ -99,9 +100,11 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     }
 
     @Override
-    public void connectFailed(Endpoint endpoint, SocketAddress socketAddress, Throwable throwable) {
+    public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                              SocketAddress socketAddress, Throwable throwable) {
+        requireNonNull(protocol, "protocol");
         requireNonNull(endpoint, "endpoint");
-        proxySelector.connectFailed(endpoint.toUri(HTTP_SCHEME),
+        proxySelector.connectFailed(endpoint.toUri(protocol),
                                     requireNonNull(socketAddress, "socketAddress"),
                                     new IOException(throwable));
     }

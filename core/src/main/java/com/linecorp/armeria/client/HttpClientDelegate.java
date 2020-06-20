@@ -143,7 +143,7 @@ final class HttpClientDelegate implements HttpClient {
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop());
 
-        final ProxyConfig proxyConfig = selectProxyConfig(host, port);
+        final ProxyConfig proxyConfig = selectProxyConfig(protocol, host, port);
         final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
@@ -163,11 +163,11 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private ProxyConfig selectProxyConfig(String host, int port) {
+    private ProxyConfig selectProxyConfig(SessionProtocol sessionProtocol, String host, int port) {
         ProxyConfig proxyConfig;
         try {
             final Endpoint endpoint = Endpoint.of(host, port);
-            proxyConfig = factory.proxyConfigSelector().select(endpoint);
+            proxyConfig = factory.proxyConfigSelector().select(sessionProtocol, endpoint);
             requireNonNull(proxyConfig, "proxyConfig");
         } catch (Throwable t) {
             logger.warn("Failed to select ProxyConfig for <{}:{}>; falling back to DIRECT ",

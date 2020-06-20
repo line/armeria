@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * A {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
@@ -48,12 +49,13 @@ public final class StaticProxyConfigSelector implements ProxyConfigSelector {
     }
 
     @Override
-    public ProxyConfig select(Endpoint endpoint) {
+    public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
         return proxyConfig;
     }
 
     @Override
-    public void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable) {
+    public void connectFailed(SessionProtocol sessionProtocol, Endpoint endpoint,
+                              SocketAddress sa, Throwable throwable) {
         // do nothing
     }
 }

@@ -22,6 +22,7 @@ import java.net.ProxySelector;
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
@@ -37,21 +38,24 @@ public interface ProxyConfigSelector {
      * Selects the {@link ProxyConfig} to use when connecting to a network
      * resource specified by the {@link Endpoint} parameter.
      *
+     * @param protocol the protocol associated with the endpoint
      * @param endpoint an endpoint containing the requested host and port
      * @return the selected proxy config which should be non-null
      */
-    ProxyConfig select(Endpoint endpoint);
+    ProxyConfig select(SessionProtocol protocol, Endpoint endpoint);
 
     /**
      * Called to indicate a connection attempt to the specified {@link Endpoint}
      * has failed. This callback may be utilized to decide which proxy configuration
      * should be used for each uri.
      *
+     * @param protocol the protocol associated with the endpoint
      * @param endpoint an endpoint containing the requested host and port
      * @param sa the remote socket address of the proxy server
      * @param throwable the cause of the failure
      */
-    void connectFailed(Endpoint endpoint, SocketAddress sa, Throwable throwable);
+    void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                       SocketAddress sa, Throwable throwable);
 
     /**
      * Provides a way to re-use an existing {@link ProxySelector} with some limitations.

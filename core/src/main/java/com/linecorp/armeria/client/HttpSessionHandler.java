@@ -81,6 +81,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
+    private final SessionProtocol desiredProtocol;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -121,7 +122,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
                        MeterRegistry meterRegistry, boolean useHttp1Pipelining,
-                       long idleTimeoutMillis, long pingIntervalMillis) {
+                       long idleTimeoutMillis, long pingIntervalMillis, SessionProtocol desiredProtocol) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
@@ -131,6 +132,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
+        this.desiredProtocol = desiredProtocol;
     }
 
     private static boolean useProxyConnection(ChannelHandlerContext ctx) {
@@ -430,7 +432,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
             final PoolKey poolKey = ctx.channel().attr(POOL_KEY).get();
-            channelPool.invokeProxyConnectFailed(poolKey, cause);
+            final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
+            channelPool.invokeProxyConnectFailed(protocol, poolKey, cause);
             sessionPromise.tryFailure(new UnprocessedRequestException(cause));
             return;
         }
