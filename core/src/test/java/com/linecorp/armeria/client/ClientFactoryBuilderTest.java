@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
-import java.net.URI;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -193,7 +192,7 @@ class ClientFactoryBuilderTest {
     void defaultProxySelectorShouldBeStaticDirect() {
         try (ClientFactory factory = ClientFactory.ofDefault()) {
             assertThat(factory.options().proxyConfigSelector()).isInstanceOf(StaticProxyConfigSelector.class);
-            assertThat(factory.options().proxyConfigSelector().select(URI.create("http://any.uri"))).isEqualTo(
+            assertThat(factory.options().proxyConfigSelector().select(Endpoint.of("any.uri"))).isEqualTo(
                     ProxyConfig.direct());
         }
     }

@@ -23,13 +23,14 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
-import java.net.URI;
 import java.util.List;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.client.Endpoint;
 
 /**
  * A simple class which wraps a {@link ProxySelector}. This class may have some limitations, most notably:
@@ -41,6 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     private static final Logger logger = LoggerFactory.getLogger(WrappingProxyConfigSelector.class);
+    private static final String HTTP_SCHEME = "http";
 
     private static InetSocketAddress resolve(InetSocketAddress inetSocketAddress) {
         if (!inetSocketAddress.isUnresolved()) {
@@ -82,8 +84,9 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     }
 
     @Override
-    public ProxyConfig select(URI uri) {
-        final List<Proxy> proxies = proxySelector.select(requireNonNull(uri, "uri"));
+    public ProxyConfig select(Endpoint endpoint) {
+        requireNonNull(endpoint, "endpoint");
+        final List<Proxy> proxies = proxySelector.select(endpoint.toUri(HTTP_SCHEME));
         if (proxies == null || proxies.isEmpty()) {
             return ProxyConfig.direct();
         }
@@ -96,8 +99,9 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     }
 
     @Override
-    public void connectFailed(URI uri, SocketAddress socketAddress, Throwable throwable) {
-        proxySelector.connectFailed(requireNonNull(uri, "uri"),
+    public void connectFailed(Endpoint endpoint, SocketAddress socketAddress, Throwable throwable) {
+        requireNonNull(endpoint, "endpoint");
+        proxySelector.connectFailed(endpoint.toUri(HTTP_SCHEME),
                                     requireNonNull(socketAddress, "socketAddress"),
                                     new IOException(throwable));
     }

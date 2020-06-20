@@ -19,7 +19,6 @@ import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -422,7 +421,7 @@ final class HttpChannelPool implements AsyncCloseable {
             if (proxyConfig.proxyType() != ProxyType.DIRECT) {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
-                proxyConfigSelector.connectFailed(poolKey.connUri, proxyAddress, cause);
+                proxyConfigSelector.connectFailed(Endpoint.of(poolKey.host, poolKey.port), proxyAddress, cause);
             }
         } catch (Throwable t) {
             logger.warn("Exception while invoking proxy connectFailed for <{}> ", poolKey, t);
@@ -602,19 +601,16 @@ final class HttpChannelPool implements AsyncCloseable {
         final String host;
         final String ipAddr;
         final int port;
-        final ProxyConfig proxyConfig;
         final int hashCode;
+        final ProxyConfig proxyConfig;
 
-        final URI connUri;
-
-        PoolKey(String ipAddr, ProxyConfig proxyConfig, URI connUri) {
+        PoolKey(String host, String ipAddr, int port, ProxyConfig proxyConfig) {
+            this.host = host;
             this.ipAddr = ipAddr;
+            this.port = port;
             this.proxyConfig = proxyConfig;
-            host = connUri.getHost();
-            port = connUri.getPort();
-            hashCode = ((host.hashCode() * 31 + ipAddr.hashCode()) * 31 + port) * 31 + proxyConfig.hashCode();
-
-            this.connUri = connUri;
+            hashCode = ((host.hashCode() * 31 + ipAddr.hashCode()) * 31 + port) * 31 +
+                       proxyConfig.hashCode();
         }
 
         @Override

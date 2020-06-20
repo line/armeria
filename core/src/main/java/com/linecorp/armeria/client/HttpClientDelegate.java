@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 import javax.annotation.Nullable;
 
@@ -144,18 +142,9 @@ final class HttpClientDelegate implements HttpClient {
         final int port = endpointWithPort.port();
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop());
-        final URI connUri;
-        try {
-            connUri = new URI("http", null, host, port, null, null, null);
-        } catch (URISyntaxException e) {
-            final UnprocessedRequestException ure = new UnprocessedRequestException(e);
-            handleEarlyRequestException(ctx, req, ure);
-            res.close(ure);
-            return;
-        }
 
-        final ProxyConfig proxyConfig = selectProxyConfig(connUri);
-        final PoolKey key = new PoolKey(ipAddr, proxyConfig, connUri);
+        final ProxyConfig proxyConfig = selectProxyConfig(host, port);
+        final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
@@ -174,13 +163,15 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private ProxyConfig selectProxyConfig(URI connUri) {
+    private ProxyConfig selectProxyConfig(String host, int port) {
         ProxyConfig proxyConfig;
         try {
-            proxyConfig = factory.proxyConfigSelector().select(connUri);
+            final Endpoint endpoint = Endpoint.of(host, port);
+            proxyConfig = factory.proxyConfigSelector().select(endpoint);
             requireNonNull(proxyConfig, "proxyConfig");
         } catch (Throwable t) {
-            logger.warn("Failed to select ProxyConfig for <{}>; falling back to DIRECT ", connUri, t);
+            logger.warn("Failed to select ProxyConfig for <{}:{}>; falling back to DIRECT ",
+                        host, port, t);
             proxyConfig = ProxyConfig.direct();
         }
         return proxyConfig;
