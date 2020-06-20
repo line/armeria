@@ -23,8 +23,9 @@ import java.lang.annotation.Target;
 
 /**
  * Annotation for service name that is often used as a meter tag or distributed trace's span name.
- * You can override the default service name by annotating a class or method with {@link ServiceName}.
- * For example:<pre>{@code
+ * By default, an annotated service uses its class name as its service name.
+ * You can override it by annotating a class or method with {@link ServiceName} like the following:
+ * <pre>{@code
  * > public class MyService {
  * >     @Get("/")
  * >     public String get(ServiceRequestContext ctx) {
