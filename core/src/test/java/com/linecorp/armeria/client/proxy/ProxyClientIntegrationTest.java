@@ -32,13 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.extension.ConditionEvaluationResult.disabled;
-import static org.junit.jupiter.api.extension.ConditionEvaluationResult.enabled;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
@@ -58,11 +52,6 @@ import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.extension.ConditionEvaluationResult;
-import org.junit.jupiter.api.extension.ExecutionCondition;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -121,7 +110,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.ReferenceCountUtil;
 
-@Timeout(10)
 public class ProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
     private static final String SUCCESS_RESPONSE = "success";
@@ -376,35 +364,6 @@ public class ProxyClientIntegrationTest {
                                                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                     .hasRootCauseInstanceOf(ProxyConnectException.class);
             assertThat(selector.result()).isTrue();
-        }
-    }
-
-    @Test
-    @EnableIfDefaultSelector
-    void testHttpProxyByDefaultSelector() throws Exception {
-        final String httpNonProxyHosts = System.getProperty("http.nonProxyHosts");
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(ProxySelector.getDefault())
-                                                        .build()) {
-            System.setProperty("http.proxyHost", httpProxyServer.address().getHostString());
-            System.setProperty("http.proxyPort", String.valueOf(httpProxyServer.address().getPort()));
-            System.setProperty("http.nonProxyHosts", "");
-
-            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                                 .factory(clientFactory)
-                                                 .decorator(LoggingClient.newDecorator())
-                                                 .build();
-            final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                    webClient.get(PROXY_PATH).aggregate();
-            final AggregatedHttpResponse response = responseFuture.join();
-            assertThat(response.status()).isEqualTo(OK);
-            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        } finally {
-            System.clearProperty("http.proxyHost");
-            System.clearProperty("http.proxyPort");
-            if (httpNonProxyHosts != null) {
-                System.setProperty("http.nonProxyHosts", httpNonProxyHosts);
-            }
         }
     }
 
@@ -887,19 +846,5 @@ public class ProxyClientIntegrationTest {
                 throw e;
             }
         }
-    }
-
-    private static class EnableIfDefaultSelectorCondition implements ExecutionCondition {
-        @Override
-        public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
-            return ProxySelector.getDefault() != null ? enabled("default selector exists")
-                                                      : disabled("default selector doesn't exist");
-        }
-    }
-
-    @Target(ElementType.METHOD)
-    @Retention(RetentionPolicy.RUNTIME)
-    @ExtendWith(EnableIfDefaultSelectorCondition.class)
-    private @interface EnableIfDefaultSelector {
     }
 }

@@ -522,6 +522,11 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets the {@link ProxySelector} which determines the proxy configuration.
+     *
+     * <p>This method makes a best effort to provide compatibility with {@link ProxySelector}.
+     * Some known issues include:
+     * 1) Limited compatibility with sun's default selector
+     * 2) Only selecting a single {@link ProxyConfig} is supported</p>
      */
     public ClientFactoryBuilder proxyConfig(ProxySelector proxySelector) {
         requireNonNull(proxySelector, "proxySelector");

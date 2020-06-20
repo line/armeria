@@ -21,22 +21,30 @@ import static java.util.Objects.requireNonNull;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * Selects the {@link ProxyConfig} to use when connecting to a network
- * resource specified by the {@code URI} parameter.
+ * resource specified by the {@link SessionProtocol} and {@link Endpoint} parameter.
  * This class may be used to dynamically control what proxy configuration
  * to use for each request.
+
+ * <p>It should be noted that the only guarantee provided is the {@link Endpoint} called with
+ * {@code select} will be the same as the {@link Endpoint} called with {@code connectFailed}.</p>
+ *
+ * <p>For instance, the invoked {@link SessionProtocol} may change depending on HTTP/2 upgrade.
+ * Additionally, we should note the {@link Endpoint} used to construct {@link Client} will not
+ * necessarily be equal to the {@link Endpoint} in either callback method.</p>
  */
 @UnstableApi
 public interface ProxyConfigSelector {
 
     /**
      * Selects the {@link ProxyConfig} to use when connecting to a network
-     * resource specified by the {@link Endpoint} parameter.
+     * resource specified by the {@link SessionProtocol} and {@link Endpoint} parameter.
      *
      * @param protocol the protocol associated with the endpoint
      * @param endpoint an endpoint containing the requested host and port
@@ -45,9 +53,8 @@ public interface ProxyConfigSelector {
     ProxyConfig select(SessionProtocol protocol, Endpoint endpoint);
 
     /**
-     * Called to indicate a connection attempt to the specified {@link Endpoint}
-     * has failed. This callback may be utilized to decide which proxy configuration
-     * should be used for each uri.
+     * Called to indicate a connection attempt to the specified {@link SessionProtocol}
+     * and {@link Endpoint} has failed.
      *
      * @param protocol the protocol associated with the endpoint
      * @param endpoint an endpoint containing the requested host and port

@@ -35,10 +35,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * A simple class which wraps a {@link ProxySelector}. This class may have some limitations, most notably:
-
  * 1. Some incompatibilities when used with sun's {@code DefaultProxySelector}
- *     - some fields like socksProxyVersion aren't used
- *     - this class doesn't attempt to resolve scheme format differences.
+ *     - Some fields like socksProxyVersion aren't used
+ *     - This class doesn't attempt to resolve scheme format differences. For instance,
+ *       although the default sun implementation uses basic scheme formats such as "http", "https",
+ *       armeria uses scheme formats ("none+http", "tbinary+h1c").
+ *       This may be a source of unexpected behavior.
  * 2. Selecting multiple {@link Proxy} isn't supported.
  */
 final class WrappingProxyConfigSelector implements ProxyConfigSelector {
