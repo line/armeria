@@ -143,14 +143,14 @@ public class AnnotatedService implements HttpService {
             responseType = ResponseType.OTHER_OBJECTS;
         }
 
-        ServiceName serviceName = method.getAnnotation(ServiceName.class);
+        ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
         if (serviceName == null) {
-            serviceName = object.getClass().getAnnotation(ServiceName.class);
+            serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
             defaultServiceName = serviceName.value();
         } else {
-            defaultServiceName = method.getDeclaringClass().getName();
+            defaultServiceName = object.getClass().getName();
         }
 
         this.method.setAccessible(true);

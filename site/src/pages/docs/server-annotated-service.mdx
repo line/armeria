@@ -1374,12 +1374,11 @@ public class MyAnnotatedService {
 }
 ```
 
-## Specifying the default service name
+## Specifying the service name
 
-The default name of an annotated service which served a request is the innermost class name.
-The service name is often used as a meter tag or distributed trace's span name.
-If you want to customize the default service name, then you can override the name by annotating
-a class or method with <type://@ServiceName> like the below:
+A service name is human-readable string that is often used as a meter tag or distributed trace's span name.
+By default, an annotated service uses its class name as its service name.
+You can override it by annotating a class or method with <type://@ServiceName> like the following:
 
 ```java
 public class MyService {
@@ -1395,16 +1394,16 @@ public class MyService {
 public class MyService {
     @Get("/")
     public String get(ServiceRequestContext ctx) {
-        assert ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName()
-                  .equals("my-service");
+        assert ctx.log().ensureAvailable(RequestLogProperty.NAME)
+                  .serviceName().equals("my-service");
     }
 
     // Override the default service name by the method annotation
     @ServiceName("my-post-service")
     @Post("/")
     public String post(ServiceRequestContext ctx) {
-        assert ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName()
-                  .equals("my-post-service");
+        assert ctx.log().ensureAvailable(RequestLogProperty.NAME)
+                  .serviceName().equals("my-post-service");
     }
 }
 
@@ -1422,31 +1421,11 @@ sb.annotatedService("/", new MyService(), service -> {
 
 Note that <type://RequestOnlyLog#name()> is safely accessed using
 `ctx.log().ensureAvailable(RequestLogProperty.NAME)` only in your annotated service method.
-Generally, it is recommended to use <type://RequestLogAccess#whenComplete()>.
-Please see [Availability of properties](https://armeria.dev/docs/advanced-structured-logging#availability-of-properties)
-before using it.
-
-If you access <type://RequestOnlyLog#name()> in a decorator or <type://HttpService>, you should use
-<type://RequestLogAccess#whenComplete()> or <type://RequestLogAccess#whenAvailable(RequestLogProperty)>
-with <type://RequestLogProperty#NAME>.
-
-```java
-ServiceRequestContext ctx = ...
-// Simply wait until a log is completed
-ctx.log().whenComplete().thenApply(log -> {
-    String serviceName = log.serviceName();
-    ...
-})
-// If you are only interested in RequestOnlyLog.name()
-ctx.log().whenAvailable(RequestLogProperty.NAME).thenApply(log -> {
-    String serviceName = log.serviceName();
-    ...
-})
-```
+Otherwise, it is generally recommended to use <type://RequestLogAccess#whenComplete()>.
+Please refer to [Structured logging](/docs/advanced-structured-logging)
+for more information about RPC and HTTP service names, and how to use it.
 
 </Tip>
 
-Please refer to [Request properties](https://armeria.dev/docs/advanced-structured-logging#request-properties)
-for more information about RPC and HTTP service names.
     
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html

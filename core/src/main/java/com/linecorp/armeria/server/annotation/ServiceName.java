@@ -29,8 +29,8 @@ import java.lang.annotation.Target;
  * >     @Get("/")
  * >     public String get(ServiceRequestContext ctx) {
  * >         // The default service name
- * >         assert ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName()
- * >                   .equals(MyService.class.getName());
+ * >         assert ctx.log().ensureAvailable(RequestLogProperty.NAME)
+ * >                   .serviceName().equals(MyService.class.getName());
  * >     }
  * > }
  *
@@ -39,16 +39,16 @@ import java.lang.annotation.Target;
  * > public class MyService {
  * >     @Get("/")
  * >     public String get(ServiceRequestContext ctx) {
- * >         assert ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName()
- * >                   .equals("my-service");
+ * >         assert ctx.log().ensureAvailable(RequestLogProperty.NAME)
+ * >                   .serviceName().equals("my-service");
  * >     }
  *
  * >     // Override the default service name by the method annotation
  * >     @ServiceName("my-post-service")
  * >     @Post("/")
  * >     public String post(ServiceRequestContext ctx) {
- * >         assert ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName()
- * >                   .equals("my-post-service");
+ * >         assert ctx.log().ensureAvailable(RequestLogProperty.NAME)
+ * >                   .serviceName().equals("my-post-service");
  * >     }
  * > }
  * }</pre>
