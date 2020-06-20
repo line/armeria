@@ -18,6 +18,7 @@ dependencies {
     implementation project(':thrift')
 
     implementation 'com.squareup.retrofit2:converter-jackson'
+    implementation 'com.google.protobuf:protobuf-java-util'
     implementation 'io.grpc:grpc-okhttp'
     implementation 'io.grpc:grpc-netty-shaded'
     implementation 'org.awaitility:awaitility'

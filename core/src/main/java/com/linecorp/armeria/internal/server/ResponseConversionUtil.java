@@ -227,7 +227,12 @@ public final class ResponseConversionUtil {
                     subscription.request(1);
                 });
             } catch (Exception e) {
-                onError(e);
+                try {
+                    writer.close(e);
+                } finally {
+                    assert subscription != null;
+                    subscription.cancel();
+                }
             }
         }
 
@@ -236,14 +241,7 @@ public final class ResponseConversionUtil {
             if (!writer.isOpen()) {
                 return;
             }
-            try {
-                writer.close(cause);
-            } catch (Exception e) {
-                // 'subscription.cancel()' would be called by the close future listener of the writer,
-                // so we call it when we failed to close the writer.
-                assert subscription != null;
-                subscription.cancel();
-            }
+            writer.close(cause);
         }
 
         @Override

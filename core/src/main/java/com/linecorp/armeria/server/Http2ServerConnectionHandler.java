@@ -22,6 +22,7 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
@@ -38,16 +39,16 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
-                                 GracefulShutdownSupport gracefulShutdownSupport, String scheme) {
+                                 Timer keepAliveTimer, GracefulShutdownSupport gracefulShutdownSupport,
+                                 String scheme) {
 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
         if (config.idleTimeoutMillis() > 0 || config.pingIntervalMillis() > 0) {
-            keepAliveHandler = new Http2ServerKeepAliveHandler(channel, encoder().frameWriter(),
-                                                               config.idleTimeoutMillis(),
-                                                               config.pingIntervalMillis(),
-                                                               config.maxConnectionAgeMillis());
+            keepAliveHandler = new Http2ServerKeepAliveHandler(
+                    channel, encoder().frameWriter(), keepAliveTimer,
+                    config.idleTimeoutMillis(), config.pingIntervalMillis(), config.maxConnectionAgeMillis());
         } else {
             keepAliveHandler = null;
         }

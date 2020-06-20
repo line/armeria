@@ -26,6 +26,7 @@ import java.util.function.Predicate;
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -73,9 +74,11 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final boolean hasResponseFilter = responseFilter != null;
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    exceptionFilter(), hasResponseFilter);
+                                                    responseTrailersFilter(), exceptionFilter(),
+                                                    hasResponseFilter);
 
-        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(ruleFilter, decision);
+        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(ruleFilter, decision,
+                                                                         responseTrailersFilter() != null);
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }
@@ -96,7 +99,6 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
-
     /**
      * Adds the specified {@code responseFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If the specified {@code responseFilter} completes with {@code true},
@@ -120,6 +122,19 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     public CircuitBreakerRuleWithContentBuilder<T> onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseTrailersFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code responseTrailersFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public CircuitBreakerRuleWithContentBuilder<T> onResponseTrailers(
+            Predicate<? super HttpHeaders> responseTrailersFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
     }
 
     /**

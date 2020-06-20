@@ -167,6 +167,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private final int maxContentLength;
 
+    private final boolean requiresResponseTrailers;
+
     private final boolean needsContentInRule;
 
     /**
@@ -175,6 +177,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     RetryingClient(HttpClient delegate, RetryRule retryRule, int totalMaxAttempts,
                    long responseTimeoutMillisForEachAttempt, boolean useRetryAfter) {
         super(delegate, retryRule, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
+        requiresResponseTrailers = retryRule.requiresResponseTrailers();
         needsContentInRule = false;
         this.useRetryAfter = useRetryAfter;
         maxContentLength = 0;
@@ -187,6 +190,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                    RetryRuleWithContent<HttpResponse> retryRuleWithContent, int totalMaxAttempts,
                    long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int maxContentLength) {
         super(delegate, retryRuleWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
+        requiresResponseTrailers = retryRuleWithContent.requiresResponseTrailers();
         needsContentInRule = true;
         this.useRetryAfter = useRetryAfter;
         checkArgument(maxContentLength > 0,
@@ -247,7 +251,26 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
-        derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
+        if (requiresResponseTrailers) {
+            response.aggregate().handle((aggregated, cause) -> {
+                handleResponse(ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
+                               cause != null ? HttpResponse.ofFailure(cause) : aggregated.toHttpResponse());
+                return null;
+            });
+        } else {
+            handleResponse(ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx, response);
+        }
+    }
+
+    private void handleResponse(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
+                                HttpRequest originalReq, HttpResponse returnedRes,
+                                CompletableFuture<HttpResponse> future, ClientRequestContext derivedCtx,
+                                HttpResponse response) {
+
+        final RequestLogProperty logProperty = requiresResponseTrailers ? RequestLogProperty.RESPONSE_TRAILERS
+                                                                        : RequestLogProperty.RESPONSE_HEADERS;
+
+        derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             try {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;

@@ -5,7 +5,7 @@
 boms:
   - com.fasterxml.jackson:jackson-bom:2.11.0
   - io.dropwizard.metrics:metrics-bom:4.1.9
-  - io.grpc:grpc-bom:1.29.0
+  - io.grpc:grpc-bom:1.30.0
   - io.micrometer:micrometer-bom:1.5.1
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.50.Final
@@ -20,13 +20,13 @@ ch.qos.logback:
   logback-classic:
     version: '1.2.3'
     javadocs:
-    - https://static.javadoc.io/ch.qos.logback/logback-classic/1.2.3/
+    - https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.3/
 
 com.auth0:
   java-jwt:
     version: '3.10.3'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.10.3/
+    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.10.3/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -45,7 +45,7 @@ com.github.ben-manes.caffeine:
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.8.2/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.2/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -107,7 +107,7 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protobuf-java: { version: &PROTOBUF_VERSION '3.11.4' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.12.0' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
@@ -154,35 +154,35 @@ io.dropwizard:
   dropwizard-core:
     version: &DROPWIZARD_VERSION '2.0.9'
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-core/2.0.9/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.9/
   dropwizard-jackson:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jackson/2.0.9/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jackson/2.0.9/
   dropwizard-lifecycle:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-lifecycle/2.0.9/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-lifecycle/2.0.9/
   dropwizard-jersey:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jersey/2.0.9/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jersey/2.0.9/
   dropwizard-jetty:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/2.0.9/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jetty/2.0.9/
   dropwizard-testing:
     version: *DROPWIZARD_VERSION
     javadocs:
-      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/2.0.9/
+      - https://www.javadoc.io/doc/io.dropwizard/dropwizard-testing/2.0.9/
   dropwizard-util:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-util/2.0.9/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-util/2.0.9/
   dropwizard-validation:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-validation/2.0.9/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-validation/2.0.9/
 
 io.dropwizard.metrics:
   metrics-core:
@@ -217,13 +217,13 @@ io.grpc:
 io.micrometer:
   micrometer-core:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.4.0/
+    - https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.4.0/
   micrometer-registry-prometheus:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.4.0/
+    - https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.4.0/
   micrometer-spring-legacy:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.9/
+    - https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.9/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -267,8 +267,8 @@ io.zipkin.brave:
   brave:
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
-    - https://static.javadoc.io/io.zipkin.brave/brave-instrumentation-http/5.6.3/
+    - https://www.javadoc.io/doc/io.zipkin.brave/brave/5.6.3/
+    - https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/
 
 it.unimi.dsi:
   fastutil:
@@ -332,13 +332,13 @@ org.apache.curator:
   curator-recipes:
     version: &CURATOR_VERSION '4.3.0'
     javadocs:
-    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.3.0/
+    - https://www.javadoc.io/doc/org.apache.curator/curator-recipes/4.3.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
   curator-x-discovery:
     version: *CURATOR_VERSION
     javadocs:
-     - https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/4.3.0/
+    - https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/4.3.0/
 
 org.apache.hbase:
   hbase-shaded-client:
@@ -365,7 +365,7 @@ org.apache.thrift:
   libthrift:
     version: '0.13.0'
     javadocs:
-    - https://static.javadoc.io/org.apache.thrift/libthrift/0.13.0/
+    - https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.13.0/
     exclusions:
     - javax.annotation:javax.annotation-api
     - org.apache.httpcomponents:httpcore
@@ -505,7 +505,7 @@ org.slf4j:
   slf4j-api:
     version: *SLF4J_VERSION
     javadocs:
-    - https://static.javadoc.io/org.slf4j/slf4j-api/1.7.30/
+    - https://www.javadoc.io/doc/org.slf4j/slf4j-api/1.7.30/
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:

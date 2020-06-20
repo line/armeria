@@ -10,25 +10,36 @@ interface TypeLinkProps {
 }
 
 const TypeLink: React.FC<TypeLinkProps> = (props) => {
-  let simpleTypeName = props.name;
-  const lastDotIdx = simpleTypeName.lastIndexOf('.');
+  let simpleName = props.name;
+  const lastDotIdx = simpleName.lastIndexOf('.');
   if (lastDotIdx >= 0) {
-    simpleTypeName = simpleTypeName.substring(lastDotIdx + 1);
+    simpleName = simpleName.substring(lastDotIdx + 1);
   }
 
   let suffix = '';
   if (props.plural) {
-    if (simpleTypeName.match(/(ch|s|sh|x|z)$/)) {
+    if (simpleName.match(/(ch|s|sh|x|z)$/)) {
       suffix = 'es';
     } else {
       suffix = 's';
     }
   }
 
+  let title = '';
+  if (simpleName.indexOf('#') > 0) {
+    const replaced = simpleName.replace('#', '.');
+    title = replaced;
+    simpleName = replaced.replace(/ *\([^)]*\)*/, '()');
+  } else {
+    title = simpleName;
+  }
+
   const simpleTypeNameWithHref = props.href ? (
-    <OutboundLink href={props.href}>{simpleTypeName}</OutboundLink>
+    <OutboundLink href={props.href} title={title}>
+      {simpleName}
+    </OutboundLink>
   ) : (
-    simpleTypeName
+    simpleName
   );
 
   return (

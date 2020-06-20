@@ -117,7 +117,7 @@ class RetryingClientWithLoggingTest {
                                           .decorator(RetryingClient.builder(retryRule).newDecorator())
                                           .decorator((delegate, ctx, req) -> {
                                               final RequestLogBuilder logBuilder = ctx.logBuilder();
-                                              logBuilder.name("foo");
+                                              logBuilder.name("FooService", "foo");
                                               logBuilder.requestContent("bar", null);
                                               logBuilder.deferRequestContentPreview();
                                               logBuilder.deferResponseContent();
@@ -140,7 +140,9 @@ class RetryingClientWithLoggingTest {
         await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex + 1));
         // Let's just check the first request log.
         final RequestLog requestLog = logResult.get(0);
+        assertThat(requestLog.serviceName()).isEqualTo("FooService");
         assertThat(requestLog.name()).isEqualTo("foo");
+        assertThat(requestLog.fullName()).isEqualTo("FooService/foo");
         assertThat(requestLog.requestContent()).isEqualTo("bar");
         assertThat(requestLog.requestContentPreview()).isEqualTo("baz");
 

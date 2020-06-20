@@ -267,4 +267,12 @@ public interface RetryRule {
      *              exception.
      */
     CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);
+
+    /**
+     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
+     * successful or not.
+     */
+    default boolean requiresResponseTrailers() {
+        return false;
+    }
 }

@@ -28,8 +28,6 @@ import static com.linecorp.armeria.common.logging.BuiltInProperty.TLS_SESSION_ID
 
 final class BuiltInProperties {
 
-    private static final BuiltInProperty[] allValues = BuiltInProperty.values();
-
     private static final long MASK_ADDRESSES =
             mask(REMOTE_HOST, REMOTE_IP, REMOTE_PORT, LOCAL_HOST, LOCAL_IP, LOCAL_PORT, CLIENT_IP);
     private static final long MASK_SSL = mask(TLS_SESSION_ID, TLS_CIPHER, TLS_PROTO);

@@ -77,6 +77,26 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
     }
 
     /**
+     * Unwraps this {@link Service} and returns the object being decorated.
+     * If this {@link Service} is the innermost object, this method returns itself.
+     * For example:
+     * <pre>{@code
+     * HttpService service1 = new MyService();
+     * assert service1.unwrap() == service1;
+     *
+     * HttpService service2 = service1.decorate(LoggingService.newDecorator());
+     * HttpService service3 = service2.decorate(AuthService.newDecorator());
+     * assert service2.unwrap() == service1;
+     * assert service3.unwrap() == service2;
+     * assert service3.unwrap().unwrap() == service1;
+     * }</pre>
+     */
+    @Override
+    default Service<? extends Request, ? extends Response> unwrap() {
+        return (Service<? extends Request, ? extends Response>) Unwrappable.super.unwrap();
+    }
+
+    /**
      * Returns whether the given {@code path} and {@code query} should be cached if the service's result is
      * successful. By default, exact path mappings with no input query are cached.
      */

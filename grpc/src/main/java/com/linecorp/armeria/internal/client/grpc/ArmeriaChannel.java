@@ -91,7 +91,10 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                                   HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType(),
                                   HttpHeaderNames.TE, HttpHeaderValues.TRAILERS));
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req);
-        ctx.logBuilder().name(method.getFullMethodName());
+
+        final String fullMethodName = method.getFullMethodName();
+        final int methodIndex = fullMethodName.lastIndexOf('/') + 1;
+        ctx.logBuilder().name(method.getServiceName(), fullMethodName.substring(methodIndex));
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
         ctx.logBuilder().deferResponseContent();

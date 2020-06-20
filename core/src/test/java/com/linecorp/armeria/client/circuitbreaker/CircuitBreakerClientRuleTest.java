@@ -25,10 +25,16 @@ import java.util.concurrent.CompletionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.Maps;
+
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -41,6 +47,9 @@ class CircuitBreakerClientRuleTest {
             sb.service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"));
             sb.service("/503", (ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE));
             sb.service("/slow", (ctx, req) -> HttpResponse.streaming());
+            sb.service("/trailers", (ctx, req) -> HttpResponse.of(ResponseHeaders.of(200),
+                                                                  HttpData.ofUtf8("oops"),
+                                                                  HttpHeaders.of("grpc-status", 3)));
         }
     };
 
@@ -80,6 +89,27 @@ class CircuitBreakerClientRuleTest {
         assertThat(client.get("/503").aggregate().join().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         await().untilAsserted(() -> {
             assertThatThrownBy(() -> client.get("/503").aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(FailFastException.class);
+        });
+    }
+
+    @Test
+    void openCircuitWithTrailer() {
+        final CircuitBreakerRule rule =
+                CircuitBreakerRule.builder()
+                                  .onResponseTrailers(trailers -> trailers.containsInt("grpc-status", 3))
+                                  .thenFailure();
+
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .build();
+
+        assertThat(client.get("/trailers").aggregate().join().trailers()).containsExactly(
+                Maps.immutableEntry(HttpHeaderNames.of("grpc-status"), "3"));
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/trailers").aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(FailFastException.class);
         });

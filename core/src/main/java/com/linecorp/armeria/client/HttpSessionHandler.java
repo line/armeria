@@ -33,15 +33,21 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -71,6 +77,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final SocketAddress remoteAddress;
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
+    private final MeterRegistry meterRegistry;
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
@@ -113,12 +120,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
+                       MeterRegistry meterRegistry, boolean useHttp1Pipelining,
+                       long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
+        this.meterRegistry = meterRegistry;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
@@ -314,9 +323,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
                 if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
+                    final Timer keepAliveTimer =
+                            MoreMeters.newTimer(meterRegistry, "armeria.client.connections.lifespan",
+                                                ImmutableList.of(Tag.of("protocol", protocol.uriText())));
                     final Http1ClientKeepAliveHandler keepAliveHandler =
-                            new Http1ClientKeepAliveHandler(channel, requestEncoder, responseDecoder,
-                                                            idleTimeoutMillis, pingIntervalMillis);
+                            new Http1ClientKeepAliveHandler(
+                                    channel, requestEncoder, responseDecoder,
+                                    keepAliveTimer, idleTimeoutMillis, pingIntervalMillis);
                     requestEncoder.setKeepAliveHandler(keepAliveHandler);
                     responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
                 }
@@ -416,9 +429,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
-            setPendingException(ctx, new UnprocessedRequestException(cause));
             final PoolKey poolKey = ctx.channel().attr(POOL_KEY).get();
             channelPool.invokeProxyConnectFailed(poolKey, cause);
+            sessionPromise.tryFailure(new UnprocessedRequestException(cause));
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));
