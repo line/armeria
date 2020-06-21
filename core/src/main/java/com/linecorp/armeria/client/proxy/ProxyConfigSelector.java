@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.UnstableApi;
@@ -32,12 +31,14 @@ import com.linecorp.armeria.common.util.UnstableApi;
  * This class may be used to dynamically control what proxy configuration
  * to use for each request.
 
- * <p>It should be noted that the only guarantee provided is the {@link Endpoint} called with
- * {@code select} will be the same as the {@link Endpoint} called with {@code connectFailed}.</p>
+ * <p>It should be noted that the only guarantee provided is for a single request,
+ * the {@link Endpoint} called with {@code select} will be equal to the {@link Endpoint}
+ * called with {@code connectFailed}.</p>
  *
- * <p>For instance, the invoked {@link SessionProtocol} may change depending on HTTP/2 upgrade.
- * Additionally, we should note the {@link Endpoint} used to construct {@link Client} will not
- * necessarily be equal to the {@link Endpoint} in either callback method.</p>
+ * <p>For instance, the invoked {@link SessionProtocol} may change depending on the result of
+ * protocol negotiation.
+ * Additionally, we should note the {@link Endpoint} used to construct the request will not
+ * necessarily be equal to the {@link Endpoint} in either callback method parameter.</p>
  */
 @UnstableApi
 public interface ProxyConfigSelector {

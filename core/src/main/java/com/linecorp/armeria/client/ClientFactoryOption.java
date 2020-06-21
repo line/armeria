@@ -218,7 +218,7 @@ public final class ClientFactoryOption<T>
             define("METER_REGISTRY", Metrics.globalRegistry);
 
     /**
-     * The {@link ProxyConfigSelector} which determines the proxy configuration.
+     * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
      */
     public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
             define("PROXY_CONFIG_SELECTOR", StaticProxyConfigSelector.of(ProxyConfig.direct()));

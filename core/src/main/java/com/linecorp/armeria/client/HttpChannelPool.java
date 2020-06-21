@@ -125,7 +125,7 @@ final class HttpChannelPool implements AsyncCloseable {
         bootstraps = newEnumMap(
                 Bootstrap.class,
                 desiredProtocol -> {
-                    final SslContext sslCtx = sslContext(desiredProtocol);
+                    final SslContext sslCtx = determineSslContext(desiredProtocol);
                     final Bootstrap bootstrap = baseBootstrap.clone();
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
@@ -148,7 +148,7 @@ final class HttpChannelPool implements AsyncCloseable {
         proxyConfigSelector = clientFactory.proxyConfigSelector();
     }
 
-    private SslContext sslContext(SessionProtocol desiredProtocol) {
+    private SslContext determineSslContext(SessionProtocol desiredProtocol) {
         return desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C ?
                sslCtxHttp1Only : sslCtxHttp1Or2;
     }
@@ -187,7 +187,7 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = sslContext(desiredProtocol);
+            final SslContext sslCtx = determineSslContext(desiredProtocol);
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
         }
     }
@@ -421,6 +421,9 @@ final class HttpChannelPool implements AsyncCloseable {
             if (proxyConfig.proxyType() != ProxyType.DIRECT) {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
+                if (!(cause instanceof UnprocessedRequestException)) {
+                    cause = new UnprocessedRequestException(cause);
+                }
                 proxyConfigSelector.connectFailed(protocol, Endpoint.of(poolKey.host, poolKey.port),
                                                   proxyAddress, cause);
             }

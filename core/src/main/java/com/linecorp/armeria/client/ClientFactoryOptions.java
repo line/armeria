@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
@@ -260,7 +261,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * The {@link ProxyConfigSelector} which determines the proxy configuration.
+     * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
      */
     public ProxyConfigSelector proxyConfigSelector() {
         return get(ClientFactoryOption.PROXY_CONFIG_SELECTOR);

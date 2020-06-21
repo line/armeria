@@ -36,10 +36,10 @@ import com.linecorp.armeria.common.SessionProtocol;
 /**
  * A simple class which wraps a {@link ProxySelector}. This class may have some limitations, most notably:
  * 1. Some incompatibilities when used with sun's {@code DefaultProxySelector}
- *     - Some fields like socksProxyVersion aren't used
- *     - This class doesn't attempt to resolve scheme format differences. For instance,
- *       although the default sun implementation uses basic scheme formats such as "http", "https",
- *       armeria uses scheme formats ("none+http", "tbinary+h1c").
+ *     - Some properties like socksProxyVersion aren't respected
+ *     - This class doesn't attempt to resolve scheme format differences.
+ *       For instance, sun's {@code DefaultProxySelector} requires basic scheme formats "http", "https".
+ *       However, armeria uses scheme formats including serialization format ("none+http", "tbinary+h1c").
  *       This may be a source of unexpected behavior.
  * 2. Selecting multiple {@link Proxy} isn't supported.
  */
@@ -55,10 +55,6 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
 
     private static ProxyConfig toProxyConfig(@Nullable Proxy proxy) {
         if (proxy == null || proxy.address() == null) {
-            return ProxyConfig.direct();
-        }
-        if (!(proxy.address() instanceof InetSocketAddress)) {
-            logger.warn("Invalid proxy address for <{}>.", proxy);
             return ProxyConfig.direct();
         }
 
@@ -95,7 +91,7 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
         }
 
         final Proxy proxy = proxies.get(0);
-        if (proxies.size() > 1) {
+        if (logger.isDebugEnabled() && proxies.size() > 1) {
             logger.debug("Using the first proxy <{}> of <{}>.", proxy, proxies);
         }
         return toProxyConfig(proxy);

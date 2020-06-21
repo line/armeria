@@ -33,11 +33,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.Proxy.Type;
 import java.net.ProxySelector;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -53,6 +57,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
@@ -208,24 +214,6 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
-    void testNullDefaultSelector() throws Exception {
-        final ProxySelector defaultProxySelector = ProxySelector.getDefault();
-        ProxySelector.setDefault(null);
-        try (ClientFactory clientFactory = ClientFactory.builder().build()) {
-            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                                 .factory(clientFactory).build();
-            final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                    webClient.get(PROXY_PATH).aggregate();
-            final AggregatedHttpResponse response = responseFuture.join();
-            assertThat(response.status()).isEqualTo(OK);
-            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(0);
-        } finally {
-            ProxySelector.setDefault(defaultProxySelector);
-        }
-    }
-
-    @Test
     void testSocks4BasicCase() throws Exception {
         try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.socks4(socksProxyServer.address())).build()) {
@@ -278,10 +266,39 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
+    void testWrappingSelectorBasicCase() throws Exception {
+        final ProxySelector proxySelector = new ProxySelector() {
+            @Override
+            public List<Proxy> select(URI uri) {
+                return ImmutableList.of(new Proxy(Type.HTTP, httpProxyServer.address()));
+            }
+
+            @Override
+            public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+            }
+        };
+        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
+                proxySelector).build()) {
+            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        }
+    }
+
+    @Test
     void testSelectFailureFallsBackToDirect() throws Exception {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
             public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 throw new RuntimeException("select exception");
             }
 
@@ -311,6 +328,8 @@ public class ProxyClientIntegrationTest {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
             public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 return null;
             }
 
@@ -331,38 +350,6 @@ public class ProxyClientIntegrationTest {
             assertThat(response.status()).isEqualTo(OK);
             assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
             assertThat(numSuccessfulProxyRequests).isEqualTo(0);
-            assertThat(selector.result()).isTrue();
-        }
-    }
-
-    @Test
-    void testProxyServerImmediateClose() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
-            ctx.close();
-        });
-        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
-            @Override
-            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
-                return ProxyConfig.socks4(socksProxyServer.address());
-            }
-
-            @Override
-            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
-                                      SocketAddress sa, Throwable throwable) {
-                throw new RuntimeException("connectFailed exception");
-            }
-        });
-
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector).build()) {
-            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                                 .factory(clientFactory)
-                                                 .decorator(LoggingClient.newDecorator())
-                                                 .build();
-            final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                    webClient.get(PROXY_PATH).aggregate();
-            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                                    .hasRootCauseInstanceOf(ProxyConnectException.class);
             assertThat(selector.result()).isTrue();
         }
     }
@@ -513,6 +500,7 @@ public class ProxyClientIntegrationTest {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
             public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(H1C);
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 return ProxyConfig.socks4(proxyAddress);
             }
@@ -520,9 +508,11 @@ public class ProxyClientIntegrationTest {
             @Override
             public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
                                       SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(H1C);
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 assertThat(sa).isEqualTo(proxyAddress);
-                assertThat(throwable).isInstanceOf(ConnectException.class);
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ConnectException.class);
                 failedAttempts.incrementAndGet();
             }
         });
@@ -559,6 +549,7 @@ public class ProxyClientIntegrationTest {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
             public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(H1C);
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 return ProxyConfig.socks4(proxyAddress);
             }
@@ -566,9 +557,11 @@ public class ProxyClientIntegrationTest {
             @Override
             public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
                                       SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(H1C);
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 assertThat(sa).isEqualTo(proxyAddress);
-                assertThat(throwable).isInstanceOf(ProxyConnectException.class);
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ProxyConnectException.class);
                 failedAttempts.incrementAndGet();
             }
         });
@@ -590,6 +583,43 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
+    void testProxy_serverImmediateClose_throwsException() throws Exception {
+        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+            ctx.close();
+        });
+        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
+            @Override
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                return ProxyConfig.socks4(socksProxyServer.address());
+            }
+
+            @Override
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                assertThat(sa).isEqualTo(socksProxyServer.address());
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ProxyConnectException.class);
+                throw new RuntimeException("connectFailed exception");
+            }
+        });
+
+        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector).build()) {
+            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(ProxyConnectException.class);
+            assertThat(selector.result()).isTrue();
+        }
+    }
+
+    @Test
     void testProxy_responseFailure_throwsException() throws Exception {
         DYNAMIC_HANDLER.setWriteCustomizer((ctx, msg, promise) -> {
             ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
@@ -600,6 +630,7 @@ public class ProxyClientIntegrationTest {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
             public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(H1C);
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 return ProxyConfig.socks4(proxyAddress);
             }
@@ -607,9 +638,11 @@ public class ProxyClientIntegrationTest {
             @Override
             public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
                                       SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(H1C);
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
                 assertThat(sa).isEqualTo(proxyAddress);
-                assertThat(throwable).isInstanceOf(ConnectException.class);
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ProxyConnectException.class);
                 failedAttempts.incrementAndGet();
             }
         });
@@ -811,7 +844,7 @@ public class ProxyClientIntegrationTest {
     }
 
     /**
-     * This test class ensures the test fails when an assertion fails.
+     * This test class ensures the test fails when an assertion in the callback fails.
      */
     private static class TestProxyConfigSelector implements ProxyConfigSelector {
         final ProxyConfigSelector inner;
