@@ -137,7 +137,7 @@
 - The Spring Boot integration now supports
   [the new graceful shutdown properties](https://docs.spring.io/spring-boot/docs/2.3.0.RELEASE/reference/html/spring-boot-features.html#boot-features-graceful-shutdown)
   introduced in Spring Boot 2.3. #2784 #2802
-- Added a new API for handling reference counted or pooled objects such as <type://PooledHttpData>) in
+- Added a new API for handling reference counted or pooled objects such as <type://PooledHttpData> in
   a relatively safer way. #2448
   - See <type://PooledHttpData>, <type://PooledWebClient>, <type://PooledHttpRequest> and
     <type://PooledHttpResponse> for more information.
@@ -149,7 +149,7 @@
 
 ## 🛠️ Bug fixes
 
-- It's now allowed to specify an absolute URL *only when* an <type://WebClient> was created *without* a base
+- It's now allowed to specify an absolute URL *only when* a <type://WebClient> was created *without* a base
   URL. #2757
   ```java
   WebClient clientWithoutBaseUrl = WebClient.of();
@@ -193,17 +193,19 @@
 - The method signature of
   <type://RequestConverterFunction#convertRequest(ServiceRequestContext,AggregatedHttpRequest,Class,ParameterizedType)>
   has been changed to support parameterized types. #2779
-- The default <type://MeterIdPrefixFunction>` returned by <type://MeterIdPrefixFunction#ofDefault(String)>
+- The default <type://MeterIdPrefixFunction> returned by <type://MeterIdPrefixFunction#ofDefault(String)>
   now generates the meter IDs with different tags. #2780
   - The `route` tag has been replaced with the `service` tag.
 - `RetrofitMeterIdPrefixFunctionBuilder` has been removed and superseded by
   <type://RequestOnlyLog#serviceName()>. #2780
 - ZooKeeper-based service discovery: #2749 #2791
-  - Renamed all classes to use `ZooKeeper` instead of `Zookeeper`.
   - You now must specify <type://ZooKeeperRegistrationSpec> or <type://ZooKeeperDiscoverySpec> when creating
     <type://ZooKeeperUpdatingListener> or <type://ZooKeeperEndpointGroup>.
   - `NodeValueCodec` has been removed.
   - `ZooKeeperEndpointGroupBuilder.codec()` and `ZooKeeperUpdatingListenerBuilder.codec()` have been removed.
+- `ByteBufHttpData` has been replaced with <type://PooledHttpData>. #2448
+- `SubscriptionOption.WITH_POOLED_OBJECTS` has been replaced with <type://PooledHttpRequest> and
+  <type://PooledHttpResponse>. #2448
 
 ## ⛓ Dependencies
 
