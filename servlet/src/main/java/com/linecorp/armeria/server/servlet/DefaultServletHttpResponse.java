@@ -55,7 +55,7 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
     private final PrintWriter writer;
     private final ResponseHeadersBuilder headersBuilder;
 
-    private final List<String> cookies = new ArrayList<>();
+    private final List<String> setCookies = new ArrayList<>();
 
     private final ByteArrayOutputStream content = new ByteArrayOutputStream();
 
@@ -82,8 +82,8 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
             return;
         }
 
-        if (!cookies.isEmpty()) {
-            headersBuilder.set(HttpHeaderNames.SET_COOKIE, cookies);
+        if (!setCookies.isEmpty()) {
+            headersBuilder.set(HttpHeaderNames.SET_COOKIE, setCookies);
         }
         if (content.size() == 0) {
             resFuture.complete(HttpResponse.of(
@@ -113,7 +113,7 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
         if (!isNullOrEmpty(cookie.getDomain())) {
             builder.domain(cookie.getDomain());
         }
-        cookies.add(builder.build().toSetCookieHeader());
+        setCookies.add(builder.build().toSetCookieHeader());
     }
 
     @Override

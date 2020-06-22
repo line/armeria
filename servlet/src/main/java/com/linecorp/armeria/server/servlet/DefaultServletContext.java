@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.EventListener;
@@ -45,7 +46,6 @@ import javax.servlet.http.HttpServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -53,7 +53,6 @@ import com.google.common.collect.Sets;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.server.servlet.UrlMapper.Element;
 
 final class DefaultServletContext implements ServletContext {
     private static final Logger logger = LoggerFactory.getLogger(DefaultServletContext.class);
@@ -61,7 +60,7 @@ final class DefaultServletContext implements ServletContext {
             Sets.immutableEnumSet(SessionTrackingMode.COOKIE, SessionTrackingMode.URL);
 
     private final LogLevel level;
-    private final UrlMapper<DefaultServletRegistration> servletUrlMapper = new UrlMapper<>(true);
+    private final ServletUrlMapper servletUrlMapper = new ServletUrlMapper();
     private final Map<String, Object> attributeMap = new HashMap<>();
     private final String contextPath;
     private final String servletContextName;
@@ -69,7 +68,7 @@ final class DefaultServletContext implements ServletContext {
     private int sessionTimeout = 30; // unit: minutes
     private boolean initialized;
     private Map<String, String> initParamMap = new HashMap<>();
-    private Map<String, DefaultServletRegistration> servletRegistrationMap = new HashMap<>();
+    private Map<String, DefaultServletRegistration> servletRegistrations = new HashMap<>();
     private Map<String, String> mimeMappings = new HashMap<>();
     private Set<SessionTrackingMode> sessionTrackingModeSet = defaultSessionTrackingModeSet;
     private String requestCharacterEncoding = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET.name();
@@ -101,7 +100,7 @@ final class DefaultServletContext implements ServletContext {
     void init() {
         initialized = true;
         initParamMap = ImmutableMap.copyOf(initParamMap);
-        servletRegistrationMap = ImmutableMap.copyOf(servletRegistrationMap);
+        servletRegistrations = ImmutableMap.copyOf(servletRegistrations);
         sessionTrackingModeSet = ImmutableSet.copyOf(sessionTrackingModeSet);
         mimeMappings = ImmutableMap.copyOf(mimeMappings);
     }
@@ -114,15 +113,6 @@ final class DefaultServletContext implements ServletContext {
 
     void mimeMappings(Map<String, String> mappings) {
         mimeMappings.putAll(requireNonNull(mappings, "mappings"));
-    }
-
-    /**
-     * Get servlet path.
-     */
-    @Nullable
-    String getServletPath(String uri) {
-        final Element element = servletUrlMapper.getMapping(UrlMapper.normalizePath(uri));
-        return element == null ? null : element.path.substring(contextPath.length());
     }
 
     @Override
@@ -206,20 +196,17 @@ final class DefaultServletContext implements ServletContext {
     @Nullable
     public ServletRequestDispatcher getRequestDispatcher(String path) {
         requireNonNull(path, "path");
-        final UrlMapper.Element<DefaultServletRegistration> element =
-                servletUrlMapper.getMapping(UrlMapper.normalizePath(path));
-        if (element == null) {
+        final DefaultServletRegistration registration = servletUrlMapper.getMapping(path);
+        if (registration == null) {
             return null;
         }
-        return new ServletRequestDispatcher(new ServletFilterChain(element.getObject()),
-                                            element.pattern, element);
+        return new ServletRequestDispatcher(new ServletFilterChain(registration), registration.getName());
     }
 
     @Override
     @Nullable
     public ServletRequestDispatcher getNamedDispatcher(String name) {
         requireNonNull(name, "name");
-        name = UrlMapper.normalizePath(name);
         final DefaultServletRegistration servletRegistration = getServletRegistration(name);
         if (servletRegistration == null) {
             return null;
@@ -230,28 +217,20 @@ final class DefaultServletContext implements ServletContext {
     @Override
     @Nullable
     public Servlet getServlet(String name) throws ServletException {
-        requireNonNull(name, "name");
-        final DefaultServletRegistration registration = servletRegistrationMap.get(name);
-        if (registration == null) {
-            return null;
-        }
-        return registration.getServlet();
+        // This method is deprecated and should return null.
+        return null;
     }
 
     @Override
     public Enumeration<Servlet> getServlets() {
-        return Collections.enumeration(servletRegistrationMap.values()
-                                                             .stream()
-                                                             .map(DefaultServletRegistration::getServlet)
-                                                             .collect(ImmutableList.toImmutableList()));
+        // This method is deprecated and should return an empty set.
+        return Collections.enumeration(ImmutableSet.of());
     }
 
     @Override
     public Enumeration<String> getServletNames() {
-        return Collections.enumeration(servletRegistrationMap.values()
-                                                             .stream()
-                                                             .map(DefaultServletRegistration::getName)
-                                                             .collect(ImmutableList.toImmutableList()));
+        // This method is deprecated and should return an empty set.
+        return Collections.enumeration(ImmutableSet.of());
     }
 
     @Override
@@ -277,7 +256,7 @@ final class DefaultServletContext implements ServletContext {
     @Override
     public String getServerInfo() {
         return ArmeriaHttpUtil.SERVER_HEADER +
-               " (JDK " + SystemInfo.javaVersion() + ";" + SystemInfo.osType().name() + ")";
+               " (JDK " + SystemInfo.javaVersion() + ';' + SystemInfo.osType().name() + ')';
     }
 
     @Override
@@ -330,42 +309,77 @@ final class DefaultServletContext implements ServletContext {
         return servletContextName;
     }
 
+    void addServlet(String servletName, String className, String... urlPatterns) {
+        final DefaultServletRegistration registration = addServlet(servletName, className);
+        addUrlPatterns(servletName, registration, urlPatterns);
+    }
+
+    void addServlet(String servletName, HttpServlet httpServlet, String... urlPatterns) {
+        final DefaultServletRegistration registration = addServlet(servletName, httpServlet);
+        addUrlPatterns(servletName, registration, urlPatterns);
+    }
+
+    void addServlet(String servletName, Class<? extends Servlet> servletClass, String... urlPatterns) {
+        final DefaultServletRegistration registration = addServlet(servletName, servletClass);
+        addUrlPatterns(servletName, registration, urlPatterns);
+    }
+
+    private void addUrlPatterns(String servletName, @Nullable DefaultServletRegistration registration,
+                                String... urlPatterns) {
+        if (registration == null) {
+            return;
+        }
+        final Set<String> conflicts = registration.addMapping(urlPatterns);
+        if (!conflicts.isEmpty()) {
+            servletRegistrations.remove(servletName);
+            throw new IllegalArgumentException(conflicts + " are mapped already in urlPatterns: " +
+                                               Arrays.toString(urlPatterns));
+        }
+    }
+
+    @Nullable
     @Override
     public DefaultServletRegistration addServlet(String servletName, String className) {
-        ensureUninitialized("addServlet");
-        checkArgument(!isNullOrEmpty(servletName), "servletName is empty)", servletName);
         requireNonNull(className, "className");
         try {
             //noinspection unchecked
             return addServlet(servletName, (Class<HttpServlet>) Class.forName(className));
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to add a servlet. servletName: " + servletName, e);
+            throw new RuntimeException("Failed to add a servlet. servletName: " + servletName +
+                                       ", className: " + className, e);
         }
     }
 
+    @Nullable
     @Override
     public DefaultServletRegistration addServlet(String servletName, Servlet servlet) {
         ensureUninitialized("addServlet");
         checkArgument(!isNullOrEmpty(servletName),
                       "servletName: %s (expected: not null and empty)", servletName);
         requireNonNull(servlet, "servlet");
-        servletName = UrlMapper.normalizePath(servletName);
+        if (servletRegistrations.containsKey(servletName)) {
+            logger.warn("{} is registered already.", servletName);
+            return null;
+        }
         final DefaultServletRegistration servletRegistration =
                 new DefaultServletRegistration(servletName, servlet, this, servletUrlMapper, initParamMap);
-        servletRegistrationMap.put(servletName, servletRegistration);
+        if (servletRegistrations.containsValue(servletRegistration)) {
+            logger.warn("{} is registered already.", servlet);
+            return null;
+        }
+        servletRegistrations.put(servletName, servletRegistration);
         return servletRegistration;
     }
 
+    @Nullable
     @Override
     public DefaultServletRegistration addServlet(String servletName, Class<? extends Servlet> servletClass) {
-        ensureUninitialized("addServlet");
-        checkArgument(!isNullOrEmpty(servletName),
-                      "servletName: %s (expected: not null and empty)", servletName);
         requireNonNull(servletClass, "servletClass");
         try {
             return addServlet(servletName, createServlet(servletClass));
         } catch (ServletException e) {
-            throw new RuntimeException("Failed to add a servlet. servletName: " + servletName, e);
+            throw new RuntimeException("Failed to add a servlet. servletName: " + servletName +
+                                       ", servletClass: " + servletClass, e);
         }
     }
 
@@ -375,7 +389,7 @@ final class DefaultServletContext implements ServletContext {
             requireNonNull(clazz, "clazz");
             return clazz.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create a servlet: " + clazz.getSimpleName(), e);
+            throw new ServletException("Failed to create a servlet: " + clazz.getSimpleName(), e);
         }
     }
 
@@ -383,12 +397,12 @@ final class DefaultServletContext implements ServletContext {
     @Nullable
     public DefaultServletRegistration getServletRegistration(String servletName) {
         requireNonNull(servletName, "servletName");
-        return servletRegistrationMap.get(servletName);
+        return servletRegistrations.get(servletName);
     }
 
     @Override
     public Map<String, DefaultServletRegistration> getServletRegistrations() {
-        return servletRegistrationMap;
+        return servletRegistrations;
     }
 
     @Override
@@ -481,7 +495,7 @@ final class DefaultServletContext implements ServletContext {
     @Override
     public String getVirtualServerName() {
         return ArmeriaHttpUtil.SERVER_HEADER +
-               " (JDK " + SystemInfo.javaVersion() + ";" + SystemInfo.osType().name() + ")";
+               " (JDK " + SystemInfo.javaVersion() + ';' + SystemInfo.osType().name() + ')';
     }
 
     @Override

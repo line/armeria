@@ -94,10 +94,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
     DefaultServletHttpRequest(ServiceRequestContext serviceRequestContext,
                               DefaultServletContext servletContext,
                               AggregatedHttpRequest httpRequest) throws IOException {
-        requireNonNull(serviceRequestContext, "serviceRequestContext");
-        requireNonNull(servletContext, "servletContext");
-        requireNonNull(httpRequest, "request");
-
         this.serviceRequestContext = serviceRequestContext;
         this.servletContext = servletContext;
         this.httpRequest = httpRequest;
@@ -111,7 +107,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         requestURI = serviceRequestContext.path();
         queryParams = queryParamsOf(serviceRequestContext.query(), contentType, httpRequest);
         cookies = decodeCookie();
-        servletPath = servletContext.getServletPath(requestURI);
+        servletPath = requestURI.substring(servletContext.getContextPath().length() + 1);
         pathInfo = decodePathInfo();
 
         final Builder<String, String[]> builder = ImmutableMap.builder();

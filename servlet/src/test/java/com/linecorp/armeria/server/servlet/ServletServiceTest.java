@@ -284,19 +284,11 @@ public class ServletServiceTest {
                 final ServletRequestDispatcher dispatcher =
                         (ServletRequestDispatcher) request.getServletContext()
                                                           .getRequestDispatcher(request.getRequestURI());
-                assertThat(dispatcher.getPath()).isEqualTo("/home");
                 assertThat(dispatcher.getName()).isEqualTo("/home");
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().write("welcome");
                 response.getWriter().close();
-                final UrlMapper urlMapper = new UrlMapper<String>(true);
-                urlMapper.addMapping("/test", "Exact path", "/test");
-                urlMapper.addMapping("/test/*", "End with *", "/test/*");
-                urlMapper.addMapping("/test/*.html", "Contain *", "/test/*.html");
-                assertThat(urlMapper.getMapping("/test")).isEqualTo("/test");
-                assertThat(urlMapper.getMapping("/test/path/info")).isEqualTo("/test/*");
-                assertThat(urlMapper.getMapping("/test/path/info.html")).isEqualTo("/test/*.html");
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }

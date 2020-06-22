@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.servlet;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -38,23 +37,20 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 final class DefaultServletRegistration implements Dynamic {
+
     private final String servletName;
     private final Servlet servlet;
     private final ServletConfig servletConfig;
-    private final UrlMapper<DefaultServletRegistration> urlMapper;
-    private final Set<String> mappingSet = new HashSet<>();
+    private final DefaultServletContext servletContext;
+    private final ServletUrlMapper urlMapper;
     private final Map<String, String> initParameterMap;
+    private final Set<String> mappingSet = new HashSet<>();
 
     DefaultServletRegistration(String servletName, Servlet servlet, DefaultServletContext servletContext,
-                               UrlMapper<DefaultServletRegistration> urlMapper,
-                               Map<String, String> initParameterMap) {
-        requireNonNull(servletName, "servletName");
-        requireNonNull(servlet, "servlet");
-        requireNonNull(servletContext, "servletContext");
-        requireNonNull(urlMapper, "urlMapper");
-
+                               ServletUrlMapper urlMapper, Map<String, String> initParameterMap) {
         this.servletName = servletName;
         this.servlet = servlet;
+        this.servletContext = servletContext;
         this.urlMapper = urlMapper;
         this.initParameterMap = ImmutableMap.copyOf(initParameterMap);
         servletConfig = new ServletConfig() {
@@ -79,7 +75,6 @@ final class DefaultServletRegistration implements Dynamic {
                 return Collections.enumeration(ImmutableSet.copyOf(getInitParameters().keySet()));
             }
         };
-        addMapping(servletName);
     }
 
     ServletConfig getServletConfig() {
@@ -92,14 +87,29 @@ final class DefaultServletRegistration implements Dynamic {
 
     @Override
     public Set<String> addMapping(String... urlPatterns) {
-        checkState(!((DefaultServletContext) servletConfig.getServletContext()).isInitialized(),
-                   "Can't add servlet mapping after the servlet context is initialized.");
         requireNonNull(urlPatterns, "urlPatterns");
-        mappingSet.addAll(Arrays.asList(urlPatterns));
-        for (String pattern : urlPatterns) {
-            urlMapper.addMapping(pattern, this, servletName);
+        checkState(!servletContext.isInitialized(),
+                   "Can't add servlet mapping after the servlet context is initialized.");
+
+        final Set<String> conflicts = new HashSet<>();
+
+        for (String urlPattern : urlPatterns) {
+            final DefaultServletRegistration registration =
+                    urlMapper.getMapping(urlPattern);
+            if (registration != null) {
+                conflicts.add(urlPattern);
+            }
         }
-        return mappingSet;
+
+        if (!conflicts.isEmpty()) {
+            return ImmutableSet.copyOf(conflicts);
+        }
+
+        for (String urlPattern : urlPatterns) {
+            urlMapper.addMapping(urlPattern, this);
+        }
+
+        return ImmutableSet.of();
     }
 
     @Override

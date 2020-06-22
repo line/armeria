@@ -26,30 +26,13 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 final class ServletRequestDispatcher implements RequestDispatcher {
-    private final String path;
-    private final String name;
+
     private final ServletFilterChain filterChain;
-
-    final UrlMapper.Element<DefaultServletRegistration> mapperElement;
-
-    ServletRequestDispatcher(ServletFilterChain filterChain, String path,
-                             @Nullable UrlMapper.Element<DefaultServletRegistration> element) {
-        this(filterChain, path, path, element);
-    }
+    private final String name;
 
     ServletRequestDispatcher(ServletFilterChain filterChain, String name) {
-        this(filterChain, name, name, null);
-    }
-
-    ServletRequestDispatcher(ServletFilterChain filterChain, String path, String name,
-                             @Nullable UrlMapper.Element<DefaultServletRegistration> element) {
-        requireNonNull(filterChain, "filterChain");
-        requireNonNull(path, "path");
-        requireNonNull(name, "name");
         this.filterChain = filterChain;
-        this.path = path;
         this.name = name;
-        mapperElement = element;
     }
 
     @Override
@@ -67,10 +50,6 @@ final class ServletRequestDispatcher implements RequestDispatcher {
         requireNonNull(request, "request");
         requireNonNull(response, "response");
         filterChain.doFilter(request, response);
-    }
-
-    String getPath() {
-        return path;
     }
 
     String getName() {

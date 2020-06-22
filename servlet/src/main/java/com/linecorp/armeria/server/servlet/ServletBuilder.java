@@ -18,11 +18,14 @@ package com.linecorp.armeria.server.servlet;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
+import javax.servlet.Servlet;
 import javax.servlet.http.HttpServlet;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -31,7 +34,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 /**
  * A builder class which creates a new {@link DefaultServletContext} instance.
  */
-public class ServletBuilder {
+public final class ServletBuilder {
+
     private final DefaultServletContext servletContext;
     private final ServerBuilder serverBuilder;
     private final String contextPath;
@@ -62,54 +66,47 @@ public class ServletBuilder {
     }
 
     /**
-     * Creates a new {@link ServerBuilder}.
+     * Add a servlet.
      */
-    public ServerBuilder build() {
-        final String path = contextPath.isEmpty() ? "/" : contextPath;
-        final DefaultServletService servletService = new DefaultServletService(servletContext);
-        serverBuilder.serviceUnder(path, servletService);
-        if (rootServletAdded) {
-            serverBuilder.service(path, servletService);
-        } else {
-            serverBuilder.service(path, (ctx, req) -> HttpResponse.of(HttpStatus.NOT_FOUND));
+    public ServletBuilder servlet(String servletName, HttpServlet httpServlet, String... urlPatterns) {
+        checkUrlPatterns(urlPatterns);
+        servletContext.addServlet(servletName, httpServlet, urlPatterns);
+        return this;
+    }
+
+    private void checkUrlPatterns(String... urlPatterns) {
+        final List<String> urls = ImmutableList.copyOf(requireNonNull(urlPatterns, "urlPatterns"));
+        if (urls.isEmpty()) {
+            throw new IllegalArgumentException("empty urlPatterns");
         }
-        servletContext.init();
-        return serverBuilder;
+        for (String url : urls) {
+            if (url == null) {
+                throw new IllegalArgumentException("url is null.");
+            } else if (url.isEmpty() || "/".equals(url)) {
+                rootServletAdded = true;
+            } else if (url.charAt(0) != '/') {
+                throw new IllegalArgumentException("url must start with /. url: " + url);
+            }
+        }
     }
 
     /**
      * Add a servlet.
      */
-    public ServletBuilder servlet(String path, HttpServlet httpServlet) {
-        requireNonNull(path, "path");
-        requireNonNull(httpServlet, "httpServlet");
-        validatePath(path);
-        servletContext.addServlet(contextPath + path, httpServlet);
+    public ServletBuilder servlet(String servletName, String className, String... urlPatterns) {
+        checkUrlPatterns(urlPatterns);
+        servletContext.addServlet(servletName, className, urlPatterns);
         return this;
     }
 
     /**
      * Add a servlet.
      */
-    public ServletBuilder servlet(String path, String servletClass) {
-        requireNonNull(path, "path");
-        requireNonNull(servletClass, "servletClass");
-        validatePath(path);
-        servletContext.addServlet(contextPath + path, servletClass);
+    public ServletBuilder servlet(String servletName, Class<? extends Servlet> servletClass,
+                                  String... urlPatterns) {
+        checkUrlPatterns(urlPatterns);
+        servletContext.addServlet(servletName, servletClass, urlPatterns);
         return this;
-    }
-
-    /**
-     * Validate servlet path.
-     */
-    public void validatePath(String path) {
-        if (path.isEmpty() || "/".equals(path)) {
-            rootServletAdded = true;
-        } else {
-            checkArgument(path.charAt(0) == '/',
-                          "servletPath must start with /. servletPath: %s",
-                          path);
-        }
     }
 
     /**
@@ -162,5 +159,21 @@ public class ServletBuilder {
         requireNonNull(responseEncoding, "responseEncoding");
         servletContext.setResponseCharacterEncoding(responseEncoding);
         return this;
+    }
+
+    /**
+     * TBD.
+     */
+    public ServerBuilder build() {
+        final String path = contextPath.isEmpty() ? "/" : contextPath;
+        final DefaultServletService servletService = new DefaultServletService(servletContext);
+        serverBuilder.serviceUnder(path, servletService);
+        if (rootServletAdded) {
+            serverBuilder.service(path, servletService);
+        } else {
+            serverBuilder.service(path, (ctx, req) -> HttpResponse.of(HttpStatus.NOT_FOUND));
+        }
+        servletContext.init();
+        return serverBuilder;
     }
 }
