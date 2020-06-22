@@ -1,0 +1,243 @@
+## 🌟 New features
+
+- You can now specify the maximum lifespan of server-side connections using
+  <type://ServerBuilder#maxConnectionAge(Duration)>. This is useful when you have to deal with a load balancer
+  without HTTP/2 support. #2747 #2796
+  ```java
+  Server server =
+      Server.builder()
+            .maxConnectionAge(Duration.ofMinutes(1))
+            ...
+            .build();
+  ```
+- You can now record the name of the service that handled a request into <type://RequestOnlyLog#serviceName()>.
+  #2768 #2780 #2809 #2820
+  - By using <type://ServiceBindingBuilder#defaultServiceName(String)>:
+    ```java
+    Server server =
+        Server.builder()
+              .route().path("/service")
+                      .defaultServiceName("my-service")
+                      .build(new MyService())
+              .build();
+    ```
+  - By using <type://@ServiceName>:
+    ```java
+    @ServiceName("my-service")
+    public class MyAnnotatedService {
+        @Get("/get")
+        public String get() { ... }
+
+        @Post("/set")
+        @ServiceName("my-post-service")
+        public String post(@Param String value) { ... }
+    }
+    ```
+  - Programmatically:
+    ```java
+    Server server =
+        Server.builder()
+              .service("/service", (ctx, req) -> {
+                  ctx.logBuilder().serviceName("my-service");
+              })
+              .build();
+    ```
+  - Armeria will use the FQCN of the service class if you did not specify a service name.
+- You can now use `@Nullable` annotation to specify an optional parameter or request object in annotated
+  services. Previously, only the parameters with <type://@Default> annotation or `Optional` type were accepted.
+  #2773
+  ```java
+  public class MyAnnotatedService {
+      // null will be injected into 'value' instead of returning
+      // '400 Bad Request' when 'value' is missing.
+      @Get("/get")
+      public String get(@Param @Nullable String value) { ... }
+  }
+  ```
+- You can now use the classes in the `java.time` package in annotated services. #2760 #2783 #2792 #2799
+  ```java
+  public class MyAnnotatedService {
+      @Get("/sleep/{duration}")
+      public void sleep(@Param Duration duration) { ... }
+  }
+  ```
+- You can now determine whether a request was successful or not from HTTP trailers in
+  <type://CircuitBreakerClient> and <type://RetryingClient> using `onResponseTrailers()` method.
+  This can be useful when you work with gRPC, whose status code is encoded in the `grpc-status` trailer. #2816
+  ```java
+  CircuitBreaker cb = CircuitBreaker.of("my-service");
+  CircuitBreakerRule cbr =
+      CircuitBreakerRule.builder()
+                        .onResponseTrailers(trailers -> {
+                            return trailers.getInt("grpc-status", -1) != 0;
+                        })
+                        .thenFailure()
+                        .build();
+
+  MyServiceStub myService =
+      Clients.builder("gproto+h2c://example.com/")
+             .decorator(CircuitBreakerClient.newDecorator(cb, cbr))
+             .build(MyServiceStub.class);
+  ```
+- <type://RequestLog> sanitizers now accept <type://RequestContext> as an additional input, so that
+  the sanitizers can behave differently depending on the current path, etc. #2803
+  ```java
+  Server server =
+      Server.builder()
+            .decorator(LoggingService.builder()
+                                     .headersSanitizer((ctx, headers) -> {
+                                         if (ctx.path().startsWith("/secret/")) {
+                                             return "<secret>";
+                                         } else {
+                                             return headers;
+                                         }
+                                     })
+                                     .newDecorator())
+            ...
+            .build();
+  ```
+- Armeria now supports service discovery and registration for
+  [Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html) and
+  [Finagle ServerSets](http://stevenskelton.ca/finagle-serverset-clusters-using-zookeeper/). #2673 #2749 #2791
+  ```java
+  CuratorFramework curator = ...;
+  // Client side:
+  //// Curator Service Discovery:
+  EndpointGroup curatorEndpointGroup =
+      ZooKeeperEndpointGroup.of(curator, "/discovery/curator",
+                                ZooKeeperDiscoverySpec.curator("my-service"));
+  //// Finagle ServerSets:
+  EndpointGroup serverSetsEndpointGroup =
+      ZooKeeperEndpointGroup.of(curator, "/discovery/serversets"
+                                ZooKeeperDiscoverySpec.serverSets());
+
+  // Server-side:
+  Server server = ...;
+  //// Curator Service Discovery
+  server.addListener(ZooKeeperUpdatingListener.of(
+      curator, "/discovery/curator",
+      ZooKeeperRegistrationSpec.curator("my-service")));
+  //// Finagle ServerSets:
+  server.addListener(ZooKeeperUpdatingListener.of(
+      curator, "/discovery/serversets",
+      ZooKeeperRegistrationSpec.serverSets()));
+  ```
+- You can now build <type://OAuth1aToken> more conveniently using the builder API. #2770
+  ```java
+  OAuth1aToken token =
+      OAuth1aToken.builder()
+                  .realm("...")
+                  .consumerKey("...")
+                  .token("...")
+                  ...
+                  .build();
+  ```
+- The Spring Boot integration now hides all services under `/internal/` for non-management ports when
+  `management.server.port` property is set. #2408 #2502
+- The Spring Boot integration now supports
+  [the new graceful shutdown properties](https://docs.spring.io/spring-boot/docs/2.3.0.RELEASE/reference/html/spring-boot-features.html#boot-features-graceful-shutdown)
+  introduced in Spring Boot 2.3. #2784 #2802
+- Added a new API for handling reference counted or pooled objects such as <type://PooledHttpData>) in
+  a relatively safer way. #2448
+  - See <type://PooledHttpData>, <type://PooledWebClient>, <type://PooledHttpRequest> and
+    <type://PooledHttpResponse> for more information.
+
+## 📈 Improvements
+
+- Cleaned up minor issues reported by [errorprone](https://errorprone.info/). #2772
+- Made some exception messages more user-friendly. #2751
+
+## 🛠️ Bug fixes
+
+- It's now allowed to specify an absolute URL *only when* an <type://WebClient> was created *without* a base
+  URL. #2757
+  ```java
+  WebClient clientWithoutBaseUrl = WebClient.of();
+  WebClient clientWithBaseUrl = WebClient.of("https://example.com/");
+  // Good
+  clientWithBaseUrl.get("/bar");
+  clientWithoutBaseUrl.get("https://foo.com/");
+  // Bad
+  clientWithBaseUrl.get("https://foo.com/");
+  clientWithoutBaseUrl.get("/bar");
+  ```
+- Boolean parameter conversion became more strict in annotated services. #2767 #2774
+  - Only `true`, `false`, `1` and `0` are accepted. Other values will cause a `400 Bad Request` response.
+- <type://DocService> web UI now shows the 'request body' field for `DELETE` and `PATCH` methods in the debug
+  form. #2756 #2819
+- <type://JacksonRequestConverterFunction> now handles the case where the target type has a type parameter,
+  e.g. `List<Long>`. #2769 #2779
+- Fixed a bug where the current <type://ServiceRequestContext> is not pushed when invoking
+  <type://ResponseConverterFunction#convertResponse(ServiceRequestContext,ResponseHeaders,Object,HttpHeaders)>.
+  #2789
+- <type://RequestContextExportingAppender> now handles the `<exports />` tag correctly. #2781
+- Fixed a bug where some Reactive Streams `Subscriber` implementations violate the specification. #2815
+- You no longer get sporadic <type://WriteTimeoutException> from proxied connections. #2801 #2805
+- You no longer get a <type://CancelledSubscriptionException> unnecessarily when using
+  <type://PublisherBasedStreamMessage>. #2797
+- You no longer get sporadic `EncoderException`s from HTTP/1 connections. #2765
+- It's now disallowed to specify the following headers in gRPC `Metadata`. #2718
+  - `:status`
+  - `grpc-message`
+  - `grpc-status`
+  - `armeria.grpc.ThrowableProto-bin`
+
+## 🏚️ Deprecations
+
+- <type://AbstractUnwrappable#delegate()> has been deprecated in favor of <type://Unwrappable#unwrap()>.
+
+## ☢️ Breaking changes
+
+- You can specify an absolute URL *only when* a <type://WebClient> was created *without* a base URL.
+  It was previously allowed to specify an absolute URL even when created with a base URL. #2757
+- The method signature of
+  <type://RequestConverterFunction#convertRequest(ServiceRequestContext,AggregatedHttpRequest,Class,ParameterizedType)>
+  has been changed to support parameterized types. #2779
+- The default <type://MeterIdPrefixFunction>` returned by <type://MeterIdPrefixFunction#ofDefault(String)>
+  now generates the meter IDs with different tags. #2780
+  - The `route` tag has been replaced with the `service` tag.
+- `RetrofitMeterIdPrefixFunctionBuilder` has been removed and superseded by
+  <type://RequestOnlyLog#serviceName()>. #2780
+- ZooKeeper-based service discovery: #2749 #2791
+  - Renamed all classes to use `ZooKeeper` instead of `Zookeeper`.
+  - You now must specify <type://ZooKeeperRegistrationSpec> or <type://ZooKeeperDiscoverySpec> when creating
+    <type://ZooKeeperUpdatingListener> or <type://ZooKeeperEndpointGroup>.
+  - `NodeValueCodec` has been removed.
+  - `ZooKeeperEndpointGroupBuilder.codec()` and `ZooKeeperUpdatingListenerBuilder.codec()` have been removed.
+
+## ⛓ Dependencies
+
+- Bouncy Castle 1.65 → 1.65.01
+- Dropwizard 2.0.9 → 2.0.10
+- gRPC 1.29.0 → 1.30.0
+- Jetty 9.4.29 → 9.4.30
+- Reactor 3.3.5 → 3.3.6
+- Spring Boot 2.3.0 → 2.3.1, 2.1.14 → 2.1.15
+- Tomcat 9.0.35 → 9.0.36, 8.5.55 → 8.5.56
+- Example dependencies
+  - Dagger 2.27 → 2.28
+  - grpc-kotlin-stub 0.1.2 → 0.1.3
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'anuraaga',
+    'cbornet',
+    'eonezhang',
+    'ghkim3221',
+    'heowc',
+    'huydx',
+    'ikhoon',
+    'jongmin92',
+    'jrhee17',
+    'KarboniteKream',
+    'kojilin',
+    'max904-github',
+    'minwoox',
+    'okue',
+    'sokangmin',
+    'tobias-',
+    'trustin',
+  ]}
+/>

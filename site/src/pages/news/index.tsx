@@ -1,11 +1,7 @@
-import loadable from '@loadable/component';
+import { withPrefix } from 'gatsby';
 import React from 'react';
+
+import Redirect from '../../layouts/redirect.tsx';
 import recentNews from '../../../gen-src/news-recent.json';
 
-const latestNewsPath = Object.keys(recentNews)[0];
-const latestNewsPageName = latestNewsPath.substring(
-  latestNewsPath.lastIndexOf('/') + 1,
-);
-const LatestNewsPage = loadable(() => import(`./${latestNewsPageName}.mdx`));
-
-export default (props: any) => <LatestNewsPage {...props} />;
+export default (props: any) => <Redirect href={withPrefix(Object.keys(recentNews)[0])} />;
