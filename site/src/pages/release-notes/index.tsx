@@ -1,7 +1,9 @@
 import { withPrefix } from 'gatsby';
 import React from 'react';
 
-import Redirect from '../../layouts/redirect.tsx';
+import Redirect from '../../layouts/redirect';
 import recentReleases from '../../../gen-src/release-notes-recent.json';
 
-export default (props: any) => <Redirect href={withPrefix(Object.keys(recentReleases)[0])} />;
+export default () => (
+  <Redirect href={withPrefix(Object.keys(recentReleases)[0])} />
+);

@@ -13,10 +13,7 @@ const Redirect: React.FC<RedirectProps> = (props) => {
   return (
     <>
       <Helmet title="Redirecting">
-        <meta
-          httpEquiv="refresh"
-          content={`0; url=${props.href}`}
-        />
+        <meta httpEquiv="refresh" content={`0; url=${props.href}`} />
         <script>{`
         window.location = '${props.href}';
         `}</script>
@@ -33,10 +30,8 @@ const Redirect: React.FC<RedirectProps> = (props) => {
         >
           <main>
             <Typography.Paragraph>
-              <OutboundLink href={props.href}>
-                Click here
-              </OutboundLink>{' '}
-              if not redirected.
+              <OutboundLink href={props.href}>Click here</OutboundLink> if not
+              redirected.
             </Typography.Paragraph>
           </main>
         </div>
