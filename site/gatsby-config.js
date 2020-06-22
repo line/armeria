@@ -24,6 +24,7 @@ module.exports = {
         },
       },
     },
+    'gatsby-plugin-cname',
     {
       resolve: 'gatsby-plugin-google-analytics',
       options: {
