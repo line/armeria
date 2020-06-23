@@ -1,3 +1,11 @@
 dependencies {
     api 'junit:junit'
 }
+
+// Copy common files from junit5 module to gen-src directory in order to use them as a source set.
+task copyFiles(type: Copy) {
+    from "${rootProject.projectDir}/junit5/src/main/java/com/linecorp/armeria/internal/testing"
+    into "${project.ext.genSrcDir}/main/java/com/linecorp/armeria/internal/testing"
+}
+
+tasks.compileJava.dependsOn(copyFiles)
