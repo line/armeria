@@ -24,7 +24,13 @@ import Typography from '@material-ui/core/Typography';
 import CloseIcon from '@material-ui/icons/Close';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
-import React, { ChangeEvent, useCallback, useEffect, useReducer, useState, } from 'react';
+import React, {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useReducer,
+  useState,
+} from 'react';
 import { Option } from 'react-dropdown';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 // react-syntax-highlighter type definitions are out of date.
@@ -495,7 +501,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
                 href="https://armeria.dev/docs/server-docservice/#example-requests-and-headers"
                 rel="noreferrer"
                 target="_blank"
-              >specifying example requests and headers</a>.
+              >
+                specifying example requests and headers
+              </a>
+              .
             </Alert>
             <EndpointPath
               examplePaths={examplePaths}
