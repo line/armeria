@@ -18,13 +18,11 @@ package com.linecorp.armeria.server.encoding;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -35,6 +33,7 @@ import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import reactor.test.StepVerifier;
 
 class HttpEncodedResponseTest {
 
@@ -66,7 +65,11 @@ class HttpEncodedResponseTest {
                                                   HttpData.ofUtf8("foo"));
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
                 orig, HttpEncodingType.DEFLATE, mediaType -> true, 1);
-        final List<HttpObject> join = encoded.drainAll().join();
-        assertThat(((HttpData) join.get(2)).toStringUtf8()).isEqualTo("foo");
+        StepVerifier.create(encoded)
+                    .expectNext(ResponseHeaders.of(HttpStatus.CONTINUE))
+                    .expectNext(headers)
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectComplete()
+                    .verify();
     }
 }

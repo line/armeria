@@ -113,7 +113,7 @@ class DefaultWebClientTest {
                                           .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-            client.get("/").drainAll();
+            client.get("/").aggregate();
             final ClientRequestContext cctx = ctxCaptor.get();
             await().untilAsserted(() -> {
                 assertThat(cctx.endpointGroup()).isSameAs(group);
@@ -138,7 +138,7 @@ class DefaultWebClientTest {
                                           .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-            client.get("http://group").drainAll();
+            client.get("http://group").aggregate();
             final ClientRequestContext cctx = ctxCaptor.get();
             await().untilAsserted(() -> {
                 assertThat(cctx.endpointGroup()).isSameAs(group);

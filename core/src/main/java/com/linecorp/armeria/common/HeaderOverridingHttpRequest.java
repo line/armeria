@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -87,16 +86,6 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         delegate.subscribe(subscriber, executor, options);
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
-        return delegate.drainAll(executor);
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        return delegate.drainAll(executor, options);
     }
 
     @Override

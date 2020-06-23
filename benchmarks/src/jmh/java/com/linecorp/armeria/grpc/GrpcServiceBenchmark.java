@@ -41,7 +41,6 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 
 @State(Scope.Thread)
 public class GrpcServiceBenchmark {
@@ -82,7 +81,7 @@ public class GrpcServiceBenchmark {
 
     @TearDown(Level.Invocation)
     public void closeResponse() {
-        response.drainAll().join().forEach(ReferenceCountUtil::release);
+        response.aggregate().join();
     }
 
     @Benchmark

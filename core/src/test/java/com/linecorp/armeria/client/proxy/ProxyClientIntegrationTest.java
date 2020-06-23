@@ -103,7 +103,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.ReferenceCountUtil;
 
-public class ProxyClientIntegrationTest {
+class ProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
     private static final String SUCCESS_RESPONSE = "success";
 

@@ -23,12 +23,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -110,16 +111,48 @@ class HttpDecodedResponseTest {
     }
 
     private static ByteBuf responseBuf(HttpResponse decoded, boolean withPooledObjects) {
-        final CompletableFuture<List<HttpObject>> future;
+        final CompletableFuture<ByteBuf> future = new CompletableFuture<>();
         if (withPooledObjects) {
-            future = decoded.drainAll(WITH_POOLED_OBJECTS);
+            decoded.subscribe(new Subscriber<HttpObject>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Long.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(HttpObject o) {
+                    if (o instanceof PooledHttpData) {
+                        future.complete(((PooledHttpData) o).content());
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onComplete() {}
+            }, WITH_POOLED_OBJECTS);
         } else {
-            future = decoded.drainAll();
+            decoded.subscribe(new Subscriber<HttpObject>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Long.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(HttpObject o) {
+                    if (o instanceof PooledHttpData) {
+                        future.complete(((PooledHttpData) o).content());
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onComplete() {}
+            });
         }
-        return future.join().stream()
-                .filter(o -> o instanceof PooledHttpData)
-                .map(o -> ((PooledHttpData) o).content())
-                .findFirst()
-                .get();
+        return future.join();
     }
 }

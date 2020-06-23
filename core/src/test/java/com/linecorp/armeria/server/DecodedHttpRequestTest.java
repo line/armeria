@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -27,11 +25,12 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+
+import reactor.test.StepVerifier;
 
 public class DecodedHttpRequestTest {
 
@@ -44,8 +43,10 @@ public class DecodedHttpRequestTest {
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         req.close();
 
-        final List<HttpObject> drained = req.drainAll().join();
-        assertThat(drained).containsExactly(HttpData.ofUtf8("foo"));
+        StepVerifier.create(req)
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -54,8 +55,10 @@ public class DecodedHttpRequestTest {
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         req.close();
 
-        final List<HttpObject> drained = req.drainAll().join();
-        assertThat(drained).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(req)
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -65,8 +68,10 @@ public class DecodedHttpRequestTest {
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
         req.close();
 
-        final List<HttpObject> drained = req.drainAll().join();
-        assertThat(drained).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(req)
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -76,8 +81,10 @@ public class DecodedHttpRequestTest {
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         req.close();
 
-        final List<HttpObject> drained = req.drainAll().join();
-        assertThat(drained).containsExactly(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(req)
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -88,9 +95,11 @@ public class DecodedHttpRequestTest {
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         req.close();
 
-        final List<HttpObject> drained = req.drainAll().join();
-        assertThat(drained).containsExactly(HttpData.ofUtf8("foo"),
-                                            HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(req)
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     private static DecodedHttpRequest decodedHttpRequest() {

@@ -111,17 +111,6 @@ class Http1ConnectionReuseTest {
             }
 
             @Override
-            public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
-                return null;
-            }
-
-            @Override
-            public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor,
-                                                                SubscriptionOption... options) {
-                return null;
-            }
-
-            @Override
             public void abort() {}
 
             @Override

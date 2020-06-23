@@ -546,36 +546,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         @Override
-        public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-            return drainAll(executor, false);
-        }
-
-        @Override
-        public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-            requireNonNull(options, "options");
-
-            final boolean withPooledObjects = containsWithPooledObjects(options);
-            return drainAll(executor, withPooledObjects);
-        }
-
-        private CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-            requireNonNull(executor, "executor");
-
-            final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
-            final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, drainer, processor, executor, withPooledObjects,
-                    false /* We do not call Subscription.cancel() in StreamMessageDrainer. */);
-            if (!subscribe0(subscription)) {
-                final DownstreamSubscription<T> oldSubscription = this.subscription;
-                assert oldSubscription != null;
-                return CompletableFutures.exceptionallyCompletedFuture(
-                        abortedOrLate(oldSubscription.subscriber()));
-            }
-
-            return drainer.future();
-        }
-
-        @Override
         public EventExecutor defaultSubscriberExecutor() {
             return processor.executor();
         }
