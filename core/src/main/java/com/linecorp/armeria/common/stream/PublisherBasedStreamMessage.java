@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotif
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -34,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -140,27 +138,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
             }
         });
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-        requireNonNull(executor, "executor");
-
-        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(false);
-        if (!subscribe1(drainer, executor, false)) {
-            final AbortableSubscriber subscriber = this.subscriber;
-            assert subscriber != null;
-            return CompletableFutures.exceptionallyCompletedFuture(abortedOrLate(subscriber.subscriber));
-        }
-
-        return drainer.future();
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        requireNonNull(options, "options");
-
-        return drainAll(executor);
     }
 
     @Override

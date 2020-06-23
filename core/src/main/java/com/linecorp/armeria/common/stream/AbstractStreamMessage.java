@@ -22,7 +22,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithP
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -33,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -88,35 +86,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      *         or aborted.
      */
     abstract SubscriptionImpl subscribe(SubscriptionImpl subscription);
-
-    @Override
-    public final CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-        return drainAll(executor, false);
-    }
-
-    @Override
-    public final CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        requireNonNull(options, "options");
-
-        final boolean withPooledObjects = containsWithPooledObjects(options);
-        return drainAll(executor, withPooledObjects);
-    }
-
-    private CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        requireNonNull(executor, "executor");
-        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
-        final SubscriptionImpl subscription = new SubscriptionImpl(this, drainer, executor,
-                                                                   withPooledObjects, false);
-        final SubscriptionImpl actualSubscription = subscribe(subscription);
-
-        if (actualSubscription != subscription) {
-            // Failed to subscribe.
-            return CompletableFutures.exceptionallyCompletedFuture(
-                    abortedOrLate(actualSubscription.subscriber()));
-        }
-
-        return drainer.future();
-    }
 
     @Override
     public final CompletableFuture<Void> whenComplete() {

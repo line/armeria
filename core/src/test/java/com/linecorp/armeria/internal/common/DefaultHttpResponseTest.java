@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.Unpooled;
+import reactor.test.StepVerifier;
 
 class DefaultHttpResponseTest {
 
@@ -52,29 +53,38 @@ class DefaultHttpResponseTest {
         // Always headers only.
         final HttpResponseWriter res1 = HttpResponse.streaming();
         res1.close(AggregatedHttpResponse.of(204));
-        assertThat(res1.drainAll().join()).containsExactly(ResponseHeaders.of(204));
+        StepVerifier.create(res1)
+                    .expectNext(ResponseHeaders.of(204))
+                    .expectComplete()
+                    .verify();
 
         // Headers only.
         final HttpResponseWriter res2 = HttpResponse.streaming();
         res2.close(AggregatedHttpResponse.of(ResponseHeaders.of(200)));
-        assertThat(res2.drainAll().join()).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 0));
+        StepVerifier.create(res2)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 0))
+                    .expectComplete()
+                    .verify();
 
         // Headers and body.
         final HttpResponseWriter res3 = HttpResponse.streaming();
         res3.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), HttpData.ofUtf8("foo")));
-        assertThat(res3.drainAll().join()).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3),
-                HttpData.ofUtf8("foo"));
+        StepVerifier.create(res3)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3))
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectComplete()
+                    .verify();
 
         // Headers, body and trailers.
         final HttpResponseWriter res4 = HttpResponse.streaming();
         res4.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), HttpData.ofUtf8("bar"),
                                              HttpHeaders.of("x-trailer", true)));
-        assertThat(res4.drainAll().join()).containsExactly(
-                ResponseHeaders.of(200),
-                HttpData.ofUtf8("bar"),
-                HttpHeaders.of("x-trailer", true));
+        StepVerifier.create(res4)
+                    .expectNext(ResponseHeaders.of(200))
+                    .expectNext(HttpData.ofUtf8("bar"))
+                    .expectNext(HttpHeaders.of("x-trailer", true))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
