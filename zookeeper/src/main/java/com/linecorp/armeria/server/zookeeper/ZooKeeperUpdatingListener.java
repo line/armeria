@@ -144,7 +144,8 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private static ZooKeeperRegistrationSpec legacySpec(ZooKeeperRegistrationSpec spec, Server server) {
         final Endpoint endpoint = ((LegacyZooKeeperRegistrationSpec) spec).endpoint();
         if (endpoint != null) {
-            if (endpoint.hasPort() && validatePort(server, endpoint.port(), null)) {
+            if (endpoint.hasPort()) {
+                warnIfInactivePort(server, endpoint.port(), null);
                 return spec;
             }
             final ServerPort serverPort = server.activePort();
@@ -198,9 +199,8 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
             ServerSetsRegistrationSpec spec, Server server) {
         final ServerSetsInstance serverSetsInstance = spec.serverSetsInstance();
         if (serverSetsInstance.serviceEndpoint() != null) {
-            if (validatePort(server, serverSetsInstance.serviceEndpoint().port(), null)) {
-                return spec;
-            }
+            warnIfInactivePort(server, serverSetsInstance.serviceEndpoint().port(), null);
+            return spec;
         }
         final ServerSetsRegistrationSpecBuilder builder =
                 ZooKeeperRegistrationSpec.builderForServerSets();
@@ -218,24 +218,23 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     private static int port(Server server, SessionProtocol protocol, @Nullable Integer port) {
         if (port != null) {
-            if (validatePort(server, port, protocol)) {
-                return port;
-            }
+            warnIfInactivePort(server, port, protocol);
+            return port;
         }
         final ServerPort serverPort = server.activePort(protocol);
         return serverPort != null ? serverPort.localAddress().getPort() : -1;
     }
 
-    private static boolean validatePort(Server server, int port, @Nullable SessionProtocol protocol) {
+    private static void warnIfInactivePort(
+            Server server, int port, @Nullable SessionProtocol protocol) {
         for (ServerPort serverPort : server.activePorts().values()) {
             if ((protocol == null || serverPort.hasProtocol(protocol)) &&
                 serverPort.localAddress().getPort() == port) {
-                return true;
+                return;
             }
         }
         logger.warn("The specified port number {} does not exist. (expected one of activePorts: {})",
                     port, server.activePorts());
-        return false;
     }
 
     @Override

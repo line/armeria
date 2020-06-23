@@ -58,7 +58,7 @@ class ServerSetRegistrationTest {
         final Map<String, InetSocketAddress> additionals = ImmutableMap.of(
                 "foo", InetSocketAddress.createUnresolved("127.0.0.1", endpoints.get(1).port()));
         final EndpointStatus endpointStatus =
-                serverSet.join(InetSocketAddress.createUnresolved("127.0.0.1", endpoints.get(0).port()),
+                serverSet.join(InetSocketAddress.createUnresolved("127.0.0.1", 1),
                                additionals, -100, ImmutableMap.of("bar", "baz"));
 
         final byte[] serverSetImplBytes;
@@ -72,7 +72,7 @@ class ServerSetRegistrationTest {
         final ServerSetsRegistrationSpecBuilder specBuilder =
                 ZooKeeperRegistrationSpec.builderForServerSets();
         final ZooKeeperRegistrationSpec spec =
-                specBuilder.serviceEndpoint(Endpoint.of("127.0.0.1", endpoints.get(0).port()))
+                specBuilder.serviceEndpoint(Endpoint.of("127.0.0.1", 1))
                            .additionalEndpoint("foo", Endpoint.of("127.0.0.1", endpoints.get(1).port()))
                            .shardId(-100)
                            .metadata(ImmutableMap.of("bar", "baz"))
@@ -97,7 +97,8 @@ class ServerSetRegistrationTest {
         final ServerSetsInstance decoded = ServerSetsNodeValueCodec.INSTANCE.decode(
                 updatingListenerBytes);
         final ServerSetsInstance expected = new ServerSetsInstance(
-                Endpoint.of("127.0.0.1", endpoints.get(0).port()),
+                // The specified port number is used although the port is not actually used.
+                Endpoint.of("127.0.0.1", 1),
                 ImmutableMap.of("foo", Endpoint.of("127.0.0.1", endpoints.get(1).port())),
                 -100,
                 ImmutableMap.of("bar", "baz"));

@@ -159,7 +159,7 @@ class EurekaUpdatingListenerTest {
     }
 
     @Test
-    void misconfiguredPortNumberIsChanged() throws IOException {
+    void specifiedPortIsUsed() throws IOException {
         final EurekaUpdatingListener listener =
                 EurekaUpdatingListener.builder(eurekaServer.httpUri())
                                       .instanceId(INSTANCE_ID)
@@ -177,8 +177,8 @@ class EurekaUpdatingListenerTest {
         final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
                                                            InstanceInfo.class);
         final int port = instanceInfo.getPort().getPort();
-        assertThat(port).isNotEqualTo(1);
-        assertThat(port).isEqualTo(application.activeLocalPort());
+        // The specified port number is used although the port is not actually used.
+        assertThat(port).isEqualTo(1);
         application.stop().join();
     }
 }
