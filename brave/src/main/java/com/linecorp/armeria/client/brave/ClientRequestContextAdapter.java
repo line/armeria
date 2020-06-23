@@ -20,7 +20,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -28,8 +27,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.brave.SpanContextUtil;
-
-import brave.http.HttpClientAdapter;
 
 /**
  * Wraps a pair of {@link ClientRequestContext} and {@link RequestHeadersBuilder} in an {@link
@@ -61,13 +58,6 @@ final class ClientRequestContextAdapter {
             return ctx.method().name();
         }
 
-        /**
-         * Original implementation is calling {@link HttpClientAdapter#url(Object)} which needs {@link
-         * RequestLog#scheme()}, but because {@link RequestLog#scheme()} is not always available, we need to
-         * use {@link RequestContext#path()} directly.
-         *
-         * @see brave.http.HttpClientRequest#path()
-         */
         @Override
         public String path() {
             return ctx.path();

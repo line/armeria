@@ -1014,7 +1014,7 @@ class GrpcServiceServerTest {
                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                    throws Exception {
                                requestHeaders.set(req.headers());
-                               return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                               return new FilteredHttpResponse(unwrap().execute(ctx, req)) {
                                    @Override
                                    protected HttpObject filter(HttpObject obj) {
                                        if (obj instanceof HttpData) {
@@ -1054,7 +1054,7 @@ class GrpcServiceServerTest {
                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                    throws Exception {
                                requestHeaders.set(req.headers());
-                               return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                               return new FilteredHttpResponse(unwrap().execute(ctx, req)) {
                                    @Override
                                    protected HttpObject filter(HttpObject obj) {
                                        if (obj instanceof HttpData) {

@@ -38,8 +38,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.DomainNameMapping;
-import io.netty.util.DomainNameMappingBuilder;
+import io.netty.util.Mapping;
 
 /**
  * A <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
@@ -55,7 +54,7 @@ import io.netty.util.DomainNameMappingBuilder;
  */
 public final class VirtualHost {
 
-    private static final Pattern HOSTNAME_PATTERN = Pattern.compile(
+    static final Pattern HOSTNAME_PATTERN = Pattern.compile(
             "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
     /**
@@ -168,8 +167,8 @@ public final class VirtualHost {
 
         // Pretty convoluted way to validate but it's done only once and
         // we don't need to duplicate the pattern matching logic.
-        final DomainNameMapping<Boolean> mapping =
-                new DomainNameMappingBuilder<>(Boolean.FALSE).add(hostnamePattern, Boolean.TRUE).build();
+        final Mapping<String, Boolean> mapping =
+                new DomainMappingBuilder<>(Boolean.FALSE).add(hostnamePattern, Boolean.TRUE).build();
 
         if (!mapping.map(defaultHostname)) {
             throw new IllegalArgumentException(

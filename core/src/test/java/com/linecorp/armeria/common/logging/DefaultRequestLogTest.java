@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -64,6 +65,7 @@ class DefaultRequestLogTest {
     @Test
     void endRequestSuccess() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         log.endRequest();
         assertThat(log.requestDurationNanos()).isZero();
         assertThat(log.requestCause()).isNull();
@@ -72,6 +74,7 @@ class DefaultRequestLogTest {
     @Test
     void endRequestWithoutHeaders() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         log.endRequest();
         final RequestHeaders headers = log.requestHeaders();
         assertThat(headers.scheme()).isEqualTo("http");
@@ -83,6 +86,7 @@ class DefaultRequestLogTest {
     @Test
     void endRequestWithHeadersInContext() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         when(ctx.request()).thenReturn(HttpRequest.of(HttpMethod.GET, "/foo"));
         log.endRequest();
         assertThat(log.requestHeaders()).isSameAs(ctx.request().headers());
@@ -147,6 +151,7 @@ class DefaultRequestLogTest {
 
     @Test
     void addChild() {
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest();
@@ -221,6 +226,7 @@ class DefaultRequestLogTest {
     @Test
     void deferContent_setContentAfterEndResponse() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 
@@ -244,6 +250,7 @@ class DefaultRequestLogTest {
     @Test
     void deferContent_setContentBeforeEndResponse() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 
@@ -270,5 +277,50 @@ class DefaultRequestLogTest {
                                                                .defaultLogName(logName).build();
         ctx.logBuilder().endRequest();
         assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).name()).isSameAs(logName);
+    }
+
+    @Test
+    void logNameWithRequestContent() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+    }
+
+    @Test
+    void logNameWithDeferredRequestContent() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+
+        log.deferRequestContent();
+        log.endRequest();
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        assertThat(log.whenRequestComplete()).isNotDone();
+
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        assertThat(log.name()).isSameAs("test");
+        await().untilAsserted(() -> {
+            assertThat(log.whenRequestComplete()).isDone();
+        });
+    }
+
+    @Test
+    void logNameWithDeferredRequestContent_beforeEndRequest() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+
+        log.deferRequestContent();
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        assertThat(log.whenRequestComplete()).isNotDone();
+
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        await().untilAsserted(() -> {
+            assertThat(log.whenRequestComplete()).isDone();
+        });
     }
 }

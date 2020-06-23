@@ -59,7 +59,7 @@ public enum RequestLogProperty {
     SCHEME(true),
 
     /**
-     * {@link RequestLog#name()}.
+     * {@link RequestLog#name()}, {@link RequestLog#serviceName()}, {@link RequestLog#fullName()}.
      */
     NAME(true),
 

@@ -50,7 +50,7 @@ final class JitterAddingBackoff extends BackoffWrapper {
     @Override
     public long nextDelayMillis(int numAttemptsSoFar) {
         validateNumAttemptsSoFar(numAttemptsSoFar);
-        final long nextDelayMillis = delegate().nextDelayMillis(numAttemptsSoFar);
+        final long nextDelayMillis = unwrap().nextDelayMillis(numAttemptsSoFar);
         if (nextDelayMillis < 0) {
             return nextDelayMillis;
         }
@@ -65,7 +65,7 @@ final class JitterAddingBackoff extends BackoffWrapper {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("delegate", delegate())
+                          .add("delegate", unwrap())
                           .add("minJitterRate", minJitterRate)
                           .add("maxJitterRate", maxJitterRate)
                           .toString();

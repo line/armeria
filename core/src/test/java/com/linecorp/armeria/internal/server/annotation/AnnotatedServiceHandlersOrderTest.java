@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
@@ -108,8 +109,10 @@ public class AnnotatedServiceHandlersOrderTest {
 
     private static class ParameterLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType) throws Exception {
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isZero();
             }
@@ -119,8 +122,10 @@ public class AnnotatedServiceHandlersOrderTest {
 
     private static class MethodLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType) throws Exception {
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isOne();
             }
@@ -130,8 +135,10 @@ public class AnnotatedServiceHandlersOrderTest {
 
     private static class ClassLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType) throws Exception {
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isEqualTo(2);
             }
@@ -141,8 +148,10 @@ public class AnnotatedServiceHandlersOrderTest {
 
     private static class ServiceLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType) throws Exception {
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isEqualTo(3);
             }
@@ -152,8 +161,10 @@ public class AnnotatedServiceHandlersOrderTest {
 
     private static class ServerLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType) throws Exception {
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isEqualTo(4);
             }

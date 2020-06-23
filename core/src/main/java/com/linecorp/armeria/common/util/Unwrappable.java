@@ -54,4 +54,37 @@ public interface Unwrappable {
         requireNonNull(type, "type");
         return type.isInstance(this) ? type.cast(this) : null;
     }
+
+    /**
+     * Unwraps this object and returns the object being decorated. If this {@link Unwrappable} is the innermost
+     * object, this method returns itself. For example:
+     * <pre>{@code
+     * class Foo implements Unwrappable {}
+     *
+     * class Bar<T extends Unwrappable> extends AbstractUnwrappable<T> {
+     *     Bar(T delegate) {
+     *         super(delegate);
+     *     }
+     * }
+     *
+     * class Qux<T extends Unwrappable> extends AbstractUnwrappable<T> {
+     *     Qux(T delegate) {
+     *         super(delegate);
+     *     }
+     * }
+     *
+     * Foo foo = new Foo();
+     * assert foo.unwrap() == foo;
+     *
+     * Bar<Foo> bar = new Bar<>(foo);
+     * assert bar.unwrap() == foo;
+     *
+     * Qux<Bar<Foo>> qux = new Qux<>(bar);
+     * assert qux.unwrap() == bar;
+     * assert qux.unwrap().unwrap() == foo;
+     * }</pre>
+     */
+    default Unwrappable unwrap() {
+        return this;
+    }
 }

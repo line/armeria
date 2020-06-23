@@ -152,11 +152,11 @@ class ServerTest {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             if ("/timeout-not".equals(ctx.path())) {
-                               ctx.clearRequestTimeout();
+                                ctx.clearRequestTimeout();
                             } else {
                                 ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
                             }
-                            return delegate().serve(ctx, req);
+                            return unwrap().serve(ctx, req);
                         }
                     };
 

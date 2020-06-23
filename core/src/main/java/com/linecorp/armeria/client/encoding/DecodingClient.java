@@ -80,14 +80,14 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         if (req.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
             // Client specified encoding, so we don't do anything automatically.
-            return delegate().execute(ctx, req);
+            return unwrap().execute(ctx, req);
         }
 
         req = req.withHeaders(req.headers().toBuilder()
                                  .set(HttpHeaderNames.ACCEPT_ENCODING, acceptEncodingHeader));
         ctx.updateRequest(req);
 
-        final HttpResponse res = delegate().execute(ctx, req);
+        final HttpResponse res = unwrap().execute(ctx, req);
         return new HttpDecodedResponse(res, decoderFactories, ctx.alloc());
     }
 }

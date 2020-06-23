@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
  * HTTP request or an HTTP response depending on what header values it contains. For example, having a
  * {@link HttpHeaderNames#STATUS} header could mean it is an HTTP response.
  */
-interface AggregatedHttpMessage {
+public interface AggregatedHttpMessage {
 
     /**
      * Returns the HTTP headers.

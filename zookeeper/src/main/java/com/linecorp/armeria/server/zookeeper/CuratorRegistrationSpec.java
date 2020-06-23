@@ -21,7 +21,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
-final class CuratorRegistrationSpec implements ZookeeperRegistrationSpec {
+final class CuratorRegistrationSpec implements ZooKeeperRegistrationSpec {
 
     private final ServiceInstance<?> serviceInstance;
     private final String path;
@@ -41,6 +41,11 @@ final class CuratorRegistrationSpec implements ZookeeperRegistrationSpec {
     }
 
     @Override
+    public boolean isSequential() {
+        return false;
+    }
+
+    @Override
     public byte[] encodedInstance() {
         return CuratorXNodeValueCodec.INSTANCE.encode(serviceInstance);
     }
@@ -50,6 +55,7 @@ final class CuratorRegistrationSpec implements ZookeeperRegistrationSpec {
         return MoreObjects.toStringHelper(this)
                           .add("serviceInstance", serviceInstance)
                           .add("path", path)
+                          .add("isSequential", isSequential())
                           .toString();
     }
 }

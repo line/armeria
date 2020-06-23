@@ -42,11 +42,11 @@ final class FunctionalDecoratingHttpService extends SimpleDecoratingHttpService 
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return function.serve(delegate(), ctx, req);
+        return function.serve((HttpService) unwrap(), ctx, req);
     }
 
     @Override
     public String toString() {
-        return FunctionalDecoratingHttpService.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
+        return FunctionalDecoratingHttpService.class.getSimpleName() + '(' + unwrap() + ", " + function + ')';
     }
 }

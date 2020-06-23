@@ -51,7 +51,8 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNull();
 
         // Test if FooService.serviceAdded() is invoked.
-        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, null, 1, 1, true,
+        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultServiceName */ null,
+                                                    /* defaultLogName */ null, 1, 1, true,
                                                     AccessLogWriter.disabled(), false);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
@@ -86,7 +87,7 @@ public class ServiceTest {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return delegate().serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
     }
 

@@ -119,7 +119,7 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
         req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);
 
         ctx.logBuilder().deferResponseContentPreview();
-        final HttpResponse res = delegate().execute(ctx, req);
+        final HttpResponse res = unwrap().execute(ctx, req);
         return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res);
     }
 }

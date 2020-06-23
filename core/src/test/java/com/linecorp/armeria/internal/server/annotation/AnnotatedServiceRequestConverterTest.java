@@ -19,9 +19,21 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.Gender.MALE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
+import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +50,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -45,8 +58,10 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean1;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean2;
@@ -100,13 +115,24 @@ class AnnotatedServiceRequestConverterTest {
         }
 
         @Post("/convert3")
-        public String convert3(@RequestConverter(TestRequestConverterOptional1.class)
-                                       Optional<RequestJsonObj1> obj1,
-                               @RequestConverter(TestRequestConverterOptional2.class)
-                                       Optional<RequestJsonObj2> obj2) {
+        public String convert3(@RequestConverter(TestRequestConverter1.class) Optional<RequestJsonObj1> obj1,
+                               @RequestConverter(TestRequestConverter2.class) Optional<RequestJsonObj2> obj2) {
             assertThat(obj1.isPresent()).isTrue();
             assertThat(obj2.isPresent()).isTrue();
             return obj2.get().strVal();
+        }
+
+        @Post("/convert4")
+        @RequestConverter(NullReturningConverter.class)
+        public void convert4(Optional<String> optional, @Nullable String nullable) {
+            assertThat(optional).isEmpty();
+            assertThat(nullable).isNull();
+        }
+
+        @Post("/convert5")
+        @RequestConverter(NullReturningConverter.class)
+        public void convert5(String nonnull) {
+            fail("Should not reach here");
         }
     }
 
@@ -206,10 +232,11 @@ class AnnotatedServiceRequestConverterTest {
             return uuid;
         }
 
-        @Get("/default/period/:period")
-        public Period defaultPeriod(@Param Period period) {
-            assertThat(period).isNotNull();
-            return period;
+        @Post("/default/time")
+        public String defaultTimeBean(TimeBean timeBean) {
+            assertThat(timeBean).isNotNull();
+            timeBean.validate();
+            return timeBean.toString();
         }
     }
 
@@ -309,8 +336,10 @@ class AnnotatedServiceRequestConverterTest {
         static class AliceRequestConverter implements RequestConverterFunction {
             @Nullable
             @Override
-            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                         Class<?> expectedResultType) throws Exception {
+            public Object convertRequest(
+                    ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                    @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
                 if (expectedResultType == Alice.class) {
                     final String age = ctx.pathParam("age");
                     assert age != null;
@@ -323,8 +352,10 @@ class AnnotatedServiceRequestConverterTest {
         static class BobRequestConverter implements RequestConverterFunction {
             @Nullable
             @Override
-            public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                         Class<?> expectedResultType) throws Exception {
+            public Object convertRequest(
+                    ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                    @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
                 if (expectedResultType == Bob.class) {
                     final String age = ctx.pathParam("age");
                     assert age != null;
@@ -578,12 +609,68 @@ class AnnotatedServiceRequestConverterTest {
         }
     }
 
+    static class TimeBean {
+        @Param
+        Duration duration;
+        @Param
+        Instant instant;
+        @Param
+        LocalDate localDate;
+        @Param
+        LocalDateTime localDateTime;
+        @Param
+        LocalTime localTime;
+        @Param
+        OffsetDateTime offsetDateTime;
+        @Param
+        OffsetTime offsetTime;
+        @Param
+        Period period;
+        @Param
+        ZonedDateTime zonedDateTime;
+        @Param
+        ZoneId zoneId;
+        @Param
+        ZoneOffset zoneOffset;
+
+        public void validate() {
+            assertThat(duration).isNotNull();
+            assertThat(instant).isNotNull();
+            assertThat(localDate).isNotNull();
+            assertThat(localDateTime).isNotNull();
+            assertThat(offsetDateTime).isNotNull();
+            assertThat(offsetTime).isNotNull();
+            assertThat(period).isNotNull();
+            assertThat(zonedDateTime).isNotNull();
+            assertThat(zoneId).isNotNull();
+            assertThat(zoneOffset).isNotNull();
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("duration", duration)
+                              .add("instant", instant)
+                              .add("localDate", localDate)
+                              .add("localDateTime", localDateTime)
+                              .add("offsetDateTime", offsetDateTime)
+                              .add("offsetTime", offsetTime)
+                              .add("period", period)
+                              .add("zonedDateTime", zonedDateTime)
+                              .add("zoneId", zoneId)
+                              .add("zoneOffset", zoneOffset)
+                              .toString();
+        }
+    }
+
     public static class TestRequestConverter1 implements RequestConverterFunction {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj1 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
                 return mapper.readValue(request.contentUtf8(), RequestJsonObj1.class);
             }
@@ -595,45 +682,41 @@ class AnnotatedServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public RequestJsonObj1 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj1 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj1.class)) {
                 final RequestJsonObj1 obj1 = mapper.readValue(request.contentUtf8(),
                                                               RequestJsonObj1.class);
                 return new RequestJsonObj1(obj1.intVal() + 1, obj1.strVal() + 'a');
             }
+
             return RequestConverterFunction.fallthrough();
         }
     }
 
     public static class TestRequestConverter2 implements RequestConverterFunction {
         @Override
-        public RequestJsonObj2 convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                              Class<?> expectedResultType) throws Exception {
+        public RequestJsonObj2 convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType.isAssignableFrom(RequestJsonObj2.class)) {
-                return new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD));
+                return new RequestJsonObj2(request.headers().method().name());
             }
+
             return RequestConverterFunction.fallthrough();
         }
     }
 
-    public static class TestRequestConverterOptional1 implements RequestConverterFunction {
-        private final ObjectMapper mapper = new ObjectMapper();
-
+    public static class NullReturningConverter implements RequestConverterFunction {
+        @Nullable
         @Override
-        public Optional<RequestJsonObj1> convertRequest(ServiceRequestContext ctx,
-                                                        AggregatedHttpRequest request,
-                                                        Class<?> expectedResultType) throws Exception {
-            return Optional.of(mapper.readValue(request.contentUtf8(), RequestJsonObj1.class));
-        }
-    }
-
-    public static class TestRequestConverterOptional2 implements RequestConverterFunction {
-        @Override
-        public Optional<RequestJsonObj2> convertRequest(ServiceRequestContext ctx,
-                                                        AggregatedHttpRequest request,
-                                                        Class<?> expectedResultType) throws Exception {
-            return Optional.of(new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD)));
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+            return null;
         }
     }
 
@@ -661,6 +744,15 @@ class AnnotatedServiceRequestConverterTest {
         response = client.post("/1/convert3", content1).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(HttpMethod.POST.name());
+
+        // Conversion to null
+        response = client.post("/1/convert4", content1).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        // Conversion to null that will fail with 400 Bad Request,
+        // because the injection target is not annotated with @Nullable.
+        response = client.post("/1/convert5", content1).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -930,11 +1022,44 @@ class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    void testDefaultRequestConverter_period() {
+    void testDefaultRequestConverter_timeBean() {
         final WebClient client = WebClient.of(server.httpUri());
-        final Period period = Period.of(2020, 1, 1);
-        final AggregatedHttpResponse response = client.get("/2/default/period/" + period).aggregate().join();
-        assertThat(response.contentUtf8()).isEqualTo(period.toString());
+
+        final TimeBean timeBean = new TimeBean();
+        timeBean.duration = Duration.ofDays(1);
+        timeBean.instant = Instant.now();
+        timeBean.localDate = LocalDate.now();
+        timeBean.localDateTime = LocalDateTime.now();
+        timeBean.localTime = LocalTime.now();
+        timeBean.offsetDateTime = OffsetDateTime.now();
+        timeBean.offsetTime = OffsetTime.now();
+        timeBean.period = Period.of(1, 2, 3);
+        timeBean.zonedDateTime = ZonedDateTime.now();
+        timeBean.zoneId = ZoneId.systemDefault();
+        timeBean.zoneOffset = ZoneOffset.ofHours(1);
+
+        final QueryParams queryParams = QueryParams.builder()
+                                                   .add("duration", timeBean.duration.toString())
+                                                   .add("instant", timeBean.instant.toString())
+                                                   .add("localDate", timeBean.localDate.toString())
+                                                   .add("localDateTime", timeBean.localDateTime.toString())
+                                                   .add("localTime", timeBean.localTime.toString())
+                                                   .add("offsetDateTime", timeBean.offsetDateTime.toString())
+                                                   .add("offsetTime", timeBean.offsetTime.toString())
+                                                   .add("period", timeBean.period.toString())
+                                                   .add("zonedDateTime", timeBean.zonedDateTime.toString())
+                                                   .add("zoneId", timeBean.zoneId.toString())
+                                                   .add("zoneOffset", timeBean.zoneOffset.toString())
+                                                   .build();
+
+        final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.POST,
+                                                                              "/2/default/time",
+                                                                              MediaType.FORM_DATA,
+                                                                              queryParams.toQueryString()))
+                                                      .aggregate()
+                                                      .join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(timeBean.toString());
     }
 
     @Test

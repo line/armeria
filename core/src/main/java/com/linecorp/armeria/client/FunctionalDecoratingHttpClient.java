@@ -41,11 +41,11 @@ final class FunctionalDecoratingHttpClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        return function.execute(delegate(), ctx, req);
+        return function.execute((HttpClient) unwrap(), ctx, req);
     }
 
     @Override
     public String toString() {
-        return FunctionalDecoratingHttpClient.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
+        return FunctionalDecoratingHttpClient.class.getSimpleName() + '(' + unwrap() + ", " + function + ')';
     }
 }

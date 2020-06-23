@@ -81,7 +81,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
         // For no-op spans, nothing special to do.
         if (span.isNoop()) {
             try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-                return delegate().serve(ctx, req);
+                return unwrap().serve(ctx, req);
             }
         }
 
@@ -100,12 +100,12 @@ public final class BraveService extends SimpleDecoratingHttpService {
             }
 
             final HttpServerResponse braveRes =
-                ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
+                    ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
             handler.handleSend(braveRes, span);
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-            return delegate().serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
     }
 }

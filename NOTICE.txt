@@ -3,7 +3,7 @@ Armeria
 
 Please visit the official web site for more information:
 
-  * https://line.github.io/armeria/
+  * https://armeria.dev/
 
 Copyright 2015 LINE Corporation
 
@@ -72,6 +72,11 @@ This product contains a modified part of Eureka, distributed by Netflix:
 
   * License: licenses/LICENSE.eureka.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/netflix/eureka
+
+This product contains a modified part of Finagle, distributed by Twitter:
+
+  * License: licenses/LICENSE.finagle.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/twitter/finagle
 
 This product contains a modified part of gRPC, distributed by Google:
 

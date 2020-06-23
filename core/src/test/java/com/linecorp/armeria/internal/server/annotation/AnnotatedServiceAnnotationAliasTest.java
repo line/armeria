@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.ParameterizedType;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -120,8 +121,10 @@ public class AnnotatedServiceAnnotationAliasTest {
     static class MyRequestConverter implements RequestConverterFunction {
         @Nullable
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType) throws Exception {
+        public Object convertRequest(
+                ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
+                @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
+
             if (expectedResultType == MyRequest.class) {
                 final String decorated = ctx.attr(decoratedFlag);
                 return new MyRequest(request.contentUtf8() + decorated);
@@ -190,7 +193,7 @@ public class AnnotatedServiceAnnotationAliasTest {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     appendAttribute(ctx, " (decorated-3)");
-                    return delegate().serve(ctx, req);
+                    return unwrap().serve(ctx, req);
                 }
             };
         }

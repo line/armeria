@@ -50,7 +50,7 @@ public final class InvocationUtil {
             return;
         }
         ctx.setAttr(RETROFIT_INVOCATION, invocation);
-        ctx.logBuilder().name(invocation.method().getName());
+        ctx.logBuilder().name(invocation.method().getDeclaringClass().getName(), invocation.method().getName());
     }
 
     private InvocationUtil() {}

@@ -113,7 +113,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
         if (span.isNoop()) {
             try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-                return delegate().execute(ctx, req);
+                return unwrap().execute(ctx, req);
             }
         }
 
@@ -164,7 +164,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-            return delegate().execute(ctx, req);
+            return unwrap().execute(ctx, req);
         }
     }
 

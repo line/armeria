@@ -25,7 +25,7 @@ import java.util.zip.DeflaterOutputStream;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -52,7 +52,7 @@ abstract class AbstractStreamDecoderTest {
         final StreamDecoder decoder = newDecoder();
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
         buf.writeBytes(PAYLOAD);
-        final HttpData data = decoder.decode(new ByteBufHttpData(buf, false));
+        final HttpData data = decoder.decode(PooledHttpData.wrap(buf));
         assertThat(buf.refCnt()).isZero();
         assertThat(data).isInstanceOfSatisfying(ByteBufHolder.class, d -> assertThat(d.refCnt()).isEqualTo(1));
         ((ByteBufHolder) data).release();
@@ -69,7 +69,7 @@ abstract class AbstractStreamDecoderTest {
     public void empty_pooled() {
         final StreamDecoder decoder = newDecoder();
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
-        final HttpData data = decoder.decode(new ByteBufHttpData(buf, false));
+        final HttpData data = decoder.decode(PooledHttpData.wrap(buf));
         assertThat(buf.refCnt()).isZero();
 
         // Even for a pooled empty input, the result is unpooled since there's no point in pooling empty

@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.zookeeper.ZookeeperDiscoverySpec;
+import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
@@ -67,8 +67,8 @@ class CuratorServiceDiscoveryCompatibilityTest {
         serviceDiscovery.close();
         await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/foo/bar"));
 
-        final ZookeeperRegistrationSpec registrationSpec =
-                ZookeeperRegistrationSpec.builderForCurator("foo")
+        final ZooKeeperRegistrationSpec registrationSpec =
+                ZooKeeperRegistrationSpec.builderForCurator("foo")
                                          .serviceId("bar")
                                          .serviceAddress("foo.com")
                                          .port(endpoint.port())
@@ -93,7 +93,7 @@ class CuratorServiceDiscoveryCompatibilityTest {
 
         final CompletableFuture<ServiceInstance<?>> instanceCaptor = new CompletableFuture<>();
         try (CloseableZooKeeper zk = zkInstance.connection()) {
-            final ZookeeperDiscoverySpec discoverySpec = ZookeeperDiscoverySpec.builderForCurator("foo")
+            final ZooKeeperDiscoverySpec discoverySpec = ZooKeeperDiscoverySpec.builderForCurator("foo")
                                                                                .converter(serviceInstance -> {
                                                                  instanceCaptor.complete(serviceInstance);
                                                                  return null;

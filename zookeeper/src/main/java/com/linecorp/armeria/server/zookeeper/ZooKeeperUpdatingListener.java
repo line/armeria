@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -51,110 +52,130 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * Creates a ZooKeeper server listener, which registers the {@link Server} into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link #builder(String, String, ZookeeperRegistrationSpec)} instead.
+     * {@link #builder(String, String, ZooKeeperRegistrationSpec)} instead.
      *
      * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
+     * @param znodePath the ZooKeeper node to register
+     * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListener of(
-            String zkConnectionStr, String zNodePath, ZookeeperRegistrationSpec spec) {
-        return builder(zkConnectionStr, zNodePath, spec).build();
+            String zkConnectionStr, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return builder(zkConnectionStr, znodePath, spec).build();
     }
 
     /**
      * Creates a ZooKeeper server listener, which registers the {@link Server} into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link #builder(CuratorFramework, String, ZookeeperRegistrationSpec)} instead.
+     * {@link #builder(CuratorFramework, String, ZooKeeperRegistrationSpec)} instead.
      *
      * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
+     * @param znodePath the ZooKeeper node to register
+     * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListener of(
-            CuratorFramework client, String zNodePath, ZookeeperRegistrationSpec spec) {
-        return builder(client, zNodePath, spec).build();
+            CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return builder(client, znodePath, spec).build();
     }
 
     /**
-     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a znode
      * path.
      *
      * @param client the curator framework instance
-     * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
+     * @param znodePath the ZooKeeper node to register
+     * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
-            CuratorFramework client, String zNodePath, ZookeeperRegistrationSpec spec) {
-        return new ZooKeeperUpdatingListenerBuilder(client, zNodePath, spec);
+            CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return new ZooKeeperUpdatingListenerBuilder(client, znodePath, spec);
     }
 
     /**
-     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a znode path.
      *
      * @param zkConnectionStr the ZooKeeper connection string
-     * @param zNodePath the ZooKeeper node to register
-     * @param spec the {@link ZookeeperRegistrationSpec} to encode and register the {@link Server}
+     * @param znodePath the ZooKeeper node to register
+     * @param spec the {@link ZooKeeperRegistrationSpec} to encode and register the {@link Server}
      */
     public static ZooKeeperUpdatingListenerBuilder builder(
-            String zkConnectionStr, String zNodePath, ZookeeperRegistrationSpec spec) {
-        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath, spec);
+            String zkConnectionStr, String znodePath, ZooKeeperRegistrationSpec spec) {
+        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, znodePath, spec);
     }
 
     private final CuratorFramework client;
-    private final String zNodePath;
-    private final ZookeeperRegistrationSpec spec;
+    private final String znodePath;
+    private final ZooKeeperRegistrationSpec spec;
     private final boolean closeClientOnStop;
 
-    ZooKeeperUpdatingListener(CuratorFramework client, String zNodePath, ZookeeperRegistrationSpec spec,
+    ZooKeeperUpdatingListener(CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec,
                               boolean closeClientOnStop) {
         this.client = requireNonNull(client, "client");
-        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        this.znodePath = requireNonNull(znodePath, "znodePath");
         this.spec = spec;
         this.closeClientOnStop = closeClientOnStop;
     }
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        final ZookeeperRegistrationSpec registrationSpec = fillAndCreateNewRegistrationSpec(spec, server);
+        final ZooKeeperRegistrationSpec registrationSpec = fillAndCreateNewRegistrationSpec(spec, server);
         client.start();
         client.create()
               .creatingParentsIfNeeded()
-              .withMode(CreateMode.EPHEMERAL)
-              .forPath(zNodePath + registrationSpec.path(), registrationSpec.encodedInstance());
+              .withMode(registrationSpec.isSequential() ? CreateMode.EPHEMERAL_SEQUENTIAL
+                                                        : CreateMode.EPHEMERAL)
+              .forPath(znodePath + registrationSpec.path(), registrationSpec.encodedInstance());
     }
 
-    private static ZookeeperRegistrationSpec fillAndCreateNewRegistrationSpec(
-            ZookeeperRegistrationSpec spec, Server server) {
-        if (spec instanceof LegacyZookeeperRegistrationSpec) {
-            final Endpoint endpoint = ((LegacyZookeeperRegistrationSpec) spec).endpoint();
+    private static ZooKeeperRegistrationSpec fillAndCreateNewRegistrationSpec(
+            ZooKeeperRegistrationSpec spec, Server server) {
+        if (spec instanceof LegacyZooKeeperRegistrationSpec) {
+            return legacySpec(spec, server);
+        }
+        if (spec instanceof CuratorRegistrationSpec) {
+            return curatorSpec(((CuratorRegistrationSpec) spec).serviceInstance(), server);
+        }
+        if (spec instanceof ServerSetsRegistrationSpec) {
+            return serverSetsSpec((ServerSetsRegistrationSpec) spec, server);
+        }
+        return spec;
+    }
+
+    private static ZooKeeperRegistrationSpec legacySpec(ZooKeeperRegistrationSpec spec, Server server) {
+        final Endpoint endpoint = ((LegacyZooKeeperRegistrationSpec) spec).endpoint();
+        if (endpoint != null) {
             if (endpoint.hasPort() && validatePort(server, endpoint.port(), null)) {
                 return spec;
             }
             final ServerPort serverPort = server.activePort();
             assert serverPort != null;
-            return ZookeeperRegistrationSpec.legacy(endpoint.withPort(serverPort.localAddress().getPort()));
-        } else if (spec instanceof CuratorRegistrationSpec) {
-            final ServiceInstance<?> serviceInstance =
-                    ((CuratorRegistrationSpec) spec).serviceInstance();
-            return fillAndCreateNewRegistrationSpec(serviceInstance, server);
-        } else {
-            return spec;
+            return ZooKeeperRegistrationSpec.legacy(endpoint.withPort(serverPort.localAddress().getPort()));
         }
+
+        return ZooKeeperRegistrationSpec.legacy(defaultEndpoint(server));
     }
 
-    private static ZookeeperRegistrationSpec fillAndCreateNewRegistrationSpec(
+    private static Endpoint defaultEndpoint(Server server) {
+        final ServerPort serverPort = server.activePort();
+        assert serverPort != null;
+        return Endpoint.of(defaultAddress(server), serverPort.localAddress().getPort());
+    }
+
+    private static String defaultAddress(Server server) {
+        final Inet4Address inet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
+        return inet4Address != null ? inet4Address.getHostAddress() : server.defaultHostname();
+    }
+
+    private static ZooKeeperRegistrationSpec curatorSpec(
             ServiceInstance<?> serviceInstance, Server server) {
         final CuratorRegistrationSpecBuilder builder =
-                ZookeeperRegistrationSpec.builderForCurator(serviceInstance.getName());
+                ZooKeeperRegistrationSpec.builderForCurator(serviceInstance.getName());
         builder.serviceId(serviceInstance.getId());
         final String address;
         if (serviceInstance.getAddress() != null) {
             address = serviceInstance.getAddress();
         } else {
-            final Inet4Address inet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
-            address = inet4Address != null ? inet4Address.getHostAddress() : server.defaultHostname();
+            address = defaultAddress(server);
         }
         builder.serviceAddress(address);
         final int port = port(server, SessionProtocol.HTTP, serviceInstance.getPort());
@@ -169,6 +190,28 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         final Object payload = serviceInstance.getPayload();
         if (payload != null) {
             builder.payload(payload);
+        }
+        return builder.build();
+    }
+
+    private static ZooKeeperRegistrationSpec serverSetsSpec(
+            ServerSetsRegistrationSpec spec, Server server) {
+        final ServerSetsInstance serverSetsInstance = spec.serverSetsInstance();
+        if (serverSetsInstance.serviceEndpoint() != null) {
+            if (validatePort(server, serverSetsInstance.serviceEndpoint().port(), null)) {
+                return spec;
+            }
+        }
+        final ServerSetsRegistrationSpecBuilder builder =
+                ZooKeeperRegistrationSpec.builderForServerSets();
+        builder.serviceEndpoint(defaultEndpoint(server))
+               .additionalEndpoints(serverSetsInstance.additionalEndpoints())
+               .metadata(serverSetsInstance.metadata())
+               .sequential(spec.isSequential())
+               .nodeName(spec.path().substring(1)); // Simply remove prepended '/'.
+        final Integer shardId = serverSetsInstance.shardId();
+        if (shardId != null) {
+            builder.shardId(shardId);
         }
         return builder.build();
     }

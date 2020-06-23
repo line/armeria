@@ -194,5 +194,19 @@ public final class Functions {
         };
     }
 
+    /**
+     * Returns a {@link BiFunction} that returns the first argument.
+     */
+    public static <T, U> BiFunction<T, U, T> first() {
+        return (first, second) -> first;
+    }
+
+    /**
+     * Returns a {@link BiFunction} that returns the second argument.
+     */
+    public static <T, U> BiFunction<T, U, U> second() {
+        return (first, second) -> second;
+    }
+
     private Functions() {}
 }

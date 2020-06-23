@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.log
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -32,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
@@ -75,14 +77,16 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     private final Logger logger;
     private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
-    private final Function<? super RequestHeaders, ?> requestHeadersSanitizer;
-    private final Function<Object, ?> requestContentSanitizer;
-    private final Function<? super HttpHeaders, ?> requestTrailersSanitizer;
 
-    private final Function<? super ResponseHeaders, ?> responseHeadersSanitizer;
-    private final Function<Object, ?> responseContentSanitizer;
-    private final Function<? super HttpHeaders, ?> responseTrailersSanitizer;
-    private final Function<? super Throwable, ?> responseCauseSanitizer;
+    private final BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer;
+    private final BiFunction<? super RequestContext, Object, ?> requestContentSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer;
+
+    private final BiFunction<? super RequestContext, ? super ResponseHeaders, ?> responseHeadersSanitizer;
+    private final BiFunction<? super RequestContext, Object, ?> responseContentSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer;
+
     private final Sampler<? super ServiceRequestContext> sampler;
 
     /**
@@ -94,13 +98,13 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             @Nullable Logger logger,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-            Function<? super RequestHeaders, ?> requestHeadersSanitizer,
-            Function<Object, ?> requestContentSanitizer,
-            Function<? super HttpHeaders, ?> requestTrailersSanitizer,
-            Function<? super ResponseHeaders, ?> responseHeadersSanitizer,
-            Function<Object, ?> responseContentSanitizer,
-            Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-            Function<? super Throwable, ?> responseCauseSanitizer,
+            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer,
             Sampler<? super ServiceRequestContext> sampler) {
 
         super(requireNonNull(delegate, "delegate"));
@@ -125,7 +129,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             ctx.log().whenRequestComplete().thenAccept(requestLogger);
             ctx.log().whenComplete().thenAccept(responseLogger);
         }
-        return delegate().serve(ctx, req);
+        return unwrap().serve(ctx, req);
     }
 
     private class RequestLogger implements Consumer<RequestOnlyLog> {

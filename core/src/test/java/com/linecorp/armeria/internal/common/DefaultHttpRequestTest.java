@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 
 import io.netty.buffer.PooledByteBufAllocator;
 
@@ -53,19 +54,19 @@ class DefaultHttpRequestTest {
     void abortedAggregation(boolean executorSpecified, boolean withPooledObjects, Throwable abortCause) {
         final Thread mainThread = Thread.currentThread();
         final DefaultHttpRequest req = new DefaultHttpRequest(RequestHeaders.of(HttpMethod.GET, "/foo"));
-        final CompletableFuture<AggregatedHttpRequest> future;
+        final CompletableFuture<? extends AggregatedHttpRequest> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
             if (withPooledObjects) {
-                future = req.aggregateWithPooledObjects(
+                future = PooledHttpRequest.of(req).aggregateWithPooledObjects(
                         CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
             } else {
                 future = req.aggregate(CommonPools.workerGroup().next());
             }
         } else {
             if (withPooledObjects) {
-                future = req.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+                future = PooledHttpRequest.of(req).aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
             } else {
                 future = req.aggregate();
             }
@@ -75,14 +76,14 @@ class DefaultHttpRequestTest {
 
         if (abortCause == null) {
             assertThatThrownBy(() -> {
-                final CompletableFuture<AggregatedHttpRequest> f =
+                final CompletableFuture<? extends AggregatedHttpRequest> f =
                         future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
                 req.abort();
                 f.join();
             }).hasCauseInstanceOf(AbortedStreamException.class);
         } else {
             assertThatThrownBy(() -> {
-                final CompletableFuture<AggregatedHttpRequest> f =
+                final CompletableFuture<? extends AggregatedHttpRequest> f =
                         future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
                 req.abort(abortCause);
                 f.join();

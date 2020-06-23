@@ -41,7 +41,7 @@ final class AttemptLimitingBackoff extends BackoffWrapper {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("delegate", delegate())
+                          .add("delegate", unwrap())
                           .add("maxAttempts", maxAttempts)
                           .toString();
     }

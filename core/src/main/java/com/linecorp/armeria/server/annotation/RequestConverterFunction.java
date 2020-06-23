@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.reflect.ParameterizedType;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -35,10 +37,18 @@ public interface RequestConverterFunction {
      * Converts the specified {@code request} to an object of {@code expectedResultType}.
      * Calls {@link RequestConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this converter cannot convert the {@code request} to an object.
+     *
+     * @param ctx the {@link ServiceRequestContext} of {@code request}.
+     * @param request the {@link AggregatedHttpRequest} being handled.
+     * @param expectedResultType the desired type of the conversion result.
+     * @param expectedParameterizedResultType the desired parameterized type of the conversion result.
+     *                                        {@code null} will be given if {@code expectedResultType} doesn't
+     *                                        have any type parameters.
      */
     @Nullable
     Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                          Class<?> expectedResultType) throws Exception;
+                          Class<?> expectedResultType,
+                          @Nullable ParameterizedType expectedParameterizedResultType) throws Exception;
 
     /**
      * Throws a {@link FallthroughException} in order to try to convert the {@code request} to

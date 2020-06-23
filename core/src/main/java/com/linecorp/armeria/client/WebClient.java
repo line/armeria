@@ -384,4 +384,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     default HttpResponse trace(String path) {
         return execute(RequestHeaders.of(HttpMethod.TRACE, path));
     }
+
+    @Override
+    HttpClient unwrap();
 }

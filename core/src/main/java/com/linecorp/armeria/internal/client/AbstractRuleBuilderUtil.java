@@ -23,8 +23,10 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -38,18 +40,21 @@ public final class AbstractRuleBuilderUtil {
     public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
     buildFilter(Predicate<RequestHeaders> requestHeadersFilter,
                 @Nullable Predicate<ResponseHeaders> responseHeadersFilter,
+                @Nullable Predicate<HttpHeaders> responseTrailersFilter,
                 @Nullable Predicate<Throwable> exceptionFilter,
                 boolean hasResponseFilter) {
         return (ctx, cause) -> {
-            if (ctx.log().isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
-                final RequestHeaders requestHeaders = ctx.log().partial().requestHeaders();
+            final RequestLog log = ctx.log().partial();
+            if (log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
+                final RequestHeaders requestHeaders = log.requestHeaders();
                 if (!requestHeadersFilter.test(requestHeaders)) {
                     return false;
                 }
             }
 
             // Safe to return true since no filters are set
-            if (exceptionFilter == null && responseHeadersFilter == null && !hasResponseFilter) {
+            if (exceptionFilter == null && responseHeadersFilter == null &&
+                responseTrailersFilter == null && !hasResponseFilter) {
                 return true;
             }
 
@@ -57,9 +62,16 @@ public final class AbstractRuleBuilderUtil {
                 return true;
             }
 
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                final ResponseHeaders responseHeaders = ctx.log().partial().responseHeaders();
-                if (responseHeadersFilter != null && responseHeadersFilter.test(responseHeaders)) {
+            if (responseHeadersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                final ResponseHeaders responseHeaders = log.responseHeaders();
+                if (responseHeadersFilter.test(responseHeaders)) {
+                    return true;
+                }
+            }
+
+            if (responseTrailersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+                final HttpHeaders responseTrailers = log.responseTrailers();
+                if (responseTrailersFilter.test(responseTrailers)) {
                     return true;
                 }
             }

@@ -126,9 +126,9 @@ final class RouteDecoratingService implements HttpService {
             });
 
             if (serviceChain.isEmpty()) {
-                return delegate().serve(ctx, req);
+                return unwrap().serve(ctx, req);
             }
-            serviceChain.add(delegate());
+            serviceChain.add((HttpService) unwrap());
             final HttpService service = serviceChain.poll();
             ctx.setAttr(DECORATOR_KEY, serviceChain);
             assert service != null;
@@ -139,7 +139,7 @@ final class RouteDecoratingService implements HttpService {
         public String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("router", router)
-                              .add("delegate", delegate()).toString();
+                              .add("delegate", unwrap()).toString();
         }
     }
 }

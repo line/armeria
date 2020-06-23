@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpStatus.OK;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
@@ -32,6 +33,7 @@ import static org.awaitility.Awaitility.await;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +53,7 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
@@ -125,7 +128,6 @@ public class ProxyClientIntegrationTest {
     static NettyServerExtension socksProxyServer = new NettyServerExtension() {
         @Override
         protected void configure(Channel ch) throws Exception {
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new SocksPortUnificationServerHandler());
             ch.pipeline().addLast(DYNAMIC_HANDLER);
             ch.pipeline().addLast(new Socks4ProxyServerHandler());
@@ -139,7 +141,6 @@ public class ProxyClientIntegrationTest {
     static NettyServerExtension httpProxyServer = new NettyServerExtension() {
         @Override
         protected void configure(Channel ch) throws Exception {
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
@@ -154,12 +155,11 @@ public class ProxyClientIntegrationTest {
         protected void configure(Channel ch) throws Exception {
             final SslContext sslContext = SslContextBuilder
                     .forServer(ssc.privateKey(), ssc.certificate()).build();
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
-            ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
+            ch.pipeline().addLast(new SleepHandler());
             ch.pipeline().addLast(new IntermediaryProxyServerHandler("http"));
         }
     };
@@ -187,7 +187,7 @@ public class ProxyClientIntegrationTest {
     @Test
     void testDisabledProxyBasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(ProxyConfig.direct()).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -204,7 +204,7 @@ public class ProxyClientIntegrationTest {
     void testSocks4BasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.socks4(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -222,7 +222,7 @@ public class ProxyClientIntegrationTest {
     void testSocks5BasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.socks5(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -239,7 +239,7 @@ public class ProxyClientIntegrationTest {
     void testH1CProxyBasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.connect(httpProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -330,7 +330,7 @@ public class ProxyClientIntegrationTest {
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
                         ProxyConfig.connect(httpsProxyServer.address(), true)).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -360,7 +360,7 @@ public class ProxyClientIntegrationTest {
         await().until(() -> responseFutures.stream().allMatch(CompletableFuture::isDone));
         assertThat(responseFutures.stream().map(CompletableFuture::join))
                 .allMatch(response -> response.contentUtf8().equals(SUCCESS_RESPONSE));
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        assertThat(numSuccessfulProxyRequests).isGreaterThanOrEqualTo(1);
         clientFactory.close();
     }
 
@@ -379,7 +379,7 @@ public class ProxyClientIntegrationTest {
                              .proxyConfig(ProxyConfig.socks4(socksProxyServer.address(), username))
                              .build();
 
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -420,7 +420,7 @@ public class ProxyClientIntegrationTest {
 
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.socks4(new InetSocketAddress("127.0.0.1", unusedPort))).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -448,7 +448,7 @@ public class ProxyClientIntegrationTest {
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.socks4(socksProxyServer.address())).connectTimeoutMillis(1).build();
 
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -467,7 +467,7 @@ public class ProxyClientIntegrationTest {
         });
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
                 ProxyConfig.socks4(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -478,6 +478,26 @@ public class ProxyClientIntegrationTest {
                                                 .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                 .hasRootCauseInstanceOf(ProxyConnectException.class);
         clientFactory.close();
+    }
+
+    @Test
+    void testProxyServerImmediateClose() throws Exception {
+        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+            ctx.close();
+        });
+        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
+                ProxyConfig.socks4(socksProxyServer.address())).build()) {
+            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            await().timeout(Duration.ofSeconds(10)).until(responseFuture::isCompletedExceptionally);
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(ProxyConnectException.class);
+        }
     }
 
     static class ProxySuccessEvent {
@@ -543,6 +563,21 @@ public class ProxyClientIntegrationTest {
             ctx.fireUserEventTriggered(new ProxySuccessEvent(
                     new InetSocketAddress(split[0], Integer.parseInt(split[1])),
                     new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK)));
+        }
+    }
+
+    private static final class SleepHandler extends ChannelInboundHandlerAdapter {
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if (evt instanceof ProxySuccessEvent) {
+                // Sleep as much as defaultWriteTimeoutMillis in order to make sure that the
+                // first writing to the channel occurs after ProxySuccessEvent is triggered.
+                // If the first writing happens before ProxySuccessEvent is triggered,
+                // the client would get WriteTimeoutException that makes the test fail.
+                Thread.sleep(Flags.defaultWriteTimeoutMillis());
+            }
+            super.userEventTriggered(ctx, evt);
         }
     }
 

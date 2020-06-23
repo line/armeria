@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -29,8 +29,8 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -133,12 +133,12 @@ class StreamMessageDrainerTest {
 
     @Test
     void withPooledObjects() {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-        final DefaultStreamMessage<ByteBufHttpData> stream = new DefaultStreamMessage<>();
+        final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
+        final DefaultStreamMessage<PooledHttpData> stream = new DefaultStreamMessage<>();
         stream.write(data);
         stream.close();
 
-        final List<ByteBufHttpData> httpData = stream.drainAll(WITH_POOLED_OBJECTS).join();
+        final List<PooledHttpData> httpData = stream.drainAll(WITH_POOLED_OBJECTS).join();
 
         assertThat(httpData.size()).isOne();
         assertThat(data.refCnt()).isOne();
@@ -147,12 +147,12 @@ class StreamMessageDrainerTest {
 
     @Test
     void unpooledByDefault() {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-        final DefaultStreamMessage<ByteBufHttpData> stream = new DefaultStreamMessage<>();
+        final PooledHttpData data = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
+        final DefaultStreamMessage<PooledHttpData> stream = new DefaultStreamMessage<>();
         stream.write(data);
         stream.close();
 
-        final List<ByteBufHttpData> httpData = stream.drainAll().join();
+        final List<PooledHttpData> httpData = stream.drainAll().join();
 
         assertThat(httpData.size()).isOne();
         assertThat(data.refCnt()).isZero();

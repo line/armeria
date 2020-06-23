@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -56,7 +57,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
 
     private final ClientBuilderParams params;
-    private final HttpClient httpClient;
+    private final PooledHttpClient httpClient;
 
     private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
@@ -72,7 +73,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                    SerializationFormat serializationFormat,
                    @Nullable GrpcJsonMarshaller jsonMarshaller) {
         this.params = params;
-        this.httpClient = httpClient;
+        this.httpClient = PooledHttpClient.of(httpClient);
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.serializationFormat = serializationFormat;
@@ -90,7 +91,10 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                                   HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType(),
                                   HttpHeaderNames.TE, HttpHeaderValues.TRAILERS));
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req);
-        ctx.logBuilder().name(method.getFullMethodName());
+
+        final String fullMethodName = method.getFullMethodName();
+        final int methodIndex = fullMethodName.lastIndexOf('/') + 1;
+        ctx.logBuilder().name(method.getServiceName(), fullMethodName.substring(methodIndex));
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
         ctx.logBuilder().deferResponseContent();
@@ -100,7 +104,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final int maxInboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES);
         final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
 
-        final HttpClient client;
+        final PooledHttpClient client;
 
         final CallCredentials credentials = callOptions.getCredentials();
         if (credentials != null) {

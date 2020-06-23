@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.log
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -33,10 +34,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -54,14 +57,16 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     private final Logger logger;
     private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
-    private final Function<? super HttpHeaders, ?> requestHeadersSanitizer;
-    private final Function<Object, ?> requestContentSanitizer;
-    private final Function<? super HttpHeaders, ?> requestTrailersSanitizer;
 
-    private final Function<? super HttpHeaders, ?> responseHeadersSanitizer;
-    private final Function<Object, ?> responseContentSanitizer;
-    private final Function<? super HttpHeaders, ?> responseTrailersSanitizer;
-    private final Function<? super Throwable, ?> responseCauseSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer;
+    private final BiFunction<? super RequestContext, Object, ?> requestContentSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer;
+
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer;
+    private final BiFunction<? super RequestContext, Object, ?> responseContentSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer;
+
     private final Sampler<? super ClientRequestContext> sampler;
 
     /**
@@ -73,13 +78,13 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
              null,
              log -> level,
              log -> level,
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
+             Functions.second(),
+             Functions.second(),
+             Functions.second(),
+             Functions.second(),
+             Functions.second(),
+             Functions.second(),
+             Functions.second(),
              Sampler.always());
     }
 
@@ -87,19 +92,22 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
      * {@link LogLevel}s with the specified sanitizers.
      */
-    AbstractLoggingClient(Client<I, O> delegate,
-                          @Nullable Logger logger,
-                          Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-                          Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-                          Function<? super HttpHeaders, ?> requestHeadersSanitizer,
-                          Function<Object, ?> requestContentSanitizer,
-                          Function<? super HttpHeaders, ?> requestTrailersSanitizer,
-                          Function<? super HttpHeaders, ?> responseHeadersSanitizer,
-                          Function<Object, ?> responseContentSanitizer,
-                          Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-                          Function<? super Throwable, ?> responseCauseSanitizer,
-                          Sampler<? super ClientRequestContext> sampler) {
+    AbstractLoggingClient(
+            Client<I, O> delegate,
+            @Nullable Logger logger,
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer,
+            Sampler<? super ClientRequestContext> sampler) {
+
         super(requireNonNull(delegate, "delegate"));
+
         this.logger = logger != null ? logger : LoggerFactory.getLogger(getClass());
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
@@ -121,7 +129,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
             ctx.log().whenRequestComplete().thenAccept(requestLogger);
             ctx.log().whenComplete().thenAccept(responseLogger);
         }
-        return delegate().execute(ctx, req);
+        return unwrap().execute(ctx, req);
     }
 
     private class RequestLogger implements Consumer<RequestOnlyLog> {

@@ -68,6 +68,10 @@ public class ZooKeeperExtension extends AbstractAllOrEachExtension implements Zo
         return instance().connectString().get();
     }
 
+    public int port() {
+        return instance().port().get();
+    }
+
     @Override
     public CloseableZooKeeper connection() {
         // Try up to three times to reduce flakiness.

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.thrift;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -59,4 +60,7 @@ public interface THttpClient extends Unwrappable, ClientBuilderParams {
      */
     RpcResponse executeMultiplexed(
             String path, Class<?> serviceType, String serviceName, String method, Object... args);
+
+    @Override
+    RpcClient unwrap();
 }

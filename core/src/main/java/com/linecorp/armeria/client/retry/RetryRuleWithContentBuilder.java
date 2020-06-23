@@ -24,11 +24,10 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -87,11 +86,11 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         }
 
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
-                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(),
-                                                    responseHeadersFilter(),
-                                                    exceptionFilter(), hasResponseFilter);
+                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
+                                                    responseTrailersFilter(), exceptionFilter(),
+                                                    hasResponseFilter);
 
-        final RetryRule first = RetryRuleBuilder.build(ruleFilter, decision);
+        final RetryRule first = RetryRuleBuilder.build(ruleFilter, decision, responseTrailersFilter() != null);
         if (!hasResponseFilter) {
             return RetryRuleUtil.fromRetryRule(first);
         }
@@ -111,17 +110,6 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         return RetryRuleUtil.orElse(first, second);
     }
 
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("exceptionFilter", exceptionFilter())
-                          .add("requestHeadersFilter", requestHeadersFilter())
-                          .add("responseHeadersFilter", responseHeadersFilter())
-                          .add("responseFilter", responseFilter())
-                          .toString();
-    }
-
     // Override the return type of the chaining methods in the superclass.
 
     /**
@@ -133,6 +121,18 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     public RetryRuleWithContentBuilder<T> onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
+     * response buffered, which may lead to excessive memory usage.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onResponseTrailers(
+            Predicate<? super HttpHeaders> responseTrailersFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
     }
 
     /**

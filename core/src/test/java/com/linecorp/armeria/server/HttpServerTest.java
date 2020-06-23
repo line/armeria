@@ -81,12 +81,12 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -216,7 +216,7 @@ class HttpServerTest {
                                         final ByteBuf content = PooledByteBufAllocator.DEFAULT
                                                 .buffer(1)
                                                 .writeByte('0' + finalI);
-                                        data = new ByteBufHttpData(content, false);
+                                        data = PooledHttpData.wrap(content);
                                     } else {
                                         data = HttpData.ofAscii(String.valueOf(finalI));
                                     }
@@ -426,7 +426,7 @@ class HttpServerTest {
                                 pendingRequestLogs.decrementAndGet();
                                 requestLogs.add(log);
                             });
-                            return delegate().serve(ctx, req);
+                            return unwrap().serve(ctx, req);
                         }
                     };
             sb.decorator(decorator);

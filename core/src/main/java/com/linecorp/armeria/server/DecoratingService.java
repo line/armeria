@@ -46,11 +46,11 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
-        ServiceCallbackInvoker.invokeServiceAdded(cfg, delegate());
+        ServiceCallbackInvoker.invokeServiceAdded(cfg, unwrap());
     }
 
     @Override
     public boolean shouldCachePath(String path, @Nullable String query, Route route) {
-        return delegate().shouldCachePath(path, query, route);
+        return unwrap().shouldCachePath(path, query, route);
     }
 }

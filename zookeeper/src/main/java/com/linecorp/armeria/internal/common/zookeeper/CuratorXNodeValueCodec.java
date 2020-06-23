@@ -39,12 +39,12 @@ public enum CuratorXNodeValueCodec {
     private static final JavaType type = mapper.getTypeFactory().constructType(ServiceInstance.class);
 
     /**
-     * Decodes a zNode value to a {@link ServiceInstance}.
+     * Decodes a znode value to a {@link ServiceInstance}.
      */
-    public ServiceInstance<?> decode(byte[] zNodeValue) {
-        requireNonNull(zNodeValue, "zNodeValue");
+    public ServiceInstance<?> decode(byte[] znodeValue) {
+        requireNonNull(znodeValue, "znodeValue");
         try {
-            return mapper.readValue(zNodeValue, type);
+            return mapper.readValue(znodeValue, type);
         } catch (IOException e) {
             throw new EndpointGroupException("invalid endpoint segment.", e);
         }
@@ -55,7 +55,7 @@ public enum CuratorXNodeValueCodec {
      */
     public byte[] encode(ServiceInstance<?> serviceInstance) {
         try {
-            return mapper.writeValueAsBytes(serviceInstance);
+            return mapper.writeValueAsBytes(requireNonNull(serviceInstance, "serviceInstance"));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(
                     "Failed to encode serviceInstance. serviceInstance: " + serviceInstance, e);
