@@ -11,6 +11,7 @@
   "dependencies": {
     "@material-ui/core": "^4.10.2",
     "@material-ui/icons": "^4.9.1",
+    "@material-ui/lab": "^4.0.0-alpha.56",
     "core-js": "^3.6.5",
     "dayjs": "^1.8.28",
     "jsonminify": "^0.4.1",
