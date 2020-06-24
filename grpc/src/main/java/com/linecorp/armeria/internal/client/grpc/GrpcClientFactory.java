@@ -224,7 +224,6 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         } catch (NoSuchMethodException e) {
             try {
                 // Fallback for ScalaPB
-
                 getServiceDescriptorMethod = stubClass.getDeclaredMethod("SERVICE");
             } catch (NoSuchMethodException noSuchMethodException) {
                 throw new IllegalStateException(
