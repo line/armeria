@@ -1,5 +1,0 @@
-dependencies {
-    implementation project(':testing:common')
-
-    api 'junit:junit'
-}
