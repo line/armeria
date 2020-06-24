@@ -14,6 +14,7 @@
  * under the License.
  */
 
+import Alert from '@material-ui/lab/Alert';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
@@ -494,6 +495,17 @@ const DebugPage: React.FunctionComponent<Props> = ({
             <Typography variant="h6" paragraph>
               Debug
             </Typography>
+            <Alert severity="info">
+              You can set the default values by{' '}
+              <a
+                href="https://armeria.dev/docs/server-docservice/#example-requests-and-headers"
+                rel="noreferrer"
+                target="_blank"
+              >
+                specifying example requests and headers
+              </a>
+              .
+            </Alert>
             <EndpointPath
               examplePaths={examplePaths}
               editable={!exactPathMapping}
