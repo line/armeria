@@ -224,9 +224,11 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         } catch (NoSuchMethodException e) {
             try {
                 // Fallback for ScalaPB
+
                 getServiceDescriptorMethod = stubClass.getDeclaredMethod("SERVICE");
             } catch (NoSuchMethodException noSuchMethodException) {
-                throw new IllegalStateException("Could not find getServiceDescriptor on a gRPC client stub.");
+                throw new IllegalStateException(
+                        "Could not find a io.grpc.ServiceDescriptor on a gRPC client stub.");
             }
         }
         try {
