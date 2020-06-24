@@ -202,7 +202,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
-        final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop(), 0);
+        final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().detachContext(), 0);
         doExecute0(ctx, reqDuplicator, req, res, responseFuture);
         return res;
     }
@@ -276,7 +276,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                         log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
                 if (needsContentInRule && responseCause == null) {
                     try (HttpResponseDuplicator duplicator =
-                                 response.toDuplicator(derivedCtx.eventLoop(),
+                                 response.toDuplicator(derivedCtx.eventLoop().detachContext(),
                                                        derivedCtx.maxResponseLength())) {
                         final TruncatingHttpResponse truncatingHttpResponse =
                                 new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);

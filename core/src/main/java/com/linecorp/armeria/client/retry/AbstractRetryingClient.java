@@ -178,11 +178,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                                             Runnable retryTask, long nextDelayMillis) {
         try {
             if (nextDelayMillis == 0) {
-                ctx.contextAwareEventLoop().execute(retryTask);
+                ctx.eventLoop().execute(retryTask);
             } else {
                 @SuppressWarnings("unchecked")
                 final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
-                        .contextAwareEventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
+                        .eventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
                 scheduledFuture.addListener(future -> {
                     if (future.isCancelled()) {
                         // future is cancelled when the client factory is closed.

@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextAwareEventLoop;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
@@ -84,6 +85,8 @@ public final class DefaultClientRequestContext
     private EndpointGroup endpointGroup;
     @Nullable
     private Endpoint endpoint;
+    @Nullable
+    private RequestContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private final String fragment;
     @Nullable
@@ -294,7 +297,7 @@ public final class DefaultClientRequestContext
             requireNonNull(rpcReq, "rpcReq");
         }
 
-        eventLoop = ctx.eventLoop();
+        eventLoop = ctx.eventLoop().detachContext();
         options = ctx.options();
         endpointGroup = ctx.endpointGroup();
         updateEndpoint(endpoint);
@@ -365,9 +368,12 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public EventLoop eventLoop() {
+    public RequestContextAwareEventLoop eventLoop() {
         checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
-        return eventLoop;
+        if (contextAwareEventLoop != null) {
+            return contextAwareEventLoop;
+        }
+        return contextAwareEventLoop = RequestContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override

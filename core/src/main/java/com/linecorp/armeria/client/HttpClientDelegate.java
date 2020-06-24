@@ -81,7 +81,7 @@ final class HttpClientDelegate implements HttpClient {
         }
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
-        final EventLoop eventLoop = ctx.eventLoop();
+        final EventLoop eventLoop = ctx.eventLoop().detachContext();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
@@ -136,7 +136,7 @@ final class HttpClientDelegate implements HttpClient {
         final String host = extractHost(ctx, req, endpointWithPort);
         final int port = endpointWithPort.port();
         final SessionProtocol protocol = ctx.sessionProtocol();
-        final HttpChannelPool pool = factory.pool(ctx.eventLoop());
+        final HttpChannelPool pool = factory.pool(ctx.eventLoop().detachContext());
 
         final PoolKey key = new PoolKey(host, ipAddr, port);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);

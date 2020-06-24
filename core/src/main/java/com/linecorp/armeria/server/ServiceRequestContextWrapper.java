@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
@@ -29,6 +28,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
@@ -96,7 +96,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public RequestContextAwareScheduledExecutorService blockingTaskExecutor() {
         return delegate().blockingTaskExecutor();
     }
 

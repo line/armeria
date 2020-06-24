@@ -80,7 +80,7 @@ public class RequestContextTest {
         when(channel.eventLoop()).thenReturn(eventLoop.get());
         final RequestContext context = createContext();
         final Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
-        final EventExecutor executor = context.contextAwareEventLoop();
+        final EventExecutor executor = context.eventLoop();
         final CountDownLatch latch = new CountDownLatch(18);
         executor.execute(() -> checkCallback(1, context, callbacksCalled, latch));
         executor.schedule(() -> checkCallback(2, context, callbacksCalled, latch), 0, TimeUnit.SECONDS);

@@ -40,12 +40,8 @@ class RequestContextAwareExecutorService implements ExecutorService {
         this.delegate = delegate;
     }
 
-    final RequestContext context() {
+    RequestContext context() {
         return context;
-    }
-
-    ExecutorService delegate() {
-        return delegate;
     }
 
     @Override

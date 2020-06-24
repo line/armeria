@@ -133,7 +133,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
         if (!currentTask.isRun() && timeoutMillis != 0) {
             // Current request was not delegated. Schedule a timeout.
-            final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().schedule(
+            final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().detachContext().schedule(
                     () -> resFuture.completeExceptionally(
                             new UnprocessedRequestException(RequestTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
@@ -239,7 +239,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                         numActiveRequests.decrementAndGet();
                         drain();
                         return null;
-                    }, ctx.eventLoop());
+                    }, ctx.eventLoop().detachContext());
                     resFuture.complete(actualRes);
                 } catch (Throwable t) {
                     numActiveRequests.decrementAndGet();

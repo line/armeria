@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -302,14 +303,14 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
-     * long-running task. The {@link ScheduledExecutorService} will propagate the {@link ServiceRequestContext}
-     * automatically when running a task.
-     *
-     * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
-     * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
+     * Returns the {@link RequestContextAwareScheduledExecutorService} that could be used for executing
+     * a potentially long-running task. The {@link RequestContextAwareScheduledExecutorService}
+     * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
+     * If you want to use {@link ScheduledExecutorService} without setting this context,
+     * call {@link RequestContextAwareScheduledExecutorService#detachContext()} and use the returned
+     * {@link ScheduledExecutorService}.
      */
-    ScheduledExecutorService blockingTaskExecutor();
+    RequestContextAwareScheduledExecutorService blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable

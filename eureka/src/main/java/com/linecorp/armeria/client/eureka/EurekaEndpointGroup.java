@@ -192,9 +192,9 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
             ctx = captor.get();
         }
 
-        final EventLoop eventLoop = ctx.eventLoop();
+        final EventLoop eventLoop = ctx.eventLoop().detachContext();
         response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
-            try (SafeCloseable unused = aggregatedRes) {
+            try (SafeCloseable ignored = aggregatedRes) {
                 if (closed) {
                     return null;
                 }

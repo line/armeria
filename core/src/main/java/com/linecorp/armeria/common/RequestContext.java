@@ -378,7 +378,10 @@ public interface RequestContext {
 
     /**
      * Returns the {@link Executor} that is handling the current {@link Request}.
+     *
+     * @deprecated Use {@code eventLoop().detachContext()}.
      */
+    @Deprecated
     default Executor executor() {
         // The implementation is the same as eventLoop but we expose as an Executor as well given
         // how much easier it is to write tests for an Executor (i.e.,
@@ -387,9 +390,12 @@ public interface RequestContext {
     }
 
     /**
-     * Returns the {@link EventLoop} that is handling the current {@link Request}.
+     * Returns the {@link RequestContextAwareEventLoop} that is handling the current {@link Request}.
+     * The {@link RequestContextAwareEventLoop} sets this {@link RequestContext} as the current context
+     * before executing any submitted tasks. If you want to use {@link EventLoop} without setting this context,
+     * call {@link RequestContextAwareEventLoop#detachContext()} and use the returned {@link EventLoop}.
      */
-    EventLoop eventLoop();
+    RequestContextAwareEventLoop eventLoop();
 
     /**
      * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
@@ -408,20 +414,26 @@ public interface RequestContext {
      * callbacks in service code to make sure features that require the {@link RequestContext} work properly.
      * Most asynchronous libraries like {@link CompletableFuture} provide methods that accept an
      * {@link Executor} to run callbacks on.
+     *
+     * @deprecated Use {@link #eventLoop()}.
      */
+    @Deprecated
     default Executor contextAwareExecutor() {
         // The implementation is the same as contextAwareEventLoop but we expose as an Executor as well given
         // how common it is to use only as an Executor and it becomes much easier to write tests for an
         // Executor (i.e., when(ctx.contextAwareExecutor()).thenReturn(MoreExecutors.directExecutor()));
-        return contextAwareEventLoop();
+        return eventLoop();
     }
 
     /**
      * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current
-     * context before executing any callback.
+     * context before executing any submitted tasks.
+     *
+     * @deprecated Use {@link #eventLoop()}.
      */
+    @Deprecated
     default EventLoop contextAwareEventLoop() {
-        return new RequestContextAwareEventLoop(this, eventLoop());
+        return eventLoop();
     }
 
     /**
@@ -458,7 +470,7 @@ public interface RequestContext {
     /**
      * Returns an {@link Executor} that will execute callbacks in the given {@code executor}, making sure to
      * propagate the current {@link RequestContext} into the callback execution. It is generally preferred to
-     * use {@link #contextAwareEventLoop()} to ensure the callback stays on the same thread as well.
+     * use {@link #eventLoop()} to ensure the callback stays on the same thread as well.
      */
     default Executor makeContextAware(Executor executor) {
         return runnable -> executor.execute(makeContextAware(runnable));
@@ -477,7 +489,7 @@ public interface RequestContext {
      * making sure to propagate the current {@link RequestContext} into the callback execution.
      */
     default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
-        return new RequestContextAwareScheduledExecutorService(this, executor);
+        return RequestContextAwareScheduledExecutorService.of(this, executor);
     }
 
     /**

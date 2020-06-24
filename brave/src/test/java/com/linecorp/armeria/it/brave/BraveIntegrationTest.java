@@ -126,7 +126,7 @@ class BraveIntegrationTest {
                         quxClient.hello(name, f2);
                         CompletableFuture.allOf(f1, f2).whenCompleteAsync((aVoid, throwable) -> {
                             resultHandler.onComplete(f1.getNow(null) + ", and " + f2.getNow(null));
-                        }, RequestContext.current().contextAwareExecutor());
+                        }, RequestContext.current().eventLoop());
                     })));
 
             sb.service("/qux", decorate("service/qux", THttpService.of(
@@ -177,12 +177,12 @@ class BraveIntegrationTest {
                                                        }
                                                    })
                                            )).collect(toImmutableList())),
-                                   RequestContext.current().contextAwareExecutor())
+                                   RequestContext.current().eventLoop())
                             .addListener(() -> {
                                 responseFuture.complete(HttpResponse.of(HttpStatus.OK,
                                                                         MediaType.PLAIN_TEXT_UTF_8,
                                                                         "Lee"));
-                            }, RequestContext.current().contextAwareExecutor());
+                            }, RequestContext.current().eventLoop());
                     return res;
                 }
             }));
