@@ -110,7 +110,8 @@ public final class GrpcClientOptions {
      * </ul>
      */
     public static final ClientOption<Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller>>
-            GRPC_JSON_MARSHALLER_FACTORY = ClientOption.define("GRPC_JSON_MARSHALLER", GrpcJsonMarshaller::of);
+            GRPC_JSON_MARSHALLER_FACTORY = ClientOption.define("GRPC_JSON_MARSHALLER_FACTORY",
+                                                               GrpcJsonMarshaller::of);
 
     private GrpcClientOptions() {}
 }
