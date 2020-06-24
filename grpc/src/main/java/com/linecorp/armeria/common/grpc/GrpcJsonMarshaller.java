@@ -19,13 +19,38 @@ package com.linecorp.armeria.common.grpc;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.function.Function;
+
+import com.google.protobuf.Message;
+
+import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.MethodDescriptor.Marshaller;
+import io.grpc.ServiceDescriptor;
 
 /**
  * A JSON marshaller for gRPC method request or response messages to and from JSON.
+ *
+ * @see GrpcServiceBuilder#jsonMarshallerFactory(Function)
+ * @see GrpcClientOptions#GRPC_JSON_MARSHALLER_FACTORY
  */
 public interface GrpcJsonMarshaller {
+
+    /**
+     * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}
+     * served by the {@linkplain ServiceDescriptor service}.
+     */
+    static GrpcJsonMarshaller of(ServiceDescriptor serviceDescriptor) {
+        return builder().build(serviceDescriptor);
+    }
+
+    /**
+     * Returns a new {@link GrpcJsonMarshallerBuilder}.
+     */
+    static GrpcJsonMarshallerBuilder builder() {
+        return new GrpcJsonMarshallerBuilder();
+    }
 
     /**
      * Serializes a gRPC message into JSON.

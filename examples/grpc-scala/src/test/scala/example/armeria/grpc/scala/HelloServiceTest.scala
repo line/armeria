@@ -1,23 +1,25 @@
 package example.armeria.grpc.scala
 
 import java.util.concurrent.TimeUnit
+import java.util.function.{Function => JFunction}
 import java.util.stream
 
 import com.google.common.base.Stopwatch
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.client.grpc.GrpcClientOptions
 import com.linecorp.armeria.common.SerializationFormat
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
+import com.linecorp.armeria.common.grpc.{GrpcJsonMarshaller, GrpcSerializationFormats}
 import com.linecorp.armeria.server.Server
 import example.armeria.grpc.scala.HelloServiceImpl.toMessage
 import example.armeria.grpc.scala.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import example.armeria.grpc.scala.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
 import example.armeria.grpc.scala.hello.{HelloReply, HelloRequest}
+import io.grpc.ServiceDescriptor
 import io.grpc.stub.StreamObserver
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtensionContext
-import org.junit.jupiter.api.{BeforeAll, Test}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
 
@@ -54,7 +56,7 @@ class HelloServiceTest {
 
   @ArgumentsSource(classOf[GrpcSerializationProvider])
   @ParameterizedTest
-  def lotsOfReplies(serializationFormat: SerializationFormat) {
+  def lotsOfReplies(serializationFormat: SerializationFormat): Unit = {
     var completed = false
     val helloService = newClient[HelloServiceStub](serializationFormat)
 
@@ -154,13 +156,16 @@ object HelloServiceTest {
 
   private def newClient[A](serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO)
                           (implicit tag: ClassTag[A]): A = {
+    val jsonMarshallerFactory: JFunction[_ >: ServiceDescriptor, _ <: GrpcJsonMarshaller] =
+      _ => ScalaPBJsonMarshaller()
+
     Clients.builder(uri(serializationFormat))
-           .option(GrpcClientOptions.GRPC_JSON_MARSHALLER.newValue(ScalaPBJsonMarshaller()))
+           .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(jsonMarshallerFactory))
            .build(tag.runtimeClass).asInstanceOf[A]
   }
 
   private def uri(serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO): String =
-    s"$serializationFormat+http://127.0.0.1:${ server.activeLocalPort() }/"
+    s"$serializationFormat+http://127.0.0.1:${server.activeLocalPort()}/"
 
   @BeforeAll
   def beforeClass(): Unit = {

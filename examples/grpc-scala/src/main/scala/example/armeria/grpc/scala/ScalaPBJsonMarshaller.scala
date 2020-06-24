@@ -32,7 +32,7 @@ import scala.io.{Codec, Source}
  * A [[GrpcJsonMarshaller]] that serializes and deserializes a [[GeneratedMessage]] to and from
  * JSON.
  */
-class ScalaPBJsonMarshaller private(
+class ScalaPBJsonMarshaller private (
   jsonPrinter: Printer = jsonDefaultPrinter,
   jsonParser: Parser = jsonDefaultParser
 ) extends GrpcJsonMarshaller {

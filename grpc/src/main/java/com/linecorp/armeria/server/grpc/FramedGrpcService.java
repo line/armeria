@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
@@ -28,16 +27,15 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
@@ -54,8 +52,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
-import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
@@ -73,6 +69,7 @@ import io.grpc.Server;
 import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
+import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 
 /**
@@ -87,8 +84,7 @@ final class FramedGrpcService extends AbstractPooledHttpService implements GrpcS
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
-    @Nullable
-    private final GrpcJsonMarshaller jsonMarshaller;
+    private final Map<String, GrpcJsonMarshaller> jsonMarshallers;
     @Nullable
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
     private final int maxOutboundMessageSizeBytes;
@@ -106,8 +102,7 @@ final class FramedGrpcService extends AbstractPooledHttpService implements GrpcS
                       DecompressorRegistry decompressorRegistry,
                       CompressorRegistry compressorRegistry,
                       Set<SerializationFormat> supportedSerializationFormats,
-                      GrpcJsonMarshaller jsonMarshaller,
-                      Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer,
+                      Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
                       int maxOutboundMessageSizeBytes,
                       boolean useBlockingTaskExecutor,
@@ -120,8 +115,14 @@ final class FramedGrpcService extends AbstractPooledHttpService implements GrpcS
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.useClientTimeoutHeader = useClientTimeoutHeader;
-        this.jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats,
-                                             jsonMarshaller, jsonMarshallerCustomizer);
+        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
+            jsonMarshallers = ImmutableMap.of();
+        } else {
+            jsonMarshallers =
+                    registry.services().stream()
+                            .map(ServerServiceDefinition::getServiceDescriptor)
+                            .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
+        }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -217,9 +218,10 @@ final class FramedGrpcService extends AbstractPooledHttpService implements GrpcS
             HttpHeaders headers,
             HttpResponseWriter res,
             SerializationFormat serializationFormat) {
+        final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final ArmeriaServerCall<I, O> call = new ArmeriaServerCall<>(
                 headers,
-                methodDef.getMethodDescriptor(),
+                methodDescriptor,
                 compressorRegistry,
                 decompressorRegistry,
                 res,
@@ -227,7 +229,7 @@ final class FramedGrpcService extends AbstractPooledHttpService implements GrpcS
                 maxOutboundMessageSizeBytes,
                 ctx,
                 serializationFormat,
-                jsonMarshaller,
+                jsonMarshallers.get(methodDescriptor.getServiceName()),
                 unsafeWrapRequestBuffers,
                 useBlockingTaskExecutor,
                 defaultHeaders.get(serializationFormat));
@@ -361,27 +363,6 @@ final class FramedGrpcService extends AbstractPooledHttpService implements GrpcS
         }
 
         return null;
-    }
-
-    @Nullable
-    private static GrpcJsonMarshaller jsonMarshaller(
-            HandlerRegistry registry,
-            Set<SerializationFormat> supportedSerializationFormats,
-            @Nullable GrpcJsonMarshaller jsonMarshaller,
-            Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
-        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
-            return null;
-        }
-        if (jsonMarshaller != null) {
-            return jsonMarshaller;
-        }
-
-        final List<MethodDescriptor<?, ?>> methods =
-                registry.services().stream()
-                        .flatMap(service -> service.getMethods().stream())
-                        .map(ServerMethodDefinition::getMethodDescriptor)
-                        .collect(toImmutableList());
-        return new DefaultJsonMarshaller(GrpcJsonUtil.jsonMarshaller(methods, jsonMarshallerCustomizer));
     }
 
     @Override

@@ -48,7 +48,7 @@ object Main {
       GrpcService.builder()
                  .addService(HelloServiceGrpc.bindService(new HelloServiceImpl, ExecutionContext.global))
                  .supportedSerializationFormats(GrpcSerializationFormats.values)
-                 .jsonMarshaller(ScalaPBJsonMarshaller())
+                 .jsonMarshallerFactory(_ => ScalaPBJsonMarshaller())
                  .enableUnframedRequests(true)
                  .build()
 
