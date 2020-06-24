@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -97,8 +98,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final int methodIndex = fullMethodName.lastIndexOf('/') + 1;
         ctx.logBuilder().name(method.getServiceName(), fullMethodName.substring(methodIndex));
         ctx.logBuilder().serializationFormat(serializationFormat);
-        ctx.logBuilder().deferRequestContent();
-        ctx.logBuilder().deferResponseContent();
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
+                               RequestLogProperty.RESPONSE_CONTENT);
 
         final ClientOptions options = options();
         final int maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);

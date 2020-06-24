@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -199,47 +200,70 @@ abstract class HttpResponseDecoder {
          */
         @Override
         public boolean tryWrite(HttpObject o) {
+            boolean wrote = false;
             switch (state) {
                 case WAIT_NON_INFORMATIONAL:
-                    // NB: It's safe to call logBuilder.startResponse() multiple times.
-                    if (ctx != null) {
-                        ctx.logBuilder().startResponse();
-                    }
-
-                    assert o instanceof HttpHeaders && !(o instanceof RequestHeaders) : o;
-
-                    if (o instanceof ResponseHeaders) {
-                        final ResponseHeaders headers = (ResponseHeaders) o;
-                        final HttpStatus status = headers.status();
-                        if (!status.isInformational()) {
-                            state = State.WAIT_DATA_OR_TRAILERS;
-                            if (ctx != null) {
-                                ctx.logBuilder().responseHeaders(headers);
-                            }
-                        }
-                    }
+                    wrote = handleWaitNonInformational(o);
                     break;
                 case WAIT_DATA_OR_TRAILERS:
-                    if (o instanceof HttpHeaders) {
-                        state = State.DONE;
-                        if (ctx != null) {
-                            ctx.logBuilder().responseTrailers((HttpHeaders) o);
-                        }
-                    } else {
-                        if (ctx != null) {
-                            ctx.logBuilder().increaseResponseLength((HttpData) o);
-                        }
-                    }
+                    wrote = handleWaitDateOrTrailers(o);
                     break;
                 case DONE:
                     ReferenceCountUtil.safeRelease(o);
-                    return false;
+                    break;
             }
-            return delegate.tryWrite(o);
+
+            return wrote;
         }
 
         @Override
         public boolean tryWrite(Supplier<? extends HttpObject> o) {
+            return delegate.tryWrite(o);
+        }
+
+        private boolean handleWaitNonInformational(HttpObject o) {
+            // NB: It's safe to call logBuilder.startResponse() multiple times.
+            if (ctx != null) {
+                ctx.logBuilder().startResponse();
+            }
+
+            assert o instanceof HttpHeaders && !(o instanceof RequestHeaders) : o;
+
+            if (o instanceof ResponseHeaders) {
+                final ResponseHeaders headers = (ResponseHeaders) o;
+                final HttpStatus status = headers.status();
+                if (!status.isInformational()) {
+                    state = State.WAIT_DATA_OR_TRAILERS;
+                    if (ctx != null) {
+                        ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
+                        try {
+                            return delegate.tryWrite(headers);
+                        } finally {
+                            ctx.logBuilder().responseHeaders(headers);
+                        }
+                    }
+                }
+            }
+
+            return delegate.tryWrite(o);
+        }
+
+        private boolean handleWaitDateOrTrailers(HttpObject o) {
+            if (o instanceof HttpHeaders) {
+                state = State.DONE;
+                if (ctx != null) {
+                    ctx.logBuilder().defer(RequestLogProperty.RESPONSE_TRAILERS);
+                    try {
+                        return delegate.tryWrite(o);
+                    } finally {
+                        ctx.logBuilder().responseTrailers((HttpHeaders) o);
+                    }
+                }
+            } else {
+                if (ctx != null) {
+                    ctx.logBuilder().increaseResponseLength((HttpData) o);
+                }
+            }
             return delegate.tryWrite(o);
         }
 
@@ -266,8 +290,6 @@ abstract class HttpResponseDecoder {
                            Consumer<Throwable> actionOnNotTimedOut) {
             state = State.DONE;
 
-            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
-
             if (ctx != null) {
                 if (cause == null) {
                     ctx.request().abort();
@@ -275,19 +297,21 @@ abstract class HttpResponseDecoder {
                     ctx.request().abort(cause);
                 }
             }
+
+            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
         }
 
         private void closeAction(@Nullable Throwable cause) {
             if (cause != null) {
+                delegate.close(cause);
                 if (ctx != null) {
                     ctx.logBuilder().endResponse(cause);
                 }
-                delegate.close(cause);
             } else {
+                delegate.close();
                 if (ctx != null) {
                     ctx.logBuilder().endResponse();
                 }
-                delegate.close();
             }
         }
 
@@ -358,12 +382,10 @@ abstract class HttpResponseDecoder {
                         responseTimeoutHandler.run();
                     } else {
                         final ResponseTimeoutException cause = ResponseTimeoutException.get();
-                        if (ctx != null) {
-                            ctx.logBuilder().endResponse(cause);
-                        }
                         delegate.close(cause);
                         if (ctx != null) {
                             ctx.request().abort(cause);
+                            ctx.logBuilder().endResponse(cause);
                         }
                     }
                 }

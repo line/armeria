@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * Decorates an {@link HttpClient} to preview the content of {@link Request}s and {@link Response}s.
@@ -118,7 +119,7 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
                 contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
         req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);
 
-        ctx.logBuilder().deferResponseContentPreview();
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().execute(ctx, req);
         return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res);
     }

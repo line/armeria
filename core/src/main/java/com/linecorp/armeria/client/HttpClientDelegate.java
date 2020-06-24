@@ -222,10 +222,10 @@ final class HttpClientDelegate implements HttpClient {
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
         try (SafeCloseable ignored = RequestContextUtil.pop()) {
+            req.abort(cause);
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             logBuilder.endRequest(cause);
             logBuilder.endResponse(cause);
-            req.abort(cause);
         }
     }
 
