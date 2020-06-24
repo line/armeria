@@ -206,7 +206,7 @@ abstract class HttpResponseDecoder {
                     wrote = handleWaitNonInformational(o);
                     break;
                 case WAIT_DATA_OR_TRAILERS:
-                    wrote = handleWaitDateOrTrailers(o);
+                    wrote = handleWaitDataOrTrailers(o);
                     break;
                 case DONE:
                     ReferenceCountUtil.safeRelease(o);
@@ -248,7 +248,7 @@ abstract class HttpResponseDecoder {
             return delegate.tryWrite(o);
         }
 
-        private boolean handleWaitDateOrTrailers(HttpObject o) {
+        private boolean handleWaitDataOrTrailers(HttpObject o) {
             if (o instanceof HttpHeaders) {
                 state = State.DONE;
                 if (ctx != null) {
