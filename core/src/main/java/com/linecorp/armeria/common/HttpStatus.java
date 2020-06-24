@@ -510,7 +510,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     }
 
     /**
-     *  Returns whether the {@link HttpStatus} is a client error, with a status code of 4XX.
+     * Returns whether the {@link HttpStatus} is a client error, with a status code of 4XX.
      */
     public boolean isClientError() {
         return codeClass == HttpStatusClass.CLIENT_ERROR;
