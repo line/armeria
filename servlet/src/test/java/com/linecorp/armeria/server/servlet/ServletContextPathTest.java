@@ -43,10 +43,11 @@ class ServletContextPathTest {
             sb.http(0);
             final ServletBuilder servletBuilder = new ServletBuilder(sb, "/foo");
             sb = servletBuilder
-                    .servlet("/", new HomeServletTest())
-                    .servlet("/bar", new BarServletTest())
-                    .servlet("/end/", new EndServletTest())
-                    .servlet("/servlet/path/*", new PathInfoServletTest())
+                    .servlet("root", new HomeServletTest(), "/")
+                    .servlet("bar", new BarServletTest(), "/bar")
+                    .servlet("end", new EndServletTest(), "/end/")
+                    .servlet("servlet_path",
+                             new PathInfoServletTest(), "/servlet/path/*")
                     .build();
         }
     };
@@ -92,9 +93,9 @@ class ServletContextPathTest {
             try {
                 // Context path: "/foo" and servlet path: ""
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/foo")).getName()).isEqualTo("/foo");
+                        .getServletContext().getRequestDispatcher("/foo")).getName()).isEqualTo("root");
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/foo/")).getName()).isEqualTo("/foo");
+                        .getServletContext().getRequestDispatcher("/foo/")).getName()).isEqualTo("root");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get home");
@@ -112,10 +113,10 @@ class ServletContextPathTest {
                 throws ServletException, IOException {
             try {
                 // Context path: "/foo" and servlet path: "/bar"
-                assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/foo/bar")).getName()).isEqualTo("/foo/bar");
-                assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/foo/bar/")).getName()).isEqualTo("/foo/bar");
+                assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
+                        "/foo/bar")).getName()).isEqualTo("bar");
+                assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
+                        "/foo/bar/")).getName()).isEqualTo("bar");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get bar");
@@ -133,10 +134,10 @@ class ServletContextPathTest {
                 throws ServletException, IOException {
             try {
                 // Context path: "/foo" and servlet path: "/end/"
-                assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/foo/end")).getName()).isEqualTo("/foo/end");
-                assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/foo/end/")).getName()).isEqualTo("/foo/end");
+                assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
+                        "/foo/end")).getName()).isEqualTo("end");
+                assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
+                        "/foo/end/")).getName()).isEqualTo("end");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get end");

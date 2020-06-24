@@ -16,38 +16,47 @@
 
 package com.linecorp.armeria.server.servlet;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 final class ServletUrlMapper {
 
-    private final Map<Pattern, DefaultServletRegistration> registrations = new HashMap<>();
+    private final Map<Pattern, Pair<String, DefaultServletRegistration>> registrations = new LinkedHashMap<>();
 
     void addMapping(String urlPattern, DefaultServletRegistration registration) {
         // TODO Optimize router.
         final Pattern pattern;
+        final String contextServletPath;
+        // contextPath = /foo
         if (urlPattern.endsWith("/*")) {
-            pattern = Pattern.compile('^' + urlPattern.substring(0, urlPattern.length() - 2) + ".*?");
+            // urlPattern = /foo/bar/* -> contextServletPath = /foo/bar
+            contextServletPath = urlPattern.substring(0, urlPattern.length() - 2);
+            pattern = Pattern.compile('^' + contextServletPath + ".*?");
         } else if (urlPattern.startsWith("*.")) {
             // extension mapping.
             if (urlPattern.length() == 2) {
                 throw new IllegalArgumentException();
             }
+            // urlPattern = *.html -> contextServletPath = *.html
             pattern = Pattern.compile(".*\\." + urlPattern.substring(2));
+            contextServletPath = urlPattern;
         } else {
             // exact match.
-            final String normalizedPath = removeTrailingSlash(urlPattern);
-            pattern = Pattern.compile('^' + normalizedPath + '$');
+            // urlPattern = /foo/bar -> contextServletPath = /bar
+            contextServletPath = removeTrailingSlash(urlPattern);
+            pattern = Pattern.compile('^' + contextServletPath + '$');
         }
-        registrations.put(pattern, registration);
+        registrations.put(pattern, Pair.of(contextServletPath, registration));
     }
 
     @Nullable
-    DefaultServletRegistration getMapping(String path) {
+    Pair<String, DefaultServletRegistration> getMapping(String path) {
         final String normalizedPath = removeTrailingSlash(path);
         return registrations.entrySet().stream()
                             .filter(entry -> entry.getKey().matcher(normalizedPath).matches())

@@ -1,7 +1,3 @@
-/**
- * Example data async servlet.
- */
-
 package example.armeria.server.servlet;
 
 import java.io.IOException;

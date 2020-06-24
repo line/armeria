@@ -11,4 +11,5 @@ repositories {
 
 dependencies {
     api 'javax.servlet:javax.servlet-api:4.0.1'
+    implementation 'org.apache.commons:commons-lang3:3.10'
 }

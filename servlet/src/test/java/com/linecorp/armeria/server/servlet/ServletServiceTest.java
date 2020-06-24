@@ -23,19 +23,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
 import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -57,8 +52,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -74,7 +67,7 @@ public class ServletServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final ServletBuilder servletBuilder = new ServletBuilder(sb);
-            servletBuilder.servlet("/home", TestServlet.class.getName())
+            servletBuilder.servlet("home", TestServlet.class.getName(), "/home")
                           .attribute("attribute1", "value1")
                           .initParameter("param1", "value1")
                           .mimeMapping("avi", "video/x-msvideo")
@@ -228,17 +221,14 @@ public class ServletServiceTest {
                 request.getServletContext().getRequestDispatcher("/app/abc");
                 request.getServletContext().getRequestDispatcher("abc");
                 assertThat(Objects.isNull(
-                        request.getServletContext().getNamedDispatcher("/home"))).isEqualTo(false);
-                assertThat(Objects.isNull(
-                        request.getServletContext().getNamedDispatcher("/abc"))).isEqualTo(true);
-                assertThat(Objects.isNull(
-                        request.getServletContext().getServlet("/home"))).isEqualTo(false);
-                assertThat(Objects.isNull(
-                        request.getServletContext().getServlet("/abc"))).isEqualTo(true);
+                        request.getServletContext().getNamedDispatcher("home"))).isEqualTo(false);
+                assertThat(request.getServletContext().getNamedDispatcher("/abc")).isEqualTo(null);
+                assertThat(request.getServletContext().getServlet("/home")).isEqualTo(null);
+                assertThat(request.getServletContext().getServlet("/abc")).isEqualTo(null);
                 assertThat(
-                        Collections.list(request.getServletContext().getServlets()).size()).isEqualTo(1);
+                        Collections.list(request.getServletContext().getServlets()).size()).isEqualTo(0);
                 assertThat(
-                        Collections.list(request.getServletContext().getServletNames()).size()).isEqualTo(1);
+                        Collections.list(request.getServletContext().getServletNames()).size()).isEqualTo(0);
                 request.getServletContext().log(request.getServletContext().getServerInfo());
                 assertThat(Collections.list(
                         request.getServletContext().getInitParameterNames()).size()).isEqualTo(1);
@@ -259,22 +249,20 @@ public class ServletServiceTest {
                         request.getServletContext().getDefaultSessionTrackingModes())).isEqualTo(false);
                 assertThat(Objects.isNull(
                         request.getServletContext().getEffectiveSessionTrackingModes())).isEqualTo(false);
-                assertThat(Objects.isNull(request.getServletContext().getFilterRegistration(
-                        "authenticate"))).isEqualTo(true);
 
                 final DefaultServletRegistration servletRegistration = (DefaultServletRegistration) request
-                        .getServletContext().getServletRegistration("/home");
+                        .getServletContext().getServletRegistration("home");
                 assertThat(servletRegistration.getInitParameters().size()).isEqualTo(0);
                 assertThat(servletRegistration.getInitParameter("param1")).isEqualTo(null);
                 assertThat(Objects.isNull(servletRegistration.getServlet())).isEqualTo(false);
-                assertThat(servletRegistration.getName()).isEqualTo("/home");
+                assertThat(servletRegistration.getName()).isEqualTo("home");
                 assertThat(servletRegistration.getClassName()).isEqualTo(
                         "com.linecorp.armeria.server.servlet.ServletServiceTest$TestServlet");
                 assertThat(servletRegistration.getMappings().size()).isEqualTo(1);
                 request.getServletContext().log(new Exception("Test log"), "Test log exception");
                 request.getServletContext().log("Test log", new Exception("Test log exception"));
                 request.getServletContext().setAttribute("attribute1", null);
-                assertThat(servletRegistration.getServletConfig().getServletName()).isEqualTo("/home");
+                assertThat(servletRegistration.getServletConfig().getServletName()).isEqualTo("home");
                 assertThat(servletRegistration.getServletConfig().getInitParameter("test")).isEqualTo(null);
                 assertThat(servletRegistration.getServletConfig()
                                               .getInitParameterNames().hasMoreElements()).isEqualTo(false);
@@ -284,7 +272,7 @@ public class ServletServiceTest {
                 final ServletRequestDispatcher dispatcher =
                         (ServletRequestDispatcher) request.getServletContext()
                                                           .getRequestDispatcher(request.getRequestURI());
-                assertThat(dispatcher.getName()).isEqualTo("/home");
+                assertThat(dispatcher.getName()).isEqualTo("home");
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().write("welcome");
@@ -321,7 +309,7 @@ public class ServletServiceTest {
                 response.setHeader("header1", "value1");
                 assertThat(response.getHeader("header1")).isEqualTo("value1");
                 response.setIntHeader("header2", 2);
-                assertThat(response.getHeaderNames().size()).isEqualTo(4);
+                assertThat(response.getHeaderNames().isEmpty()).isEqualTo(false);
                 assertThat(response.getHeaders("header2").size()).isEqualTo(1);
                 response.addDateHeader("end_date", new Date().getTime());
                 response.addHeader("header1", "value1");
@@ -423,17 +411,6 @@ public class ServletServiceTest {
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
-        }
-    }
-
-    static class TestFilter implements Filter {
-        private static final Logger logger = LoggerFactory.getLogger(TestFilter.class);
-
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-                throws IOException, ServletException {
-            logger.info("Do filter successfully!");
-            chain.doFilter(request, response);
         }
     }
 }

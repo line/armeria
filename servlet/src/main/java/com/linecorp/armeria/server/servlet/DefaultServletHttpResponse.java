@@ -63,7 +63,8 @@ final class DefaultServletHttpResponse implements HttpServletResponse {
 
     private boolean usingWriter;
 
-    DefaultServletHttpResponse(DefaultServletContext servletContext, CompletableFuture<HttpResponse> resFuture) {
+    DefaultServletHttpResponse(DefaultServletContext servletContext,
+                               CompletableFuture<HttpResponse> resFuture) {
         this.servletContext = servletContext;
         this.resFuture = resFuture;
         outputStream = new DefaultServletOutputStream(this);

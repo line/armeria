@@ -43,6 +43,7 @@ import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 import javax.servlet.http.HttpServlet;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +104,31 @@ final class DefaultServletContext implements ServletContext {
         servletRegistrations = ImmutableMap.copyOf(servletRegistrations);
         sessionTrackingModeSet = ImmutableSet.copyOf(sessionTrackingModeSet);
         mimeMappings = ImmutableMap.copyOf(mimeMappings);
+    }
+
+    /**
+     * Decode servlet path:
+     * <a
+     * href="https://download.oracle.com/otn-pub/jcp/servlet-3.0-fr-eval-oth-JSpec/servlet-3_0-final-spec.pdf">
+     * Servlet path</a> page number: 25
+     * ContextPath /catalog
+     * Mapping Pattern: /lawn/*
+     * Mapping Pattern: /garden/*
+     * Mapping Pattern: *.jsp
+     * uri: /catalog/lawn/index.html -> ServletPath: /lawn + PathInfo: /index.html
+     * uri: /catalog/garden/implements/ -> ServletPath: /garden + PathInfo: /implements/
+     * uri: /catalog/help/feedback.jsp -> ServletPath: /help/feedback.jsp + PathInfo: null.
+     */
+    @Nullable
+    String decodeServletPath(String uri) {
+        final Pair<String, DefaultServletRegistration> pair = servletUrlMapper.getMapping(uri);
+        if (pair == null) {
+            return null;
+        } else if (pair.getKey().startsWith("*.")) {
+            return uri.substring(contextPath.length());
+        } else {
+            return pair.getKey().substring(contextPath.length());
+        }
     }
 
     void mimeMapping(String extension, String mimeType) {
@@ -196,11 +222,11 @@ final class DefaultServletContext implements ServletContext {
     @Nullable
     public ServletRequestDispatcher getRequestDispatcher(String path) {
         requireNonNull(path, "path");
-        final DefaultServletRegistration registration = servletUrlMapper.getMapping(path);
-        if (registration == null) {
+        final Pair<String, DefaultServletRegistration> pair = servletUrlMapper.getMapping(path);
+        if (pair == null) {
             return null;
         }
-        return new ServletRequestDispatcher(new ServletFilterChain(registration), registration.getName());
+        return new ServletRequestDispatcher(new ServletFilterChain(pair.getValue()), pair.getValue().getName());
     }
 
     @Override
@@ -309,6 +335,19 @@ final class DefaultServletContext implements ServletContext {
         return servletContextName;
     }
 
+    private void addUrlPatterns(String servletName, @Nullable DefaultServletRegistration registration,
+                                String... urlPatterns) {
+        if (registration == null) {
+            return;
+        }
+        final Set<String> conflicts = registration.addMapping(urlPatterns);
+        if (!conflicts.isEmpty()) {
+            servletRegistrations.remove(servletName);
+            throw new IllegalArgumentException(conflicts + " are mapped already in urlPatterns: " +
+                                               Arrays.toString(urlPatterns));
+        }
+    }
+
     void addServlet(String servletName, String className, String... urlPatterns) {
         final DefaultServletRegistration registration = addServlet(servletName, className);
         addUrlPatterns(servletName, registration, urlPatterns);
@@ -322,19 +361,6 @@ final class DefaultServletContext implements ServletContext {
     void addServlet(String servletName, Class<? extends Servlet> servletClass, String... urlPatterns) {
         final DefaultServletRegistration registration = addServlet(servletName, servletClass);
         addUrlPatterns(servletName, registration, urlPatterns);
-    }
-
-    private void addUrlPatterns(String servletName, @Nullable DefaultServletRegistration registration,
-                                String... urlPatterns) {
-        if (registration == null) {
-            return;
-        }
-        final Set<String> conflicts = registration.addMapping(urlPatterns);
-        if (!conflicts.isEmpty()) {
-            servletRegistrations.remove(servletName);
-            throw new IllegalArgumentException(conflicts + " are mapped already in urlPatterns: " +
-                                               Arrays.toString(urlPatterns));
-        }
     }
 
     @Nullable
@@ -428,13 +454,12 @@ final class DefaultServletContext implements ServletContext {
     @Nullable
     @Override
     public FilterRegistration getFilterRegistration(String filterName) {
-        requireNonNull(filterName, "filterName");
-        return null;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        return ImmutableMap.of();
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override

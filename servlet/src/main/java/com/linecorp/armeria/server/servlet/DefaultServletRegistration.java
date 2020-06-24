@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.servlet;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -94,9 +95,7 @@ final class DefaultServletRegistration implements Dynamic {
         final Set<String> conflicts = new HashSet<>();
 
         for (String urlPattern : urlPatterns) {
-            final DefaultServletRegistration registration =
-                    urlMapper.getMapping(urlPattern);
-            if (registration != null) {
+            if (urlMapper.getMapping(urlPattern) != null) {
                 conflicts.add(urlPattern);
             }
         }
@@ -106,8 +105,9 @@ final class DefaultServletRegistration implements Dynamic {
         }
 
         for (String urlPattern : urlPatterns) {
-            urlMapper.addMapping(urlPattern, this);
+            urlMapper.addMapping(servletContext.getContextPath() + urlPattern, this);
         }
+        mappingSet.addAll(Arrays.asList(urlPatterns));
 
         return ImmutableSet.of();
     }

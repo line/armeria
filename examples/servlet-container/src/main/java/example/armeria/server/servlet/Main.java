@@ -12,7 +12,7 @@ public class Main {
     public static ServerBuilder getServerBuilder(ServerBuilder serverBuilder) {
         final ServletBuilder sb = new ServletBuilder(
                 serverBuilder.http(8080), "/app");
-        serverBuilder = sb.servlet("/home", new HomeServlet())
+        serverBuilder = sb.servlet("home", new HomeServlet(), "/home")
                           .build();
         return serverBuilder;
     }

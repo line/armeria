@@ -65,15 +65,6 @@ public final class ServletBuilder {
         this.serverBuilder = serverBuilder;
     }
 
-    /**
-     * Add a servlet.
-     */
-    public ServletBuilder servlet(String servletName, HttpServlet httpServlet, String... urlPatterns) {
-        checkUrlPatterns(urlPatterns);
-        servletContext.addServlet(servletName, httpServlet, urlPatterns);
-        return this;
-    }
-
     private void checkUrlPatterns(String... urlPatterns) {
         final List<String> urls = ImmutableList.copyOf(requireNonNull(urlPatterns, "urlPatterns"));
         if (urls.isEmpty()) {
@@ -88,6 +79,15 @@ public final class ServletBuilder {
                 throw new IllegalArgumentException("url must start with /. url: " + url);
             }
         }
+    }
+
+    /**
+     * Add a servlet.
+     */
+    public ServletBuilder servlet(String servletName, HttpServlet httpServlet, String... urlPatterns) {
+        checkUrlPatterns(urlPatterns);
+        servletContext.addServlet(servletName, httpServlet, urlPatterns);
+        return this;
     }
 
     /**

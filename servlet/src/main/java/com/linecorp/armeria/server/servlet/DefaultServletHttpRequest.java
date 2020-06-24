@@ -107,7 +107,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         requestURI = serviceRequestContext.path();
         queryParams = queryParamsOf(serviceRequestContext.query(), contentType, httpRequest);
         cookies = decodeCookie();
-        servletPath = requestURI.substring(servletContext.getContextPath().length() + 1);
+        servletPath = servletContext.decodeServletPath(requestURI);
         pathInfo = decodePathInfo();
 
         final Builder<String, String[]> builder = ImmutableMap.builder();

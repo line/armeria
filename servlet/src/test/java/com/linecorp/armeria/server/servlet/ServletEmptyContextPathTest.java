@@ -43,10 +43,11 @@ class ServletEmptyContextPathTest {
             sb.http(0);
             final ServletBuilder servletBuilder = new ServletBuilder(sb);
             sb = servletBuilder
-                    .servlet("/", new HomeServletTest())
-                    .servlet("/bar", new BarServletTest())
-                    .servlet("/end/", new EndServletTest())
-                    .servlet("/servlet/path/*", new PathInfoServletTest())
+                    .servlet("root", new HomeServletTest(), "/")
+                    .servlet("bar", new BarServletTest(), "/bar")
+                    .servlet("end", new EndServletTest(), "/end/")
+                    .servlet("servlet_path",
+                             new PathInfoServletTest(), "/servlet/path/*")
                     .build();
         }
     };
@@ -92,9 +93,9 @@ class ServletEmptyContextPathTest {
             try {
                 // Context path: "" and servlet path: ""
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/")).getName()).isEqualTo("");
+                        .getServletContext().getRequestDispatcher("/")).getName()).isEqualTo("root");
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("")).getName()).isEqualTo("");
+                        .getServletContext().getRequestDispatcher("")).getName()).isEqualTo("root");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get home");
@@ -113,9 +114,9 @@ class ServletEmptyContextPathTest {
             try {
                 // Context path: "" and servlet path: "/bar"
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/bar")).getName()).isEqualTo("/bar");
+                        .getServletContext().getRequestDispatcher("/bar")).getName()).isEqualTo("bar");
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/bar/")).getName()).isEqualTo("/bar");
+                        .getServletContext().getRequestDispatcher("/bar/")).getName()).isEqualTo("bar");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get bar");
@@ -134,9 +135,9 @@ class ServletEmptyContextPathTest {
             try {
                 // Context path: "" and servlet path: "/end"
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/end")).getName()).isEqualTo("/end");
+                        .getServletContext().getRequestDispatcher("/end")).getName()).isEqualTo("end");
                 assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getNamedDispatcher("/end/")).getName()).isEqualTo("/end");
+                        .getServletContext().getRequestDispatcher("/end/")).getName()).isEqualTo("end");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get end");
