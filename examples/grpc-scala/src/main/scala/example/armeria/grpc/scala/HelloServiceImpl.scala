@@ -31,7 +31,6 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-
 class HelloServiceImpl extends HelloServiceGrpc.HelloService {
 
   override def hello(request: HelloRequest): Future[HelloReply] = {

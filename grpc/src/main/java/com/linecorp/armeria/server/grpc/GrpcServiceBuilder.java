@@ -295,7 +295,7 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder jsonMarshallerFactory(
             Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
-        this.jsonMarshallerFactory = jsonMarshallerFactory;
+        this.jsonMarshallerFactory = requireNonNull(jsonMarshallerFactory, "jsonMarshallerFactory");
         return this;
     }
 
