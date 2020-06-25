@@ -207,7 +207,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata);
 
         final HttpResponse res = initContextAndExecuteWithFallback(
-                httpClient, ctx, endpointGroup,
+                httpClient, ctx, endpointGroup, HttpResponse::from,
                 (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
@@ -327,9 +327,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 final HttpHeaders trailers = parseGrpcWebTrailers(buf);
                 if (trailers == null) {
                     // Malformed trailers.
-                    close(Status.INTERNAL
-                                  .withDescription("grpc-web trailers malformed: " +
-                                                   buf.toString(StandardCharsets.UTF_8)),
+                    close(Status.INTERNAL.withDescription("grpc-web trailers malformed: " +
+                                                          buf.toString(StandardCharsets.UTF_8)),
                           new Metadata());
                 } else {
                     GrpcStatus.reportStatus(trailers, responseReader, this);

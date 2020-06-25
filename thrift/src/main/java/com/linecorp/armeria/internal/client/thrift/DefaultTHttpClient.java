@@ -35,7 +35,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 
     DefaultTHttpClient(ClientBuilderParams params, RpcClient delegate, MeterRegistry meterRegistry) {
-        super(params, delegate, meterRegistry);
+        super(params, delegate, meterRegistry,
+              RpcResponse::from, (ctx, cause) -> RpcResponse.ofFailure(cause));
     }
 
     @Override
@@ -63,8 +64,7 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         pathAndQuery.storeInCache(path);
 
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
-        return execute(HttpMethod.POST, pathAndQuery.path(), null, serviceName, call,
-                       (ctx, cause) -> RpcResponse.ofFailure(cause));
+        return execute(HttpMethod.POST, pathAndQuery.path(), null, serviceName, call);
     }
 
     @Override

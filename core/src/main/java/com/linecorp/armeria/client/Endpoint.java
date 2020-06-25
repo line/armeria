@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -172,8 +173,15 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     @Override
-    public Endpoint select(ClientRequestContext ctx) {
+    public Endpoint selectNow(ClientRequestContext ctx) {
         return this;
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                              ScheduledExecutorService executor,
+                                              long timeoutMillis) {
+        return UnmodifiableFuture.completedFuture(this);
     }
 
     @Override

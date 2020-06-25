@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -82,8 +83,15 @@ public class DynamicEndpointGroup
     }
 
     @Override
-    public final Endpoint select(ClientRequestContext ctx) {
-        return maybeCreateSelector().select(ctx);
+    public final Endpoint selectNow(ClientRequestContext ctx) {
+        return maybeCreateSelector().selectNow(ctx);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                              ScheduledExecutorService executor,
+                                              long timeoutMillis) {
+        return maybeCreateSelector().select(ctx, executor, timeoutMillis);
     }
 
     /**

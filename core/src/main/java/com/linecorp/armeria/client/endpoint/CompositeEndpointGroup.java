@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.base.MoreObjects;
@@ -103,8 +103,15 @@ final class CompositeEndpointGroup
     }
 
     @Override
-    public Endpoint select(ClientRequestContext ctx) {
-        return selector.select(ctx);
+    public Endpoint selectNow(ClientRequestContext ctx) {
+        return selector.selectNow(ctx);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                              ScheduledExecutorService executor,
+                                              long timeoutMillis) {
+        return selector.select(ctx, executor, timeoutMillis);
     }
 
     @Override
