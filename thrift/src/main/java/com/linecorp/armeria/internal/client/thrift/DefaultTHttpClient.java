@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.thrift.THttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -63,7 +64,8 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         pathAndQuery.storeInCache(path);
 
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
-        return execute(HttpMethod.POST, pathAndQuery.path(), null, serviceName, call,
+
+        return execute(HttpMethod.POST, scheme().sessionProtocol(), pathAndQuery.path(), null, serviceName, call,
                        (ctx, cause) -> RpcResponse.ofFailure(cause));
     }
 

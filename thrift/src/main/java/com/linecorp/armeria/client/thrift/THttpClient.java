@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.thrift;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
