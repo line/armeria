@@ -19,15 +19,25 @@ import javax.validation.constraints.NotNull;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
+
 /**
  * Used as an example request object in {@link GrpcServiceRegistrationBean}.
+ *
+ * @deprecated Use {@link DocServiceConfigurator}.
  */
+@Deprecated
 public final class GrpcExampleRequest {
 
     /**
      * Returns a new {@link GrpcExampleRequest} with the specified {@code serviceType}, {@code methodName}
      * and {@code exampleRequest}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleRequestForMethod(String, String, Object...)} or
+     *             {@link DocServiceBuilder#exampleRequestForMethod(String, String, Iterable)}
      */
+    @Deprecated
     public static GrpcExampleRequest of(@NotNull String serviceType,
                                         @NotNull String methodName,
                                         @NotNull Object exampleRequest) {

@@ -36,7 +36,22 @@ import com.linecorp.armeria.server.Route;
  * >             .setDecorators(LoggingService.newDecorator());
  * > }
  * }</pre>
+ *
+ * @deprecated Use {@link ArmeriaServerConfigurator}.
+ *             <pre>{@code
+ *             @Bean
+ *             public ArmeriaServerConfigurator myService() {
+ *                 return server -> {
+ *                     server.route()
+ *                           .path("/ok")
+ *                           .methods(HttpMethod.GET, HttpMethod.POST)
+ *                           .defaultServiceName("myService")
+ *                           .decorator(LoggingService.newDecorator())
+ *                           .build(new MyService());
+ *                 };
+ *             }}</pre>
  */
+@Deprecated
 public class HttpServiceRegistrationBean extends AbstractServiceRegistrationBean<
         HttpService, HttpServiceRegistrationBean, Object, HttpHeaders> {
 
