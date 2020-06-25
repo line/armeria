@@ -20,6 +20,7 @@ includeWithFlags ':junit4',                             'java', 'publish', 'relo
 includeWithFlags ':junit5',                             'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                              'java', 'publish', 'relocate'
 includeWithFlags ':logback',                            'java', 'publish', 'relocate'
+includeWithFlags ':oauth2',                             'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                          'java', 'publish', 'relocate'
 includeWithFlags ':rxjava',                             'java', 'publish', 'relocate'
 includeWithFlags ':rxjava2',                            'java', 'publish', 'relocate'
