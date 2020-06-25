@@ -35,7 +35,7 @@ interface ClientHttpObjectEncoder extends HttpObjectEncoder {
     default ChannelFuture writeHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
         assert eventLoop().inEventLoop();
         if (isClosed()) {
-            return newFailedFuture(new UnprocessedRequestException(ClosedSessionException.get()));
+            return newFailedFuture(UnprocessedRequestException.wrap(ClosedSessionException.get()));
         }
 
         return doWriteHeaders(id, streamId, headers, endStream);

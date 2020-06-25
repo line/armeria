@@ -35,15 +35,33 @@ public final class UnprocessedRequestException extends RuntimeException {
     private static final long serialVersionUID = 4679512839715213302L;
 
     /**
-     * Creates a new instance with the specified {@code message} and {@code cause}.
+     * Returns a new {@link UnprocessedRequestException} with the specified {@code message} and
+     * {@link Throwable}.
      */
+    public static UnprocessedRequestException wrap(Throwable cause) {
+        requireNonNull(cause, "cause");
+        if (cause instanceof UnprocessedRequestException) {
+            return (UnprocessedRequestException) cause;
+        }
+        return new UnprocessedRequestException(cause);
+    }
+
+    /**
+     * Creates a new instance with the specified {@code message} and {@code cause}.
+     *
+     * @deprecated Use {@link #wrap(Throwable)}.
+     */
+    @Deprecated
     public UnprocessedRequestException(@Nullable String message, Throwable cause) {
         super(message, requireNonNull(cause, "cause"));
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
+     *
+     * @deprecated Use {@link #wrap(Throwable)}.
      */
+    @Deprecated
     public UnprocessedRequestException(Throwable cause) {
         super(requireNonNull(cause, "cause").toString(), cause);
     }

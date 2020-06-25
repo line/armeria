@@ -69,7 +69,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
             final ClosedStreamException closedStreamException =
                     new ClosedStreamException("Cannot create a new stream. streamId: " + streamId +
                                               ", lastStreamCreated: " + local.lastStreamCreated());
-            return newFailedFuture(new UnprocessedRequestException(closedStreamException));
+            return newFailedFuture(UnprocessedRequestException.wrap(closedStreamException));
         }
 
         // Client starts a new stream.
