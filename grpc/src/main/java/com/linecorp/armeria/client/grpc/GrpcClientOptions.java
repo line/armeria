@@ -17,16 +17,23 @@
 package com.linecorp.armeria.client.grpc;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
+
+import io.grpc.ServiceDescriptor;
 
 /**
  * {@link ClientOption}s to control gRPC-specific behavior.
@@ -77,13 +84,34 @@ public final class GrpcClientOptions {
             ClientOption.define("GRPC_UNSAFE_WRAP_RESPONSE_BUFFERS", false);
 
     /**
-     * Sets a {@link Consumer} that can customize the JSON marshaller used when handling JSON payloads in the
-     * service. This is commonly used to switch from the default of using lowerCamelCase for field names to
-     * using the field name from the proto definition, by setting
-     * {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)}.
+     * Sets the factory that creates a {@link GrpcJsonMarshaller} that serializes and deserializes request or
+     * response messages to and from JSON depending on the {@link SerializationFormat}. The returned
+     * {@link GrpcJsonMarshaller} from the factory replaces the built-in {@link GrpcJsonMarshaller}.
+     *
+     * <p>This is commonly used to:
+     * <ul>
+     *   <li>Switch from the default of using lowerCamelCase for field names to using the field name from
+     *       the proto definition, by setting
+     *       {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)} via
+     *       {@link GrpcJsonMarshallerBuilder#jsonMarshallerCustomizer(Consumer)}.
+     *       <pre>{@code
+     *        Clients.builder(grpcServerUri)
+     *               .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(serviceDescriptor -> {
+     *                   return GrpcJsonMarshaller.builder()
+     *                                            .jsonMarshallerCustomizer(builder -> {
+     *                                                builder.preservingProtoFieldNames(true);
+     *                                            })
+     *                                            .build(serviceDescriptor);
+     *               }))
+     *               .build();
+     *       }</pre></li>
+     *   <li>Set a customer marshaller for non-{@link Message} types such as {@code scalapb.GeneratedMessage}
+     *       for Scala and {@code pbandk.Message} for Kotlin.</li>
+     * </ul>
      */
-    public static final ClientOption<Consumer<MessageMarshaller.Builder>> JSON_MARSHALLER_CUSTOMIZER =
-            ClientOption.define("GRPC_JSON_MARSHALLER_CUSTOMIZER", unused -> { /* no-op */ });
+    public static final ClientOption<Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller>>
+            GRPC_JSON_MARSHALLER_FACTORY = ClientOption.define("GRPC_JSON_MARSHALLER_FACTORY",
+                                                               GrpcJsonMarshaller::of);
 
     private GrpcClientOptions() {}
 }

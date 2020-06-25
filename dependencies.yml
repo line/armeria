@@ -142,6 +142,11 @@ com.squareup.retrofit2:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
 
+com.thesamet.scalapb:
+  scalapb-runtime_2.13: { version: &SCALAPB_VERSION '0.10.1' }
+  scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
+  scalapb-json4s_2.13: { version: *SCALAPB_VERSION }
+
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
@@ -227,6 +232,10 @@ io.micrometer:
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
+
+# This is only used for examples/grpc-scala
+io.monix:
+  monix-reactive_2.13: { version: '3.2.1' }
 
 io.netty:
   netty-common:
@@ -497,6 +506,9 @@ org.reflections:
     relocations:
     - from: org.reflections
       to: com.linecorp.armeria.internal.shaded.reflections
+
+org.scala:
+  scala-library: { version: '2.13.2' }
 
 org.slf4j:
   jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.30' }
