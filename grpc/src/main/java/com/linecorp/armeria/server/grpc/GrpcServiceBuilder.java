@@ -280,14 +280,14 @@ public final class GrpcServiceBuilder {
      *       {@link GrpcJsonMarshallerBuilder#jsonMarshallerCustomizer(Consumer)}.
      *       <pre>{@code
      *       GrpcService.builder()
-     *            .jsonMarshallerFactory(serviceDescriptor -> {
-     *                return GrpcJsonMarshaller.builder()
-     *                                         .jsonMarshallerCustomizer(builder -> {
-     *                                             builder.preservingProtoFieldNames(true);
-     *                                         })
-     *                                         .build(serviceDescriptor);
-     *            })
-     *            .build();
+     *                  .jsonMarshallerFactory(serviceDescriptor -> {
+     *                      return GrpcJsonMarshaller.builder()
+     *                                               .jsonMarshallerCustomizer(builder -> {
+     *                                                    builder.preservingProtoFieldNames(true);
+     *                                               })
+     *                                               .build(serviceDescriptor);
+     *                  })
+     *                  .build();
      *       }</pre></li>
      *   <li>Set a customer marshaller for non-{@link Message} types such as {@code scalapb.GeneratedMessage}
      *       for Scala and {@code pbandk.Message} for Kotlin.</li>
