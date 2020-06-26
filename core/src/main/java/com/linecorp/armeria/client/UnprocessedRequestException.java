@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Flags;
 
@@ -35,15 +34,23 @@ public final class UnprocessedRequestException extends RuntimeException {
     private static final long serialVersionUID = 4679512839715213302L;
 
     /**
-     * Creates a new instance with the specified {@code message} and {@code cause}.
+     * Returns a new {@link UnprocessedRequestException} with the specified {@code message} and
+     * {@link Throwable}.
      */
-    public UnprocessedRequestException(@Nullable String message, Throwable cause) {
-        super(message, requireNonNull(cause, "cause"));
+    public static UnprocessedRequestException of(Throwable cause) {
+        requireNonNull(cause, "cause");
+        if (cause instanceof UnprocessedRequestException) {
+            return (UnprocessedRequestException) cause;
+        }
+        return new UnprocessedRequestException(cause);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
+     *
+     * @deprecated Use {@link #of(Throwable)}.
      */
+    @Deprecated
     public UnprocessedRequestException(Throwable cause) {
         super(requireNonNull(cause, "cause").toString(), cause);
     }

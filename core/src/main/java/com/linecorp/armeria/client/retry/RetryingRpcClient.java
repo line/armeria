@@ -161,10 +161,10 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
     private static void handleException(ClientRequestContext ctx, CompletableFuture<RpcResponse> future,
                                         Throwable cause, boolean endRequestLog) {
+        future.completeExceptionally(cause);
         if (endRequestLog) {
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
-        future.completeExceptionally(cause);
     }
 }
