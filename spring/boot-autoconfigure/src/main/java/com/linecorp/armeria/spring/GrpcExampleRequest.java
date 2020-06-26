@@ -19,7 +19,6 @@ import javax.validation.constraints.NotNull;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**

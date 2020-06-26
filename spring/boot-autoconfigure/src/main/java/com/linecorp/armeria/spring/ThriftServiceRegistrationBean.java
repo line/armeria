@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceBindingBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
@@ -82,6 +83,8 @@ public class ThriftServiceRegistrationBean extends AbstractServiceRegistrationBe
 
     /**
      * Register the url path this service map to.
+     *
+     * @deprecated Use {@link ServiceBindingBuilder#pathPrefix(String)}
      */
     @Deprecated
     public ThriftServiceRegistrationBean setPath(@NotNull String path) {

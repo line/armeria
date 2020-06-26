@@ -27,14 +27,11 @@ import javax.validation.constraints.NotNull;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.AnnotatedServiceBindingBuilder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceBindingBuilder;
-import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -112,12 +109,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Sets service name to use in monitoring.
      *
-     * @deprecated The service name is automatically set now. If you want to customize it:
-     *             <ul>
-     *                <li>Use {@link ServiceName} for a annotated service.</li>
-     *                <li>Set {@link ServiceBindingBuilder#defaultServiceName(String) for a {@link HttpService}.</li>
-     *                <li>Set programmatically using {@link RequestLogBuilder#name(String, String)}</li>
-     *             </ul>
+     * @deprecated The service name is automatically set now.
      */
     @Deprecated
     public final U setServiceName(@NotNull String serviceName) {
