@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -73,8 +74,17 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
             return UnmodifiableFuture.completedFuture(endpoint);
         }
 
-        // Schedule timeout.
-        executor.schedule(() -> listeningFuture.complete(null), timeoutMillis, TimeUnit.MILLISECONDS);
+        // Schedule the timeout task.
+        final ScheduledFuture<?> timeoutFuture =
+                executor.schedule(() -> listeningFuture.complete(null),
+                                  timeoutMillis, TimeUnit.MILLISECONDS);
+        listeningFuture.timeoutFuture = timeoutFuture;
+
+        // Cancel the timeout task if necessary, just in case listeningFuture is
+        // completed even before we assign timeoutFuture to listeningFuture.timeoutFuture.
+        if (listeningFuture.isDone()) {
+            timeoutFuture.cancel(false);
+        }
 
         return listeningFuture;
     }
@@ -84,6 +94,8 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         private final Executor executor;
         @Nullable
         private volatile Endpoint selectedEndpoint;
+        @Nullable
+        private volatile ScheduledFuture<?> timeoutFuture;
 
         ListeningFuture(ClientRequestContext ctx, Executor executor) {
             this.ctx = ctx;
@@ -99,8 +111,11 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
             try {
                 final Endpoint endpoint = AbstractEndpointSelector.this.selectNow(ctx);
                 if (endpoint != null) {
+                    cleanup();
+
+                    // Complete with the selected endpoint.
                     selectedEndpoint = endpoint;
-                    executor.execute(() -> complete(endpoint));
+                    executor.execute(() -> super.complete(endpoint));
                 }
             } catch (Throwable t) {
                 completeExceptionally(t);
@@ -109,20 +124,29 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
 
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
-            group().removeListener(this);
+            cleanup();
             return super.cancel(mayInterruptIfRunning);
         }
 
         @Override
         public boolean complete(Endpoint value) {
-            group().removeListener(this);
+            cleanup();
             return super.complete(value);
         }
 
         @Override
         public boolean completeExceptionally(Throwable ex) {
-            group().removeListener(this);
+            cleanup();
             return super.completeExceptionally(ex);
+        }
+
+        private void cleanup() {
+            group().removeListener(this);
+            final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+            if (timeoutFuture != null) {
+                this.timeoutFuture = null;
+                timeoutFuture.cancel(false);
+            }
         }
     }
 }
