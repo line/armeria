@@ -24,6 +24,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Clock;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -31,6 +33,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 
@@ -56,21 +59,25 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
     }
 
     @Override
-    public HttpFileAttributes readAttributes() throws IOException {
-        if (!Files.exists(path)) {
-            return null;
-        }
-
-        try {
-            final BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
-            if (attrs.isRegularFile()) {
-                return new HttpFileAttributes(attrs.size(), attrs.lastModifiedTime().toMillis());
+    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+        return CompletableFuture.supplyAsync(() -> {
+            if (!Files.exists(path)) {
+                return null;
             }
-        } catch (NoSuchFileException e) {
-            // Non-existent file.
-        }
 
-        return null;
+            try {
+                final BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+                if (attrs.isRegularFile()) {
+                    return new HttpFileAttributes(attrs.size(), attrs.lastModifiedTime().toMillis());
+                }
+            } catch (NoSuchFileException e) {
+                // Non-existent file.
+            } catch (IOException e) {
+                return Exceptions.throwUnsafely(e);
+            }
+
+            return null;
+        }, fileReadExecutor);
     }
 
     @Override

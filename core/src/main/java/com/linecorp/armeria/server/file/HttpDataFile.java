@@ -15,9 +15,9 @@
  */
 package com.linecorp.armeria.server.file;
 
-import java.io.IOException;
 import java.time.Clock;
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
@@ -76,12 +76,18 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     }
 
     @Override
+    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+        return AggregatedHttpFile.super.readAttributes(fileReadExecutor);
+    }
+
+    @Override
     public ResponseHeaders readHeaders() {
-        try {
-            return super.readHeaders();
-        } catch (IOException e) {
-            throw new Error(e); // Never reaches here.
-        }
+        return super.readHeaders(attrs);
+    }
+
+    @Override
+    public CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
+        return AggregatedHttpFile.super.readHeaders(fileReadExecutor);
     }
 
     @Override

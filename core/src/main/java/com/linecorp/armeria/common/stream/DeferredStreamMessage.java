@@ -66,7 +66,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             DeferredStreamMessage.class, Throwable.class, "abortCause");
 
     @Nullable
-    @SuppressWarnings("unused") // Updated only via delegateUpdater
+    @SuppressWarnings("unused") // Updated only via upstreamUpdater
     private volatile StreamMessage<T> upstream;
 
     // Only accessed from subscription's executor.
