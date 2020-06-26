@@ -79,6 +79,10 @@ configure(projectsWithFlags('java')) {
         dependencies {
             errorprone 'com.google.errorprone:error_prone_core'
         }
+
+        tasks.withType(JavaCompile) {
+            options.errorprone.excludedPaths = '.*/gen-src/.*'
+        }
     }
 
     // Common dependencies
@@ -146,7 +150,6 @@ configure(projectsWithFlags('java')) {
     // Target Java 8.
     tasks.withType(JavaCompile) {
         options.compilerArgs += ['--release', '8']
-        options.errorprone.excludedPaths = '.*/gen-src/.*'
 
         dependsOn checkJavaVersion
     }
