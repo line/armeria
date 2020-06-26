@@ -248,7 +248,7 @@ public final class DefaultClientRequestContext
     }
 
     private void failEarly(Throwable cause) {
-        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
+        final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
             autoFillSchemeAndAuthority();
