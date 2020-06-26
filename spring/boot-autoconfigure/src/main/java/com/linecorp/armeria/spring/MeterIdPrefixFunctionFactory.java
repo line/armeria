@@ -19,13 +19,19 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
  * Produces a {@link MeterIdPrefixFunction} from a service name.
+ *
+ * @deprecated Use {@link MeterIdPrefixFunction}.
  */
+@Deprecated
 @FunctionalInterface
 public interface MeterIdPrefixFunctionFactory {
 
     /**
      * Returns the default {@link MeterIdPrefixFunctionFactory} instance.
+     *
+     * @deprecated Use {@link MeterIdPrefixFunction#ofDefault(String)}
      */
+    @Deprecated
     static MeterIdPrefixFunctionFactory ofDefault() {
         return DefaultMeterIdPrefixFunctionFactory.INSTANCE;
     }
