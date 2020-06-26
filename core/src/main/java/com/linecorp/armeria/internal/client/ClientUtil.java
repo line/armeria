@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -60,7 +61,7 @@ public final class ClientUtil {
                 try {
                     success = initFuture.get();
                 } catch (Exception e) {
-                    throw Exceptions.peel(e);
+                    throw UnprocessedRequestException.of(Exceptions.peel(e));
                 }
 
                 return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
@@ -68,7 +69,7 @@ public final class ClientUtil {
                 return futureConverter.apply(initFuture.handle((success, cause) -> {
                     try {
                         if (cause != null) {
-                            throw cause;
+                            throw UnprocessedRequestException.of(Exceptions.peel(cause));
                         }
 
                         return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
