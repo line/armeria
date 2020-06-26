@@ -72,6 +72,7 @@ project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:grpc-example',                       'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                        'java'
+includeWithFlags ':examples:grpc-scala',                         'java', 'scala-grpc'
 includeWithFlags ':examples:grpc-reactor',                       'java', 'reactor-grpc'
 includeWithFlags ':examples:proxy-server',                       'java'
 includeWithFlags ':examples:saml-service-provider',              'java'

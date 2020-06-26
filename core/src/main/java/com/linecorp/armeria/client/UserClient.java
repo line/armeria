@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.SystemInfo;
 
@@ -114,9 +115,10 @@ public abstract class UserClient<I extends Request, O extends Response>
      *                                {@link Client#execute(ClientRequestContext, Request)} throws an exception
      *                                instead of returning an error response
      */
-    protected final O execute(HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-                              I req, BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
-        return execute(endpointGroup(), method, path, query, fragment, req, fallbackResponseFactory);
+    protected final O execute(HttpMethod method, SessionProtocol protocol, String path, @Nullable String query,
+                              @Nullable String fragment, I req,
+                              BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
+        return execute(endpointGroup(), method, protocol, path, query, fragment, req, fallbackResponseFactory);
     }
 
     /**
@@ -131,8 +133,8 @@ public abstract class UserClient<I extends Request, O extends Response>
      *                                {@link Client#execute(ClientRequestContext, Request)} throws an exception
      *                                instead of returning an error response
      */
-    protected final O execute(EndpointGroup endpointGroup,
-                              HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+    protected final O execute(EndpointGroup endpointGroup, HttpMethod method, SessionProtocol protocol,
+                              String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
 
         final HttpRequest httpReq;
@@ -148,7 +150,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         }
 
         final DefaultClientRequestContext ctx =
-                new DefaultClientRequestContext(meterRegistry, scheme().sessionProtocol(),
+                new DefaultClientRequestContext(meterRegistry, protocol,
                                                 id, method, path, query, fragment, options(), httpReq, rpcReq,
                                                 System.nanoTime(), SystemInfo.currentTimeMicros());
 
