@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ClientRequestContextPushedOnCallbackTest {
 

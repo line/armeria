@@ -37,7 +37,7 @@ import com.linecorp.armeria.service.test.thrift.tree.LeafType;
 import com.linecorp.armeria.service.test.thrift.tree.StringLeaf;
 import com.linecorp.armeria.service.test.thrift.tree.TreeRequest;
 import com.linecorp.armeria.service.test.thrift.tree.TreeService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ThriftTreeStructureTest {
     @RegisterExtension

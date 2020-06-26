@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 

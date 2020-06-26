@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.SimpleDecoratingRpcService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.thrift.ThriftCallService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 /**
  * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters

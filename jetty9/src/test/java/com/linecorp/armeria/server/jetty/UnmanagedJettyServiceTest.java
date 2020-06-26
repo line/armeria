@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class UnmanagedJettyServiceTest extends WebAppContainerTest {
 

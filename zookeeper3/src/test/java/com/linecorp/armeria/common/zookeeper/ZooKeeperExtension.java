@@ -25,7 +25,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.testing.TemporaryFolder;
-import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
+import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 
 import zookeeperjunit.CloseableZooKeeper;
 import zookeeperjunit.ZKFactory;

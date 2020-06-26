@@ -32,8 +32,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledAggregatedHttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoop;
