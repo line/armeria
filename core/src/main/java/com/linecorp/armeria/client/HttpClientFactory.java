@@ -103,7 +103,7 @@ final class HttpClientFactory implements ClientFactory {
     private final EventLoopScheduler eventLoopScheduler;
     private final Supplier<EventLoop> eventLoopSupplier =
             () -> RequestContext.mapCurrent(
-                    ctx -> ctx.eventLoop().detachContext(), () -> eventLoopGroup().next());
+                    ctx -> ctx.eventLoop().withoutContext(), () -> eventLoopGroup().next());
     private final ClientFactoryOptions options;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 

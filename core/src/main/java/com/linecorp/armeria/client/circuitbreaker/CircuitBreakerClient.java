@@ -262,7 +262,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
                        if (needsContentInRule && cause == null) {
                            try (HttpResponseDuplicator duplicator =
                                         response.toDuplicator(
-                                                ctx.eventLoop().detachContext(), ctx.maxResponseLength())) {
+                                                ctx.eventLoop().withoutContext(), ctx.maxResponseLength())) {
                                final TruncatingHttpResponse truncatingHttpResponse =
                                        new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
                                reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(

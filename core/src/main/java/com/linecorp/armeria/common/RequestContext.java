@@ -393,7 +393,7 @@ public interface RequestContext {
      * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.
      * The {@link ContextAwareEventLoop} sets this {@link RequestContext} as the current context
      * before executing any submitted tasks. If you want to use {@link EventLoop} without setting this context,
-     * call {@link ContextAwareEventLoop#detachContext()} and use the returned {@link EventLoop}.
+     * call {@link ContextAwareEventLoop#withoutContext()} and use the returned {@link EventLoop}.
      */
     ContextAwareEventLoop eventLoop();
 

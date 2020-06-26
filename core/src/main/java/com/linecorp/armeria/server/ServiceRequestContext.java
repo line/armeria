@@ -307,7 +307,7 @@ public interface ServiceRequestContext extends RequestContext {
      * a potentially long-running task. The {@link ContextAwareScheduledExecutorService}
      * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
      * If you want to use {@link ScheduledExecutorService} without setting this context,
-     * call {@link ContextAwareScheduledExecutorService#detachContext()} and use the returned
+     * call {@link ContextAwareScheduledExecutorService#withoutContext()} and use the returned
      * {@link ScheduledExecutorService}.
      */
     ContextAwareScheduledExecutorService blockingTaskExecutor();

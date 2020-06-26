@@ -70,7 +70,7 @@ public final class ContextAwareEventLoop extends ContextAwareExecutorService imp
      * Returns the {@link EventLoop} that is executing submitted tasks without setting
      * the {@link RequestContext}.
      */
-    public EventLoop detachContext() {
+    public EventLoop withoutContext() {
         return eventLoop;
     }
 

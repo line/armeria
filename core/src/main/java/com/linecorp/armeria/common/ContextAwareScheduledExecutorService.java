@@ -64,7 +64,7 @@ public final class ContextAwareScheduledExecutorService
      * Returns the {@link ScheduledExecutorService} that is executing submitted tasks without setting
      * the {@link RequestContext}.
      */
-    public ScheduledExecutorService detachContext() {
+    public ScheduledExecutorService withoutContext() {
         return executor;
     }
 

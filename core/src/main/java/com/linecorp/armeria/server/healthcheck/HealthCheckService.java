@@ -334,7 +334,7 @@ public final class HealthCheckService implements TransientHttpService {
                     // Send pings (102 Processing) periodically afterwards.
                     final ScheduledFuture<?> pingFuture;
                     if (pingIntervalMillis != 0 && pingIntervalMillis < longPollingTimeoutMillis) {
-                        pingFuture = ctx.eventLoop().detachContext().scheduleWithFixedDelay(
+                        pingFuture = ctx.eventLoop().withoutContext().scheduleWithFixedDelay(
                                 new PingTask(res),
                                 pingIntervalMillis, pingIntervalMillis, TimeUnit.MILLISECONDS);
                     } else {
@@ -342,7 +342,7 @@ public final class HealthCheckService implements TransientHttpService {
                     }
 
                     // Send 304 Not Modified on timeout.
-                    final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().detachContext().schedule(
+                    final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
                             new TimeoutTask(res), longPollingTimeoutMillis, TimeUnit.MILLISECONDS);
 
                     final PendingResponse pendingResponse =

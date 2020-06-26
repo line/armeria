@@ -297,7 +297,7 @@ public final class DefaultClientRequestContext
             requireNonNull(rpcReq, "rpcReq");
         }
 
-        eventLoop = ctx.eventLoop().detachContext();
+        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         endpointGroup = ctx.endpointGroup();
         updateEndpoint(endpoint);
