@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.google.common.util.concurrent.AtomicDouble;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -35,6 +37,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class CircuitBreakerMetrics {
 
     private final AtomicReference<EventCount> latestEventCount = new AtomicReference<>(EventCount.ZERO);
+    private final AtomicDouble state = new AtomicDouble(1);
     private final Counter transitionsToClosed;
     private final Counter transitionsToOpen;
     private final Counter transitionsToHalfOpen;
@@ -43,6 +46,8 @@ final class CircuitBreakerMetrics {
     CircuitBreakerMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
         requireNonNull(parent, "parent");
         requireNonNull(idPrefix, "idPrefix");
+
+        parent.gauge(idPrefix.name("state"), idPrefix.tags(), state, AtomicDouble::get);
 
         final String requests = idPrefix.name("requests");
         parent.gauge(requests, idPrefix.tags("result", "success"),
@@ -62,12 +67,15 @@ final class CircuitBreakerMetrics {
     void onStateChanged(CircuitState state) {
         switch (state) {
             case CLOSED:
+                this.state.set(1);
                 transitionsToClosed.increment();
                 break;
             case OPEN:
+                this.state.set(0);
                 transitionsToOpen.increment();
                 break;
             case HALF_OPEN:
+                this.state.set(0.5);
                 transitionsToHalfOpen.increment();
                 break;
             default:

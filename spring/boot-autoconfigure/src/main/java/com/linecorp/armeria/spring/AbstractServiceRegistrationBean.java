@@ -27,7 +27,11 @@ import javax.validation.constraints.NotNull;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.server.AnnotatedServiceBindingBuilder;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceBindingBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -38,7 +42,10 @@ import com.linecorp.armeria.server.docs.DocService;
  * @param <U> the type of the implementation of this bean
  * @param <V> the type of the example request object to be registered
  * @param <W> the type of the example header object to be registered
+ *
+ * @deprecated Use {@link ArmeriaServerConfigurator}.
  */
+@Deprecated
 public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * The annotated service object to register.
@@ -82,7 +89,10 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
 
     /**
      * Registers an annotated service object.
+     *
+     * @deprecated Use {@link ServerBuilder#service(Route, HttpService)}}
      */
+    @Deprecated
     public final U setService(@NotNull T service) {
         this.service = service;
         return self();
@@ -98,7 +108,10 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
 
     /**
      * Sets service name to use in monitoring.
+     *
+     * @deprecated The service name is automatically set now.
      */
+    @Deprecated
     public final U setServiceName(@NotNull String serviceName) {
         this.serviceName = serviceName;
         return self();
@@ -115,8 +128,12 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Sets the decorator of the annotated service object. {@code decorators} are applied to {@code service} in
      * order.
+     *
+     * @deprecated Use {@link ServiceBindingBuilder#decorator(Function)} or
+     *             {@link AnnotatedServiceBindingBuilder#decorator(Function)}.
      */
     @SafeVarargs
+    @Deprecated
     public final U setDecorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return setDecorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
@@ -125,7 +142,11 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Sets the decorators of the annotated service object. {@code decorators} are applied to {@code service} in
      * order.
+     *
+     * @deprecated Use {@link ServiceBindingBuilder#decorator(Function)} or
+     *             {@link AnnotatedServiceBindingBuilder#decorator(Function)}.
      */
+    @Deprecated
     public final U setDecorators(
             List<Function<? super HttpService, ? extends HttpService>> decorators) {
         this.decorators = requireNonNull(decorators, "decorators");

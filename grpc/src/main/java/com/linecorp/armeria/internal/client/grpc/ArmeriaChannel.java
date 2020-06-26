@@ -19,8 +19,6 @@ import java.net.URI;
 
 import javax.annotation.Nullable;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
-
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -38,6 +36,8 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -64,7 +64,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final SessionProtocol sessionProtocol;
     private final SerializationFormat serializationFormat;
     @Nullable
-    private final MessageMarshaller jsonMarshaller;
+    private final GrpcJsonMarshaller jsonMarshaller;
     private final String advertisedEncodingsHeader;
 
     ArmeriaChannel(ClientBuilderParams params,
@@ -72,7 +72,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                    MeterRegistry meterRegistry,
                    SessionProtocol sessionProtocol,
                    SerializationFormat serializationFormat,
-                   @Nullable MessageMarshaller jsonMarshaller) {
+                   @Nullable GrpcJsonMarshaller jsonMarshaller) {
         this.params = params;
         this.httpClient = PooledHttpClient.of(httpClient);
         this.meterRegistry = meterRegistry;
@@ -97,8 +97,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final int methodIndex = fullMethodName.lastIndexOf('/') + 1;
         ctx.logBuilder().name(method.getServiceName(), fullMethodName.substring(methodIndex));
         ctx.logBuilder().serializationFormat(serializationFormat);
-        ctx.logBuilder().deferRequestContent();
-        ctx.logBuilder().deferResponseContent();
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
+                               RequestLogProperty.RESPONSE_CONTENT);
 
         final ClientOptions options = options();
         final int maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);

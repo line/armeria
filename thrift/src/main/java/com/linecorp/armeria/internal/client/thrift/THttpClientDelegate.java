@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -144,7 +145,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                     PooledHttpData.wrap(buf).withEndOfStream());
 
             ctx.updateRequest(httpReq);
-            ctx.logBuilder().deferResponseContent();
+            ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT);
 
             assert unwrap() instanceof PooledHttpClient;
             final PooledHttpClient client = (PooledHttpClient) unwrap();
