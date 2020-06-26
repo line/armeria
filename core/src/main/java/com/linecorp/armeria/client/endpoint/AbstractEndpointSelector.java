@@ -80,8 +80,11 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
                                   timeoutMillis, TimeUnit.MILLISECONDS);
         listeningFuture.timeoutFuture = timeoutFuture;
 
-        // Cancel the timeout task if necessary, just in case listeningFuture is
-        // completed even before we assign timeoutFuture to listeningFuture.timeoutFuture.
+        // Cancel the timeout task if listeningFuture is done already.
+        // This guards against the following race condition:
+        // 1) (Current thread) Timeout task is scheduled.
+        // 2) ( Other thread ) listeningFuture is completed, but the timeout task is not cancelled
+        // 3) (Current thread) timeoutFuture is assigned to listeningFuture.timeoutFuture, but it's too late.
         if (listeningFuture.isDone()) {
             timeoutFuture.cancel(false);
         }
