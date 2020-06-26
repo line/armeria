@@ -36,18 +36,22 @@ import io.netty.buffer.ByteBufUtil;
 
 public class GrpcMessageMarshallerTest {
 
+    private static final DefaultJsonMarshaller DEFAULT_JSON_MARSHALLER =
+            new DefaultJsonMarshaller(MessageMarshaller.builder()
+                                                       .register(SimpleRequest.getDefaultInstance())
+                                                       .register(SimpleResponse.getDefaultInstance())
+                                                       .build());
+
     private GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller;
 
     @Before
     public void setUp() {
+
         marshaller = new GrpcMessageMarshaller<>(
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
                 TestServiceGrpc.getUnaryCallMethod(),
-                MessageMarshaller.builder()
-                                 .register(SimpleRequest.getDefaultInstance())
-                                 .register(SimpleResponse.getDefaultInstance())
-                                 .build(),
+                DEFAULT_JSON_MARSHALLER,
                 false);
     }
 
@@ -75,10 +79,7 @@ public class GrpcMessageMarshallerTest {
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
                 TestServiceGrpc.getUnaryCallMethod(),
-                MessageMarshaller.builder()
-                                 .register(SimpleRequest.getDefaultInstance())
-                                 .register(SimpleResponse.getDefaultInstance())
-                                 .build(),
+                DEFAULT_JSON_MARSHALLER,
                 true);
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.REQUEST_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);
@@ -120,10 +121,7 @@ public class GrpcMessageMarshallerTest {
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
                 TestServiceGrpc.getUnaryCallMethod(),
-                MessageMarshaller.builder()
-                                 .register(SimpleRequest.getDefaultInstance())
-                                 .register(SimpleResponse.getDefaultInstance())
-                                 .build(),
+                DEFAULT_JSON_MARSHALLER,
                 true);
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.RESPONSE_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);

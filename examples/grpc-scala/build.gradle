@@ -1,0 +1,36 @@
+plugins {
+    id 'application'
+    id 'scala'
+}
+
+dependencies {
+    implementation project(':core')
+    implementation project(':grpc')
+    implementation 'org.scala-lang:scala-library'
+    implementation "com.thesamet.scalapb:scalapb-runtime_2.13"
+    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13"
+    implementation "com.thesamet.scalapb:scalapb-json4s_2.13"
+    implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.13'
+    implementation 'io.monix:monix-reactive_2.13'
+
+    runtimeOnly 'org.slf4j:slf4j-simple'
+
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.awaitility:awaitility'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+}
+
+application {
+    mainClassName = 'example.armeria.grpc.scala.Main'
+}
+
+compileScala.targetCompatibility = 1.8
+ScalaCompileOptions.metaClass.useAnt = false
+
+sourceSets {
+    main {
+        scala {
+            srcDirs "${protobuf.generatedFilesBaseDir}/main/scalapb"
+        }
+    }
+}

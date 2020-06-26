@@ -25,6 +25,8 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -57,12 +59,20 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                         "in \":scheme\" and \":authority\". :path=" +
                         req.path() + ", :scheme=" + req.scheme() + ", :authority=" + req.authority()));
             }
+            final SessionProtocol protocol;
+            try {
+                protocol = Scheme.parse(uri.getScheme()).sessionProtocol();
+            } catch (Exception e) {
+                return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
+                        "Failed to parse a scheme: " + uri.getScheme(), e));
+            }
+
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
             final String path = uri.getRawPath();
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder()
                                                           .path(query == null ? path : path + '?' + query));
-            return execute(endpoint, newReq);
+            return execute(endpoint, newReq, protocol);
         }
 
         if (isAbsoluteUri(req.path())) {
@@ -80,16 +90,16 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         } else {
             newReq = req;
         }
-        return execute(endpointGroup(), newReq);
+        return execute(endpointGroup(), newReq, scheme().sessionProtocol());
     }
 
-    private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req) {
+    private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req, SessionProtocol protocol) {
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             return abortRequestAndReturnFailureResponse(req, cause);
         }
-        return execute(endpointGroup, req.method(),
+        return execute(protocol, endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req);
     }
 

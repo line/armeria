@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.SystemInfo;
 
@@ -120,19 +121,22 @@ public abstract class UserClient<I extends Request, O extends Response>
     /**
      * Executes the specified {@link Request} via the delegate.
      *
+     * @param protocol the {@link SessionProtocol} to use
      * @param method the method of the {@link Request}
      * @param path the path part of the {@link Request} URI
      * @param query the query part of the {@link Request} URI
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      */
-    protected final O execute(HttpMethod method, String path, @Nullable String query,
-                              @Nullable String fragment, I req) {
-        return execute(endpointGroup(), method, path, query, fragment, req);
+    protected final O execute(SessionProtocol protocol, HttpMethod method, String path,
+                              @Nullable String query, @Nullable String fragment, I req) {
+        return execute(protocol, endpointGroup(), method, path, query, fragment, req);
     }
 
     /**
      * Executes the specified {@link Request} via the delegate.
+     *
+     * @param protocol the {@link SessionProtocol} to use
      * @param endpointGroup the {@link EndpointGroup} of the {@link Request}
      * @param method the method of the {@link Request}
      * @param path the path part of the {@link Request} URI
@@ -140,8 +144,8 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      */
-    protected final O execute(EndpointGroup endpointGroup, HttpMethod method, String path,
-                              @Nullable String query, @Nullable String fragment, I req) {
+    protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
+                              String path, @Nullable String query, @Nullable String fragment, I req) {
 
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
@@ -156,7 +160,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         }
 
         final DefaultClientRequestContext ctx =
-                new DefaultClientRequestContext(meterRegistry, scheme().sessionProtocol(),
+                new DefaultClientRequestContext(meterRegistry, protocol,
                                                 id, method, path, query, fragment, options(), httpReq, rpcReq,
                                                 System.nanoTime(), SystemInfo.currentTimeMicros());
 

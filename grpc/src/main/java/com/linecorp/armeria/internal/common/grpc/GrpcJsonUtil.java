@@ -40,7 +40,7 @@ public final class GrpcJsonUtil {
      */
     public static MessageMarshaller jsonMarshaller(
             List<MethodDescriptor<?, ?>> methods,
-            Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
+            @Nullable Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
         final MessageMarshaller.Builder builder = MessageMarshaller.builder()
                                                                    .omittingInsignificantWhitespace(true)
                                                                    .ignoringUnknownFields(true);
@@ -55,7 +55,9 @@ public final class GrpcJsonUtil {
             }
         }
 
-        jsonMarshallerCustomizer.accept(builder);
+        if (jsonMarshallerCustomizer != null) {
+            jsonMarshallerCustomizer.accept(builder);
+        }
 
         return builder.build();
     }

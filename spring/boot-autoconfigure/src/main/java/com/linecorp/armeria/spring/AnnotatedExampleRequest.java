@@ -19,15 +19,24 @@ import javax.validation.constraints.NotNull;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
+
 /**
  * Used as an example request object in {@link AnnotatedServiceRegistrationBean}.
+ *
+ * @deprecated Use {@link DocServiceConfigurator}.
  */
+@Deprecated
 public final class AnnotatedExampleRequest {
 
     /**
      * Returns a new {@link AnnotatedExampleRequest} with the specified {@code methodName}
      * and {@code exampleRequest}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleRequestForMethod(Class, String, Object...)} and
+     *             {@link DocServiceBuilder#exampleRequestForMethod(Class, String, Iterable)}.
      */
+    @Deprecated
     public static AnnotatedExampleRequest of(@NotNull String methodName,
                                              @NotNull Object exampleRequest) {
         return new AnnotatedExampleRequest(methodName, exampleRequest);

@@ -21,8 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -59,8 +57,7 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
      */
     public KafkaAccessLogWriter(Producer<K, V> producer, String topic,
                                 Function<? super RequestLog, ? extends V> valueExtractor) {
-
-        this(producer, topic, null, valueExtractor, 0);
+        this(producer, topic, log -> null, valueExtractor);
     }
 
     /**
@@ -78,17 +75,9 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
     public KafkaAccessLogWriter(Producer<K, V> producer, String topic,
                                 Function<? super RequestLog, ? extends K> keyExtractor,
                                 Function<? super RequestLog, ? extends V> valueExtractor) {
-        this(producer, topic, requireNonNull(keyExtractor, "keyExtractor"), valueExtractor, 0);
-    }
-
-    private KafkaAccessLogWriter(Producer<K, V> producer, String topic,
-                                 @Nullable Function<? super RequestLog, ? extends K> keyExtractor,
-                                 Function<? super RequestLog, ? extends V> valueExtractor,
-                                 @SuppressWarnings("unused") int dummy) {
-
         this.producer = requireNonNull(producer, "producer");
         this.topic = requireNonNull(topic, "topic");
-        this.keyExtractor = keyExtractor == null ? log -> null : keyExtractor;
+        this.keyExtractor = requireNonNull(keyExtractor, "keyExtractor");
         this.valueExtractor = requireNonNull(valueExtractor, "valueExtractor");
     }
 
