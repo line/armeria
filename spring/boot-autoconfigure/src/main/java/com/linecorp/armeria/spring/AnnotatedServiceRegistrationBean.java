@@ -61,7 +61,7 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  *             >               .requestConverters(new MyRequestConverter())
  *             >               .responseConverters(new MyResponseConverter())
  *             >               .decorator(LoggingService.newDecorator())
- *             >               .build(new MyAnnoatedService());
+ *             >               .build(new MyAnnotatedService());
  *             >     };
  *             > }
  *
