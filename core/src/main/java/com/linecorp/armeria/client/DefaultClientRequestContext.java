@@ -296,16 +296,16 @@ public final class DefaultClientRequestContext
     }
 
     private void failEarly(Throwable cause) {
-        final RequestLogBuilder logBuilder = logBuilder();
-        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
-        logBuilder.endRequest(wrapped);
-        logBuilder.endResponse(wrapped);
-
+        final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
             autoFillSchemeAndAuthority();
-            req.abort(cause);
+            req.abort(wrapped);
         }
+
+        final RequestLogBuilder logBuilder = logBuilder();
+        logBuilder.endRequest(wrapped);
+        logBuilder.endResponse(wrapped);
     }
 
     private void autoFillSchemeAndAuthority() {

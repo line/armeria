@@ -83,13 +83,14 @@ class HttpClientWithRequestLogTest {
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
-                .hasCauseExactlyInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .hasRootCauseExactlyInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("invalid path");
 
         await().untilAsserted(() -> assertThat(
-                requestCauseHolder.get()).isExactlyInstanceOf(IllegalArgumentException.class));
+                requestCauseHolder.get()).hasRootCauseExactlyInstanceOf(IllegalArgumentException.class));
         await().untilAsserted(() -> assertThat(
-                responseCauseHolder.get()).isExactlyInstanceOf(IllegalArgumentException.class));
+                responseCauseHolder.get()).hasRootCauseExactlyInstanceOf(IllegalArgumentException.class));
         await().untilAsserted(() -> assertThat(req.isComplete()).isTrue());
     }
 

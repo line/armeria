@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -118,7 +119,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
                 contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
         req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);
 
-        ctx.logBuilder().deferResponseContentPreview();
+        ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().serve(ctx, req);
         return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res);
     }
