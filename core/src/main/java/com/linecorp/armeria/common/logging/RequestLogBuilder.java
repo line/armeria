@@ -166,26 +166,46 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * {@link #endRequest()} is called.
      *
      * <p>Note, however, the request content is not set if {@link #endRequest(Throwable)} was called.
+     *
+     * @deprecated Use {@link #defer(RequestLogProperty)}.
      */
-    void deferRequestContent();
+    @Deprecated
+    default void deferRequestContent() {
+        defer(RequestLogProperty.REQUEST_CONTENT);
+    }
 
     /**
      * Returns {@code true} if {@link #deferRequestContent()} is called.
+     *
+     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
      */
-    boolean isDeferRequestContentSet();
+    @Deprecated
+    default boolean isDeferRequestContentSet() {
+        return isDeferred(RequestLogProperty.REQUEST_CONTENT);
+    }
 
     /**
      * Allows setting the request content preview using {@link #requestContentPreview(String)} even after
      * {@link #endRequest()} is called.
      *
      * <p>Note, however, the request content preview is not set if {@link #endRequest(Throwable)} was called.
+     *
+     * @deprecated Use {@link #defer(RequestLogProperty)}.
      */
-    void deferRequestContentPreview();
+    @Deprecated
+    default void deferRequestContentPreview() {
+        defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+    }
 
     /**
      * Returns {@code true} if {@link #deferRequestContentPreview()} is called.
+     *
+     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
      */
-    boolean isDeferRequestContentPreviewSet();
+    @Deprecated
+    default boolean isDeferRequestContentPreviewSet() {
+        return isDeferred(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+    }
 
     /**
      * Sets the {@link RequestLog#requestTrailers()}.
@@ -311,26 +331,46 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * {@link #endResponse()} is called.
      *
      * <p>Note, however, the response content is not set if {@link #endResponse(Throwable)} was called.
+     *
+     * @deprecated Use {@link #defer(RequestLogProperty)}.
      */
-    void deferResponseContent();
+    @Deprecated
+    default void deferResponseContent() {
+        defer(RequestLogProperty.RESPONSE_CONTENT);
+    }
 
     /**
      * Returns {@code true} if {@link #deferResponseContent()} is called.
+     *
+     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
      */
-    boolean isDeferResponseContentSet();
+    @Deprecated
+    default boolean isDeferResponseContentSet() {
+        return isDeferred(RequestLogProperty.RESPONSE_CONTENT);
+    }
 
     /**
      * Allows setting the response content preview using {@link #responseContentPreview(String)} even after
      * {@link #endResponse()} is called.
      *
      * <p>Note, however, the response content preview is not set if {@link #endResponse(Throwable)} was called.
+     *
+     * @deprecated Use {@link #defer(RequestLogProperty)}.
      */
-    void deferResponseContentPreview();
+    @Deprecated
+    default void deferResponseContentPreview() {
+        defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+    }
 
     /**
      * Returns {@code true} if {@link #deferResponseContentPreview()} is called.
+     *
+     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
      */
-    boolean isDeferResponseContentPreviewSet();
+    @Deprecated
+    default boolean isDeferResponseContentPreviewSet() {
+        return isDeferred(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+    }
 
     /**
      * Sets the {@link RequestLog#responseTrailers()}.
@@ -387,6 +427,77 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * @param responseEndTimeNanos {@link System#nanoTime()} value when the response ended.
      */
     void endResponse(Throwable responseCause, long responseEndTimeNanos);
+
+    // Methods related with deferred properties
+
+    /**
+     * Returns {@code true} if the specified {@link RequestLogProperty} has been deferred with
+     * {@link #defer(RequestLogProperty)}.
+     */
+    boolean isDeferred(RequestLogProperty property);
+
+    /**
+     * Returns {@code true} if all of the specified {@link RequestLogProperty}s have been deferred with
+     * {@link #defer(RequestLogProperty)}.
+     */
+    boolean isDeferred(RequestLogProperty... properties);
+
+    /**
+     * Returns {@code true} if all of the specified {@link RequestLogProperty}s have been deferred with
+     * {@link #defer(RequestLogProperty)}.
+     */
+    boolean isDeferred(Iterable<RequestLogProperty> properties);
+
+    /**
+     * Allows setting the specified {@link RequestLogProperty} even after {@link #endResponse()} or
+     * {@link #endResponse(Throwable)} called. Once this method is called, the caller must ensure to call
+     * the setter of the specified {@link RequestLogProperty}, because otherwise the {@link RequestLog}
+     * will never be completed.
+     *
+     * <p>Note, however, the following {@link RequestLogProperty}s will be set automatically when the
+     * {@link RequestLog} has ended with an exception:
+     * <ul>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT_PREVIEW}</li>
+     *   <li>{@link RequestLogProperty#RESPONSE_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#RESPONSE_CONTENT_PREVIEW}</li>
+     * </ul></p>
+     */
+    void defer(RequestLogProperty property);
+
+    /**
+     * Allows setting the specified {@link RequestLogProperty}s even after {@link #endResponse()} or
+     * {@link #endResponse(Throwable)} called. Once this method is called, the caller must ensure to call
+     * the setters of the specified {@link RequestLogProperty}s, because otherwise the {@link RequestLog}
+     * will never be completed.
+     *
+     * <p>Note, however, the following {@link RequestLogProperty}s will be set automatically when the
+     * {@link RequestLog} has ended with an exception:
+     * <ul>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT_PREVIEW}</li>
+     *   <li>{@link RequestLogProperty#RESPONSE_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#RESPONSE_CONTENT_PREVIEW}</li>
+     * </ul></p>
+     */
+    void defer(RequestLogProperty... properties);
+
+    /**
+     * Allows setting the specified {@link RequestLogProperty}s even after {@link #endResponse()} or
+     * {@link #endResponse(Throwable)} called. Once this method is called, the caller must ensure to call
+     * the setters of the specified {@link RequestLogProperty}s, because otherwise the {@link RequestLog}
+     * will never be completed.
+     *
+     * <p>Note, however, the following {@link RequestLogProperty}s will be set automatically when the
+     * {@link RequestLog} has ended with an exception:
+     * <ul>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT_PREVIEW}</li>
+     *   <li>{@link RequestLogProperty#RESPONSE_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#RESPONSE_CONTENT_PREVIEW}</li>
+     * </ul></p>
+     */
+    void defer(Iterable<RequestLogProperty> properties);
 
     // Methods related with nested logs
 

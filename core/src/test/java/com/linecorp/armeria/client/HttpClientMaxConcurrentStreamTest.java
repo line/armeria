@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -275,6 +276,8 @@ public class HttpClientMaxConcurrentStreamTest {
                     assertThat(throwable.getCause().getCause()).satisfiesAnyOf(
                             e -> assertThat(e).isInstanceOf(ClosedSessionException.class),
                             e -> assertThat(e).isInstanceOf(ConnectException.class)
+                                              .hasMessageContaining("reset by peer"),
+                            e -> assertThat(e).isInstanceOf(SocketException.class)
                                               .hasMessageContaining("reset by peer"));
                 });
     }

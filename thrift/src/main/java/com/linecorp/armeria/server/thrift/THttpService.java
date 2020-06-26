@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -352,21 +353,21 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
-        ctx.logBuilder().deferRequestContent();
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
         PooledHttpRequest.of(req).aggregateWithPooledObjects(
                 ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
-                    if (cause != null) {
-                        final HttpResponse errorRes;
-                        if (ctx.config().verboseResponses()) {
-                            errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
-                                                       MediaType.PLAIN_TEXT_UTF_8,
-                                                       Exceptions.traceText(cause));
-                        } else {
-                            errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-                        }
-                        responseFuture.complete(errorRes);
-                        return null;
-                    }
+            if (cause != null) {
+                final HttpResponse errorRes;
+                if (ctx.config().verboseResponses()) {
+                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                               MediaType.PLAIN_TEXT_UTF_8,
+                                               Exceptions.traceText(cause));
+                } else {
+                    errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+                responseFuture.complete(errorRes);
+                return null;
+            }
             decodeAndInvoke(ctx, aReq, serializationFormat, responseFuture);
             return null;
         }).exceptionally(CompletionActions::log);
