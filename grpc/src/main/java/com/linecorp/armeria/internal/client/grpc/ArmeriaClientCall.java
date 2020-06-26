@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -400,7 +401,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
         }
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
         if (status.isOk()) {
             req.abort();
         } else {

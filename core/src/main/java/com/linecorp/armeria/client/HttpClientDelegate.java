@@ -69,13 +69,14 @@ final class HttpClientDelegate implements HttpClient {
             //
             // See `DefaultClientRequestContext.init()` for more information.
             final UnprocessedRequestException cause =
-                    new UnprocessedRequestException(EmptyEndpointGroupException.get());
+                    UnprocessedRequestException.of(EmptyEndpointGroupException.get());
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }
 
         if (!isValidPath(req)) {
-            final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
+            final UnprocessedRequestException cause = UnprocessedRequestException.of(
+                    new IllegalArgumentException("invalid path: " + req.path()));
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }
@@ -117,7 +118,7 @@ final class HttpClientDelegate implements HttpClient {
             acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr, req, res, timingsBuilder);
         } else {
             ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-            final Throwable cause = resolveFuture.cause();
+            final UnprocessedRequestException cause = UnprocessedRequestException.of(resolveFuture.cause());
             handleEarlyRequestException(ctx, req, cause);
             res.close(cause);
         }
@@ -149,8 +150,9 @@ final class HttpClientDelegate implements HttpClient {
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);
                 } else {
-                    handleEarlyRequestException(ctx, req, cause);
-                    res.close(cause);
+                    final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
+                    handleEarlyRequestException(ctx, req, wrapped);
+                    res.close(wrapped);
                 }
                 return null;
             });
@@ -222,10 +224,10 @@ final class HttpClientDelegate implements HttpClient {
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
         try (SafeCloseable ignored = RequestContextUtil.pop()) {
+            req.abort(cause);
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             logBuilder.endRequest(cause);
             logBuilder.endResponse(cause);
-            req.abort(cause);
         }
     }
 

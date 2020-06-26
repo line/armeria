@@ -366,9 +366,9 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '1.1.1'
+    version: '2.5.0'
     javadocs:
-    - https://kafka.apache.org/11/javadoc/
+    - https://kafka.apache.org/25/javadoc/
 
 org.apache.thrift:
   libthrift:

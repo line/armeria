@@ -63,8 +63,9 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         pathAndQuery.storeInCache(path);
 
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
-        return execute(HttpMethod.POST, pathAndQuery.path(), null, serviceName, call,
-                       (ctx, cause) -> RpcResponse.ofFailure(cause));
+
+        return execute(HttpMethod.POST, scheme().sessionProtocol(), pathAndQuery.path(), null, serviceName,
+                       call, (ctx, cause) -> RpcResponse.ofFailure(cause));
     }
 
     @Override

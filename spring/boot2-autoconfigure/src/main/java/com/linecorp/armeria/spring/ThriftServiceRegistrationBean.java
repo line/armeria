@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceBindingBuilder;
 import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**
  * A bean with information for registering a thrift service. Enables micrometer
@@ -40,7 +42,29 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .addExampleHeaders(ExampleHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
  * > }
  * }</pre>
+ *
+ * @deprecated Use {@link ArmeriaServerConfigurator} and {@link DocServiceConfigurator}.
+ *             <pre>{@code
+ *             > @Bean
+ *             > public ArmeriaServerConfigurator myService() {
+ *             >     return server -> {
+ *             >         server.route()
+ *             >               .path("/my_service")
+ *             >               .decorator(LoggingService.newDecorator())
+ *             >               .build(THttpService.of(new MyThriftService()));
+ *             >     };
+ *             > }
+ *
+ *             > @Bean
+ *             > public DocServiceConfigurator myServiceDoc() {
+ *             >     return docServiceBuilder -> {
+ *             >         docServiceBuilder.exampleRequest(new MyThriftService.hello_args("Armeria"))
+ *             >                          .exampleHttpHeaders(
+ *             >                                  HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
+ *             >     };
+ *             }}</pre>
  */
+@Deprecated
 public class ThriftServiceRegistrationBean extends AbstractServiceRegistrationBean<
         HttpService, ThriftServiceRegistrationBean, TBase<?, ?>, ExampleHeaders> {
 
@@ -60,7 +84,10 @@ public class ThriftServiceRegistrationBean extends AbstractServiceRegistrationBe
 
     /**
      * Register the url path this service map to.
+     *
+     * @deprecated Use {@link ServiceBindingBuilder#pathPrefix(String)}
      */
+    @Deprecated
     public ThriftServiceRegistrationBean setPath(@NotNull String path) {
         this.path = path;
         return this;
@@ -68,28 +95,43 @@ public class ThriftServiceRegistrationBean extends AbstractServiceRegistrationBe
 
     /**
      * Adds an example HTTP header for all service methods.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(Class, HttpHeaders...)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(Class, Iterable)}.
      */
+    @Deprecated
     public ThriftServiceRegistrationBean addExampleHeaders(CharSequence name, String value) {
         return addExampleHeaders(ExampleHeaders.of(HttpHeaders.of(name, value)));
     }
 
     /**
      * Adds an example HTTP header for the specified method.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(Class, String, HttpHeaders...)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(Class, String, Iterable)}.
      */
+    @Deprecated
     public ThriftServiceRegistrationBean addExampleHeaders(String methodName, HttpHeaders exampleHeaders) {
         return addExampleHeaders(ExampleHeaders.of(methodName, exampleHeaders));
     }
 
     /**
      * Adds an example HTTP header for the specified method.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(Class, String, HttpHeaders...)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(Class, String, Iterable)}.
      */
+    @Deprecated
     public ThriftServiceRegistrationBean addExampleHeaders(String methodName, CharSequence name, String value) {
         return addExampleHeaders(ExampleHeaders.of(methodName, HttpHeaders.of(name, value)));
     }
 
     /**
      * Adds example HTTP headers for the specified method.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(Class, String, Iterable)}.
      */
+    @Deprecated
     public ThriftServiceRegistrationBean addExampleHeaders(
             String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
         exampleHeaders.forEach(h -> addExampleHeaders(methodName, h));
@@ -98,7 +140,10 @@ public class ThriftServiceRegistrationBean extends AbstractServiceRegistrationBe
 
     /**
      * Adds example HTTP headers for the specified method.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(Class, String, HttpHeaders...)}.
      */
+    @Deprecated
     public ThriftServiceRegistrationBean addExampleHeaders(String methodName,
                                                            @NotNull HttpHeaders... exampleHeaders) {
         return addExampleHeaders(methodName, ImmutableList.copyOf(exampleHeaders));
