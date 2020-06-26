@@ -131,7 +131,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             }
 
             if (!loggedRequestFirstBytesTransferred) {
-                fail(UnprocessedRequestException.wrap(future.cause()));
+                fail(UnprocessedRequestException.of(future.cause()));
             } else {
                 failAndReset(future.cause());
             }
@@ -162,7 +162,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             }
             responseDecoder.disconnectWhenFinished();
             // No need to send RST because we didn't send any packet and this will be disconnected anyway.
-            fail(UnprocessedRequestException.wrap(exception));
+            fail(UnprocessedRequestException.of(exception));
             return;
         }
 
@@ -250,7 +250,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             failAndReset(cause);
         } else {
             // No need to send RST because we didn't send any packet.
-            fail(UnprocessedRequestException.wrap(cause));
+            fail(UnprocessedRequestException.of(cause));
         }
     }
 

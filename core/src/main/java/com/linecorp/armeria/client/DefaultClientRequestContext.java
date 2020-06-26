@@ -249,7 +249,7 @@ public final class DefaultClientRequestContext
 
     private void failEarly(Throwable cause) {
         final RequestLogBuilder logBuilder = logBuilder();
-        final UnprocessedRequestException wrapped = UnprocessedRequestException.wrap(cause);
+        final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         logBuilder.endRequest(wrapped);
         logBuilder.endResponse(wrapped);
 

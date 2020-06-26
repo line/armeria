@@ -69,13 +69,13 @@ final class HttpClientDelegate implements HttpClient {
             //
             // See `DefaultClientRequestContext.init()` for more information.
             final UnprocessedRequestException cause =
-                    UnprocessedRequestException.wrap(EmptyEndpointGroupException.get());
+                    UnprocessedRequestException.of(EmptyEndpointGroupException.get());
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }
 
         if (!isValidPath(req)) {
-            final UnprocessedRequestException cause = UnprocessedRequestException.wrap(
+            final UnprocessedRequestException cause = UnprocessedRequestException.of(
                     new IllegalArgumentException("invalid path: " + req.path()));
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
@@ -118,7 +118,7 @@ final class HttpClientDelegate implements HttpClient {
             acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr, req, res, timingsBuilder);
         } else {
             ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-            final UnprocessedRequestException cause = UnprocessedRequestException.wrap(resolveFuture.cause());
+            final UnprocessedRequestException cause = UnprocessedRequestException.of(resolveFuture.cause());
             handleEarlyRequestException(ctx, req, cause);
             res.close(cause);
         }
@@ -150,7 +150,7 @@ final class HttpClientDelegate implements HttpClient {
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);
                 } else {
-                    final UnprocessedRequestException wrapped = UnprocessedRequestException.wrap(cause);
+                    final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
                     handleEarlyRequestException(ctx, req, wrapped);
                     res.close(wrapped);
                 }

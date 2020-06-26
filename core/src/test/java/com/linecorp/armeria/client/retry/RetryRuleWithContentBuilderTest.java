@@ -106,7 +106,7 @@ class RetryRuleWithContentBuilderTest {
 
         final HttpResponse response = HttpResponse.of("hello");
         final UnprocessedRequestException cause =
-                UnprocessedRequestException.wrap(ClosedSessionException.get());
+                UnprocessedRequestException.of(ClosedSessionException.get());
         response.abort(cause);
         try (HttpResponseDuplicator duplicator = response.toDuplicator()) {
             assertBackoff(rule.shouldRetry(ctx1, duplicator.duplicate(), cause)).isSameAs(backoff);
@@ -140,7 +140,7 @@ class RetryRuleWithContentBuilderTest {
                                 }).thenBackoff());
 
         final UnprocessedRequestException cause =
-                UnprocessedRequestException.wrap(ClosedSessionException.get());
+                UnprocessedRequestException.of(ClosedSessionException.get());
         final HttpResponse response = HttpResponse.ofFailure(cause);
         try (HttpResponseDuplicator duplicator = response.toDuplicator()) {
             assertBackoff(rule.shouldRetry(ctx1, duplicator.duplicate(), cause)).isSameAs(backoff);
@@ -179,7 +179,7 @@ class RetryRuleWithContentBuilderTest {
 
         final HttpResponse response = HttpResponse.streaming();
         final UnprocessedRequestException cause =
-                UnprocessedRequestException.wrap(ClosedSessionException.get());
+                UnprocessedRequestException.of(ClosedSessionException.get());
         response.abort(cause);
         assertBackoff(rule.shouldRetry(ctx1, response, cause)).isSameAs(backoff);
     }

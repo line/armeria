@@ -38,7 +38,7 @@ public final class UnprocessedRequestException extends RuntimeException {
      * Returns a new {@link UnprocessedRequestException} with the specified {@code message} and
      * {@link Throwable}.
      */
-    public static UnprocessedRequestException wrap(Throwable cause) {
+    public static UnprocessedRequestException of(Throwable cause) {
         requireNonNull(cause, "cause");
         if (cause instanceof UnprocessedRequestException) {
             return (UnprocessedRequestException) cause;
@@ -47,19 +47,9 @@ public final class UnprocessedRequestException extends RuntimeException {
     }
 
     /**
-     * Creates a new instance with the specified {@code message} and {@code cause}.
-     *
-     * @deprecated Use {@link #wrap(Throwable)}.
-     */
-    @Deprecated
-    public UnprocessedRequestException(@Nullable String message, Throwable cause) {
-        super(message, requireNonNull(cause, "cause"));
-    }
-
-    /**
      * Creates a new instance with the specified {@code cause}.
      *
-     * @deprecated Use {@link #wrap(Throwable)}.
+     * @deprecated Use {@link #of(Throwable)}.
      */
     @Deprecated
     public UnprocessedRequestException(Throwable cause) {
