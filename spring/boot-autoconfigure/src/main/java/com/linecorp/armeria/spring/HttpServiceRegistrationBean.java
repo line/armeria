@@ -39,16 +39,16 @@ import com.linecorp.armeria.server.Route;
  *
  * @deprecated Use {@link ArmeriaServerConfigurator}.
  *             <pre>{@code
- *             @Bean
- *             public ArmeriaServerConfigurator myService() {
- *                 return server -> {
- *                     server.route()
- *                           .path("/ok")
- *                           .methods(HttpMethod.GET, HttpMethod.POST)
- *                           .defaultServiceName("myService")
- *                           .decorator(LoggingService.newDecorator())
- *                           .build(new MyService());
- *                 };
+ *             > @Bean
+ *             > public ArmeriaServerConfigurator myService() {
+ *             >     return server -> {
+ *             >         server.route()
+ *             >               .path("/ok")
+ *             >               .methods(HttpMethod.GET, HttpMethod.POST)
+ *             >               .defaultServiceName("myService")
+ *             >               .decorator(LoggingService.newDecorator())
+ *             >               .build(new MyService());
+ *             >     };
  *             }}</pre>
  */
 @Deprecated

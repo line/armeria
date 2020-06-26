@@ -52,29 +52,29 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  * @deprecated Use {@link ServerBuilder#annotatedService()} via {@link ArmeriaServerConfigurator} and
  *             {@link DocServiceConfigurator}.
  *             <pre>{@code
- *             @Bean
- *             public ArmeriaServerConfigurator myService() {
- *                 return server -> {
- *                     server.annotatedService()
- *                           .pathPrefix("/my_service")
- *                           .exceptionHandlers(new MyExceptionHandler())
- *                           .requestConverters(new MyRequestConverter())
- *                           .responseConverters(new MyResponseConverter())
- *                           .decorator(LoggingService.newDecorator())
- *                           .build(new MyAnnoatedService());
- *                 };
- *             }
+ *             > @Bean
+ *             > public ArmeriaServerConfigurator myService() {
+ *             >     return server -> {
+ *             >         server.annotatedService()
+ *             >               .pathPrefix("/my_service")
+ *             >               .exceptionHandlers(new MyExceptionHandler())
+ *             >               .requestConverters(new MyRequestConverter())
+ *             >               .responseConverters(new MyResponseConverter())
+ *             >               .decorator(LoggingService.newDecorator())
+ *             >               .build(new MyAnnoatedService());
+ *             >     };
+ *             > }
  *
- *             @Bean
- *             public DocServiceConfigurator myServiceDoc() {
- *                 return docService -> {
- *                     docService.exampleRequestForMethod(MyAnnotatedService.class,
- *                                                        "myMethod", "{\"foo\":\"bar\"}")
- *                               .exampleHttpHeaders(MyAnnotatedService.class,
- *                                                   HttpHeaders.of("my-header", "headerVal")));
+ *             > @Bean
+ *             > public DocServiceConfigurator myServiceDoc() {
+ *             >     return docService -> {
+ *             >         docService.exampleRequestForMethod(MyAnnotatedService.class,
+ *             >                                            "myMethod", "{\"foo\":\"bar\"}")
+ *             >                   .exampleHttpHeaders(MyAnnotatedService.class,
+ *             >                                       HttpHeaders.of("my-header", "headerVal")));
  *
- *                 };
- *             }}</pre>
+ *             >     };
+ *             > }}</pre>
  */
 @Deprecated
 public class AnnotatedServiceRegistrationBean

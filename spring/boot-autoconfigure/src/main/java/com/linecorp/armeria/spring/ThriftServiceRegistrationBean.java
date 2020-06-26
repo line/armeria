@@ -45,22 +45,22 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  *
  * @deprecated Use {@link ArmeriaServerConfigurator} and {@link DocServiceConfigurator}.
  *             <pre>{@code
- *             @Bean
- *             public ArmeriaServerConfigurator myService() {
- *                 return server -> {
- *                     server.route()
- *                           .path("/my_service")
- *                           .decorator(LoggingService.newDecorator())
- *                           .build(THttpService.of(new MyThriftService()));
- *                 };
- *             }
+ *             > @Bean
+ *             > public ArmeriaServerConfigurator myService() {
+ *             >     return server -> {
+ *             >         server.route()
+ *             >               .path("/my_service")
+ *             >               .decorator(LoggingService.newDecorator())
+ *             >               .build(THttpService.of(new MyThriftService()));
+ *             >     };
+ *             > }
  *
- *             @Bean
- *             public DocServiceConfigurator myServiceDoc() {
- *                 return docService -> {
- *                     docService.exampleRequest(new MyThriftService.hello_args("Armeria"))
- *                               .exampleHttpHeaders(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
- *                 };
+ *             > @Bean
+ *             > public DocServiceConfigurator myServiceDoc() {
+ *             >     return docService -> {
+ *             >         docService.exampleRequest(new MyThriftService.hello_args("Armeria"))
+ *             >                   .exampleHttpHeaders(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
+ *             >     };
  *             }}</pre>
  */
 @Deprecated

@@ -47,28 +47,30 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  *
  * @deprecated Use {@link ArmeriaServerConfigurator} and {@link DocServiceConfigurator}.
  *             <pre>{@code
- *             @Bean
- *             public ArmeriaServerConfigurator myService() {
- *                 return server -> {
- *                     server.route()
- *                           .path("/my-service")
- *                           .decorator(LoggingService.newDecorator())
- *                           .build(GrpcService.builder()
- *                                             .addService(new HelloService())
- *                                             .supportedSerializationFormats(GrpcSerializationFormats.values())
- *                                             .enableUnframedRequests(true)
- *                                             .build());
- *                 };
- *             }
+ *             > @Bean
+ *             > public ArmeriaServerConfigurator myService() {
+ *             >     return server -> {
+ *             >         server.route()
+ *             >               .path("/my-service")
+ *             >               .decorator(LoggingService.newDecorator())
+ *             >               .build(GrpcService.builder()
+ *             >                                 .addService(new HelloService())
+ *             >                                 .supportedSerializationFormats(
+ *             >                                         GrpcSerializationFormats.values())
+ *             >                                 .enableUnframedRequests(true)
+ *             >                                 .build());
+ *             >     };
+ *             > }
  *
- *             @Bean
- *             public DocServiceConfigurator myServiceDoc() {
- *                 return docService -> {
- *                     docService.exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME, "Hello",
- *                                                        HelloRequest.newBuilder().setName("Armeria").build())
- *                               .exampleHttpHeaders(HelloServiceGrpc.SERVICE_NAME,
- *                                                   HttpHeaders.of("my-header", "headerVal"))
- *                 };
+ *             > @Bean
+ *             > public DocServiceConfigurator myServiceDoc() {
+ *             >     return docService -> {
+ *             >         docService.exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME, "Hello",
+ *             >                                            HelloRequest.newBuilder()
+ *             >                                                        .setName("Armeria").build())
+ *             >                   .exampleHttpHeaders(HelloServiceGrpc.SERVICE_NAME,
+ *             >                                       HttpHeaders.of("my-header", "headerVal"))
+ *             >     };
  *             }}</pre>
  */
 @Deprecated
