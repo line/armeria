@@ -25,12 +25,12 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 @SuppressWarnings("MethodParameterNamingConvention")
-final class RequestContextAwareLogger implements Logger {
+final class ContextAwareLogger implements Logger {
 
     private final RequestContext ctx;
     private final Logger logger;
 
-    RequestContextAwareLogger(RequestContext ctx, Logger logger) {
+    ContextAwareLogger(RequestContext ctx, Logger logger) {
         this.ctx = ctx;
         this.logger = logger;
     }

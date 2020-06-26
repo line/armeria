@@ -29,10 +29,9 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestContext;
 
-final class Java9RequestContextAwareFuture<T>
-        extends AbstractRequestContextAwareFuture<T> {
+final class Java9ContextAwareFuture<T> extends AbstractContextAwareFuture<T> {
 
-    Java9RequestContextAwareFuture(RequestContext requestContext) {
+    Java9ContextAwareFuture(RequestContext requestContext) {
         super(requestContext);
     }
 
@@ -276,12 +275,12 @@ final class Java9RequestContextAwareFuture<T>
 
     @Override
     public <U> CompletableFuture<U> newIncompleteFuture() {
-        return new Java9RequestContextAwareFuture<>(ctx());
+        return new Java9ContextAwareFuture<>(ctx());
     }
 
     @Override
     public CompletionStage<T> minimalCompletionStage() {
-        return new Java9RequestContextAwareMinimalStage<>(this);
+        return new Java9ContextAwareMinimalStage<>(this);
     }
 
     @Override

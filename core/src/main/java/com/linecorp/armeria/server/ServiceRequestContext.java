@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,7 +44,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -303,14 +303,14 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link RequestContextAwareScheduledExecutorService} that could be used for executing
-     * a potentially long-running task. The {@link RequestContextAwareScheduledExecutorService}
+     * Returns the {@link ContextAwareScheduledExecutorService} that could be used for executing
+     * a potentially long-running task. The {@link ContextAwareScheduledExecutorService}
      * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
      * If you want to use {@link ScheduledExecutorService} without setting this context,
-     * call {@link RequestContextAwareScheduledExecutorService#detachContext()} and use the returned
+     * call {@link ContextAwareScheduledExecutorService#detachContext()} and use the returned
      * {@link ScheduledExecutorService}.
      */
-    RequestContextAwareScheduledExecutorService blockingTaskExecutor();
+    ContextAwareScheduledExecutorService blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable

@@ -188,7 +188,7 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     }
 
     @Override
-    public RequestContextAwareEventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         return delegate().eventLoop();
     }
 

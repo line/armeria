@@ -390,12 +390,12 @@ public interface RequestContext {
     }
 
     /**
-     * Returns the {@link RequestContextAwareEventLoop} that is handling the current {@link Request}.
-     * The {@link RequestContextAwareEventLoop} sets this {@link RequestContext} as the current context
+     * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.
+     * The {@link ContextAwareEventLoop} sets this {@link RequestContext} as the current context
      * before executing any submitted tasks. If you want to use {@link EventLoop} without setting this context,
-     * call {@link RequestContextAwareEventLoop#detachContext()} and use the returned {@link EventLoop}.
+     * call {@link ContextAwareEventLoop#detachContext()} and use the returned {@link EventLoop}.
      */
-    RequestContextAwareEventLoop eventLoop();
+    ContextAwareEventLoop eventLoop();
 
     /**
      * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
@@ -481,7 +481,7 @@ public interface RequestContext {
      * sure to propagate the current {@link RequestContext} into the callback execution.
      */
     default ExecutorService makeContextAware(ExecutorService executor) {
-        return new RequestContextAwareExecutorService(this, executor);
+        return new ContextAwareExecutorService(this, executor);
     }
 
     /**
@@ -489,7 +489,7 @@ public interface RequestContext {
      * making sure to propagate the current {@link RequestContext} into the callback execution.
      */
     default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
-        return RequestContextAwareScheduledExecutorService.of(this, executor);
+        return ContextAwareScheduledExecutorService.of(this, executor);
     }
 
     /**
@@ -569,7 +569,7 @@ public interface RequestContext {
      * then invokes the input {@code stage}.
      */
     default <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
-        final CompletableFuture<T> future = JavaVersionSpecific.get().newRequestContextAwareFuture(this);
+        final CompletableFuture<T> future = JavaVersionSpecific.get().newContextAwareFuture(this);
         stage.handle((result, cause) -> {
             try (SafeCloseable ignored = push()) {
                 if (cause != null) {
@@ -599,7 +599,7 @@ public interface RequestContext {
      * @param logger the {@link Logger} to decorate.
      */
     default Logger makeContextAware(Logger logger) {
-        return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
+        return new ContextAwareLogger(this, requireNonNull(logger, "logger"));
     }
 
     /**

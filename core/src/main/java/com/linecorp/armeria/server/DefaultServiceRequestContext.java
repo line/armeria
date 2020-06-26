@@ -34,14 +34,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.ContextAwareEventLoop;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContextAwareEventLoop;
-import com.linecorp.armeria.common.RequestContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -95,9 +95,9 @@ public final class DefaultServiceRequestContext
     private final RequestLogBuilder log;
 
     @Nullable
-    private RequestContextAwareEventLoop contextAwareEventLoop;
+    private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
-    private RequestContextAwareScheduledExecutorService blockingTaskExecutor;
+    private ContextAwareScheduledExecutorService blockingTaskExecutor;
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
@@ -263,12 +263,12 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public RequestContextAwareScheduledExecutorService blockingTaskExecutor() {
+    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = RequestContextAwareScheduledExecutorService.of(
+        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(
                 this, config().server().config().blockingTaskExecutor());
     }
 
@@ -289,11 +289,11 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public RequestContextAwareEventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         if (contextAwareEventLoop != null) {
             return contextAwareEventLoop;
         }
-        return contextAwareEventLoop = RequestContextAwareEventLoop.of(this, ch.eventLoop());
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, ch.eventLoop());
     }
 
     @Override

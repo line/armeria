@@ -29,32 +29,32 @@ import com.google.common.base.MoreObjects;
  * A delegating {@link ScheduledExecutorService} that sets the {@link RequestContext} before executing any
  * submitted tasks.
  */
-public final class RequestContextAwareScheduledExecutorService
-        extends RequestContextAwareExecutorService implements ScheduledExecutorService {
+public final class ContextAwareScheduledExecutorService
+        extends ContextAwareExecutorService implements ScheduledExecutorService {
 
     /**
-     * Returns a new {@link RequestContextAwareScheduledExecutorService} that sets the specified
+     * Returns a new {@link ContextAwareScheduledExecutorService} that sets the specified
      * {@link RequestContext} before executing any submitted tasks.
      */
-    public static RequestContextAwareScheduledExecutorService of(
+    public static ContextAwareScheduledExecutorService of(
             RequestContext context, ScheduledExecutorService executor) {
         requireNonNull(context, "context");
         requireNonNull(executor, "executor");
-        if (executor instanceof RequestContextAwareScheduledExecutorService) {
-            final RequestContext ctx = ((RequestContextAwareScheduledExecutorService) executor).context();
+        if (executor instanceof ContextAwareScheduledExecutorService) {
+            final RequestContext ctx = ((ContextAwareScheduledExecutorService) executor).context();
             if (context == ctx) {
-                return (RequestContextAwareScheduledExecutorService) executor;
+                return (ContextAwareScheduledExecutorService) executor;
             }
             throw new IllegalArgumentException(
-                    "cannot create a " + RequestContextAwareScheduledExecutorService.class.getSimpleName() +
+                    "cannot create a " + ContextAwareScheduledExecutorService.class.getSimpleName() +
                     " using another " + executor);
         }
-        return new RequestContextAwareScheduledExecutorService(context, executor);
+        return new ContextAwareScheduledExecutorService(context, executor);
     }
 
     private final ScheduledExecutorService executor;
 
-    private RequestContextAwareScheduledExecutorService(
+    private ContextAwareScheduledExecutorService(
             RequestContext context, ScheduledExecutorService executor) {
         super(context, executor);
         this.executor = executor;
@@ -70,7 +70,7 @@ public final class RequestContextAwareScheduledExecutorService
 
     /**
      * Returns the {@link RequestContext} that is specified when creating
-     * this {@link RequestContextAwareScheduledExecutorService}.
+     * this {@link ContextAwareScheduledExecutorService}.
      */
     @Override
     public RequestContext context() {

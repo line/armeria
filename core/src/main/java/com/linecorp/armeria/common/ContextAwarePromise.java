@@ -21,15 +21,85 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 
-final class RequestContextAwareFuture<T> implements Future<T> {
+final class ContextAwarePromise<T> implements Promise<T> {
 
     private final RequestContext context;
-    private final Future<T> delegate;
+    private final Promise<T> delegate;
 
-    RequestContextAwareFuture(RequestContext context, Future<T> delegate) {
+    ContextAwarePromise(RequestContext context, Promise<T> delegate) {
         this.context = context;
         this.delegate = delegate;
+    }
+
+    @Override
+    public Promise<T> setSuccess(T result) {
+        delegate.setSuccess(result);
+        return this;
+    }
+
+    @Override
+    public boolean trySuccess(T result) {
+        return delegate.trySuccess(result);
+    }
+
+    @Override
+    public Promise<T> setFailure(Throwable cause) {
+        delegate.setFailure(cause);
+        return this;
+    }
+
+    @Override
+    public boolean tryFailure(Throwable cause) {
+        return delegate.tryFailure(cause);
+    }
+
+    @Override
+    public boolean setUncancellable() {
+        return delegate.setUncancellable();
+    }
+
+    @Override
+    public Promise<T> addListener(
+            GenericFutureListener<? extends Future<? super T>> listener) {
+        delegate.addListener(ContextAwareFutureListener.of(context, listener));
+        return this;
+    }
+
+    @Override
+    @SafeVarargs
+    public final Promise<T> addListeners(
+            GenericFutureListener<? extends Future<? super T>>... listeners) {
+        for (GenericFutureListener<? extends Future<? super T>> l : listeners) {
+            delegate.addListeners(ContextAwareFutureListener.of(context, l));
+        }
+        return this;
+    }
+
+    @Override
+    public Promise<T> removeListener(
+            GenericFutureListener<? extends Future<? super T>> listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    @SafeVarargs
+    public final Promise<T> removeListeners(
+            GenericFutureListener<? extends Future<? super T>>... listeners) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Promise<T> sync() throws InterruptedException {
+        delegate.sync();
+        return this;
+    }
+
+    @Override
+    public Promise<T> syncUninterruptibly() {
+        delegate.syncUninterruptibly();
+        return this;
     }
 
     @Override
@@ -48,49 +118,7 @@ final class RequestContextAwareFuture<T> implements Future<T> {
     }
 
     @Override
-    public Future<T> addListener(
-            GenericFutureListener<? extends Future<? super T>> listener) {
-        delegate.addListener(RequestContextAwareFutureListener.of(context, listener));
-        return this;
-    }
-
-    @Override
-    @SafeVarargs
-    public final Future<T> addListeners(
-            GenericFutureListener<? extends Future<? super T>>... listeners) {
-        for (GenericFutureListener<? extends Future<? super T>> l : listeners) {
-            delegate.addListener(RequestContextAwareFutureListener.of(context, l));
-        }
-        return this;
-    }
-
-    @Override
-    public Future<T> removeListener(
-            GenericFutureListener<? extends Future<? super T>> listener) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    @SafeVarargs
-    public final Future<T> removeListeners(
-            GenericFutureListener<? extends Future<? super T>>... listeners) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Future<T> sync() throws InterruptedException {
-        delegate.sync();
-        return this;
-    }
-
-    @Override
-    public Future<T> syncUninterruptibly() {
-        delegate.syncUninterruptibly();
-        return this;
-    }
-
-    @Override
-    public Future<T> await() throws InterruptedException {
+    public Promise<T> await() throws InterruptedException {
         delegate.await();
         return this;
     }
@@ -106,7 +134,7 @@ final class RequestContextAwareFuture<T> implements Future<T> {
     }
 
     @Override
-    public Future<T> awaitUninterruptibly() {
+    public Promise<T> awaitUninterruptibly() {
         delegate.awaitUninterruptibly();
         return this;
     }

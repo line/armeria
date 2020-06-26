@@ -43,7 +43,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 
-class RequestContextAwareFutureTest {
+class ContextAwareFutureTest {
 
     // TODO(minwoox) Make an extesion which a user can easily check the logs.
     @Mock

@@ -38,31 +38,30 @@ import io.netty.util.concurrent.ScheduledFuture;
 /**
  * A delegating {@link EventLoop} that sets the {@link RequestContext} before executing any submitted tasks.
  */
-public final class RequestContextAwareEventLoop
-        extends RequestContextAwareExecutorService implements EventLoop {
+public final class ContextAwareEventLoop extends ContextAwareExecutorService implements EventLoop {
 
     /**
-     * Returns a new {@link RequestContextAwareEventLoop} that sets the specified {@link RequestContext}
+     * Returns a new {@link ContextAwareEventLoop} that sets the specified {@link RequestContext}
      * before executing any submitted tasks.
      */
-    public static RequestContextAwareEventLoop of(RequestContext context, EventLoop eventLoop) {
+    public static ContextAwareEventLoop of(RequestContext context, EventLoop eventLoop) {
         requireNonNull(context, "context");
         requireNonNull(eventLoop, "eventLoop");
-        if (eventLoop instanceof RequestContextAwareEventLoop) {
-            final RequestContext ctx = ((RequestContextAwareEventLoop) eventLoop).context();
+        if (eventLoop instanceof ContextAwareEventLoop) {
+            final RequestContext ctx = ((ContextAwareEventLoop) eventLoop).context();
             if (context == ctx) {
-                return (RequestContextAwareEventLoop) eventLoop;
+                return (ContextAwareEventLoop) eventLoop;
             }
             throw new IllegalArgumentException(
-                    "cannot create a " + RequestContextAwareEventLoop.class.getSimpleName() +
+                    "cannot create a " + ContextAwareEventLoop.class.getSimpleName() +
                     " using another " + eventLoop);
         }
-        return new RequestContextAwareEventLoop(context, eventLoop);
+        return new ContextAwareEventLoop(context, eventLoop);
     }
 
     private final EventLoop eventLoop;
 
-    private RequestContextAwareEventLoop(RequestContext context, EventLoop eventLoop) {
+    private ContextAwareEventLoop(RequestContext context, EventLoop eventLoop) {
         super(context, eventLoop);
         this.eventLoop = eventLoop;
     }
@@ -77,7 +76,7 @@ public final class RequestContextAwareEventLoop
 
     /**
      * Returns the {@link RequestContext} that is specified when creating
-     * this {@link RequestContextAwareEventLoop}.
+     * this {@link ContextAwareEventLoop}.
      */
     @Override
     public RequestContext context() {
@@ -106,22 +105,22 @@ public final class RequestContextAwareEventLoop
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new RequestContextAwarePromise<>(context(), eventLoop.newPromise());
+        return new ContextAwarePromise<>(context(), eventLoop.newPromise());
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new RequestContextAwareProgressivePromise<>(context(), eventLoop.newProgressivePromise());
+        return new ContextAwareProgressivePromise<>(context(), eventLoop.newProgressivePromise());
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new RequestContextAwareFuture<>(context(), eventLoop.newSucceededFuture(result));
+        return new ContextAwareFuture<>(context(), eventLoop.newSucceededFuture(result));
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new RequestContextAwareFuture<>(context(), eventLoop.newFailedFuture(cause));
+        return new ContextAwareFuture<>(context(), eventLoop.newFailedFuture(cause));
     }
 
     @Override

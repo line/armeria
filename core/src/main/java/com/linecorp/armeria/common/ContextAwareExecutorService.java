@@ -30,12 +30,12 @@ import java.util.stream.Collectors;
  * A delegating {@link ExecutorService} that makes sure all submitted tasks are
  * executed within the {@link RequestContext}.
  */
-class RequestContextAwareExecutorService implements ExecutorService {
+class ContextAwareExecutorService implements ExecutorService {
 
     private final RequestContext context;
     private final ExecutorService delegate;
 
-    RequestContextAwareExecutorService(RequestContext context, ExecutorService delegate) {
+    ContextAwareExecutorService(RequestContext context, ExecutorService delegate) {
         this.context = context;
         this.delegate = delegate;
     }

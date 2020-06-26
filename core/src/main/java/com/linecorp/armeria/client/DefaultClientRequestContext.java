@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -37,7 +38,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextAwareEventLoop;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
@@ -86,7 +86,7 @@ public final class DefaultClientRequestContext
     @Nullable
     private Endpoint endpoint;
     @Nullable
-    private RequestContextAwareEventLoop contextAwareEventLoop;
+    private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private final String fragment;
     @Nullable
@@ -368,12 +368,12 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public RequestContextAwareEventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
         if (contextAwareEventLoop != null) {
             return contextAwareEventLoop;
         }
-        return contextAwareEventLoop = RequestContextAwareEventLoop.of(this, eventLoop);
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override
