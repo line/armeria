@@ -218,7 +218,7 @@ public final class DefaultClientRequestContext
     }
 
     private UnmodifiableFuture<Boolean> initEndpoint(Endpoint endpoint) {
-        this.endpointGroup = null;
+        endpointGroup = null;
         updateEndpoint(endpoint);
         runThreadLocalContextCustomizers();
         acquireEventLoop(endpoint);

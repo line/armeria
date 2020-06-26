@@ -71,8 +71,7 @@ public final class ClientUtil {
                             throw cause;
                         }
 
-                        return initContextAndExecuteWithFallback(
-                                delegate, ctx, errorResponseFactory, success);
+                        return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
                     } catch (Throwable t) {
                         fail(ctx, t);
                         return errorResponseFactory.apply(ctx, t);
@@ -94,6 +93,9 @@ public final class ClientUtil {
         if (succeeded) {
             return pushAndExecute(delegate, ctx);
         } else {
+            final Throwable cause = ctx.log().partial().requestCause();
+            assert cause != null;
+
             // Context initialization has failed, which means:
             // - ctx.log() has been completed with an exception.
             // - ctx.request() has been aborted (if not null).
@@ -106,12 +108,10 @@ public final class ClientUtil {
             // We will use the fallback response which is created from the exception
             // raised in ctx.init(), so the response returned can be aborted.
             if (res instanceof StreamMessage) {
-                ((StreamMessage<?>) res).abort();
+                ((StreamMessage<?>) res).abort(cause);
             }
 
             // No need to call `fail()` because failed by `DefaultRequestContext.init()` already.
-            final Throwable cause = ctx.log().partial().requestCause();
-            assert cause != null;
             return errorResponseFactory.apply(ctx, cause);
         }
     }

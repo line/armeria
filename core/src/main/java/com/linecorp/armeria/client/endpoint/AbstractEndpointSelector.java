@@ -109,7 +109,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
             }
 
             try {
-                final Endpoint endpoint = AbstractEndpointSelector.this.selectNow(ctx);
+                final Endpoint endpoint = selectNow(ctx);
                 if (endpoint != null) {
                     cleanup();
 
