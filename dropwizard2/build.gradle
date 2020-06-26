@@ -1,5 +1,5 @@
 dependencies {
-    implementation project(':jetty')
+    implementation project(':jetty9')
     // Dropwizard
     ['core', 'util', 'lifecycle', 'jackson', 'validation', 'jetty', 'jersey'].each {
         api "io.dropwizard:dropwizard-$it"

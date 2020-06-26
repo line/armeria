@@ -146,6 +146,7 @@ configure(projectsWithFlags('java')) {
     // Target Java 8.
     tasks.withType(JavaCompile) {
         options.compilerArgs += ['--release', '8']
+        options.errorprone.excludedPaths = '.*/gen-src/.*'
 
         dependsOn checkJavaVersion
     }

@@ -10,11 +10,11 @@ buildscript {
 apply plugin: 'org.springframework.boot'
 
 dependencies {
-    implementation project(':spring:boot-webflux-starter')
+    implementation project(':spring:boot2-webflux-starter')
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    runtimeOnly project(':spring:boot-actuator-starter')
+    runtimeOnly project(':spring:boot2-actuator-starter')
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

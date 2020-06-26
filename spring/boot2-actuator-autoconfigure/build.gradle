@@ -13,12 +13,12 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'io.micrometer:micrometer-registry-prometheus'
-    testRuntimeOnly project(':spring:boot-starter')
+    testRuntimeOnly project(':spring:boot2-starter')
 }
 
 // Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.
-task copyFiles(type: Copy) {
-    from "${rootProject.projectDir}/spring/boot-autoconfigure/src/main/java"
+task generateSources(type: Copy) {
+    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
     include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaServerConfigurator.java'
@@ -26,4 +26,4 @@ task copyFiles(type: Copy) {
     include '**/Ssl.java'
 }
 
-tasks.compileJava.dependsOn(copyFiles)
+tasks.compileJava.dependsOn(generateSources)

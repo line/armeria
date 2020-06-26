@@ -15,17 +15,17 @@ dependencies {
     runtimeOnly 'org.slf4j:jcl-over-slf4j'
 }
 
-// Use the sources from ':tomcat' as well as ours.
+// Use the sources from ':tomcat9' as well as ours.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-tasks.compileJava.source "${rootProject.projectDir}/tomcat/src/main/java"
+tasks.compileJava.source "${rootProject.projectDir}/tomcat9/src/main/java"
 tasks.compileJava.exclude '**/ConfigFileLoaderInitializer*'
-tasks.processResources.from "${rootProject.projectDir}/tomcat/src/main/resources"
-tasks.compileTestJava.source "${rootProject.projectDir}/tomcat/src/test/java"
-tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources"
-tasks.sourcesJar.from "${rootProject.projectDir}/tomcat/src/main/java"
-tasks.sourcesJar.from "${rootProject.projectDir}/tomcat/src/main/resources"
+tasks.processResources.from "${rootProject.projectDir}/tomcat9/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/tomcat9/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/tomcat9/src/test/resources"
+tasks.sourcesJar.from "${rootProject.projectDir}/tomcat9/src/main/java"
+tasks.sourcesJar.from "${rootProject.projectDir}/tomcat9/src/main/resources"
 tasks.sourcesJar.exclude '**/ConfigFileLoaderInitializer*'
-tasks.javadoc.source "${rootProject.projectDir}/tomcat/src/main/java"
+tasks.javadoc.source "${rootProject.projectDir}/tomcat9/src/main/java"
 tasks.javadoc.exclude '**/ConfigFileLoaderInitializer*'

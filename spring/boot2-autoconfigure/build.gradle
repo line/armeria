@@ -1,6 +1,6 @@
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift')
+    compileOnly project(':thrift0.13')
     implementation project(':logback')
 
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -15,7 +15,7 @@ dependencies {
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     testImplementation project(':grpc')
-    testImplementation project(':thrift')
+    testImplementation project(':thrift0.13')
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

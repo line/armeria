@@ -3,7 +3,7 @@ final def SPRING_VERSION = '5.1.16.RELEASE'
 final def TOMCAT_VERSION = '8.5.56'
 
 dependencies {
-    implementation project(':spring:boot-starter')
+    implementation project(':spring:boot2-starter')
     implementation project(':tomcat8.5')
 
     [ 'spring-boot-starter', 'spring-boot-autoconfigure', 'spring-boot-starter-web' ].each {
@@ -42,11 +42,11 @@ dependencies {
     }
 }
 
-// Use the sources from ':it:spring:boot-tomcat'.
+// Use the sources from ':it:spring:boot2-tomcat9'.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-def tomcatProjectDir = "${rootProject.projectDir}/it/spring/boot-tomcat"
+def tomcatProjectDir = "${rootProject.projectDir}/it/spring/boot2-tomcat9"
 tasks.compileJava.source "${tomcatProjectDir}/src/main/java"
 tasks.processResources.from "${tomcatProjectDir}/src/main/resources"
 tasks.compileTestJava.source "${tomcatProjectDir}/src/test/java", "${tomcatProjectDir}/gen-src/test/java"
@@ -55,7 +55,7 @@ tasks.sourcesJar.from "${tomcatProjectDir}/src/main/java"
 tasks.sourcesJar.from "${tomcatProjectDir}/src/main/resources"
 tasks.javadoc.source "${tomcatProjectDir}/src/main/java"
 
-// Disable checkstyle because it's checked by ':it:spring:boot-tomcat'.
+// Disable checkstyle because it's checked by ':it:spring:boot2-tomcat9'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
 }
