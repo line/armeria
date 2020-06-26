@@ -67,11 +67,11 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  *
  *             > @Bean
  *             > public DocServiceConfigurator myServiceDoc() {
- *             >     return docService -> {
- *             >         docService.exampleRequestForMethod(MyAnnotatedService.class,
- *             >                                            "myMethod", "{\"foo\":\"bar\"}")
- *             >                   .exampleHttpHeaders(MyAnnotatedService.class,
- *             >                                       HttpHeaders.of("my-header", "headerVal")));
+ *             >     return docServiceBuilder -> {
+ *             >         docServiceBuilder.exampleRequestForMethod(MyAnnotatedService.class,
+ *             >                                                   "myMethod", "{\"foo\":\"bar\"}")
+ *             >                          .exampleHttpHeaders(MyAnnotatedService.class,
+ *             >                                              HttpHeaders.of("my-header", "headerVal"));
  *
  *             >     };
  *             > }}</pre>

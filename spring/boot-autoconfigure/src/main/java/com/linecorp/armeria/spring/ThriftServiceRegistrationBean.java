@@ -57,9 +57,10 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  *
  *             > @Bean
  *             > public DocServiceConfigurator myServiceDoc() {
- *             >     return docService -> {
- *             >         docService.exampleRequest(new MyThriftService.hello_args("Armeria"))
- *             >                   .exampleHttpHeaders(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
+ *             >     return docServiceBuilder -> {
+ *             >         docServiceBuilder.exampleRequest(new MyThriftService.hello_args("Armeria"))
+ *             >                          .exampleHttpHeaders(
+ *             >                                  HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
  *             >     };
  *             }}</pre>
  */

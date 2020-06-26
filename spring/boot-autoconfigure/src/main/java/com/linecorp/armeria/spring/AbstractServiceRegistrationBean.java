@@ -143,7 +143,8 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      * Sets the decorators of the annotated service object. {@code decorators} are applied to {@code service} in
      * order.
      *
-     * @deprecated Use {@link ServerBuilder#annotatedService(Object, Function, Object...)}.
+     * @deprecated Use {@link ServiceBindingBuilder#decorator(Function)} or
+     *             {@link AnnotatedServiceBindingBuilder#decorator(Function)}.
      */
     @Deprecated
     public final U setDecorators(

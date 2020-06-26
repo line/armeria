@@ -64,12 +64,12 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  *
  *             > @Bean
  *             > public DocServiceConfigurator myServiceDoc() {
- *             >     return docService -> {
- *             >         docService.exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME, "Hello",
- *             >                                            HelloRequest.newBuilder()
- *             >                                                        .setName("Armeria").build())
- *             >                   .exampleHttpHeaders(HelloServiceGrpc.SERVICE_NAME,
- *             >                                       HttpHeaders.of("my-header", "headerVal"))
+ *             >     return docServiceBuilder -> {
+ *             >         docServiceBuilder.exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME, "Hello",
+ *             >                                                   HelloRequest.newBuilder()
+ *             >                                                               .setName("Armeria").build())
+ *             >                          .exampleHttpHeaders(HelloServiceGrpc.SERVICE_NAME,
+ *             >                                              HttpHeaders.of("my-header", "headerVal"));
  *             >     };
  *             }}</pre>
  */
