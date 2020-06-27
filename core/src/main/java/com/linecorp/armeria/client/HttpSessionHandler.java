@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.HttpChannelPool.POOL_KEY;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -36,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
+import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -78,10 +78,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
     private final MeterRegistry meterRegistry;
+    private final SessionProtocol desiredProtocol;
+    private final PoolKey poolKey;
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
-    private final SessionProtocol desiredProtocol;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -121,32 +122,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       MeterRegistry meterRegistry, boolean useHttp1Pipelining,
-                       long idleTimeoutMillis, long pingIntervalMillis, SessionProtocol desiredProtocol) {
+                       MeterRegistry meterRegistry, SessionProtocol desiredProtocol, PoolKey poolKey,
+                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
         this.meterRegistry = meterRegistry;
+        this.desiredProtocol = desiredProtocol;
+        this.poolKey = poolKey;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
-        this.desiredProtocol = desiredProtocol;
-    }
-
-    private static boolean useProxyConnection(ChannelHandlerContext ctx) {
-        final PoolKey poolKey = ctx.channel().attr(POOL_KEY).get();
-        switch (poolKey.proxyConfig.proxyType()) {
-            case DIRECT:
-                return false;
-            case SOCKS4:
-            case SOCKS5:
-            case CONNECT:
-                return true;
-            default:
-                throw new Error(); // Should never reach here.
-        }
     }
 
     @Override
@@ -348,7 +336,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (useProxyConnection(ctx)) {
+            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT) {
                 if (proxyDestinationAddress != null) {
                     // ProxyConnectionEvent was already triggered.
                     tryCompleteSessionPromise(ctx);
@@ -401,7 +389,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            final PoolKey poolKey = ctx.channel().attr(POOL_KEY).get();
             if (proxyDestinationAddress != null) {
                 channelPool.connect(proxyDestinationAddress, H1C, poolKey, sessionPromise);
             } else {
@@ -431,7 +418,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
-            final PoolKey poolKey = ctx.channel().attr(POOL_KEY).get();
             final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
             channelPool.invokeProxyConnectFailed(protocol, poolKey, cause);
             sessionPromise.tryFailure(new UnprocessedRequestException(cause));

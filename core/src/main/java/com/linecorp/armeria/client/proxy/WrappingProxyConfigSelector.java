@@ -34,14 +34,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
- * A simple class which wraps a {@link ProxySelector}. This class may have some limitations, most notably:
- * 1. Some incompatibilities when used with sun's {@code DefaultProxySelector}
- *     - Some properties like socksProxyVersion aren't respected
- *     - This class doesn't attempt to resolve scheme format differences.
- *       For instance, sun's {@code DefaultProxySelector} requires basic scheme formats "http", "https".
- *       However, armeria uses scheme formats including serialization format ("none+http", "tbinary+h1c").
- *       This may be a source of unexpected behavior.
- * 2. Selecting multiple {@link Proxy} isn't supported.
+ * See {@link ProxyConfigSelector#wrap(ProxySelector)} for more information.
  */
 final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     private static final Logger logger = LoggerFactory.getLogger(WrappingProxyConfigSelector.class);

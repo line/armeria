@@ -32,7 +32,7 @@ public final class StaticProxyConfigSelector implements ProxyConfigSelector {
     private static final StaticProxyConfigSelector DIRECT = new StaticProxyConfigSelector(ProxyConfig.direct());
 
     /**
-     * Constructs a {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
+     * Returns a {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
      * for all requests.
      */
     public static StaticProxyConfigSelector of(ProxyConfig proxyConfig) {

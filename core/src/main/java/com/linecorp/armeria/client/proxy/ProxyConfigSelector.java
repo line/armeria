@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.proxy;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 
@@ -66,8 +67,14 @@ public interface ProxyConfigSelector {
                        SocketAddress sa, Throwable throwable);
 
     /**
-     * Provides a way to re-use an existing {@link ProxySelector} with some limitations.
-     * See {@link WrappingProxyConfigSelector} for more details.
+     * Provides a way to re-use an existing {@link ProxySelector} with some limitations:
+     * 1. Some incompatibilities when used with sun's {@code DefaultProxySelector}
+     *     - Some properties like socksProxyVersion aren't respected
+     *     - This class doesn't attempt to resolve scheme format differences.
+     *       For instance, sun's {@code DefaultProxySelector} requires basic scheme formats "http", "https".
+     *       However, armeria uses scheme formats including serialization format ("none+http", "tbinary+h1c").
+     *       This may be a source of unexpected behavior.
+     * 2. Selecting multiple {@link Proxy} isn't supported.
      */
     static ProxyConfigSelector wrap(ProxySelector proxySelector) {
         return WrappingProxyConfigSelector.of(requireNonNull(proxySelector, "proxySelector"));

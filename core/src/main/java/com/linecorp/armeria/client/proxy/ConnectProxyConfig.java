@@ -46,9 +46,6 @@ public final class ConnectProxyConfig extends ProxyConfig {
         this.useTls = useTls;
     }
 
-    /**
-     * Returns the configured proxy address.
-     */
     @Override
     public InetSocketAddress proxyAddress() {
         return proxyAddress;

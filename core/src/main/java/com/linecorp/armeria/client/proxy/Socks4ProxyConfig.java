@@ -38,9 +38,6 @@ public final class Socks4ProxyConfig extends ProxyConfig {
         this.username = username;
     }
 
-    /**
-     * Returns the configured proxy address.
-     */
     @Override
     public InetSocketAddress proxyAddress() {
         return proxyAddress;

@@ -135,7 +135,7 @@ public abstract class ProxyConfig {
     public abstract ProxyType proxyType();
 
     /**
-     * Returns the proxy address. This value is {@code null} only for {@link ProxyType#DIRECT}.
+     * Returns the proxy address which is {@code null} only for {@link ProxyType#DIRECT}.
      */
     @Nullable
     public abstract InetSocketAddress proxyAddress();

@@ -43,9 +43,6 @@ public final class Socks5ProxyConfig extends ProxyConfig {
         this.password = password;
     }
 
-    /**
-     * Returns the configured proxy address.
-     */
     @Override
     public InetSocketAddress proxyAddress() {
         return proxyAddress;

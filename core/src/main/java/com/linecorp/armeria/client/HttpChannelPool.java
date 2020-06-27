@@ -67,7 +67,6 @@ import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -77,7 +76,6 @@ final class HttpChannelPool implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpChannelPool.class);
     private static final Channel[] EMPTY_CHANNELS = new Channel[0];
-    static final AttributeKey<PoolKey> POOL_KEY = AttributeKey.valueOf(PoolKey.class, "POOL_KEY");
 
     private final EventLoop eventLoop;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
@@ -401,13 +399,12 @@ final class HttpChannelPool implements AsyncCloseable {
         final Bootstrap bootstrap = getBootstrap(desiredProtocol);
 
         final Channel channel = bootstrap.register().channel();
-        channel.attr(POOL_KEY).set(poolKey);
         configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
         final ChannelFuture connectFuture = channel.connect(remoteAddress);
 
         connectFuture.addListener((ChannelFuture future) -> {
             if (future.isSuccess()) {
-                initSession(desiredProtocol, future, sessionPromise);
+                initSession(desiredProtocol, poolKey, future, sessionPromise);
             } else {
                 invokeProxyConnectFailed(desiredProtocol, poolKey, future.cause());
                 sessionPromise.tryFailure(future.cause());
@@ -438,8 +435,8 @@ final class HttpChannelPool implements AsyncCloseable {
         return new InetSocketAddress(inetAddr, key.port);
     }
 
-    private void initSession(SessionProtocol desiredProtocol, ChannelFuture connectFuture,
-                             Promise<Channel> sessionPromise) {
+    private void initSession(SessionProtocol desiredProtocol, PoolKey poolKey,
+                             ChannelFuture connectFuture, Promise<Channel> sessionPromise) {
         assert connectFuture.isSuccess();
 
         final Channel ch = connectFuture.channel();
@@ -455,8 +452,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture, meterRegistry,
-                                       useHttp1Pipelining, idleTimeoutMillis, pingIntervalMillis,
-                                       desiredProtocol));
+                                       desiredProtocol, poolKey, useHttp1Pipelining, idleTimeoutMillis,
+                                       pingIntervalMillis));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,
