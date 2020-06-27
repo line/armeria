@@ -102,6 +102,6 @@ class BaseContext {
      * Returns whether there are more child elements to process.
      */
     protected boolean hasMoreChildren() {
-        return (Boolean) unsupportedOperation();
+        return unsupportedOperation();
     }
 }

@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -29,7 +28,6 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -88,16 +86,6 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         delegate.subscribe(subscriber, executor, options);
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
-        return delegate.drainAll(executor);
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        return delegate.drainAll(executor, options);
     }
 
     @Override
@@ -161,17 +149,6 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     @Override
     public CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         return delegate.aggregate(executor).thenApply(this::replaceHeaders);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
-        return delegate.aggregateWithPooledObjects(alloc).thenApply(this::replaceHeaders);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
-            EventExecutor executor, ByteBufAllocator alloc) {
-        return delegate.aggregateWithPooledObjects(executor, alloc).thenApply(this::replaceHeaders);
     }
 
     private AggregatedHttpRequest replaceHeaders(AggregatedHttpRequest req) {

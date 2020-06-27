@@ -248,7 +248,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                                   initialAttempt);
         ctx.logBuilder().addChild(derivedCtx.log());
 
-        final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
+        final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
         if (requiresResponseTrailers) {
@@ -309,12 +309,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
                                         CompletableFuture<HttpResponse> future, Throwable cause,
                                         boolean endRequestLog) {
+        future.completeExceptionally(cause);
+        rootReqDuplicator.abort(cause);
         if (endRequestLog) {
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
-        future.completeExceptionally(cause);
-        rootReqDuplicator.abort(cause);
     }
 
     private BiFunction<RetryDecision, Throwable, Void> handleBackoff(

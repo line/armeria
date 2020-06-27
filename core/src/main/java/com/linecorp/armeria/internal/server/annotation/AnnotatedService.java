@@ -72,13 +72,13 @@ import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/docs/server-annotated-service">
- * Annotated HTTP Service</a> to use this.
+ * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
 public class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
@@ -109,6 +109,7 @@ public class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
+    private final String defaultServiceName;
 
     AnnotatedService(Object object, Method method,
                      List<AnnotatedValueResolver> resolvers,
@@ -139,6 +140,16 @@ public class AnnotatedService implements HttpService {
             responseType = ResponseType.COMPLETION_STAGE;
         } else {
             responseType = ResponseType.OTHER_OBJECTS;
+        }
+
+        ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
+        if (serviceName == null) {
+            serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
+        }
+        if (serviceName != null) {
+            defaultServiceName = serviceName.value();
+        } else {
+            defaultServiceName = object.getClass().getName();
         }
 
         this.method.setAccessible(true);
@@ -197,7 +208,7 @@ public class AnnotatedService implements HttpService {
     }
 
     public String serviceName() {
-        return method.getDeclaringClass().getName();
+        return defaultServiceName;
     }
 
     public String methodName() {
@@ -411,7 +422,7 @@ public class AnnotatedService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             try {
-                final HttpResponse response = delegate().serve(ctx, req);
+                final HttpResponse response = unwrap().serve(ctx, req);
                 if (response instanceof ExceptionFilteredHttpResponse) {
                     return response;
                 }

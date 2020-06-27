@@ -20,17 +20,25 @@ import javax.validation.constraints.NotNull;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**
  * Used as an example header object in {@link AnnotatedServiceRegistrationBean}
  * and {@link ThriftServiceRegistrationBean}.
+ *
+ * @deprecated Use {@link DocServiceConfigurator}.
  */
+@Deprecated
 public final class ExampleHeaders {
 
     /**
      * Returns a new {@link ExampleHeaders} for the method with the specified {@code methodName}
      * and {@code headers}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, String, Iterable)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(Class, String, HttpHeaders...)}.
      */
+    @Deprecated
     public static ExampleHeaders of(@NotNull String methodName, @NotNull HttpHeaders headers) {
         return new ExampleHeaders(methodName, headers);
     }
@@ -38,7 +46,11 @@ public final class ExampleHeaders {
     /**
      * Returns a new {@link ExampleHeaders} for the method with the specified {@code methodName}, {@code name}
      * and {@code value}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, String, Iterable)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(Class, String, HttpHeaders...)}.
      */
+    @Deprecated
     public static ExampleHeaders of(@NotNull String methodName, @NotNull CharSequence name,
                                     @NotNull String value) {
         return of(methodName, HttpHeaders.of(name, value));
@@ -47,14 +59,22 @@ public final class ExampleHeaders {
     /**
      * Returns a new {@link ExampleHeaders} with the specified {@code serviceType}
      * and {@code headers}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, HttpHeaders...)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(Class, HttpHeaders...)}.
      */
+    @Deprecated
     public static ExampleHeaders of(@NotNull HttpHeaders headers) {
         return new ExampleHeaders("", headers);
     }
 
     /**
      * Returns a new {@link ExampleHeaders} with the specified {@code name} and {@code value}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, HttpHeaders...)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(Class, HttpHeaders...)}.
      */
+    @Deprecated
     public static ExampleHeaders of(@NotNull CharSequence name, @NotNull String value) {
         return of(HttpHeaders.of(name, value));
     }

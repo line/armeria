@@ -72,6 +72,6 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
-        return delegate().serve(ctx, req);
+        return unwrap().serve(ctx, req);
     }
 }

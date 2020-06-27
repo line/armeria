@@ -343,7 +343,7 @@ public final class FileService extends AbstractHttpService {
         return new OrElseHttpService(this, nextService);
     }
 
-    private static final class OrElseHttpService extends AbstractHttpService {
+    private static final class OrElseHttpService implements HttpService {
 
         private final FileService first;
         private final HttpService second;

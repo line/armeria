@@ -143,7 +143,7 @@ public abstract class AbstractThriftOverHttpTest {
                             if (recordMessageLogs) {
                                 ctx.log().whenComplete().thenAccept(requestLogs::add);
                             }
-                            return delegate().serve(ctx, req);
+                            return unwrap().serve(ctx, req);
                         }
                     };
 

@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -29,19 +27,17 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -49,19 +45,21 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.unsafe.AbstractPooledHttpService;
 
 import io.grpc.Codec.Identity;
 import io.grpc.CompressorRegistry;
@@ -72,12 +70,13 @@ import io.grpc.Server;
 import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
+import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 
 /**
  * The framed {@link GrpcService} implementation.
  */
-final class FramedGrpcService extends AbstractHttpService implements GrpcService {
+final class FramedGrpcService extends AbstractPooledHttpService implements GrpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
 
@@ -86,8 +85,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
-    @Nullable
-    private final MessageMarshaller jsonMarshaller;
+    private final Map<String, GrpcJsonMarshaller> jsonMarshallers;
     @Nullable
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
     private final int maxOutboundMessageSizeBytes;
@@ -105,7 +103,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       DecompressorRegistry decompressorRegistry,
                       CompressorRegistry compressorRegistry,
                       Set<SerializationFormat> supportedSerializationFormats,
-                      Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer,
+                      Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
                       int maxOutboundMessageSizeBytes,
                       boolean useBlockingTaskExecutor,
@@ -118,7 +116,14 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.useClientTimeoutHeader = useClientTimeoutHeader;
-        jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats, jsonMarshallerCustomizer);
+        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
+            jsonMarshallers = ImmutableMap.of();
+        } else {
+            jsonMarshallers =
+                    registry.services().stream()
+                            .map(ServerServiceDefinition::getServiceDescriptor)
+                            .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
+        }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -144,7 +149,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Override
-    protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    protected HttpResponse doPost(ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
         final MediaType contentType = req.contentType();
         final SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
@@ -192,15 +197,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         final int methodIndex = methodName.lastIndexOf('/') + 1;
         ctx.logBuilder().name(method.getMethodDescriptor().getServiceName(), methodName.substring(methodIndex));
-        ctx.logBuilder().deferRequestContent();
-        ctx.logBuilder().deferResponseContent();
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
+                               RequestLogProperty.RESPONSE_CONTENT);
 
         final HttpResponseWriter res = HttpResponse.streaming();
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
             ctx.setRequestTimeoutHandler(() -> call.close(Status.CANCELLED, new Metadata()));
-            req.subscribe(call.messageReader(), ctx.eventLoop(), WITH_POOLED_OBJECTS);
+            req.subscribeWithPooledObjects(call.messageReader(), ctx.eventLoop());
             req.whenComplete().handleAsync(call.messageReader(), ctx.eventLoop());
         }
         return res;
@@ -214,9 +219,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             HttpHeaders headers,
             HttpResponseWriter res,
             SerializationFormat serializationFormat) {
+        final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final ArmeriaServerCall<I, O> call = new ArmeriaServerCall<>(
                 headers,
-                methodDef.getMethodDescriptor(),
+                methodDescriptor,
                 compressorRegistry,
                 decompressorRegistry,
                 res,
@@ -224,7 +230,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 maxOutboundMessageSizeBytes,
                 ctx,
                 serializationFormat,
-                jsonMarshaller,
+                jsonMarshallers.get(methodDescriptor.getServiceName()),
                 unsafeWrapRequestBuffers,
                 useBlockingTaskExecutor,
                 defaultHeaders.get(serializationFormat));
@@ -358,22 +364,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
 
         return null;
-    }
-
-    @Nullable
-    private static MessageMarshaller jsonMarshaller(
-            HandlerRegistry registry,
-            Set<SerializationFormat> supportedSerializationFormats,
-            Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
-        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
-            return null;
-        }
-        final List<MethodDescriptor<?, ?>> methods =
-                registry.services().stream()
-                        .flatMap(service -> service.getMethods().stream())
-                        .map(ServerMethodDefinition::getMethodDescriptor)
-                        .collect(toImmutableList());
-        return GrpcJsonUtil.jsonMarshaller(methods, jsonMarshallerCustomizer);
     }
 
     @Override

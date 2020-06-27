@@ -245,7 +245,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
         final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         final HttpResponse response;
         try {
-            response = delegate().execute(ctx, req);
+            response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
             reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
             throw cause;

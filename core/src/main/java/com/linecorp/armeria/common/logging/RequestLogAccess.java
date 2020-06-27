@@ -15,10 +15,6 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -72,34 +68,14 @@ public interface RequestLogAccess {
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
-    default boolean isAvailable(RequestLogProperty... properties) {
-        requireNonNull(properties, "properties");
-        checkArgument(properties.length != 0, "properties is empty.");
-        for (RequestLogProperty p : properties) {
-            if (!isAvailable(p)) {
-                return false;
-            }
-        }
-        return true;
-    }
+    boolean isAvailable(RequestLogProperty... properties);
 
     /**
      * Returns {@code true} if all of the specified {@link RequestLogProperty}s are available.
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
-    default boolean isAvailable(Iterable<RequestLogProperty> properties) {
-        requireNonNull(properties, "properties");
-        final Iterator<RequestLogProperty> i = properties.iterator();
-        checkArgument(i.hasNext(), "properties is empty.");
-        do {
-            final RequestLogProperty p = i.next();
-            if (!isAvailable(p)) {
-                return false;
-            }
-        } while (i.hasNext());
-        return true;
-    }
+    boolean isAvailable(Iterable<RequestLogProperty> properties);
 
     /**
      * Returns a {@link CompletableFuture} which will be completed when the {@link Request} has been processed

@@ -46,17 +46,17 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.brave.SpanCollectingReporter;
+import com.linecorp.armeria.common.brave.SpanCollector;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import brave.Span.Kind;
 import brave.Tracing;
+import brave.handler.MutableSpan;
 import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
-import zipkin2.Span;
-import zipkin2.Span.Kind;
 
 class BraveClientTest {
 
@@ -84,17 +84,17 @@ class BraveClientTest {
 
     @Test
     void shouldSubmitSpanWhenSampled() throws Exception {
-        final SpanCollectingReporter reporter = new SpanCollectingReporter();
+        final SpanCollector collector = new SpanCollector();
 
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
-                                       .spanReporter(reporter)
+                                       .addSpanHandler(collector)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
         final RequestLog requestLog = testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        final MutableSpan span = collector.spans().poll(10, TimeUnit.SECONDS);
         assertThat(span).isNotNull();
         assertThat(span.name()).isEqualTo(TEST_SPAN);
 
@@ -102,7 +102,7 @@ class BraveClientTest {
         assertThat(span.kind()).isSameAs(Kind.CLIENT);
 
         // only one span should be submitted
-        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
+        assertThat(collector.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
         // check # of annotations (we add wire annotations)
         assertThat(span.annotations()).hasSize(2);
@@ -111,7 +111,7 @@ class BraveClientTest {
         assertThat(span.traceId().length()).isEqualTo(16);
 
         // check duration is correct from request log
-        assertThat(span.durationAsLong())
+        assertThat(span.finishTimestamp() - span.startTimestamp())
                 .isEqualTo(requestLog.totalDurationNanos() / 1000);
 
         // check service name
@@ -123,17 +123,17 @@ class BraveClientTest {
 
     @Test
     void shouldSubmitSpanWithCustomRemoteName() throws Exception {
-        final SpanCollectingReporter reporter = new SpanCollectingReporter();
+        final SpanCollector collector = new SpanCollector();
 
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
-                                       .spanReporter(reporter)
+                                       .addSpanHandler(collector)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
         testRemoteInvocation(tracing, "fooService");
 
         // check span name
-        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        final MutableSpan span = collector.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertThat(span).isNotNull();
@@ -146,13 +146,13 @@ class BraveClientTest {
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
 
-        // check remote service name, lower-cased
-        assertThat(span.remoteServiceName()).isEqualTo("fooservice");
+        // check remote service name
+        assertThat(span.remoteServiceName()).isEqualTo("fooService");
     }
 
     @Test
     void scopeDecorator() throws Exception {
-        final SpanCollectingReporter reporter = new SpanCollectingReporter();
+        final SpanCollector collector = new SpanCollector();
         final AtomicInteger scopeDecoratorCallingCounter = new AtomicInteger();
         final ScopeDecorator scopeDecorator = (currentSpan, scope) -> {
             scopeDecoratorCallingCounter.getAndIncrement();
@@ -166,13 +166,13 @@ class BraveClientTest {
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
                                        .currentTraceContext(traceContext)
-                                       .spanReporter(reporter)
+                                       .addSpanHandler(collector)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
         testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        final MutableSpan span = collector.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertTags(span);
@@ -185,15 +185,15 @@ class BraveClientTest {
 
     @Test
     void shouldNotSubmitSpanWhenNotSampled() throws Exception {
-        final SpanCollectingReporter reporter = new SpanCollectingReporter();
+        final SpanCollector collector = new SpanCollector();
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
-                                       .spanReporter(reporter)
+                                       .addSpanHandler(collector)
                                        .sampler(Sampler.create(0.0f))
                                        .build();
         testRemoteInvocation(tracing, null);
 
-        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
+        assertThat(collector.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
     private static RequestLog testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
@@ -247,7 +247,7 @@ class BraveClientTest {
         return ctx.log().ensureComplete();
     }
 
-    private static void assertTags(@Nullable Span span) {
+    private static void assertTags(@Nullable MutableSpan span) {
         assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")

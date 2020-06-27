@@ -40,8 +40,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -87,9 +87,9 @@ import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class AnnotatedDocServiceTest {
+class AnnotatedDocServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -97,8 +97,8 @@ public class AnnotatedDocServiceTest {
     private static final HttpHeaders EXAMPLE_HEADERS_SERVICE = HttpHeaders.of(HttpHeaderNames.of("c"), "d");
     private static final HttpHeaders EXAMPLE_HEADERS_METHOD = HttpHeaders.of(HttpHeaderNames.of("e"), "f");
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             if (TestUtil.isDocServiceDemoMode()) {
@@ -128,7 +128,7 @@ public class AnnotatedDocServiceTest {
     };
 
     @Test
-    public void jsonSpecification() throws InterruptedException {
+    void jsonSpecification() throws InterruptedException {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
@@ -367,7 +367,7 @@ public class AnnotatedDocServiceTest {
     }
 
     @Test
-    public void excludeAllServices() throws IOException {
+    void excludeAllServices() throws IOException {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);

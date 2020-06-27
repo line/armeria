@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.stream.InternalSubscriptionOption;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -272,7 +273,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
         final ImmutableList.Builder<SubscriptionOption> builder = ImmutableList.builder();
         if (downstreamSubscription.withPooledObjects()) {
-            builder.add(SubscriptionOption.WITH_POOLED_OBJECTS);
+            builder.add(InternalSubscriptionOption.WITH_POOLED_OBJECTS);
         }
         if (downstreamSubscription.notifyCancellation()) {
             builder.add(SubscriptionOption.NOTIFY_CANCELLATION);

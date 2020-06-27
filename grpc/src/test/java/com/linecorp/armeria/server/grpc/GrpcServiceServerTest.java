@@ -31,6 +31,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -75,6 +76,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -113,6 +115,7 @@ import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
@@ -412,8 +415,13 @@ class GrpcServiceServerTest {
                     GrpcService.builder()
                                .addService(new UnitTestServiceImpl())
                                .supportedSerializationFormats(GrpcSerializationFormats.values())
-                               .jsonMarshallerCustomizer(
-                                       marshaller -> marshaller.preservingProtoFieldNames(true))
+                               .jsonMarshallerFactory(serviceDescriptor -> {
+                                   return GrpcJsonMarshaller.builder()
+                                                            .jsonMarshallerCustomizer(marshaller -> {
+                                                                marshaller.preservingProtoFieldNames(true);
+                                                            })
+                                                            .build(serviceDescriptor);
+                               })
                                .build());
             sb.serviceUnder(
                     "/no-client-timeout/",
@@ -1014,7 +1022,7 @@ class GrpcServiceServerTest {
                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                    throws Exception {
                                requestHeaders.set(req.headers());
-                               return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                               return new FilteredHttpResponse(unwrap().execute(ctx, req)) {
                                    @Override
                                    protected HttpObject filter(HttpObject obj) {
                                        if (obj instanceof HttpData) {
@@ -1045,16 +1053,22 @@ class GrpcServiceServerTest {
     void json_preservingFieldNames() throws Exception {
         final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
         final AtomicReference<byte[]> payload = new AtomicReference<>();
+        final Function<ServiceDescriptor, GrpcJsonMarshaller> marshallerFactory = serviceDescriptor -> {
+            return GrpcJsonMarshaller.builder()
+                                     .jsonMarshallerCustomizer(marshaller -> {
+                                         marshaller.preservingProtoFieldNames(true);
+                                     })
+                                     .build(serviceDescriptor);
+        };
         final UnitTestServiceBlockingStub jsonStub =
                 Clients.builder(server.httpUri(GrpcSerializationFormats.JSON) + "/json-preserving/")
-                       .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
-                               marshaller -> marshaller.preservingProtoFieldNames(true)))
+                       .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(marshallerFactory))
                        .decorator(client -> new SimpleDecoratingHttpClient(client) {
                            @Override
                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                    throws Exception {
                                requestHeaders.set(req.headers());
-                               return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                               return new FilteredHttpResponse(unwrap().execute(ctx, req)) {
                                    @Override
                                    protected HttpObject filter(HttpObject obj) {
                                        if (obj instanceof HttpData) {

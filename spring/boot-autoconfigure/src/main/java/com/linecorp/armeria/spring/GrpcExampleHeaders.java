@@ -20,16 +20,24 @@ import javax.validation.constraints.NotNull;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**
  * Used as an example header object in {@link GrpcServiceRegistrationBean}.
+ *
+ * @deprecated Use {@link DocServiceConfigurator}.
  */
+@Deprecated
 public final class GrpcExampleHeaders {
 
     /**
      * Returns a new {@link GrpcExampleHeaders} for the method with the specified {@code serviceType},
      * {@code methodName} and {@code headers}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, String, Iterable)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(String, String, HttpHeaders...)}.
      */
+    @Deprecated
     public static GrpcExampleHeaders of(@NotNull String serviceType, @NotNull String methodName,
                                         @NotNull HttpHeaders headers) {
         return new GrpcExampleHeaders(serviceType, methodName, headers);
@@ -38,7 +46,11 @@ public final class GrpcExampleHeaders {
     /**
      * Returns a new {@link GrpcExampleHeaders} for the method with the specified {@code serviceType},
      * {@code methodName}, {@code name} and {@code value}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, String, Iterable)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(String, String, HttpHeaders...)}.
      */
+    @Deprecated
     public static GrpcExampleHeaders of(@NotNull String serviceType, @NotNull String methodName,
                                         @NotNull CharSequence name, @NotNull String value) {
         return of(serviceType, methodName, HttpHeaders.of(name, value));
@@ -47,7 +59,11 @@ public final class GrpcExampleHeaders {
     /**
      * Returns a new {@link GrpcExampleHeaders} with the specified {@code serviceType}
      * and {@code headers}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, Iterable)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(String, HttpHeaders...)}.
      */
+    @Deprecated
     public static GrpcExampleHeaders of(@NotNull String serviceType, @NotNull HttpHeaders headers) {
         return new GrpcExampleHeaders(serviceType, "", headers);
     }
@@ -55,7 +71,11 @@ public final class GrpcExampleHeaders {
     /**
      * Returns a new {@link GrpcExampleHeaders} with the specified {@code serviceType}, {@code name}
      * and {@code value}.
+     *
+     * @deprecated Use {@link DocServiceBuilder#exampleHttpHeaders(String, Iterable)} or
+     *             {@link DocServiceBuilder#exampleHttpHeaders(String, HttpHeaders...)}.
      */
+    @Deprecated
     public static GrpcExampleHeaders of(@NotNull String serviceType, @NotNull CharSequence name,
                                         @NotNull String value) {
         return of(serviceType, "", HttpHeaders.of(name, value));

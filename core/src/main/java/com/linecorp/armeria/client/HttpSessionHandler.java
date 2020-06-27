@@ -19,7 +19,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -420,7 +420,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (cause instanceof ProxyConnectException) {
             final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
             channelPool.invokeProxyConnectFailed(protocol, poolKey, cause);
-            sessionPromise.tryFailure(new UnprocessedRequestException(cause));
+            sessionPromise.tryFailure(UnprocessedRequestException.of(cause));
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));

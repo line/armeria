@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal.common.brave;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -56,7 +54,7 @@ public final class TraceContextUtil {
         final PingPongExtra extra = new PingPongExtra();
         // trace contexts are not recorded until Tracer.toSpan, so this won't end up as junk data
         final TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
-                                                      .extra(Collections.singletonList(extra)).build();
+                                                      .addExtra(extra).build();
         final boolean scopeUsesRequestContext;
         try (Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
             scopeUsesRequestContext = extra.isPong();

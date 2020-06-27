@@ -129,7 +129,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             ctx.log().whenRequestComplete().thenAccept(requestLogger);
             ctx.log().whenComplete().thenAccept(responseLogger);
         }
-        return delegate().serve(ctx, req);
+        return unwrap().serve(ctx, req);
     }
 
     private class RequestLogger implements Consumer<RequestOnlyLog> {

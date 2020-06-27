@@ -57,10 +57,13 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -74,7 +77,6 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -351,8 +353,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
-        ctx.logBuilder().deferRequestContent();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
+        PooledHttpRequest.of(req).aggregateWithPooledObjects(
+                ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
             if (cause != null) {
                 final HttpResponse errorRes;
                 if (ctx.config().verboseResponses()) {
@@ -365,7 +368,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 responseFuture.complete(errorRes);
                 return null;
             }
-
             decodeAndInvoke(ctx, aReq, serializationFormat, responseFuture);
             return null;
         }).exceptionally(CompletionActions::log);
@@ -542,7 +544,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final RpcResponse reply;
 
         try (SafeCloseable ignored = ctx.push()) {
-            reply = delegate().serve(ctx, call);
+            reply = unwrap().serve(ctx, call);
         } catch (Throwable cause) {
             handleException(ctx, RpcResponse.ofFailure(cause), res, serializationFormat, seqId, func, cause);
             return;
@@ -671,7 +673,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
 
-            final HttpData encoded = new ByteBufHttpData(buf, false);
+            final HttpData encoded = PooledHttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {
@@ -718,7 +720,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
 
-            final HttpData encoded = new ByteBufHttpData(buf, false);
+            final HttpData encoded = PooledHttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {

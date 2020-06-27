@@ -23,7 +23,7 @@ import javax.annotation.CheckReturnValue;
 
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
@@ -34,14 +34,14 @@ import io.netty.util.ReferenceCounted;
  * <h3 id="reference-counted">Life cycle of reference-counted objects</h3>
  *
  * <p>When the following methods are given with a {@link ReferenceCounted} object, such as {@link ByteBuf} and
- * {@link ByteBufHttpData}, or the {@link Supplier} that provides such an object:
+ * {@link PooledHttpData}, or the {@link Supplier} that provides such an object:
  *
  * <ul>
  *   <li>{@link #tryWrite(Object)}</li>
  *   <li>{@link #tryWrite(Supplier)}</li>
  *   <li>{@link #write(Object)}</li>
  *   <li>{@link #write(Supplier)}</li>
- *   <li>{@link #close(Object)}</li>
+ *   <li>{@link #close(Throwable)}</li>
  * </ul>
  * the object will be released automatically by the stream when it's no longer in use, such as when:
  * <ul>

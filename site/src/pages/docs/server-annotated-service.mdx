@@ -1373,5 +1373,59 @@ public class MyAnnotatedService {
     public HttpResponse update() { ... }
 }
 ```
+
+## Specifying the service name
+
+A service name is human-readable string that is often used as a meter tag or distributed trace's span name.
+By default, an annotated service uses its class name as its service name.
+You can override it by annotating a class or method with <type://@ServiceName> like the following:
+
+```java
+public class MyService {
+    @Get("/")
+    public String get(ServiceRequestContext ctx) {
+        assert ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName()
+                  .equals(MyService.class.getName());
+    }
+}
+
+// Override the default service name by the class annotation
+@ServiceName("my-service")
+public class MyService {
+    @Get("/")
+    public String get(ServiceRequestContext ctx) {
+        assert ctx.log().ensureAvailable(RequestLogProperty.NAME)
+                  .serviceName().equals("my-service");
+    }
+
+    // Override the default service name by the method annotation
+    @ServiceName("my-post-service")
+    @Post("/")
+    public String post(ServiceRequestContext ctx) {
+        assert ctx.log().ensureAvailable(RequestLogProperty.NAME)
+                  .serviceName().equals("my-post-service");
+    }
+}
+
+// Or the default name could get overridden programmatically using a decorator.
+ServerBuilder sb = Server.builder();
+sb.annotatedService("/", new MyService(), service -> {
+    return service.decorate((delegate, ctx, req) -> {
+        ctx.logBuilder().name("my-decorated-service", ctx.method().name());
+        return delegate.serve(ctx, req);
+    });
+});
+```
+
+<Tip>
+
+Note that <type://RequestOnlyLog#name()> is safely accessed using
+`ctx.log().ensureAvailable(RequestLogProperty.NAME)` only in your annotated service method.
+Otherwise, it is generally recommended to use <type://RequestLogAccess#whenComplete()>.
+Please refer to [Structured logging](/docs/advanced-structured-logging)
+for more information about RPC and HTTP service names, and how to use it.
+
+</Tip>
+
     
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html

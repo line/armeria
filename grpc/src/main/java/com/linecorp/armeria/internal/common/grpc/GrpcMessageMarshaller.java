@@ -24,8 +24,6 @@ import java.io.InputStream;
 
 import javax.annotation.Nullable;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
-
 import com.google.common.io.ByteStreams;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
@@ -34,6 +32,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.UnsafeByteOperations;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 
@@ -60,38 +59,47 @@ public final class GrpcMessageMarshaller<I, O> {
     }
 
     private final ByteBufAllocator alloc;
-    private final SerializationFormat serializationFormat;
     private final MethodDescriptor<I, O> method;
     @Nullable
-    private final MessageMarshaller jsonMarshaller;
+    private final GrpcJsonMarshaller jsonMarshaller;
+    private final Marshaller<I> requestMarshaller;
+    private final Marshaller<O> responseMarshaller;
     private final MessageType requestType;
     private final MessageType responseType;
     private final boolean unsafeWrapDeserializedBuffer;
+    private final boolean isProto;
 
     public GrpcMessageMarshaller(ByteBufAllocator alloc,
                                  SerializationFormat serializationFormat,
                                  MethodDescriptor<I, O> method,
-                                 @Nullable MessageMarshaller jsonMarshaller,
+                                 @Nullable GrpcJsonMarshaller jsonMarshaller,
                                  boolean unsafeWrapDeserializedBuffer) {
         this.alloc = requireNonNull(alloc, "alloc");
-        this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.method = requireNonNull(method, "method");
         this.unsafeWrapDeserializedBuffer = unsafeWrapDeserializedBuffer;
         checkArgument(!GrpcSerializationFormats.isJson(serializationFormat) || jsonMarshaller != null,
                       "jsonMarshaller must be non-null when serializationFormat is JSON.");
+        isProto = GrpcSerializationFormats.isProto(serializationFormat);
         this.jsonMarshaller = jsonMarshaller;
-        requestType = marshallerType(method.getRequestMarshaller());
-        responseType = marshallerType(method.getResponseMarshaller());
+        requestMarshaller = method.getRequestMarshaller();
+        responseMarshaller = method.getResponseMarshaller();
+        requestType = marshallerType(requestMarshaller);
+        responseType = marshallerType(responseMarshaller);
     }
 
     public ByteBuf serializeRequest(I message) throws IOException {
         switch (requestType) {
             case PROTOBUF:
-                return serializeProto((Message) message);
+                final PrototypeMarshaller<I> marshaller = (PrototypeMarshaller<I>) requestMarshaller;
+                return serializeProto(marshaller, (Message) message);
             default:
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
-                    ByteStreams.copy(method.streamRequest(message), os);
+                    if (isProto) {
+                        ByteStreams.copy(method.streamRequest(message), os);
+                    } else {
+                        jsonMarshaller.serializeMessage(requestMarshaller, message, os);
+                    }
                 }
                 return out;
         }
@@ -103,12 +111,10 @@ public final class GrpcMessageMarshaller<I, O> {
             try {
                 switch (requestType) {
                     case PROTOBUF:
-                        final PrototypeMarshaller<I> marshaller =
-                                (PrototypeMarshaller<I>) method.getRequestMarshaller();
+                        final PrototypeMarshaller<I> marshaller = (PrototypeMarshaller<I>) requestMarshaller;
                         // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
                         @SuppressWarnings("unchecked")
-                        final I msg = (I) deserializeProto(message.buf(),
-                                                           (Message) marshaller.getMessagePrototype());
+                        final I msg = (I) deserializeProto(marshaller, message.buf());
                         return msg;
                     default:
                         // Fallback to using the method's stream marshaller.
@@ -122,18 +128,28 @@ public final class GrpcMessageMarshaller<I, O> {
             }
         }
         try (InputStream msg = messageStream) {
-            return method.parseRequest(msg);
+            if (isProto) {
+                return method.parseRequest(msg);
+            } else {
+                return jsonMarshaller.deserializeMessage(requestMarshaller, msg);
+            }
         }
     }
 
     public ByteBuf serializeResponse(O message) throws IOException {
         switch (responseType) {
             case PROTOBUF:
-                return serializeProto((Message) message);
+                final PrototypeMarshaller<O> marshaller =
+                        (PrototypeMarshaller<O>) method.getResponseMarshaller();
+                return serializeProto(marshaller, (Message) message);
             default:
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
-                    ByteStreams.copy(method.streamResponse(message), os);
+                    if (isProto) {
+                        ByteStreams.copy(method.streamResponse(message), os);
+                    } else {
+                        jsonMarshaller.serializeMessage(responseMarshaller, message, os);
+                    }
                 }
                 return out;
         }
@@ -149,8 +165,7 @@ public final class GrpcMessageMarshaller<I, O> {
                                 (PrototypeMarshaller<O>) method.getResponseMarshaller();
                         // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
                         @SuppressWarnings("unchecked")
-                        final O msg = (O) deserializeProto(message.buf(),
-                                                           (Message) marshaller.getMessagePrototype());
+                        final O msg = (O) deserializeProto(marshaller, message.buf());
                         return msg;
                     default:
                         // Fallback to using the method's stream marshaller.
@@ -164,12 +179,16 @@ public final class GrpcMessageMarshaller<I, O> {
             }
         }
         try (InputStream msg = messageStream) {
-            return method.parseResponse(msg);
+            if (isProto) {
+                return method.parseResponse(msg);
+            } else {
+                return jsonMarshaller.deserializeMessage(responseMarshaller, msg);
+            }
         }
     }
 
-    private ByteBuf serializeProto(Message message) throws IOException {
-        if (GrpcSerializationFormats.isProto(serializationFormat)) {
+    private <T> ByteBuf serializeProto(PrototypeMarshaller<T> marshaller, Message message) throws IOException {
+        if (isProto) {
             final int serializedSize = message.getSerializedSize();
             if (serializedSize == 0) {
                 return Unpooled.EMPTY_BUFFER;
@@ -186,13 +205,13 @@ public final class GrpcMessageMarshaller<I, O> {
                 }
             }
             return buf;
-        }
-
-        if (GrpcSerializationFormats.isJson(serializationFormat)) {
+        } else {
             final ByteBuf buf = alloc.buffer();
             boolean success = false;
             try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
-                jsonMarshaller.writeValue(message, os);
+                @SuppressWarnings("unchecked")
+                final T cast = (T) message;
+                jsonMarshaller.serializeMessage(marshaller, cast, os);
                 success = true;
             } finally {
                 if (!success) {
@@ -201,11 +220,11 @@ public final class GrpcMessageMarshaller<I, O> {
             }
             return buf;
         }
-        throw new IllegalStateException("Unknown serialization format: " + serializationFormat);
     }
 
-    private Message deserializeProto(ByteBuf buf, Message prototype) throws IOException {
-        if (GrpcSerializationFormats.isProto(serializationFormat)) {
+    private <T> Message deserializeProto(PrototypeMarshaller<T> marshaller, ByteBuf buf) throws IOException {
+        final Message prototype = (Message) marshaller.getMessagePrototype();
+        if (isProto) {
             if (!buf.isReadable()) {
                 return prototype.getDefaultInstanceForType();
             }
@@ -229,16 +248,11 @@ public final class GrpcMessageMarshaller<I, O> {
                 throw Status.INTERNAL.withDescription("Invalid protobuf byte sequence")
                                      .withCause(e).asRuntimeException();
             }
-        }
-
-        if (GrpcSerializationFormats.isJson(serializationFormat)) {
-            final Message.Builder builder = prototype.newBuilderForType();
+        } else {
             try (ByteBufInputStream is = new ByteBufInputStream(buf, /* releaseOnClose */ false)) {
-                jsonMarshaller.mergeValue(is, builder);
+                return (Message) jsonMarshaller.deserializeMessage(marshaller, is);
             }
-            return builder.build();
         }
-        throw new IllegalStateException("Unknown serialization format: " + serializationFormat);
     }
 
     private static MessageType marshallerType(Marshaller<?> marshaller) {

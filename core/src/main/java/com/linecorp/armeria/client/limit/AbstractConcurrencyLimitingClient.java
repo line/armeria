@@ -135,7 +135,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().schedule(
                     () -> resFuture.completeExceptionally(
-                            new UnprocessedRequestException(RequestTimeoutException.get())),
+                            UnprocessedRequestException.of(RequestTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
             currentTask.set(timeoutFuture);
         }
@@ -147,7 +147,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         numActiveRequests.incrementAndGet();
         boolean success = false;
         try {
-            final O res = delegate().execute(ctx, req);
+            final O res = unwrap().execute(ctx, req);
             res.whenComplete().handle((unused, cause) -> {
                 numActiveRequests.decrementAndGet();
                 return null;
@@ -234,7 +234,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
             try (SafeCloseable ignored = ctx.replace()) {
                 try {
-                    final O actualRes = delegate().execute(ctx, req);
+                    final O actualRes = unwrap().execute(ctx, req);
                     actualRes.whenComplete().handleAsync((unused, cause) -> {
                         numActiveRequests.decrementAndGet();
                         drain();

@@ -37,7 +37,7 @@ final class EmptyReferenceCountedHttpData
     }
 
     @Override
-    public HttpData withEndOfStream() {
+    public HttpData withEndOfStream(boolean endOfStream) {
         throw new UnsupportedOperationException();
     }
 

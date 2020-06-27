@@ -65,8 +65,7 @@ class RetryingClientWithLoggingTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                        throws Exception {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     ctx.mutateAdditionalResponseTrailers(
                             mutator -> mutator.add(HttpHeaderNames.of("foo"), "bar"));
                     if (reqCount.getAndIncrement() < 1) {
@@ -176,7 +175,7 @@ class RetryingClientWithLoggingTest {
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
                 ctx.log().whenRequestComplete().thenAccept(log -> listener.accept(log.partial()));
                 ctx.log().whenComplete().thenAccept(listener);
-                return delegate().execute(ctx, req);
+                return unwrap().execute(ctx, req);
             }
         };
     }

@@ -68,7 +68,7 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
             final WebClient client = WebClient.builder("h2://127.0.0.1:" + port)
                                               .factory(clientFactory)
                                               .build();
-            client.get("/").drainAll().join();
+            client.get("/").aggregate().join();
 
             assertThat(actualKeyName).hasValue(expectedKeyName);
         }

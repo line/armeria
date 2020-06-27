@@ -470,7 +470,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 if (protocol == null || closeable.isClosing()) {
                     channel.close();
                     promise.completeExceptionally(
-                            new UnprocessedRequestException(
+                            UnprocessedRequestException.of(
                                     new ClosedSessionException("acquired an unhealthy connection")));
                     return;
                 }
@@ -502,7 +502,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // Server set MAX_CONCURRENT_STREAMS to 0, which means we can't send anything.
                     channel.close();
                     promise.completeExceptionally(
-                            new UnprocessedRequestException(RefusedStreamException.get()));
+                            UnprocessedRequestException.of(RefusedStreamException.get()));
                 }
 
                 channel.closeFuture().addListener(f -> {
@@ -533,10 +533,10 @@ final class HttpChannelPool implements AsyncCloseable {
                     }
                 });
             } else {
-                promise.completeExceptionally(new UnprocessedRequestException(future.cause()));
+                promise.completeExceptionally(UnprocessedRequestException.of(future.cause()));
             }
         } catch (Exception e) {
-            promise.completeExceptionally(new UnprocessedRequestException(e));
+            promise.completeExceptionally(UnprocessedRequestException.of(e));
         }
     }
 

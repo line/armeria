@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 /**
  * Examples how to use {@link RequestConverter} and {@link ResponseConverter}.
  *
- * @see <a href="https://line.github.io/armeria/docs/server-annotated-service#conversion-between-an-http-message-and-a-java-object">
+ * @see <a href="https://armeria.dev/docs/server-annotated-service#conversion-between-an-http-message-and-a-java-object">
  *      Conversion between an HTTP message and a Java object</a>
  */
 @LoggingDecorator(
@@ -98,7 +98,7 @@ public class MessageConverterService {
      * be executed after the future is completed with the {@link Response} object.
      *
      * <p>Note that the {@link ServiceRequestContext} of the request is also automatically injected. See
-     * <a href="https://line.github.io/armeria/docs/server-annotated-service#other-classes-automatically-injected">
+     * <a href="https://armeria.dev/docs/server-annotated-service#other-classes-automatically-injected">
      * Other classes automatically injected</a> for more information.
      */
     @Post("/obj/future")

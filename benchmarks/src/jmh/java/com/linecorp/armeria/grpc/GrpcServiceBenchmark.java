@@ -25,7 +25,6 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import com.google.protobuf.Empty;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -33,16 +32,15 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 
 @State(Scope.Thread)
 public class GrpcServiceBenchmark {
@@ -55,7 +53,7 @@ public class GrpcServiceBenchmark {
     private static final byte[] FRAMED_EMPTY;
 
     static {
-        final ByteBufHttpData data = new ArmeriaMessageFramer(ByteBufAllocator.DEFAULT, 0)
+        final PooledHttpData data = new ArmeriaMessageFramer(ByteBufAllocator.DEFAULT, 0)
                 .writePayload(Unpooled.wrappedBuffer(Empty.getDefaultInstance().toByteArray()));
         try {
             FRAMED_EMPTY = ByteBufUtil.getBytes(data.content());
@@ -75,7 +73,7 @@ public class GrpcServiceBenchmark {
     @Setup(Level.Invocation)
     public void initBuffers() {
         req = HttpRequest.of(EMPTY_HEADERS,
-                             HttpData.wrap(ByteBufAllocator.DEFAULT.buffer().writeBytes(FRAMED_EMPTY)));
+                             PooledHttpData.wrap(ByteBufAllocator.DEFAULT.buffer().writeBytes(FRAMED_EMPTY)));
         ctx = ServiceRequestContext.builder(req)
                                    .service(SERVICE)
                                    .build();
@@ -83,7 +81,7 @@ public class GrpcServiceBenchmark {
 
     @TearDown(Level.Invocation)
     public void closeResponse() {
-        response.drainAll().join().forEach(ReferenceCountUtil::release);
+        response.aggregate().join();
     }
 
     @Benchmark

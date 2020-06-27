@@ -30,11 +30,11 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -246,7 +246,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
         } else if (req.isOpen()) {
             try {
-                req.write(new ByteBufHttpData(data.retain(), endOfStream));
+                req.write(PooledHttpData.wrap(data.retain()).withEndOfStream(endOfStream));
             } catch (Throwable t) {
                 req.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");

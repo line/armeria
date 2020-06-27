@@ -38,7 +38,7 @@ public final class TestConverters {
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof Integer) {
-                return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", (Integer) result)));
+                return httpResponse(HttpData.ofUtf8("Integer: %d", result));
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -51,7 +51,7 @@ public final class TestConverters {
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof String) {
-                return httpResponse(HttpData.ofUtf8(String.format("String: %s", result)));
+                return httpResponse(HttpData.ofUtf8("String: %s", result));
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -64,7 +64,7 @@ public final class TestConverters {
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof Number) {
-                return httpResponse(HttpData.ofUtf8(String.format("Number[%s]", result)));
+                return httpResponse(HttpData.ofUtf8("Number[%s]", result));
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -77,7 +77,7 @@ public final class TestConverters {
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof String) {
-                return httpResponse(HttpData.ofUtf8(String.format("String[%s]", result)));
+                return httpResponse(HttpData.ofUtf8("String[%s]", result));
             }
             return ResponseConverterFunction.fallthrough();
         }

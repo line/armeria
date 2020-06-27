@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static java.util.Objects.requireNonNull;
 
@@ -28,13 +27,12 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -42,12 +40,14 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -96,7 +96,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private final DefaultClientRequestContext ctx;
     private final EndpointGroup endpointGroup;
-    private final HttpClient httpClient;
+    private final PooledHttpClient httpClient;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
     private final CallOptions callOptions;
@@ -123,7 +123,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     ArmeriaClientCall(
             DefaultClientRequestContext ctx,
             EndpointGroup endpointGroup,
-            HttpClient httpClient,
+            PooledHttpClient httpClient,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
             int maxOutboundMessageSizeBytes,
@@ -132,7 +132,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             CompressorRegistry compressorRegistry,
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
-            @Nullable MessageMarshaller jsonMarshaller,
+            @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers,
             String advertisedEncodingsHeader) {
         this.ctx = ctx;
@@ -213,7 +213,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        res.subscribe(responseReader, ctx.eventLoop(), WITH_POOLED_OBJECTS);
+        res.subscribe(responseReader, ctx.eventLoop());
         res.whenComplete().handleAsync(responseReader, ctx.eventLoop());
         responseListener.onReady();
     }
@@ -401,7 +401,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
         }
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
         if (status.isOk()) {
             req.abort();
         } else {
