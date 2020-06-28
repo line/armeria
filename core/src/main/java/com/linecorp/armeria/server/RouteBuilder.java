@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -98,6 +99,9 @@ public final class RouteBuilder {
      */
     public RouteBuilder path(String prefix, String pathPattern) {
         prefix = ensureAbsolutePath(prefix, "prefix");
+        if (Strings.isNullOrEmpty(pathPattern)) {
+            return path(concatPaths(prefix, pathPattern));
+        }
         if (!prefix.endsWith("/")) {
             prefix += '/';
         }
@@ -477,9 +481,7 @@ public final class RouteBuilder {
             return new RegexPathMapping(Pattern.compile(pathPattern.substring(REGEX.length())));
         }
         if (!pathPattern.startsWith("/")) {
-            throw new IllegalArgumentException(
-                    "pathPattern: " + pathPattern +
-                    " (not an absolute path starting with '/' or a unknown pattern type)");
+            pathPattern = '/' + pathPattern;
         }
         if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
             return new ExactPathMapping(pathPattern);
