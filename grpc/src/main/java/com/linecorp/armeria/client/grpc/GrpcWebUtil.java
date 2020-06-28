@@ -61,7 +61,7 @@ public final class GrpcWebUtil {
      *                    return response.aggregate().thenApply(aggregated -> {
      *                        HttpHeaders trailers = GrpcWebUtil.parseTrailers(aggregated.content());
      *                        // Retry if the 'grpc-status' is not equal to 0.
-     *                        return trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
+     *                        return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
      *                    });
      *                })))
      *        .build(MyGrpcStub.class);
