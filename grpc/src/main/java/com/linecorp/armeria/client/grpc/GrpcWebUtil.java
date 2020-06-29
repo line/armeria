@@ -41,7 +41,7 @@ public final class GrpcWebUtil {
      * Returns a gRPC-Web trailers parsed from the specified response body.
      * {@code null} if fail to parse a gRPC-Web trailers.
      *
-     * <p>A gRPC-Web response does not contains separated trailers according to the
+     * <p>A gRPC-Web response does not contain a separated trailers according to the
      * <a href="https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2">
      * gRPC-Web spec</a>:
      * <ul>
@@ -52,8 +52,7 @@ public final class GrpcWebUtil {
      * or parsed from {@link AggregatedHttpResponse#content()}.
      *
      * <p>This method is useful when {@link RetryRuleWithContent} needs {@link GrpcHeaderNames#GRPC_STATUS}
-     * to decide whether to retry.
-     * For example:
+     * to decide whether to retry. For example:
      * <pre>{@code
      * Clients.builder(grpcServerUri)
      *        .decorator(RetryingClient.newDecorator(
