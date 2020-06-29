@@ -672,12 +672,13 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    // Use Netty's validation logic once https://github.com/netty/netty/pull/10380 is merged.
+    // TODO(minwoox) Use Netty's validation logic once https://github.com/netty/netty/pull/10380 is merged.
     private static boolean isOriginForm(URI uri) {
         return uri.getScheme() == null && !"*".equals(uri.getPath()) &&
                uri.getHost() == null && uri.getAuthority() == null;
     }
 
+    // TODO(minwoox) Use Netty's validation logic once https://github.com/netty/netty/pull/10380 is merged.
     private static boolean isAsteriskForm(URI uri) {
         return "*".equals(uri.getPath()) && uri.getScheme() == null &&
                uri.getHost() == null && uri.getAuthority() == null && uri.getQuery() == null &&
