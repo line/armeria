@@ -35,10 +35,16 @@ import javax.annotation.Nullable;
 public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
 
     private static final UnmodifiableFuture<?> NIL;
+    private static final UnmodifiableFuture<Boolean> TRUE;
+    private static final UnmodifiableFuture<Boolean> FALSE;
 
     static {
         NIL = new UnmodifiableFuture<>();
         NIL.doComplete(null);
+        TRUE = new UnmodifiableFuture<>();
+        TRUE.doComplete(Boolean.TRUE);
+        FALSE = new UnmodifiableFuture<>();
+        FALSE.doComplete(Boolean.FALSE);
     }
 
     /**
@@ -48,6 +54,18 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         if (value == null) {
             @SuppressWarnings("unchecked")
             final UnmodifiableFuture<U> cast = (UnmodifiableFuture<U>) NIL;
+            return cast;
+        }
+
+        if (value == Boolean.TRUE) {
+            @SuppressWarnings("unchecked")
+            final UnmodifiableFuture<U> cast = (UnmodifiableFuture<U>) TRUE;
+            return cast;
+        }
+
+        if (value == Boolean.FALSE) {
+            @SuppressWarnings("unchecked")
+            final UnmodifiableFuture<U> cast = (UnmodifiableFuture<U>) FALSE;
             return cast;
         }
 
