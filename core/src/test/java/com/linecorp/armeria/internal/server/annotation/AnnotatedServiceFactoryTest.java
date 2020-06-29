@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFa
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.create;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.find;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
@@ -274,6 +275,17 @@ class AnnotatedServiceFactoryTest {
                                                          .collect(Collectors.toSet());
         assertThat(postRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.POST).build(),
                                             Route.builder().path("/path").methods(HttpMethod.POST).build());
+    }
+
+    @Test
+    void testMultiPathFailingService() {
+        final MultiPathFailingService serviceObject = new MultiPathFailingService();
+        getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
+            assertThatThrownBy(() -> {
+                create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
+                       ImmutableList.of());
+            }, method.getName()).isInstanceOf(IllegalArgumentException.class);
+        });
     }
 
     @Test
@@ -532,23 +544,6 @@ class AnnotatedServiceFactoryTest {
     }
 
     static class MultiPathFailingService {
-
-        @Get
-        public HttpResponse noGetMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get
-        @Post
-        public HttpResponse noGetPostMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get("/get")
-        @Post
-        public HttpResponse noPostMappingAndGetMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
 
         @Get("/get")
         @Path("/path")
