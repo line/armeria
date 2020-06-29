@@ -305,7 +305,7 @@ public final class Flags {
                    DEFAULT_DEFAULT_HTTP1_MAX_CHUNK_SIZE,
                    value -> value >= 0);
 
-    private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
+    private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
@@ -747,14 +747,14 @@ public final class Flags {
      * If enabled, the HTTP/2 connection preface immediately for a cleartext HTTP/2 connection, reducing
      * an extra round trip incurred by the {@code OPTIONS * HTTP/1.1} upgrade request.
      * If disabled, the {@code OPTIONS * HTTP/1.1} request with {@code "Upgrade: h2c"} header is sent for
-     * a cleartext HTTP/2 connection. Consider enabling this flag if your HTTP servers do not have issues
+     * a cleartext HTTP/2 connection. Consider disabling this flag if your HTTP servers have issues
      * handling or rejecting the HTTP/2 connection preface without a upgrade request.
      * Note that this option does not affect ciphertext HTTP/2 connections, which use ALPN for protocol
      * negotiation, and it has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#useHttp2Preface(boolean)}.
      *
-     * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=true} JVM option to enable it.
+     * <p>This flag is enabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=false} JVM option to disable it.
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
