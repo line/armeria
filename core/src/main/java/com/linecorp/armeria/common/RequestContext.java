@@ -379,7 +379,7 @@ public interface RequestContext {
     /**
      * Returns the {@link Executor} that is handling the current {@link Request}.
      *
-     * @deprecated Use {@code eventLoop().detachContext()}.
+     * @deprecated Use {@code eventLoop().withoutContext()}.
      */
     @Deprecated
     default Executor executor() {
