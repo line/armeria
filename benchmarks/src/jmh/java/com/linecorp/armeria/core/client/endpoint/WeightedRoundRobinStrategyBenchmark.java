@@ -99,30 +99,30 @@ public class WeightedRoundRobinStrategyBenchmark {
     @Nullable
     @Benchmark
     public Endpoint sameWeight() throws Exception {
-        return groupSameWeight.select(null);
+        return groupSameWeight.selectNow(null);
     }
 
     @Nullable
     @Benchmark
     public Endpoint randomMainly1Max30() throws Exception {
-        return groupRandomMainly1Max30.select(null);
+        return groupRandomMainly1Max30.selectNow(null);
     }
 
     @Nullable
     @Benchmark
     public Endpoint randomMax10() throws Exception {
-        return groupRandomMax10.select(null);
+        return groupRandomMax10.selectNow(null);
     }
 
     @Nullable
     @Benchmark
     public Endpoint randomMax100() throws Exception {
-        return groupRandomMax100.select(null);
+        return groupRandomMax100.selectNow(null);
     }
 
     @Nullable
     @Benchmark
     public Endpoint unique() throws Exception {
-        return groupUnique.select(null);
+        return groupUnique.selectNow(null);
     }
 }
