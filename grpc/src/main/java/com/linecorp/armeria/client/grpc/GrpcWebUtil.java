@@ -78,24 +78,26 @@ public final class GrpcWebUtil {
         final int readerIndex = buf.readerIndex();
 
         HttpHeaders trailers = null;
-        while (buf.isReadable(HEADER_LENGTH)) {
-            final short type = buf.readUnsignedByte();
-            if ((type & RESERVED_MASK) != 0) {
-                // Malformed header
-                break;
-            }
+        try {
+            while (buf.isReadable(HEADER_LENGTH)) {
+                final short type = buf.readUnsignedByte();
+                if ((type & RESERVED_MASK) != 0) {
+                    // Malformed header
+                    break;
+                }
 
-            final int length = buf.readInt();
-            if (type >> 7 == 1) {
-                trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
-                break;
-            } else {
-                buf.skipBytes(length);
+                final int length = buf.readInt();
+                if (type >> 7 == 1) {
+                    trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
+                    break;
+                } else {
+                    buf.skipBytes(length);
+                }
             }
+            return trailers;
+        } finally {
+            buf.readerIndex(readerIndex);
         }
-
-        buf.readerIndex(readerIndex);
-        return trailers;
     }
 
     private GrpcWebUtil() {}
