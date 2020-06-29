@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.addHttp2Authority;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.decodePath;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.parseDirectives;
@@ -34,6 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,7 +49,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
@@ -57,7 +56,11 @@ import com.linecorp.armeria.server.ServerConfig;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
@@ -239,41 +242,49 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void addHttp2AuthorityWithoutUserInfo() {
-        final RequestHeadersBuilder headers = RequestHeaders.builder();
-
-        addHttp2Authority("foo", headers);
-        assertThat(headers.authority()).isEqualTo("foo");
-    }
-
-    @Test
-    void addHttp2AuthorityWithUserInfo() {
-        final RequestHeadersBuilder headers = RequestHeaders.builder();
-
-        addHttp2Authority("info@foo", headers);
-        assertThat(headers.authority()).isEqualTo("foo");
-
-        headers.clear();
-
-        addHttp2Authority("@foo.bar", headers);
-        assertThat(headers.authority()).isEqualTo("foo.bar");
-    }
-
-    @Test
-    void addHttp2AuthorityNullOrEmpty() {
-        final RequestHeadersBuilder headers = RequestHeaders.builder();
-
-        addHttp2Authority(null, headers);
-        assertThat(headers.authority()).isNull();
-
-        addHttp2Authority("", headers);
-        assertThat(headers.authority()).isEmpty();
-    }
-
-    @Test
-    void addHttp2AuthorityWithEmptyAuthority() {
-        assertThatThrownBy(() -> addHttp2Authority("info@", RequestHeaders.builder()))
+    void stripUserInfo() {
+        assertThat(ArmeriaHttpUtil.stripUserInfo("foo")).isEqualTo("foo");
+        assertThat(ArmeriaHttpUtil.stripUserInfo("info@foo")).isEqualTo("foo");
+        assertThat(ArmeriaHttpUtil.stripUserInfo("@foo.bar")).isEqualTo("foo.bar");
+        assertThatThrownBy(() -> ArmeriaHttpUtil.stripUserInfo("info@"))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void addHostHeaderIfMissing() throws URISyntaxException {
+        final io.netty.handler.codec.http.HttpHeaders headers = new DefaultHttpHeaders();
+        headers.add(HttpHeaderNames.HOST, "bar");
+
+        final HttpRequest originReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello", headers);
+
+        final InetSocketAddress socketAddress = new InetSocketAddress(36462);
+        final Channel channel = mock(Channel.class);
+        when(channel.localAddress()).thenReturn(socketAddress);
+
+        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        when(ctx.channel()).thenReturn(channel);
+
+        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig());
+        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
+        assertThat(armeriaHeaders.authority()).isEqualTo("bar");
+
+        final HttpRequest absoluteUriReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                                       "http://example.com/hello", headers);
+        armeriaHeaders = toArmeria(ctx, absoluteUriReq, serverConfig());
+        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
+        assertThat(armeriaHeaders.authority()).isEqualTo("bar");
+
+        // Remove Host header.
+        headers.remove(HttpHeaderNames.HOST);
+        armeriaHeaders = toArmeria(ctx, originReq, serverConfig());
+        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
+        assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
+
+        armeriaHeaders = toArmeria(ctx, absoluteUriReq, serverConfig());
+        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("example.com");
+        assertThat(armeriaHeaders.authority()).isEqualTo("example.com");
     }
 
     @Test
@@ -358,7 +369,7 @@ class ArmeriaHttpUtilTest {
     void excludeBlacklistHeadersWhileHttp2ToHttp1() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.TRAILER, "foo")
-                                          .add(HttpHeaderNames.AUTHORITY, "bar") // Translated to host
+                                          .add(HttpHeaderNames.HOST, "bar")
                                           .add(HttpHeaderNames.PATH, "dummy")
                                           .add(HttpHeaderNames.METHOD, "dummy")
                                           .add(HttpHeaderNames.SCHEME, "dummy")

@@ -31,8 +31,6 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
-import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
@@ -158,7 +156,6 @@ public final class ArmeriaHttpUtil {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HEADER_NAME_KEEP_ALIVE, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HEADER_NAME_PROXY_CONNECTION, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.HOST, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.UPGRADE, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
@@ -230,12 +227,10 @@ public final class ArmeriaHttpUtil {
      * please check the usage in code accordingly.
      */
     private static final CharSequenceMap REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap();
-    private static final CharSequenceMap RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap();
 
     static {
-        RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
-                                         HttpHeaderNames.HOST);
-        REQUEST_HEADER_TRANSLATIONS.add(RESPONSE_HEADER_TRANSLATIONS);
+        REQUEST_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
+                                        HttpHeaderNames.HOST);
     }
 
     /**
@@ -591,20 +586,21 @@ public final class ArmeriaHttpUtil {
 
         addHttp2Scheme(inHeaders, requestTargetUri, out);
 
-        if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
-            // Attempt to take from HOST header before taking from the request-line
-            final String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            addHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
-        }
-
-        if (out.authority() == null) {
-            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-            out.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
-        }
-
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
+        if (!out.contains(HttpHeaderNames.HOST)) {
+            // The client violates the spec that the request headers must contain a Host header.
+            // But we just add Host header to allow the request.
+            // https://tools.ietf.org/html/rfc7230#section-5.4
+            if (isOriginForm(requestTargetUri) || isAsteriskForm(requestTargetUri)) {
+                // requestTargetUri does not contain authority information.
+                final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
+                final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
+                out.add(HttpHeaderNames.HOST, defaultHostname + ':' + port);
+            } else {
+                out.add(HttpHeaderNames.HOST, stripUserInfo(requestTargetUri.getAuthority()));
+            }
+        }
         return out.build();
     }
 
@@ -674,6 +670,18 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
+    }
+
+    // Use Netty's validation logic once https://github.com/netty/netty/pull/10380 is merged.
+    private static boolean isOriginForm(URI uri) {
+        return uri.getScheme() == null && !"*".equals(uri.getPath()) &&
+               uri.getHost() == null && uri.getAuthority() == null;
+    }
+
+    private static boolean isAsteriskForm(URI uri) {
+        return "*".equals(uri.getPath()) && uri.getScheme() == null &&
+               uri.getHost() == null && uri.getAuthority() == null && uri.getQuery() == null &&
+               uri.getFragment() == null;
     }
 
     private static CharSequenceMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
@@ -771,23 +779,15 @@ public final class ArmeriaHttpUtil {
     }
 
     @VisibleForTesting
-    static void addHttp2Authority(@Nullable String authority, RequestHeadersBuilder out) {
+    static String stripUserInfo(String authority) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
-        if (authority != null) {
-            final String actualAuthority;
-            if (authority.isEmpty()) {
-                actualAuthority = "";
-            } else {
-                final int start = authority.indexOf('@') + 1;
-                if (start == 0) {
-                    actualAuthority = authority;
-                } else if (authority.length() == start) {
-                    throw new IllegalArgumentException("authority: " + authority);
-                } else {
-                    actualAuthority = authority.substring(start);
-                }
-            }
-            out.add(HttpHeaderNames.AUTHORITY, actualAuthority);
+        final int start = authority.indexOf('@') + 1;
+        if (start == 0) {
+            return authority;
+        } else if (authority.length() == start) {
+            throw new IllegalArgumentException("authority: " + authority);
+        } else {
+            return authority.substring(start);
         }
     }
 
@@ -932,12 +932,6 @@ public final class ArmeriaHttpUtil {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            final AsciiString translatedName = RESPONSE_HEADER_TRANSLATIONS.get(name);
-            if (translatedName != null && !inputHeaders.contains(translatedName)) {
-                outputHeaders.add(translatedName, value);
-                continue;
-            }
-
             if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
                 continue;
             }
