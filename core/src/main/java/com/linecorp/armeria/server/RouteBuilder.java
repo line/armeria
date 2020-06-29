@@ -465,7 +465,9 @@ public final class RouteBuilder {
 
     private static PathMapping getPathMapping(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
-
+        if (Strings.isNullOrEmpty(pathPattern)) {
+            return new ExactPathMapping(pathPattern);
+        }
         if (pathPattern.startsWith(EXACT)) {
             return new ExactPathMapping(pathPattern.substring(EXACT.length()));
         }
@@ -481,7 +483,9 @@ public final class RouteBuilder {
             return new RegexPathMapping(Pattern.compile(pathPattern.substring(REGEX.length())));
         }
         if (!pathPattern.startsWith("/")) {
-            pathPattern = '/' + pathPattern;
+            throw new IllegalArgumentException(
+                    "pathPattern: " + pathPattern +
+                    " (not an absolute path starting with '/' or a unknown pattern type)");
         }
         if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
             return new ExactPathMapping(pathPattern);
