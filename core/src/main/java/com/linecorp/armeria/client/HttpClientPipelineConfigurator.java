@@ -441,6 +441,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             // NB: No need to set the response timeout because we have session creation timeout.
+            responseDecoder.reserveUnfinishedResponse(Integer.MAX_VALUE);
             responseDecoder.addResponse(0, res, null, ctx.channel().eventLoop(), /* response timeout */ 0,
                                         UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();

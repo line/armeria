@@ -20,10 +20,12 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
@@ -42,6 +44,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
@@ -63,6 +66,8 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -124,18 +129,18 @@ public final class Flags {
         }
 
         final List<Predicate<InetAddress>> preferredIpV4Addresses =
-        CSV_SPLITTER.splitToList(getNormalized("preferredIpV4Addresses", "", unused -> true))
-                    .stream()
-                    .map(cidr -> {
-                        try {
-                            return InetAddressPredicates.ofCidr(cidr);
-                        } catch (Exception e) {
-                            logger.warn("Failed to parse a preferred IPv4: {}", cidr);
-                        }
-                        return null;
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(toImmutableList());
+                CSV_SPLITTER.splitToList(getNormalized("preferredIpV4Addresses", "", unused -> true))
+                            .stream()
+                            .map(cidr -> {
+                                try {
+                                    return InetAddressPredicates.ofCidr(cidr);
+                                } catch (Exception e) {
+                                    logger.warn("Failed to parse a preferred IPv4: {}", cidr);
+                                }
+                                return null;
+                            })
+                            .filter(Objects::nonNull)
+                            .collect(toImmutableList());
         switch (preferredIpV4Addresses.size()) {
             case 0:
                 PREFERRED_IP_V4_ADDRESSES = null;
@@ -300,7 +305,7 @@ public final class Flags {
                    DEFAULT_DEFAULT_HTTP1_MAX_CHUNK_SIZE,
                    value -> value >= 0);
 
-    private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
+    private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
@@ -556,6 +561,8 @@ public final class Flags {
 
     /**
      * Returns the default server-side maximum number of connections.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#maxNumConnections(int)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_MAX_NUM_CONNECTIONS}. Specify the
      * {@code -Dcom.linecorp.armeria.maxNumConnections=<integer>} JVM option to override
@@ -567,7 +574,9 @@ public final class Flags {
 
     /**
      * Returns the default number of {@linkplain CommonPools#workerGroup() common worker group} threads.
-     * Note that this value has effect only if a user did not specify a worker group.
+     * Note that this flag has no effect if a user specified the worker group explicitly via
+     * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
+     * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
      * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
      * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
@@ -578,7 +587,8 @@ public final class Flags {
 
     /**
      * Returns the default number of {@linkplain CommonPools#blockingTaskExecutor() blocking task executor}
-     * threads. Note that this value has effect only if a user did not specify a blocking task executor.
+     * threads. Note that this flag has no effect if a user specified the blocking task executor explicitly
+     * via {@link ServerBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS}. Specify the
      * {@code -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<integer>} JVM option to override
@@ -589,8 +599,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default server-side maximum length of a request. Note that this value has effect
-     * only if a user did not specify it.
+     * Returns the default server-side maximum length of a request. Note that this flag has no effect if a user
+     * specified the value explicitly via {@link ServerBuilder#maxRequestLength(long)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_REQUEST_LENGTH}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultMaxRequestLength=<long>} to override the default value.
@@ -601,8 +611,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default client-side maximum length of a response. Note that this value has effect
-     * only if a user did not specify it.
+     * Returns the default client-side maximum length of a response. Note that this flag has no effect if a user
+     * specified the value explicitly via {@link ClientBuilder#maxResponseLength(long)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultMaxResponseLength=<long>} to override the default value.
@@ -613,8 +623,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default server-side timeout of a request in milliseconds. Note that this value has effect
-     * only if a user did not specify it.
+     * Returns the default server-side timeout of a request in milliseconds. Note that this flag has no effect
+     * if a user specified the value explicitly via {@link ServerBuilder#requestTimeout(Duration)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>} to override
@@ -625,8 +635,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default client-side timeout of a response in milliseconds. Note that this value has effect
-     * only if a user did not specify it.
+     * Returns the default client-side timeout of a response in milliseconds. Note that this flag has no effect
+     * if a user specified the value explicitly via {@link ClientBuilder#responseTimeout(Duration)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultResponseTimeoutMillis=<long>} to override
@@ -638,7 +648,8 @@ public final class Flags {
 
     /**
      * Returns the default client-side timeout of a socket connection attempt in milliseconds.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#channelOption(ChannelOption, Object)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>} JVM option to override
@@ -650,7 +661,8 @@ public final class Flags {
 
     /**
      * Returns the default client-side timeout of a socket write attempt in milliseconds.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientBuilder#writeTimeout(Duration)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>} JVM option to override
@@ -662,7 +674,8 @@ public final class Flags {
 
     /**
      * Returns the default server-side idle timeout of a connection for keep-alive in milliseconds.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#idleTimeout(Duration)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} JVM option to override
@@ -674,7 +687,8 @@ public final class Flags {
 
     /**
      * Returns the default client-side idle timeout of a connection for keep-alive in milliseconds.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
      *
      * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} JVM option to override
@@ -685,8 +699,10 @@ public final class Flags {
     }
 
     /**
-     * Returns the default maximum length of an HTTP/1 response initial line.
-     * Note that this value has effect only if a user did not specify it.
+     * Returns the default maximum length of an HTTP/1 initial line.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http1MaxInitialLineLength(int)} or
+     * {@link ClientFactoryBuilder#http1MaxInitialLineLength(int)}.
      *
      * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxInitialLineLength=<integer>} JVM option
@@ -697,8 +713,10 @@ public final class Flags {
     }
 
     /**
-     * Returns the default maximum length of all headers in an HTTP/1 response.
-     * Note that this value has effect only if a user did not specify it.
+     * Returns the default maximum length of all HTTP/1 headers in a request or response.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http1MaxHeaderSize(int)} or
+     * {@link ClientFactoryBuilder#http1MaxHeaderSize(int)}.
      *
      * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_HTTP1_MAX_HEADER_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxHeaderSize=<integer>} JVM option
@@ -709,10 +727,12 @@ public final class Flags {
     }
 
     /**
-     * Returns the default maximum length of each chunk in an HTTP/1 response content.
+     * Returns the default maximum length of each chunk in an HTTP/1 request or response content.
      * The content or a chunk longer than this value will be split into smaller chunks
      * so that their lengths never exceed it.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http1MaxChunkSize(int)} or
+     * {@link ClientFactoryBuilder#http1MaxChunkSize(int)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP1_MAX_CHUNK_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxChunkSize=<integer>} JVM option
@@ -724,10 +744,17 @@ public final class Flags {
 
     /**
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp2Preface(boolean)} option.
-     * Note that this value has effect only if a user did not specify it.
+     * If enabled, the HTTP/2 connection preface immediately for a cleartext HTTP/2 connection, reducing
+     * an extra round trip incurred by the {@code OPTIONS * HTTP/1.1} upgrade request.
+     * If disabled, the {@code OPTIONS * HTTP/1.1} request with {@code "Upgrade: h2c"} header is sent for
+     * a cleartext HTTP/2 connection. Consider enabling this flag if your HTTP servers do not have issues
+     * handling or rejecting the HTTP/2 connection preface without a upgrade request.
+     * Note that this option does not affect ciphertext HTTP/2 connections, which use ALPN for protocol
+     * negotiation, and it has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#useHttp2Preface(boolean)}.
      *
-     * <p>This flag is enabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=false} JVM option to disable it.
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=true} JVM option to enable it.
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
@@ -735,7 +762,8 @@ public final class Flags {
 
     /**
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp1Pipelining(boolean)} option.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#useHttp1Pipelining(boolean)}.
      *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=true} JVM option to enable it.
@@ -781,7 +809,9 @@ public final class Flags {
     /**
      * Returns the default value of the {@link ServerBuilder#http2InitialConnectionWindowSize(int)} and
      * {@link ClientFactoryBuilder#http2InitialConnectionWindowSize(int)} option.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2InitialConnectionWindowSize(int)} or
+     * {@link ClientFactoryBuilder#http2InitialConnectionWindowSize(int)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2InitialConnectionWindowSize=<integer>} JVM option
@@ -794,7 +824,9 @@ public final class Flags {
     /**
      * Returns the default value of the {@link ServerBuilder#http2InitialStreamWindowSize(int)} and
      * {@link ClientFactoryBuilder#http2InitialStreamWindowSize(int)} option.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2InitialStreamWindowSize(int)} or
+     * {@link ClientFactoryBuilder#http2InitialStreamWindowSize(int)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2InitialStreamWindowSize=<integer>} JVM option
@@ -807,7 +839,9 @@ public final class Flags {
     /**
      * Returns the default value of the {@link ServerBuilder#http2MaxFrameSize(int)} and
      * {@link ClientFactoryBuilder#http2MaxFrameSize(int)} option.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxFrameSize(int)} or {@link ClientFactoryBuilder#http2MaxFrameSize(int)}.
+     *
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_FRAME_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxFrameSize=<integer>} JVM option
@@ -819,7 +853,8 @@ public final class Flags {
 
     /**
      * Returns the default value of the {@link ServerBuilder#http2MaxStreamsPerConnection(long)} option.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxStreamsPerConnection(long)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxStreamsPerConnection=<integer>} JVM option
@@ -832,7 +867,9 @@ public final class Flags {
     /**
      * Returns the default value of the {@link ServerBuilder#http2MaxHeaderListSize(long)} and
      * {@link ClientFactoryBuilder#http2MaxHeaderListSize(long)} option.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxHeaderListSize(long)} or
+     * {@link ClientFactoryBuilder#http2MaxHeaderListSize(long)}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxHeaderListSize=<integer>} JVM option
@@ -844,8 +881,8 @@ public final class Flags {
 
     /**
      * Returns the default value of the {@code backoffSpec} parameter when instantiating a {@link Backoff}
-     * using {@link Backoff#of(String)}. Note that this value has effect only if a user did not specify the
-     * {@code defaultBackoffSpec} in the constructor call.
+     * using {@link Backoff#of(String)}. Note that this flag has no effect if a user specified the
+     * {@link Backoff} explicitly.
      *
      * <p>The default value of this flag is {@value DEFAULT_DEFAULT_BACKOFF_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultBackoffSpec=<spec>} JVM option to override the default value.
@@ -855,8 +892,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default maximum number of total attempts. Note that this value has effect only if a user
-     * did not specify it when creating a {@link RetryingClient} or a {@link RetryingRpcClient}.
+     * Returns the default maximum number of total attempts. Note that this flag has no effect if a user
+     * specified the value explicitly when creating a {@link RetryingClient} or a {@link RetryingRpcClient}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>} JVM option to
