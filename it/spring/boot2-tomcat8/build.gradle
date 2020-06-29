@@ -4,7 +4,7 @@ final def TOMCAT_VERSION = '8.5.56'
 
 dependencies {
     implementation project(':spring:boot2-starter')
-    implementation project(':tomcat8.5')
+    implementation project(':tomcat8')
 
     [ 'spring-boot-starter', 'spring-boot-autoconfigure', 'spring-boot-starter-web' ].each {
         implementation("org.springframework.boot:$it") {
