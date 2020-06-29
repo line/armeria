@@ -168,7 +168,10 @@ public final class AnnotatedServiceFactory {
                     .put(Trace.class, HttpMethod.TRACE)
                     .build();
 
-    private static final String EMPTY_STRING = "";
+    /**
+     * A value to enter if HTTP method annotation value is empty or not specified.
+     */
+    private static final String EMPTY_PATH = "";
 
     /**
      * Returns the list of {@link AnnotatedService} defined by {@link Path} and HTTP method annotations
@@ -506,7 +509,7 @@ public final class AnnotatedServiceFactory {
                             if (usePathPatterns) {
                                 httpMethodPaths.addAll(pathPatterns);
                             } else if (httpMethodPaths.isEmpty()) {
-                                httpMethodPaths.add(EMPTY_STRING);
+                                httpMethodPaths.add(EMPTY_PATH);
                             }
                             if (httpMethodPaths.isEmpty()) {
                                 throw new IllegalArgumentException("A path pattern should be specified by" +

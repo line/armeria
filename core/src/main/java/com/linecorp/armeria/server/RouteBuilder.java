@@ -102,6 +102,7 @@ public final class RouteBuilder {
         if (Strings.isNullOrEmpty(pathPattern)) {
             return path(concatPaths(prefix, pathPattern));
         }
+
         if (!prefix.endsWith("/")) {
             prefix += '/';
         }
