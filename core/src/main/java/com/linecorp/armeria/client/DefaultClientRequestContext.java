@@ -272,10 +272,10 @@ public final class DefaultClientRequestContext
         final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
         if (headers.scheme() == null || !authority.equals(headers.authority())) {
             final RequestHeadersBuilder headersBuilder =
-                    headers.toBuilder().authority(authority).scheme(sessionProtocol());
-            if (headersBuilder.contains(HttpHeaderNames.HOST)) {
-                headersBuilder.remove(HttpHeaderNames.HOST);
-            }
+                    headers.toBuilder()
+                           .removeAndThen(HttpHeaderNames.HOST)
+                           .authority(authority)
+                           .scheme(sessionProtocol());
             unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
     }
