@@ -77,8 +77,8 @@ public final class GrpcWebUtil {
         }
         final int readerIndex = buf.readerIndex();
 
-        HttpHeaders trailers = null;
         try {
+            HttpHeaders trailers = null;
             while (buf.isReadable(HEADER_LENGTH)) {
                 final short type = buf.readUnsignedByte();
                 if ((type & RESERVED_MASK) != 0) {
