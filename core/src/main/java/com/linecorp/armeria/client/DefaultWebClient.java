@@ -36,7 +36,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
-        super(params, delegate, meterRegistry);
+        super(params, delegate, meterRegistry,
+              HttpResponse::from, (ctx, cause) -> HttpResponse.ofFailure(cause));
     }
 
     @Override
@@ -98,9 +99,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             return abortRequestAndReturnFailureResponse(req, cause);
         }
-        return execute(endpointGroup, req.method(), protocol,
-                       pathAndQuery.path(), pathAndQuery.query(), null, req,
-                       (ctx, cause) -> HttpResponse.ofFailure(cause));
+        return execute(protocol, endpointGroup, req.method(),
+                       pathAndQuery.path(), pathAndQuery.query(), null, req);
     }
 
     @Override

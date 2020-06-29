@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,19 +38,16 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
      *
      * <p>For example, with node a, b and c, then select result is abc abc ...
      */
-    static class RoundRobinSelector implements EndpointSelector {
-        private final EndpointGroup endpointGroup;
-
+    static class RoundRobinSelector extends AbstractEndpointSelector {
         private final AtomicInteger sequence = new AtomicInteger();
 
         RoundRobinSelector(EndpointGroup endpointGroup) {
-            this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
+            super(endpointGroup);
         }
 
         @Override
-        public Endpoint select(ClientRequestContext ctx) {
-
-            final List<Endpoint> endpoints = endpointGroup.endpoints();
+        public Endpoint selectNow(ClientRequestContext ctx) {
+            final List<Endpoint> endpoints = group().endpoints();
             final int currentSequence = sequence.getAndIncrement();
 
             if (endpoints.isEmpty()) {
