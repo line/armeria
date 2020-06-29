@@ -169,7 +169,7 @@ public final class AnnotatedServiceFactory {
                     .build();
 
     /**
-     * A value to enter if HTTP method annotation value is empty or not specified.
+     * A value to specify if HTTP method annotation value is empty or not specified.
      */
     private static final String EMPTY_PATH = "";
 
