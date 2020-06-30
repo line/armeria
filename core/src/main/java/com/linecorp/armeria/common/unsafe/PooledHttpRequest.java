@@ -34,7 +34,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A streamed HTTP/2 {@link Request} which returns pooled buffers.
  */
-public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage<HttpObject> {
+public interface PooledHttpRequest extends HttpRequest, PooledStreamMessage<HttpObject> {
 
     /**
      * Returns a {@link PooledHttpRequest} that wraps the {@link HttpRequest}, ensuring all published data

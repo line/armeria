@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.unsafe.UnsafeStreamUtil.withPooledObje
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -33,7 +32,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A {@link StreamMessage} that exposes unsafe APIs for subscribing to pooled objects from the stream.
  */
-public interface PooledHttpStreamMessage<T> extends StreamMessage<T> {
+public interface PooledStreamMessage<T> extends StreamMessage<T> {
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -110,7 +109,7 @@ public interface PooledHttpStreamMessage<T> extends StreamMessage<T> {
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber)}.
      */
@@ -122,7 +121,7 @@ public interface PooledHttpStreamMessage<T> extends StreamMessage<T> {
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber, SubscriptionOption...)}.
      */
@@ -134,7 +133,7 @@ public interface PooledHttpStreamMessage<T> extends StreamMessage<T> {
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber, EventExecutor)}.
      */
@@ -144,7 +143,7 @@ public interface PooledHttpStreamMessage<T> extends StreamMessage<T> {
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber, EventExecutor, SubscriptionOption...)}.
      */

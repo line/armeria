@@ -32,7 +32,7 @@ import com.linecorp.armeria.internal.testing.DrainingSubscriber;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 
-class PooledHttpStreamMessageTest {
+class PooledStreamMessageTest {
 
     @Test
     void subscribeWithPooledObjects() {
