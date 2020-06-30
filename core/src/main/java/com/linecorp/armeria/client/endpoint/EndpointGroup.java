@@ -140,7 +140,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      *         or {@code null} if this {@link EndpointGroup} is empty.
      */
     @Override
-    Endpoint select(ClientRequestContext ctx);
+    Endpoint selectNow(ClientRequestContext ctx);
 
     /**
      * Returns a {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.

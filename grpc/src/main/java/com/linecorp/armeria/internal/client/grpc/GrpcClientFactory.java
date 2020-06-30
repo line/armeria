@@ -23,15 +23,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
@@ -42,12 +39,11 @@ import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
 
 import io.grpc.Channel;
-import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.stub.AbstractStub;
 
@@ -95,13 +91,13 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         final HttpClient httpClient = newHttpClient(params);
 
-        // TODO(ikhoon): Support gjson with Kotlin coroutine stub once
-        //               https://github.com/grpc/grpc-kotlin/pull/63 is released
-        final MessageMarshaller jsonMarshaller =
-                GrpcSerializationFormats.isJson(serializationFormat) ?
-                GrpcJsonUtil.jsonMarshaller(
-                        stubMethods(clientType),
-                        options.get(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER)) : null;
+        final GrpcJsonMarshaller jsonMarshaller;
+        if (GrpcSerializationFormats.isJson(serializationFormat)) {
+            jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY)
+                                    .apply(getServiceDescriptor(clientType));
+        } else {
+            jsonMarshaller = null;
+        }
 
         final ArmeriaChannel channel = new ArmeriaChannel(
                 params,
@@ -139,8 +135,8 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             }
 
             final String methodName = method.getName();
-            if (!(methodName.startsWith("new") && methodName.endsWith("Stub"))) {
-                // Must be named as `new*Stub()`.
+            if (!methodName.toLowerCase().endsWith("stub")) {
+                // Must be named as `*[sS]tub()`.
                 continue;
             }
 
@@ -202,7 +198,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         return ((Unwrappable) ch).as(type);
     }
 
-    private static List<MethodDescriptor<?, ?>> stubMethods(Class<?> clientType) {
+    private static ServiceDescriptor getServiceDescriptor(Class<?> clientType) {
         if (clientType.getName().endsWith("CoroutineStub")) {
             final Annotation annotation = stubForAnnotation(clientType);
             try {
@@ -211,9 +207,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 final Method getServiceDescriptor =
                         generatedStub.getDeclaredMethod("getServiceDescriptor", null);
                 try {
-                    final ServiceDescriptor descriptor =
-                            (ServiceDescriptor) getServiceDescriptor.invoke(generatedStub);
-                    return ImmutableList.copyOf(descriptor.getMethods());
+                    return (ServiceDescriptor) getServiceDescriptor.invoke(generatedStub);
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     throw new IllegalStateException(
                             "Could not invoke getServiceDescriptor on a gRPC Kotlin client stub.");
@@ -224,19 +218,23 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         }
 
         final Class<?> stubClass = clientType.getEnclosingClass();
-        final Method getServiceDescriptorMethod;
+        Method getServiceDescriptorMethod;
         try {
             getServiceDescriptorMethod = stubClass.getDeclaredMethod("getServiceDescriptor");
         } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Could not find getServiceDescriptor on a gRPC client stub.");
+            try {
+                // Fallback for ScalaPB
+                getServiceDescriptorMethod = stubClass.getDeclaredMethod("SERVICE");
+            } catch (NoSuchMethodException noSuchMethodException) {
+                throw new IllegalStateException(
+                        "Could not find a io.grpc.ServiceDescriptor on a gRPC client stub.");
+            }
         }
-        final ServiceDescriptor descriptor;
         try {
-            descriptor = (ServiceDescriptor) getServiceDescriptorMethod.invoke(stubClass);
+            return (ServiceDescriptor) getServiceDescriptorMethod.invoke(null);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException("Could not invoke getServiceDescriptor on a gRPC client stub.");
         }
-        return ImmutableList.copyOf(descriptor.getMethods());
     }
 
     private static Class<?> generatedStub(Annotation annotation, Method valueMethod) {

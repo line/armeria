@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RetryingClientWithLoggingTest {
 
@@ -65,8 +65,7 @@ class RetryingClientWithLoggingTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                        throws Exception {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     ctx.mutateAdditionalResponseTrailers(
                             mutator -> mutator.add(HttpHeaderNames.of("foo"), "bar"));
                     if (reqCount.getAndIncrement() < 1) {

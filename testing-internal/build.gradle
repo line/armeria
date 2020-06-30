@@ -1,6 +1,6 @@
 dependencies {
-    api project(':testing:junit')
-    api project(':testing:junit4')
+    api project(':junit5')
+    api project(':junit4')
 
     api 'org.apache.httpcomponents:httpclient'
     api 'org.assertj:assertj-core'

@@ -22,6 +22,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetAddress;
@@ -42,7 +43,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -294,18 +295,15 @@ class RefreshingAddressResolverTest {
                      new DefaultDnsQuestion("foo.com.", A),
                      new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
 
-            final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder = builder(server1, server2, server3, server4, server5)
                     .negativeTtl(60)
                     .queryTimeoutMillis(1000);
-            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
-                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
-
-                final Future<InetSocketAddress> future = resolver.resolve(
-                        InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().until(future::isDone);
-                assertThat(future.cause()).isInstanceOf(DnsTimeoutException.class);
-            }
+            final ClientFactory factory =
+                    ClientFactory.builder().addressResolverGroupFactory(builder::build).build();
+            final WebClient client = WebClient.builder("http://foo.com").factory(factory).build();
+            assertThatThrownBy(() -> client.get("/").aggregate().join())
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
         }
     }
 

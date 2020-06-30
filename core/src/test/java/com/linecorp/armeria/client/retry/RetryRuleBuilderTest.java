@@ -186,7 +186,7 @@ class RetryRuleBuilderTest {
 
         final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final CompletionException ex =
-                new CompletionException(new UnprocessedRequestException(ClosedStreamException.get()));
+                new CompletionException(UnprocessedRequestException.of(ClosedStreamException.get()));
         assertBackoff(retryRule.shouldRetry(ctx3, ex)).isSameAs(unprocessBackOff);
 
         final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -217,7 +217,7 @@ class RetryRuleBuilderTest {
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final UnprocessedRequestException cause =
-                new UnprocessedRequestException(ResponseTimeoutException.get());
+                UnprocessedRequestException.of(ResponseTimeoutException.get());
         assertBackoff(retryRule.shouldRetry(ctx1, cause)).isSameAs(backoff);
 
         final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -280,7 +280,7 @@ class RetryRuleBuilderTest {
 
         final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.PUT, "/"));
         assertBackoff(retryRule.shouldRetry(ctx4,
-                                            new UnprocessedRequestException(new ClosedChannelException())))
+                                            UnprocessedRequestException.of(new ClosedChannelException())))
                 .isSameAs(unprocessedBackoff);
     }
 

@@ -38,7 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;

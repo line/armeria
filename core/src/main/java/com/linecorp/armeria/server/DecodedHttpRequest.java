@@ -104,17 +104,17 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
         final boolean published;
         if (obj instanceof HttpHeaders) { // HTTP trailers.
-            ctx.logBuilder().requestTrailers((HttpHeaders) obj);
             published = super.tryWrite(obj);
+            ctx.logBuilder().requestTrailers((HttpHeaders) obj);
             // Close this stream because HTTP trailers is the last element of the request.
             close();
         } else {
             final HttpData httpData = (HttpData) obj;
-            ctx.logBuilder().increaseRequestLength(httpData);
             published = super.tryWrite(httpData);
             if (published) {
                 inboundTrafficController.inc(httpData.length());
             }
+            ctx.logBuilder().increaseRequestLength(httpData);
         }
 
         return published;
