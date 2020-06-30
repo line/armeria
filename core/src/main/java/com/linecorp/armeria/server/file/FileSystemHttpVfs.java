@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.file;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -26,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Clock;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -37,13 +37,14 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.server.RouteUtil;
 
-final class FileSystemHttpVfs extends AbstractHttpVfs {
+final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
 
     private static final boolean FILE_SEPARATOR_IS_NOT_SLASH = File.separatorChar != '/';
 
     private final Path rootDir;
 
     FileSystemHttpVfs(Path rootDir) {
+        super(true);
         this.rootDir = requireNonNull(rootDir, "rootDir").toAbsolutePath();
         if (!Files.exists(this.rootDir) || !Files.isDirectory(this.rootDir)) {
             throw new IllegalArgumentException("rootDir: " + rootDir + " (not a directory");
@@ -51,8 +52,10 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public HttpFile get(String path, Clock clock, @Nullable String contentEncoding,
-                        HttpHeaders additionalHeaders) {
+    protected HttpFile blockingGet(
+            Executor fileReadExecutor, String path, Clock clock,
+            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+
         path = normalizePath(path);
 
         final HttpFileBuilder builder = HttpFile.builder(Paths.get(rootDir + path));
@@ -60,14 +63,14 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     }
 
     @Override
-    public boolean canList(String path) {
+    protected boolean blockingCanList(Executor fileReadExecutor, String path) {
         path = normalizePath(path);
         final Path fsPath = Paths.get(rootDir + path);
         return Files.isDirectory(fsPath) && Files.isReadable(fsPath);
     }
 
     @Override
-    public List<String> list(String path) {
+    protected List<String> blockingList(Executor fileReadExecutor, String path) {
         path = normalizePath(path);
         try (Stream<Path> stream = Files.list(Paths.get(rootDir + path))) {
             return stream.filter(Files::isReadable)

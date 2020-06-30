@@ -342,6 +342,26 @@ class FileServiceTest {
 
     @ParameterizedTest
     @ArgumentsSource(BaseUriProvider.class)
+    void testGetWithoutPreCompression(String baseUri) throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final HttpGet request = new HttpGet(baseUri + "/compressed/foo_alone.txt");
+            request.setHeader("Accept-Encoding", "gzip");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getFirstHeader("Content-Encoding")).isNull();
+                assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
+                        "text/plain; charset=utf-8");
+                final byte[] content = content(res);
+                assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo_alone");
+
+                // Confirm path not cached when cache disabled.
+                assertThat(PathAndQuery.cachedPaths())
+                        .doesNotContain("/compressed/foo_alone.txt");
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
     void testGetPreCompressedSupportsGzip(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet request = new HttpGet(baseUri + "/compressed/foo.txt");
