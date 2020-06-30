@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -33,7 +34,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A streamed HTTP/2 {@link Request} which returns pooled buffers.
  */
-public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage {
+public interface PooledHttpRequest extends HttpRequest, PooledHttpStreamMessage<HttpObject> {
 
     /**
      * Returns a {@link PooledHttpRequest} that wraps the {@link HttpRequest}, ensuring all published data

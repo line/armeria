@@ -31,10 +31,9 @@ import com.linecorp.armeria.internal.stream.InternalSubscriptionOption;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A {@link StreamMessage} of {@link HttpObject} which exposes unsafe APIs for subscribing to pooled objects
- * from the stream.
+ * A {@link StreamMessage} that exposes unsafe APIs for subscribing to pooled objects from the stream.
  */
-public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
+public interface PooledHttpStreamMessage<T> extends StreamMessage<T> {
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -48,7 +47,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      */
-    default void subscribeWithPooledObjects(Subscriber<? super HttpObject> subscriber) {
+    default void subscribeWithPooledObjects(Subscriber<? super T> subscriber) {
         subscribeWithPooledObjects(subscriber, defaultSubscriberExecutor());
     }
 
@@ -67,7 +66,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      * @param options {@link SubscriptionOption}s to subscribe with
      */
     default void subscribeWithPooledObjects(
-            Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
+            Subscriber<? super T> subscriber, SubscriptionOption... options) {
         subscribeWithPooledObjects(subscriber, defaultSubscriberExecutor(), options);
     }
 
@@ -85,7 +84,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      *
      * @param executor the executor to subscribe
      */
-    default void subscribeWithPooledObjects(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
+    default void subscribeWithPooledObjects(Subscriber<? super T> subscriber, EventExecutor executor) {
         subscribe(subscriber, executor, InternalSubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
@@ -105,7 +104,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      * @param options {@link SubscriptionOption}s to subscribe with
      */
     default void subscribeWithPooledObjects(
-            Subscriber<? super HttpObject> subscriber, EventExecutor executor, SubscriptionOption... options) {
+            Subscriber<? super T> subscriber, EventExecutor executor, SubscriptionOption... options) {
         subscribe(subscriber, executor, withPooledObjects(options));
     }
 
@@ -117,7 +116,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      */
     @Override
     @Deprecated
-    default void subscribe(Subscriber<? super HttpObject> subscriber) {
+    default void subscribe(Subscriber<? super T> subscriber) {
         StreamMessage.super.subscribe(subscriber);
     }
 
@@ -129,7 +128,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      */
     @Override
     @Deprecated
-    default void subscribe(Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
+    default void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
         subscribe(subscriber, defaultSubscriberExecutor(), options);
     }
 
@@ -141,7 +140,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      */
     @Override
     @Deprecated
-    void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
@@ -151,6 +150,5 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      */
     @Override
     @Deprecated
-    void subscribe(
-            Subscriber<? super HttpObject> subscriber, EventExecutor executor, SubscriptionOption... options);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, SubscriptionOption... options);
 }
