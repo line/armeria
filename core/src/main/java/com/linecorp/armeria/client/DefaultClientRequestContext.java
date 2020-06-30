@@ -33,6 +33,7 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -317,9 +319,12 @@ public final class DefaultClientRequestContext
         final RequestHeaders headers = req.headers();
         final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
         if (headers.scheme() == null || !authority.equals(headers.authority())) {
-            unsafeUpdateRequest(req.withHeaders(headers.toBuilder()
-                                                       .authority(authority)
-                                                       .scheme(sessionProtocol())));
+            final RequestHeadersBuilder headersBuilder =
+                    headers.toBuilder()
+                           .removeAndThen(HttpHeaderNames.HOST)
+                           .authority(authority)
+                           .scheme(sessionProtocol());
+            unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
     }
 
