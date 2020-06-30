@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * Returns a {@link MeterIdPrefix}.
+ * Transforms a {@link MeterIdPrefix} into another.
  *
  * @see MeterIdPrefixFunction
  */

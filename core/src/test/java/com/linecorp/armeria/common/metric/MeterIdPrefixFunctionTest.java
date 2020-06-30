@@ -59,26 +59,6 @@ class MeterIdPrefixFunctionTest {
 
     @Test
     void testAndThen() {
-        final MeterIdPrefixFunction f = new MeterIdPrefixFunction() {
-            @Override
-            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
-                return new MeterIdPrefix("oof");
-            }
-
-            @Override
-            public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
-                return new MeterIdPrefix("foo", ImmutableList.of());
-            }
-        };
-        final MeterIdPrefixFunction f2 = f.andThen((registry, id) -> id.append("bar"));
-        assertThat(f2.completeRequestPrefix(PrometheusMeterRegistries.newRegistry(), null))
-                .isEqualTo(new MeterIdPrefix("foo.bar", ImmutableList.of()));
-        assertThat(f2.activeRequestPrefix(PrometheusMeterRegistries.newRegistry(), null))
-                .isEqualTo(new MeterIdPrefix("oof.bar", ImmutableList.of()));
-    }
-
-    @Test
-    void testAndThen2() {
         final ServiceRequestContext ctx = newContext(HttpMethod.GET, "/",
                                                      RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
         ctx.logBuilder().endResponse();
