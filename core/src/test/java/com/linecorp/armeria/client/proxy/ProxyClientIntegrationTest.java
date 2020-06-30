@@ -247,7 +247,7 @@ class ProxyClientIntegrationTest {
                              .proxyConfig(ProxyConfig.socks5(socksProxyServer.address()))
                              .useHttp2Preface(true)
                              .build()) {
-          
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
