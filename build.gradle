@@ -79,6 +79,10 @@ configure(projectsWithFlags('java')) {
         dependencies {
             errorprone 'com.google.errorprone:error_prone_core'
         }
+
+        tasks.withType(JavaCompile) {
+            options.errorprone.excludedPaths = '.*/gen-src/.*'
+        }
     }
 
     // Common dependencies

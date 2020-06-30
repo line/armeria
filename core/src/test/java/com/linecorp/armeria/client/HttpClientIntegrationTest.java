@@ -90,7 +90,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.unsafe.PooledHttpService;
 import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
