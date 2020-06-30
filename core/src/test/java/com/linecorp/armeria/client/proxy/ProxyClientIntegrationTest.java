@@ -72,8 +72,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -199,7 +199,12 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testDisabledProxyBasicCase() throws Exception {
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(ProxyConfig.direct()).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.direct())
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -215,8 +220,12 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testSocks4BasicCase() throws Exception {
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -233,8 +242,12 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testSocks5BasicCase() throws Exception {
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks5(socksProxyServer.address())).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.socks5(socksProxyServer.address()))
+                             .useHttp2Preface(true)
+                             .build()) {
+          
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -250,8 +263,12 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testH1CProxyBasicCase() throws Exception {
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.connect(httpProxyServer.address())).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -277,8 +294,12 @@ class ProxyClientIntegrationTest {
             public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
             }
         };
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                proxySelector).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(proxySelector)
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -308,7 +329,12 @@ class ProxyClientIntegrationTest {
                 fail("connectFailed should not be called");
             }
         });
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(selector)
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -339,7 +365,12 @@ class ProxyClientIntegrationTest {
                 fail("connectFailed should not be called");
             }
         });
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(selector)
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -375,8 +406,12 @@ class ProxyClientIntegrationTest {
             ctx.close();
         });
 
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.connect(httpProxyServer.address())).useHttp2Preface(false).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                             .useHttp2Preface(false)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(HTTP, http1Server.endpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -411,8 +446,12 @@ class ProxyClientIntegrationTest {
             ctx.close();
         });
 
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.connect(httpProxyServer.address())).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(HTTP, http1Server.endpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -428,8 +467,13 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testHttpsProxyBasicCase() throws Exception {
-        try (ClientFactory clientFactory = ClientFactory.builder().tlsNoVerify().proxyConfig(
-                ProxyConfig.connect(httpsProxyServer.address(), true)).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .tlsNoVerify()
+                             .proxyConfig(ProxyConfig.connect(httpsProxyServer.address(), true))
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -446,8 +490,12 @@ class ProxyClientIntegrationTest {
     @Test
     void testProxyWithH2C() throws Exception {
         final int numRequests = 5;
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H2C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -473,8 +521,12 @@ class ProxyClientIntegrationTest {
             }
             ctx.fireChannelRead(msg);
         });
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address(), username)).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address(), username))
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -516,7 +568,12 @@ class ProxyClientIntegrationTest {
                 failedAttempts.incrementAndGet();
             }
         });
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(selector)
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -565,8 +622,13 @@ class ProxyClientIntegrationTest {
                 failedAttempts.incrementAndGet();
             }
         });
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector)
-                                                        .connectTimeoutMillis(1).build()) {
+
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(selector)
+                             .connectTimeoutMillis(1)
+                             .useHttp2Preface(true)
+                             .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -605,7 +667,12 @@ class ProxyClientIntegrationTest {
             }
         });
 
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector).build()) {
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(selector)
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
@@ -646,7 +713,13 @@ class ProxyClientIntegrationTest {
                 failedAttempts.incrementAndGet();
             }
         });
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(selector).build()) {
+
+        try (ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(selector)
+                             .useHttp2Preface(true)
+                             .build()) {
+
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())

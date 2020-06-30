@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
 
+import org.junit.AfterClass;
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -29,6 +30,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
@@ -53,15 +55,27 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
         return ImmutableList.of(SessionProtocol.H1C, SessionProtocol.H2C);
     }
 
+    /**
+     * OkHttp's MockWebServer does not support H2C with HTTP/1 upgrade request.
+     */
+    private static final ClientFactory clientFactoryWithoutUpgradeRequest =
+            ClientFactory.builder().useHttp2Preface(true).build();
+
+    @AfterClass
+    public static void closeClientFactory() {
+        clientFactoryWithoutUpgradeRequest.closeAsync();
+    }
+
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
 
     public BraveClientIntegrationTest(SessionProtocol sessionProtocol) {
         this.sessionProtocol = sessionProtocol;
+
         if (sessionProtocol == SessionProtocol.H2C) {
             protocols = ImmutableList.of(Protocol.H2_PRIOR_KNOWLEDGE);
         } else {
-            protocols = ImmutableList.of(Protocol.HTTP_1_1, Protocol.HTTP_2);
+            protocols = ImmutableList.of(Protocol.HTTP_1_1);
         }
     }
 
@@ -80,6 +94,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     protected WebClient newClient(int port) {
         return WebClient.builder(sessionProtocol.uriText() + "://127.0.0.1:" + port)
+                        .factory(clientFactoryWithoutUpgradeRequest)
                         .decorator(BraveClient.newDecorator(httpTracing))
                         .build();
     }

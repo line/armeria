@@ -31,8 +31,6 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.spotify.futures.CompletableFutures;
-
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
@@ -41,6 +39,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -54,7 +54,11 @@ import io.netty.buffer.Unpooled;
 public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHttpFile {
 
     private static final Logger logger = LoggerFactory.getLogger(StreamingHttpFile.class);
+
     private static final int MAX_CHUNK_SIZE = 8192;
+
+    private static final UnmodifiableFuture<AggregatedHttpFile> NON_EXISTENT_FILE_FUTURE =
+            UnmodifiableFuture.completedFuture(HttpFile.nonExistent());
 
     /**
      * Creates a new instance.
@@ -163,101 +167,96 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
 
     private CompletableFuture<AggregatedHttpFile> doAggregate(Executor fileReadExecutor,
                                                               @Nullable ByteBufAllocator alloc) {
-        final HttpFileAttributes attrs;
-        try {
-            attrs = readAttributes();
-        } catch (IOException e) {
-            return CompletableFutures.exceptionallyCompletedFuture(e);
-        }
-
-        if (attrs == null) {
-            return CompletableFuture.completedFuture(HttpFile.nonExistent());
-        }
-
-        if (attrs.length() > Integer.MAX_VALUE) {
-            return CompletableFutures.exceptionallyCompletedFuture(
-                    new IOException("too large to aggregate: " + attrs.length() + " bytes"));
-        }
-
-        final T in;
-        try {
-            in = newStream();
-        } catch (IOException e) {
-            return CompletableFutures.exceptionallyCompletedFuture(e);
-        }
-
-        if (in == null) {
-            return CompletableFuture.completedFuture(HttpFile.nonExistent());
-        }
-
-        boolean submitted = false;
-        try {
-            final CompletableFuture<AggregatedHttpFile> future = new EventLoopCheckingFuture<>();
-            fileReadExecutor.execute(() -> {
-                final int length = (int) attrs.length();
-                final byte[] array;
-                final ByteBuf buf;
-                if (alloc != null) {
-                    array = null;
-                    buf = alloc.buffer(length);
-                } else {
-                    array = new byte[length];
-                    buf = Unpooled.wrappedBuffer(array).clear();
-                }
-
-                boolean success = false;
-                try {
-                    for (int offset = 0;;) {
-                        final int readBytes = read(in, buf);
-                        if (readBytes < 0) {
-                            // Should not reach here because we only read up to the end of the stream.
-                            // If reached, it may mean the stream has been truncated.
-                            throw new EOFException();
-                        }
-
-                        offset += readBytes;
-                        if (offset == length) {
-                            break;
-                        }
-                    }
-
-                    final HttpFileBuilder builder =
-                            HttpFile.builder(array != null ? HttpData.wrap(array)
-                                                           : PooledHttpData.wrap(buf).withEndOfStream(),
-                                             attrs.lastModifiedMillis())
-                                    .date(isDateEnabled())
-                                    .lastModified(isLastModifiedEnabled());
-
-                    if (contentType() != null) {
-                        builder.contentType(contentType());
-                    }
-
-                    final String etag = generateEntityTag(attrs);
-                    if (etag != null) {
-                        builder.entityTag((unused1, unused2) -> etag);
-                    } else {
-                        builder.entityTag(false);
-                    }
-
-                    builder.setHeaders(headers());
-                    success = future.complete((AggregatedHttpFile) builder.build());
-                } catch (Exception e) {
-                    future.completeExceptionally(e);
-                } finally {
-                    close(in);
-                    if (!success) {
-                        buf.release();
-                    }
-                }
-            });
-
-            submitted = true;
-            return future;
-        } finally {
-            if (!submitted) {
-                close(in);
+        return readAttributes(fileReadExecutor).thenCompose(attrs -> {
+            if (attrs == null) {
+                return NON_EXISTENT_FILE_FUTURE;
             }
-        }
+
+            if (attrs.length() > Integer.MAX_VALUE) {
+                return UnmodifiableFuture.exceptionallyCompletedFuture(
+                        new IOException("too large to aggregate: " + attrs.length() + " bytes"));
+            }
+
+            final T in;
+            try {
+                in = newStream();
+            } catch (IOException e) {
+                return Exceptions.throwUnsafely(e);
+            }
+
+            if (in == null) {
+                return NON_EXISTENT_FILE_FUTURE;
+            }
+
+            boolean submitted = false;
+            try {
+                final CompletableFuture<AggregatedHttpFile> future = new EventLoopCheckingFuture<>();
+                fileReadExecutor.execute(() -> {
+                    final int length = (int) attrs.length();
+                    final byte[] array;
+                    final ByteBuf buf;
+                    if (alloc != null) {
+                        array = null;
+                        buf = alloc.buffer(length);
+                    } else {
+                        array = new byte[length];
+                        buf = Unpooled.wrappedBuffer(array).clear();
+                    }
+
+                    boolean success = false;
+                    try {
+                        for (int offset = 0;;) {
+                            final int readBytes = read(in, buf);
+                            if (readBytes < 0) {
+                                // Should not reach here because we only read up to the end of the stream.
+                                // If reached, it may mean the stream has been truncated.
+                                throw new EOFException();
+                            }
+
+                            offset += readBytes;
+                            if (offset == length) {
+                                break;
+                            }
+                        }
+
+                        final HttpFileBuilder builder =
+                                HttpFile.builder(array != null ? HttpData.wrap(array)
+                                                               : PooledHttpData.wrap(buf).withEndOfStream(),
+                                                 attrs.lastModifiedMillis())
+                                        .date(isDateEnabled())
+                                        .lastModified(isLastModifiedEnabled());
+
+                        if (contentType() != null) {
+                            builder.contentType(contentType());
+                        }
+
+                        final String etag = generateEntityTag(attrs);
+                        if (etag != null) {
+                            builder.entityTag((unused1, unused2) -> etag);
+                        } else {
+                            builder.entityTag(false);
+                        }
+
+                        builder.setHeaders(headers());
+                        success = future.complete((AggregatedHttpFile) builder.build());
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        close(in);
+                        if (!success) {
+                            buf.release();
+                        }
+                    }
+                });
+
+                submitted = true;
+                return future;
+            } finally {
+                if (!submitted) {
+                    close(in);
+                }
+            }
+        });
     }
 
     /**

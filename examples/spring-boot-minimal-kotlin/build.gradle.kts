@@ -24,10 +24,10 @@ apply(plugin = "org.jlleitschuh.gradle.ktlint")
 apply(plugin = "org.springframework.boot")
 
 dependencies {
-    implementation(project(":spring:boot-starter"))
+    implementation(project(":spring:boot2-starter"))
     implementation("org.hibernate.validator:hibernate-validator")
 
-    implementation(project(":spring:boot-actuator-starter"))
+    implementation(project(":spring:boot2-actuator-starter"))
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")

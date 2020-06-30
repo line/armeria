@@ -96,6 +96,7 @@ abstract class HttpResponseDecoder {
         final HttpResponseWrapper removed = responses.remove(id);
         if (removed != null) {
             unfinishedResponses--;
+            assert unfinishedResponses >= 0 : unfinishedResponses;
         }
         return removed;
     }

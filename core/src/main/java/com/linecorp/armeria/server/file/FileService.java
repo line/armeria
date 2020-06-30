@@ -16,16 +16,17 @@
 
 package com.linecorp.armeria.server.file;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.EnumSet;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Nullable;
 
@@ -47,6 +48,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
@@ -57,6 +59,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.EncodingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 
 /**
@@ -69,6 +72,9 @@ public final class FileService extends AbstractHttpService {
     private static final Logger logger = LoggerFactory.getLogger(FileService.class);
 
     private static final Splitter COMMA_SPLITTER = Splitter.on(',');
+
+    private static final UnmodifiableFuture<HttpFile> NON_EXISTENT_FILE_FUTURE =
+            UnmodifiableFuture.completedFuture(HttpFile.nonExistent());
 
     /**
      * Returns a new {@link FileService} for the specified {@code rootDir} in an O/S file system.
@@ -197,15 +203,10 @@ public final class FileService extends AbstractHttpService {
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpFile file = findFile(ctx, req);
-        if (file == null) {
-            return HttpResponse.of(HttpStatus.NOT_FOUND);
-        }
-        return file.asService().serve(ctx, req);
+        return findFile(ctx, req).asService().serve(ctx, req);
     }
 
-    @Nullable
-    private HttpFile findFile(ServiceRequestContext ctx, HttpRequest req) throws IOException {
+    private HttpFile findFile(ServiceRequestContext ctx, HttpRequest req) {
         final String decodedMappedPath = ctx.decodedMappedPath();
 
         final EnumSet<FileServiceContentEncoding> supportedEncodings =
@@ -226,110 +227,156 @@ public final class FileService extends AbstractHttpService {
             }
         }
 
-        final HttpFile file = findFile(ctx, decodedMappedPath, supportedEncodings);
-        if (file != null) {
-            return file;
-        }
-
-        final boolean endsWithSlash = decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/';
-        if (endsWithSlash) {
-            // Try index.html if it was a directory access.
-            final HttpFile indexFile = findFile(ctx, decodedMappedPath + "index.html", supportedEncodings);
-            if (indexFile != null) {
-                return indexFile;
-            }
-
-            // Auto-generate directory listing if enabled.
-            if (config.autoIndex() && config.vfs().canList(decodedMappedPath)) {
-                final List<String> listing = config.vfs().list(decodedMappedPath);
-                final HttpData autoIndex =
-                        AutoIndex.listingToHtml(ctx.decodedPath(), decodedMappedPath, listing);
-                return HttpFile.builder(autoIndex)
-                               .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8)
-                               .setHeaders(config.headers())
-                               .build();
-            }
-        } else {
-            // Redirect to the slash appended path if 1) /index.html exists or 2) it has a directory listing.
-            if (findFile(ctx, decodedMappedPath + "/index.html", supportedEncodings) != null ||
-                config.autoIndex() && config.vfs().canList(decodedMappedPath)) {
-                throw HttpResponseException.of(HttpResponse.of(
-                        ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
-                                           HttpHeaderNames.LOCATION, ctx.path() + '/')));
-            }
-        }
-
-        return null;
-    }
-
-    @Nullable
-    private HttpFile findFile(ServiceRequestContext ctx, String path,
-                              EnumSet<FileServiceContentEncoding> supportedEncodings) throws IOException {
-        for (FileServiceContentEncoding encoding : supportedEncodings) {
-            final String contentEncoding = encoding.headerValue;
-            final HttpFile file = findFile(ctx, path + encoding.extension, contentEncoding);
+        return HttpFile.from(findFile(ctx, decodedMappedPath, supportedEncodings).thenCompose(file -> {
             if (file != null) {
-                return file;
+                return UnmodifiableFuture.completedFuture(file);
             }
-        }
 
-        return findFile(ctx, path, (String) null);
+            final boolean endsWithSlash = decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/';
+            if (endsWithSlash) {
+                // Try index.html if it was a directory access.
+                final String indexPath = decodedMappedPath + "index.html";
+                return findFile(ctx, indexPath, supportedEncodings).thenCompose(indexFile -> {
+                    if (indexFile != null) {
+                        return UnmodifiableFuture.completedFuture(indexFile);
+                    }
+
+                    // Auto-generate directory listing if enabled.
+                    final Executor fileReadExecutor = ctx.blockingTaskExecutor();
+                    if (!config.autoIndex()) {
+                        return NON_EXISTENT_FILE_FUTURE;
+                    }
+
+                    return config.vfs().canList(fileReadExecutor, decodedMappedPath).thenCompose(canList -> {
+                        if (!canList) {
+                            return NON_EXISTENT_FILE_FUTURE;
+                        }
+
+                        return config.vfs().list(fileReadExecutor, decodedMappedPath).thenApply(listing -> {
+                            final HttpData autoIndex =
+                                    AutoIndex.listingToHtml(ctx.decodedPath(), decodedMappedPath, listing);
+                            return HttpFile.builder(autoIndex)
+                                           .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8)
+                                           .setHeaders(config.headers())
+                                           .build();
+                        });
+                    });
+                });
+            } else {
+                // Redirect to the slash appended path if:
+                // 1) /index.html exists or
+                // 2) it has a directory listing.
+                final String indexPath = decodedMappedPath + "/index.html";
+                return findFile(ctx, indexPath, supportedEncodings).thenCompose(indexFile -> {
+                    if (indexFile != null) {
+                        return UnmodifiableFuture.completedFuture(true);
+                    }
+
+                    if (!config.autoIndex()) {
+                        return UnmodifiableFuture.completedFuture(false);
+                    }
+
+                    return config.vfs().canList(ctx.blockingTaskExecutor(), decodedMappedPath);
+                }).thenApply(canList -> {
+                    if (canList) {
+                        throw HttpResponseException.of(HttpResponse.of(
+                                ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
+                                                   HttpHeaderNames.LOCATION, ctx.path() + '/')));
+                    } else {
+                        return HttpFile.nonExistent();
+                    }
+                });
+            }
+        }));
     }
 
-    @Nullable
-    private HttpFile findFile(ServiceRequestContext ctx, String path,
-                              @Nullable String contentEncoding) throws IOException {
-        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentEncoding, config.headers());
-        final HttpFileAttributes uncachedAttrs = uncachedFile.readAttributes();
-        if (cache == null) {
-            return uncachedAttrs != null ? uncachedFile : null;
+    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                 Set<FileServiceContentEncoding> supportedEncodings) {
+        return findFile(ctx, path, supportedEncodings.iterator()).thenCompose(file -> {
+            if (file != null) {
+                return UnmodifiableFuture.completedFuture(file);
+            } else {
+                return findFile(ctx, path, (String) null);
+            }
+        });
+    }
+
+    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                 Iterator<FileServiceContentEncoding> i) {
+        if (!i.hasNext()) {
+            return UnmodifiableFuture.completedFuture(null);
         }
 
-        final PathAndEncoding pathAndEncoding = new PathAndEncoding(path, contentEncoding);
-        if (uncachedAttrs == null) {
-            // Non-existent file. Invalidate the cache just in case it existed before.
+        final FileServiceContentEncoding encoding = i.next();
+        final String contentEncoding = encoding.headerValue;
+        return findFile(ctx, path + encoding.extension, contentEncoding).thenCompose(file -> {
+            if (file != null) {
+                return UnmodifiableFuture.completedFuture(file);
+            } else {
+                return findFile(ctx, path, i);
+            }
+        });
+    }
+
+    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                 @Nullable String contentEncoding) {
+
+        final ScheduledExecutorService fileReadExecutor = ctx.blockingTaskExecutor();
+        final HttpFile uncachedFile = config.vfs().get(fileReadExecutor, path, config.clock(),
+                                                       contentEncoding, config.headers());
+
+        return uncachedFile.readAttributes(fileReadExecutor).thenApply(uncachedAttrs -> {
+            if (cache == null) {
+                return uncachedAttrs != null ? uncachedFile : null;
+            }
+
+            final PathAndEncoding pathAndEncoding = new PathAndEncoding(path, contentEncoding);
+            if (uncachedAttrs == null) {
+                // Non-existent file. Invalidate the cache just in case it existed before.
+                cache.invalidate(pathAndEncoding);
+                return null;
+            }
+
+            if (uncachedAttrs.length() > config.maxCacheEntrySizeBytes()) {
+                // Invalidate the cache just in case the file was small previously.
+                cache.invalidate(pathAndEncoding);
+                return uncachedFile;
+            }
+
+            final AggregatedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
+            if (cachedFile == null) {
+                // Cache miss. Add a new entry to the cache.
+                return cache(ctx, pathAndEncoding, uncachedFile);
+            }
+
+            final HttpFileAttributes cachedAttrs = cachedFile.readAttributes();
+            assert cachedAttrs != null;
+            if (cachedAttrs.equals(uncachedAttrs)) {
+                // Cache hit, and the cached file is up-to-date.
+                return cachedFile;
+            }
+
+            // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
             cache.invalidate(pathAndEncoding);
-            return null;
-        }
-
-        if (uncachedAttrs.length() > config.maxCacheEntrySizeBytes()) {
-            // Invalidate the cache just in case the file was small previously.
-            cache.invalidate(pathAndEncoding);
-            return uncachedFile;
-        }
-
-        final AggregatedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
-        if (cachedFile == null) {
-            // Cache miss. Add a new entry to the cache.
             return cache(ctx, pathAndEncoding, uncachedFile);
-        }
-
-        final HttpFileAttributes cachedAttrs = cachedFile.readAttributes();
-        assert cachedAttrs != null;
-        if (cachedAttrs.equals(uncachedAttrs)) {
-            // Cache hit, and the cached file is up-to-date.
-            return cachedFile;
-        }
-
-        // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
-        cache.invalidate(pathAndEncoding);
-        return cache(ctx, pathAndEncoding, uncachedFile);
+        });
     }
 
-    private HttpFile cache(ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile file) {
+    private HttpFile cache(
+            ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile uncachedFile) {
+
         assert cache != null;
 
         final Executor executor = ctx.blockingTaskExecutor();
-        final AggregatedHttpFile maybeAggregated =
-                file.aggregateWithPooledObjects(executor, ctx.alloc()).thenApply(aggregated -> {
-                    cache.put(pathAndEncoding, aggregated);
-                    return aggregated;
-                }).exceptionally(cause -> {
-                    logger.warn("{} Failed to cache a file: {}", ctx, file, Exceptions.peel(cause));
-                    return null;
-                }).getNow(null);
+        final ByteBufAllocator alloc = ctx.alloc();
 
-        return firstNonNull(maybeAggregated, file);
+        return HttpFile.from(uncachedFile.aggregateWithPooledObjects(executor, alloc).thenApply(aggregated -> {
+            cache.put(pathAndEncoding, aggregated);
+            return (HttpFile) aggregated;
+        }).exceptionally(cause -> {
+            logger.warn("{} Failed to cache a file: {}", ctx, uncachedFile, Exceptions.peel(cause));
+            return uncachedFile;
+        }));
     }
 
     /**
@@ -361,11 +408,20 @@ public final class FileService extends AbstractHttpService {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            if (first.findFile(ctx, req) != null) {
-                return first.serve(ctx, req);
-            } else {
-                return second.serve(ctx, req);
-            }
+            return HttpResponse.from(
+                    first.findFile(ctx, req)
+                         .readAttributes(ctx.blockingTaskExecutor())
+                         .thenApply(firstAttrs -> {
+                             try {
+                                 if (firstAttrs != null) {
+                                     return first.serve(ctx, req);
+                                 }
+
+                                 return second.serve(ctx, req);
+                             } catch (Exception e) {
+                                 return Exceptions.throwUnsafely(e);
+                             }
+                         }));
         }
 
         @Override

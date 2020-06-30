@@ -19,6 +19,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
@@ -58,8 +61,15 @@ final class StaticEndpointGroup implements EndpointGroup {
     }
 
     @Override
-    public Endpoint select(ClientRequestContext ctx) {
-        return selector.select(ctx);
+    public Endpoint selectNow(ClientRequestContext ctx) {
+        return selector.selectNow(ctx);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                              ScheduledExecutorService executor,
+                                              long timeoutMillis) {
+        return UnmodifiableFuture.completedFuture(selectNow(ctx));
     }
 
     @Override
@@ -80,10 +90,28 @@ final class StaticEndpointGroup implements EndpointGroup {
         return StaticEndpointGroup.class.getSimpleName() + endpoints;
     }
 
-    private static class EmptyEndpointSelectionStrategy implements EndpointSelectionStrategy {
+    private static final class EmptyEndpointSelectionStrategy implements EndpointSelectionStrategy {
         @Override
         public EndpointSelector newSelector(EndpointGroup endpointGroup) {
-            return ctx -> null;
+            return EmptyEndpointSelector.INSTANCE;
+        }
+    }
+
+    private static final class EmptyEndpointSelector implements EndpointSelector {
+
+        static final EmptyEndpointSelector INSTANCE = new EmptyEndpointSelector();
+
+        @Nullable
+        @Override
+        public Endpoint selectNow(ClientRequestContext ctx) {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                                  ScheduledExecutorService executor,
+                                                  long timeoutMillis) {
+            return UnmodifiableFuture.completedFuture(null);
         }
     }
 }
