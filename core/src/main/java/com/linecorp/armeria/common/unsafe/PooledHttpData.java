@@ -50,24 +50,22 @@ import io.netty.buffer.Unpooled;
  * effects.
  *
  * <p>For example, <pre>{@code
- *
- * HttpResponse response = client.get("/");
- * response.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
- *     .thenApply(aggResp -> {
- *         // try-with-resources here ensures the content is released if it is a ByteBufHttpData, or otherwise
- *         // is a no-op if it is not.
- *         try (PooledHttpData content = aggResp.content()) {
- *             if (!aggResp.status().equals(HttpStatus.OK)) {
- *                 throw new IllegalStateException("Bad response");
- *             }
- *             try {
- *                 return OBJECT_MAPPER.readValue(content.toInputStream(), Foo.class);
- *             } catch (IOException e) {
- *                 throw new IllegalArgumentException("Bad JSON: " + content.toStringUtf8());
- *             }
- *         }
- *     });
- *
+ * PooledHttpResponse res = PooledHttpResponse.of(client.get("/"));
+ * res.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
+ *    .thenApply(aggResp -> {
+ *        // try-with-resources here ensures the content is released
+ *        // if it is a ByteBufHttpData, or otherwise is a no-op if it is not.
+ *        try (PooledHttpData content = aggResp.content()) {
+ *            if (!aggResp.status().equals(HttpStatus.OK)) {
+ *                throw new IllegalStateException("Bad response");
+ *            }
+ *            try {
+ *                return OBJECT_MAPPER.readValue(content.toInputStream(), Foo.class);
+ *            } catch (IOException e) {
+ *                throw new IllegalArgumentException("Bad JSON: " + content.toStringUtf8());
+ *            }
+ *        }
+ *    });
  * }</pre>
  *
  * <p>In this example, it is the initial {@code try (PooledHttpData content = ...} that ensures the data is
