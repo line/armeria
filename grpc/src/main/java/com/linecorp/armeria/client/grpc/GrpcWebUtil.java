@@ -90,8 +90,8 @@ public final class GrpcWebUtil {
 
                 final int length = buf.readInt();
                 // 8th (MSB) bit of the 1st gRPC frame byte is:
-                //  - '1' for trailers
-                //  - '0' for data
+                // - '1' for trailers
+                // - '0' for data
                 //
                 // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2
                 if (type >> 7 == 1) {
