@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
@@ -67,7 +69,8 @@ public final class GrpcWebUtil {
      * }</pre>
      */
     @Nullable
-    static HttpHeaders parseTrailers(HttpData response) {
+    public static HttpHeaders parseTrailers(HttpData response) {
+        requireNonNull(response, "response");
         final ByteBuf buf;
         if (response instanceof PooledHttpData) {
             buf = ((PooledHttpData) response).content();
@@ -86,10 +89,16 @@ public final class GrpcWebUtil {
                 }
 
                 final int length = buf.readInt();
+                // 8th (MSB) bit of the 1st gRPC frame byte is:
+                //  - '1' for trailers
+                //  - '0' for data
+                //
+                // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2
                 if (type >> 7 == 1) {
                     trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                     break;
                 } else {
+                    // Skip a gRPC content
                     buf.skipBytes(length);
                 }
             }
