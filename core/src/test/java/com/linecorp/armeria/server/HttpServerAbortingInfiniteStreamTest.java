@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class HttpServerAbortingInfiniteStreamTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerAbortingInfiniteStreamTest.class);

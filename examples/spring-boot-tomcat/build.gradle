@@ -11,13 +11,13 @@ apply plugin: 'org.springframework.boot'
 
 dependencies {
     implementation project(':core')
-    implementation project(':spring:boot-starter')
-    implementation project(':tomcat')
+    implementation project(':spring:boot2-starter')
+    implementation project(':tomcat9')
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    runtimeOnly project(':spring:boot-actuator-starter')
+    runtimeOnly project(':spring:boot2-actuator-starter')
 
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

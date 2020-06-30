@@ -10,7 +10,7 @@ buildscript {
 apply plugin: 'org.springframework.boot'
 
 dependencies {
-    implementation project(':spring:boot-starter')
+    implementation project(':spring:boot2-starter')
     implementation 'org.hibernate.validator:hibernate-validator'
 
     // Preprocessor that enables you to use JavaDoc to add description to REST API parameters.
@@ -21,7 +21,7 @@ dependencies {
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    runtimeOnly project(':spring:boot-actuator-starter')
+    runtimeOnly project(':spring:boot2-actuator-starter')
 
     testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
