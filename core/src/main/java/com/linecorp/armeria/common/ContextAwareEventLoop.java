@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
@@ -34,8 +33,7 @@ public interface ContextAwareEventLoop extends EventLoop, ContextAwareScheduledE
         requireNonNull(context, "context");
         requireNonNull(eventLoop, "eventLoop");
         if (eventLoop instanceof ContextAwareEventLoop) {
-            validateSameCtx(context, (ContextAwareEventLoop) eventLoop,
-                            ContextAwareEventLoop.class);
+            validateSameCtx(context, (ContextAwareEventLoop) eventLoop, ContextAwareEventLoop.class);
             return (ContextAwareEventLoop) eventLoop;
         }
         return new DefaultContextAwareEventLoop(context, eventLoop);

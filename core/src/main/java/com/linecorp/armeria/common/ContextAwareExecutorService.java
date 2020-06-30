@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
@@ -31,8 +30,7 @@ interface ContextAwareExecutorService extends ExecutorService, ContextHolder {
         requireNonNull(context, "context");
         requireNonNull(executor, "executor");
         if (executor instanceof ContextAwareExecutorService) {
-            validateSameCtx(context, (ContextAwareExecutorService) executor,
-                            ContextAwareExecutorService.class);
+            validateSameCtx(context, (ContextAwareExecutorService) executor, ContextAwareExecutorService.class);
             return (ContextAwareExecutorService) executor;
         }
         return new DefaultContextAwareExecutorService(context, executor);

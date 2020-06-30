@@ -43,7 +43,7 @@ final class ContextAwareLogger implements Logger, ContextHolder {
     private final RequestContext ctx;
     private final Logger logger;
 
-    ContextAwareLogger(RequestContext ctx, Logger logger) {
+    private ContextAwareLogger(RequestContext ctx, Logger logger) {
         this.ctx = ctx;
         this.logger = logger;
     }
