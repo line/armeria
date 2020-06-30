@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.logging;
 
 import java.util.function.BiFunction;
@@ -44,9 +43,8 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
 
     /**
      * Returns a new {@link HttpClient} decorator that logs {@link Request}s and {@link Response}s at
-     * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
-     *
-     * @see LoggingClientBuilder for more information on the default settings.
+     * {@link LogLevel#TRACE} for success, {@link LogLevel#WARN} for failure. See {@link LoggingClientBuilder}
+     * for more information on the default settings.
      */
     public static Function<? super HttpClient, LoggingClient> newDecorator() {
         return builder().requestLogLevel(LogLevel.INFO)
