@@ -41,8 +41,6 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Ascii;
-
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -73,6 +71,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
@@ -269,19 +268,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final boolean attemptUpgrade;
         switch (httpPreference) {
-        case HTTP1_REQUIRED:
-            attemptUpgrade = false;
-            break;
-        case HTTP2_PREFERRED:
-            assert remoteAddress != null;
-            attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
-            break;
-        case HTTP2_REQUIRED:
-            attemptUpgrade = true;
-            break;
-        default:
-            // Should never reach here.
-            throw new Error();
+            case HTTP1_REQUIRED:
+                attemptUpgrade = false;
+                break;
+            case HTTP2_PREFERRED:
+                assert remoteAddress != null;
+                attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
+                break;
+            case HTTP2_REQUIRED:
+                attemptUpgrade = true;
+                break;
+            default:
+                // Should never reach here.
+                throw new Error();
         }
 
         if (attemptUpgrade) {
@@ -380,6 +379,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         private final Http2ResponseDecoder responseDecoder;
         @Nullable
         private UpgradeEvent upgradeEvt;
+        private String upgradeRejectionCause = "";
         private boolean needsToClose;
 
         UpgradeRequestHandler(Http2ResponseDecoder responseDecoder) {
@@ -467,28 +467,51 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            boolean handled = false;
             if (msg instanceof HttpResponse) {
                 // The server rejected the upgrade request and sent its response in HTTP/1.
                 assert upgradeEvt == UPGRADE_REJECTED;
-                final String connection = ((HttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION);
-                needsToClose = connection != null && Ascii.equalsIgnoreCase("close", connection);
-                handled = true;
-            }
-
-            if (msg instanceof HttpContent) {
-                if (msg instanceof LastHttpContent) {
-                    // Received the rejecting response completely.
+                final HttpResponse res = (HttpResponse) msg;
+                upgradeRejectionCause = "Upgrade request rejected with: " + res;
+                // We can persist connection only when:
+                // - The response has 'Connection: keep-alive' header on HTTP/1.0.
+                // - The response has no 'Connection: close' header on HTTP/1.1.
+                // and:
+                // - The response has 'Content-Length' or 'Transfer-Encoding: chunked',
+                //   i.e. possible to determine the end of the response.
+                //
+                // See: https://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.1.2.1
+                //      https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+                needsToClose = !(HttpUtil.isKeepAlive(res) &&
+                                 (HttpUtil.isContentLengthSet(res) ||
+                                  HttpUtil.isTransferEncodingChunked(res)));
+                if (needsToClose) {
+                    // No need to wait till the end of the response.
+                    // Close the connection immediately and finish the upgrade process.
                     onUpgradeResponse(ctx, false);
                 }
-                handled = true;
+
+                ReferenceCountUtil.release(msg);
+                return;
             }
 
-            if (!handled) {
-                ctx.fireChannelRead(msg);
-            } else {
+            // We're not going to reuse the connection,
+            // so we just discard everything received.
+            if (needsToClose) {
                 ReferenceCountUtil.release(msg);
+                return;
             }
+
+            // We're not going to close but reuse the connection,
+            // so we wait until the end of the rejecting response.
+            if (msg instanceof HttpContent) {
+                if (msg instanceof LastHttpContent) {
+                    onUpgradeResponse(ctx, false);
+                }
+                ReferenceCountUtil.release(msg);
+                return;
+            }
+
+            ctx.fireChannelRead(msg);
         }
 
         private void onUpgradeResponse(ChannelHandlerContext ctx, boolean success) {
@@ -506,8 +529,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, H2C, H1C,
-                                                 "upgrade response with 'Connection: close' header");
+                    finishWithNegotiationFailure(ctx, H2C, H1C, upgradeRejectionCause);
                 } else {
                     // We can silently retry with H1C.
                     retryWithH1C(ctx);
@@ -521,7 +543,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, H2C, H1C, "upgrade request rejected");
+                    finishWithNegotiationFailure(ctx, H2C, H1C, upgradeRejectionCause);
                     return;
                 }
 
