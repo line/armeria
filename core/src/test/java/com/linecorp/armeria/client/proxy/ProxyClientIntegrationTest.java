@@ -274,8 +274,11 @@ class ProxyClientIntegrationTest {
         });
 
         final ClientFactory clientFactory =
-                ClientFactory.builder().proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
-                             .useHttp2Preface(false).build();
+                ClientFactory.builder()
+                             .useHttp2Preface(false)
+                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                             .build();
+
         final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -311,7 +314,10 @@ class ProxyClientIntegrationTest {
         });
 
         final ClientFactory clientFactory =
-                ClientFactory.builder().proxyConfig(ProxyConfig.connect(httpProxyServer.address())).build();
+                ClientFactory.builder()
+                             .useHttp2Preface(true)
+                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                             .build();
         final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
