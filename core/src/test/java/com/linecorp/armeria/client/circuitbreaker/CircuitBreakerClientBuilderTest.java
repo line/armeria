@@ -27,7 +27,7 @@ class CircuitBreakerClientBuilderTest {
     @Test
     void buildWithMaxContentLength() {
         final CircuitBreakerRuleWithContent<HttpResponse> rule =
-                CircuitBreakerRuleWithContent.onResponse(unused -> null);
+                CircuitBreakerRuleWithContent.onResponse((unused1, unused2) -> null);
         assertThatThrownBy(() -> CircuitBreakerClient.builder(rule, 0))
                   .isInstanceOf(IllegalArgumentException.class)
                   .hasMessageContaining("maxContentLength: 0 (expected: > 0)");

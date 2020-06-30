@@ -17,9 +17,12 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.BiPredicateUtil.toBiPredicateForSecond;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -51,8 +54,22 @@ public interface RetryRuleWithContent<T extends Response> {
      * with {@code true}.
      */
     static <T extends Response> RetryRuleWithContent<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> retryFunction) {
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> retryFunction) {
         return RetryRuleWithContent.<T>builder().onResponse(retryFunction).thenBackoff();
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with
+     * the {@linkplain Backoff#ofDefault() default backoff} if the specified {@code retryFunction} completes
+     * with {@code true}.
+     *
+     * @deprecated Use {@link #onResponse(BiFunction)}.
+     */
+    @Deprecated
+    static <T extends Response> RetryRuleWithContent<T> onResponse(
+            Function<? super T, ? extends CompletionStage<Boolean>> retryFunction) {
+        return onResponse((unused, res) -> retryFunction.apply(res));
     }
 
     /**
@@ -84,9 +101,22 @@ public interface RetryRuleWithContent<T extends Response> {
      * {@code requestHeadersFilter}.
      */
     static <T extends Response> RetryRuleWithContentBuilder<T> builder(
-            Predicate<? super RequestHeaders> requestHeadersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         requireNonNull(requestHeadersFilter, "requestHeadersFilter");
         return new RetryRuleWithContentBuilder<>(requestHeadersFilter);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContentBuilder} with the specified
+     * {@code requestHeadersFilter}.
+     *
+     * @deprecated Use {@link #builder(BiPredicate)}.
+     */
+    @Deprecated
+    static <T extends Response> RetryRuleWithContentBuilder<T> builder(
+            Predicate<? super RequestHeaders> requestHeadersFilter) {
+        requireNonNull(requestHeadersFilter, "requestHeadersFilter");
+        return builder(toBiPredicateForSecond(requestHeadersFilter));
     }
 
     /**

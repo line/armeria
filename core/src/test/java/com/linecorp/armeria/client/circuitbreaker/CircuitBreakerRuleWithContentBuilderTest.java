@@ -59,9 +59,9 @@ class CircuitBreakerRuleWithContentBuilderTest {
         final CircuitBreakerRuleWithContent<HttpResponse> rule =
                 CircuitBreakerRuleWithContent
                         .<HttpResponse>builder()
-                        .onResponse(response -> response.aggregate().thenApply(content -> false))
-                        .onResponse(response -> response.aggregate().thenApply(content -> false))
-                        .onResponse(response -> {
+                        .onResponse((unused, response) -> response.aggregate().thenApply(content -> false))
+                        .onResponse((unused, response) -> response.aggregate().thenApply(content -> false))
+                        .onResponse((unused, response) -> {
                             return response.aggregate()
                                            .thenApply(content -> content.contentUtf8().contains(message));
                         })

@@ -88,7 +88,7 @@ class RetryRuleBuilderTest {
                          .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                          .thenBackoff(backoff500)
                          .orElse(RetryRule.builder()
-                                          .onStatus(HttpStatus.BAD_GATEWAY::equals)
+                                          .onStatus((unused, status) -> HttpStatus.BAD_GATEWAY.equals(status))
                                           .thenBackoff(backoff502));
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -109,7 +109,7 @@ class RetryRuleBuilderTest {
         final Backoff backoff = Backoff.fixed(1000);
         final RetryRule rule =
                 RetryRule.builder()
-                         .onResponseTrailers(trailers -> trailers.containsInt("grpc-status", 3))
+                         .onResponseTrailers((unused, trailers) -> trailers.containsInt("grpc-status", 3))
                          .thenBackoff(backoff);
 
         final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -130,7 +130,10 @@ class RetryRuleBuilderTest {
                                                      .onException(ClosedSessionException.class)
                                                      .thenBackoff(backoff1),
                                             RetryRule.builder()
-                                                     .onException(WriteTimeoutException.class::isInstance)
+                                                     .onException((unused, obj) -> {
+                                                         return "/".equals(ctx.path()) &&
+                                                                obj instanceof WriteTimeoutException;
+                                                     })
                                                      .thenBackoff(backoff2));
 
         assertBackoff(rule.shouldRetry(ctx, ClosedSessionException.get())).isSameAs(backoff1);
@@ -300,8 +303,8 @@ class RetryRuleBuilderTest {
     void noDelay() {
         final int maxAttempts = 10;
         final RetryRule rule = RetryRule.builder()
-                                        .onStatus(status -> status == HttpStatus.BAD_REQUEST ||
-                                                            status == HttpStatus.TOO_MANY_REQUESTS)
+                                        .onStatus((unused, status) -> status == HttpStatus.BAD_REQUEST ||
+                                                                      status == HttpStatus.TOO_MANY_REQUESTS)
                                         .thenBackoff(Backoff.withoutDelay().withMaxAttempts(maxAttempts));
 
         for (int i = 1; i < maxAttempts; i++) {
