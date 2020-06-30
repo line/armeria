@@ -15,14 +15,17 @@
  */
 package com.linecorp.armeria.server.file;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -39,6 +42,11 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
         return null;
     }
 
+    @Override
+    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+        return UnmodifiableFuture.completedFuture(null);
+    }
+
     @Nullable
     @Override
     public ResponseHeaders readHeaders() {
@@ -46,8 +54,19 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
     }
 
     @Override
-    public HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+    public CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
+        return UnmodifiableFuture.completedFuture(null);
+    }
+
+    @Nullable
+    @Override
+    public AggregatedHttpResponse read() {
         return null;
+    }
+
+    @Override
+    public CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Nullable

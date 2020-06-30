@@ -15,11 +15,15 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.time.Clock;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -27,6 +31,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 
@@ -34,7 +39,7 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
 
     private final URL url;
     @Nullable
-    private HttpFileAttributes attrs;
+    private CompletableFuture<HttpFileAttributes> attrsFuture;
 
     ClassPathHttpFile(URL url,
                       boolean contentTypeAutoDetectionEnabled,
@@ -45,7 +50,7 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
                       HttpHeaders headers) {
         super(contentTypeAutoDetectionEnabled ? MimeTypeUtil.guessFromPath(url.toString()) : null,
               clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
-        this.url = url;
+        this.url = requireNonNull(url, "url");
     }
 
     @Override
@@ -54,14 +59,23 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
     }
 
     @Override
-    public HttpFileAttributes readAttributes() throws IOException {
-        if (attrs == null) {
-            final URLConnection conn = url.openConnection();
-            final long length = conn.getContentLengthLong();
-            final long lastModifiedMillis = conn.getLastModified();
-            attrs = new HttpFileAttributes(length, lastModifiedMillis);
+    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
+
+        if (attrsFuture != null) {
+            return attrsFuture;
         }
-        return attrs;
+
+        return attrsFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                final URLConnection conn = url.openConnection();
+                final long length = conn.getContentLengthLong();
+                final long lastModifiedMillis = conn.getLastModified();
+                return new HttpFileAttributes(length, lastModifiedMillis);
+            } catch (IOException e) {
+                return Exceptions.throwUnsafely(e);
+            }
+        }, fileReadExecutor);
     }
 
     @Override

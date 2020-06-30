@@ -107,7 +107,7 @@ class RetryingClientWithLoggingTest {
     void retryingThenLogging() throws InterruptedException {
         successLogIndex = 3;
         final RetryRuleWithContent<HttpResponse> retryRule =
-                RetryRuleWithContent.onResponse(response -> {
+                RetryRuleWithContent.onResponse((unused, response) -> {
                     return response.aggregate().thenApply(content -> !"hello".equals(content.contentUtf8()));
                 });
 
