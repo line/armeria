@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Clock;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
@@ -61,8 +63,8 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
                          @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                          HttpHeaders headers) {
         super(contentType, clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
-        this.content = content;
-        this.attrs = attrs;
+        this.content = requireNonNull(content, "content");
+        this.attrs = requireNonNull(attrs, "attrs");
     }
 
     @Override
@@ -82,7 +84,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
 
     @Override
     public ResponseHeaders readHeaders() {
-        return super.readHeaders(attrs);
+        return readHeaders(attrs);
     }
 
     @Override

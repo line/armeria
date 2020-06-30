@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -42,7 +44,7 @@ final class CachingHttpFile implements HttpFile {
     private volatile AggregatedHttpFile cachedFile;
 
     CachingHttpFile(HttpFile file, int maxCachingLength) {
-        this.file = file;
+        this.file = requireNonNull(file, "file");
         this.maxCachingLength = maxCachingLength;
     }
 
@@ -84,6 +86,7 @@ final class CachingHttpFile implements HttpFile {
     }
 
     private HttpFile getFile(Executor fileReadExecutor) {
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
         return HttpFile.from(file.readAttributes(fileReadExecutor).thenApply(uncachedAttrs -> {
             if (uncachedAttrs == null) {
                 // Non-existent file. Invalidate the cache just in case it existed before.

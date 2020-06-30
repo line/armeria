@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -48,7 +50,7 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
                       HttpHeaders headers) {
         super(contentTypeAutoDetectionEnabled ? MimeTypeUtil.guessFromPath(url.toString()) : null,
               clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
-        this.url = url;
+        this.url = requireNonNull(url, "url");
     }
 
     @Override
@@ -58,6 +60,8 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
 
     @Override
     public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
+
         if (attrsFuture != null) {
             return attrsFuture;
         }
@@ -71,7 +75,7 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
             } catch (IOException e) {
                 return Exceptions.throwUnsafely(e);
             }
-        });
+        }, fileReadExecutor);
     }
 
     @Override

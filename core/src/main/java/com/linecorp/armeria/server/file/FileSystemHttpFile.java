@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.channels.ByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -50,7 +52,7 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
                        HttpHeaders headers) {
         super(contentTypeAutoDetectionEnabled ? MimeTypeUtil.guessFromPath(path.toString()) : null,
               clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
-        this.path = path;
+        this.path = requireNonNull(path, "path");
     }
 
     @Override

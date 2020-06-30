@@ -141,7 +141,7 @@ public interface HttpFile {
      * {@link Path}.
      */
     static HttpFileBuilder builder(Path path) {
-        return new FileSystemHttpFileBuilder(path);
+        return new FileSystemHttpFileBuilder(requireNonNull(path, "path"));
     }
 
     /**

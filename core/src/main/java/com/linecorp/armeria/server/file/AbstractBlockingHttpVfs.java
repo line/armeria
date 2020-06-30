@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +57,11 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
             Executor fileReadExecutor, String path, Clock clock,
             @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
 
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
+        requireNonNull(path, "path");
+        requireNonNull(clock, "clock");
+        requireNonNull(additionalHeaders, "additionalHeaders");
+
         return HttpFile.from(CompletableFuture.supplyAsync(
                 () -> blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders),
                 fileReadExecutor));
@@ -81,6 +88,9 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      */
     @Override
     public final CompletableFuture<Boolean> canList(Executor fileReadExecutor, String path) {
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
+        requireNonNull(path, "path");
+
         if (directoryListingSupported) {
             return CompletableFuture.supplyAsync(() -> blockingCanList(fileReadExecutor, path),
                                                  fileReadExecutor);
@@ -108,6 +118,9 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      */
     @Override
     public final CompletableFuture<List<String>> list(Executor fileReadExecutor, String path) {
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
+        requireNonNull(path, "path");
+
         if (directoryListingSupported) {
             return CompletableFuture.supplyAsync(() -> blockingList(fileReadExecutor, path),
                                                  fileReadExecutor);

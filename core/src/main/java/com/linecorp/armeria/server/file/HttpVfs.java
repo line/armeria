@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
@@ -48,14 +47,15 @@ public interface HttpVfs {
      * Creates a new {@link HttpVfs} with the specified {@code rootDir} in an O/S file system.
      */
     static HttpVfs of(Path rootDir) {
-        return new FileSystemHttpVfs(rootDir);
+        return new FileSystemHttpVfs(requireNonNull(rootDir, "rootDir"));
     }
 
     /**
      * Creates a new {@link HttpVfs} with the specified {@code rootDir} in the current class path.
      */
     static HttpVfs of(ClassLoader classLoader, String rootDir) {
-        return new ClassPathHttpVfs(classLoader, rootDir);
+        return new ClassPathHttpVfs(requireNonNull(classLoader, "classLoader"),
+                                    requireNonNull(rootDir, "rootDir"));
     }
 
     /**
