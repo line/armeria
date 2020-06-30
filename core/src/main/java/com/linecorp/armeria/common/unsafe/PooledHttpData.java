@@ -141,4 +141,30 @@ public interface PooledHttpData extends HttpData, ByteBufHolder, SafeCloseable {
      */
     @Override
     PooledHttpData withEndOfStream(boolean endOfStream);
+
+    // Methods from ByteBufHolder.
+
+    @Override
+    PooledHttpData copy();
+
+    @Override
+    PooledHttpData duplicate();
+
+    @Override
+    PooledHttpData retainedDuplicate();
+
+    @Override
+    PooledHttpData replace(ByteBuf content);
+
+    @Override
+    PooledHttpData retain();
+
+    @Override
+    PooledHttpData retain(int increment);
+
+    @Override
+    PooledHttpData touch();
+
+    @Override
+    PooledHttpData touch(Object hint);
 }
