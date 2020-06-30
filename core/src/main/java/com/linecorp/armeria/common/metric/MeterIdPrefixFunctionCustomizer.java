@@ -22,7 +22,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 /**
  * Transforms a {@link MeterIdPrefix} into another.
  *
- * @see MeterIdPrefixFunction
+ * @see MeterIdPrefixFunction#andThen(MeterIdPrefixFunctionCustomizer)
  */
 @FunctionalInterface
 public interface MeterIdPrefixFunctionCustomizer {
