@@ -66,24 +66,23 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
      */
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
-        return new StickyEndpointSelector(requestContextHasher, endpointGroup);
+        return new StickyEndpointSelector(endpointGroup, requestContextHasher);
     }
 
-    private static final class StickyEndpointSelector implements EndpointSelector {
+    private static final class StickyEndpointSelector extends AbstractEndpointSelector {
 
         private final ToLongFunction<ClientRequestContext> requestContextHasher;
-        private final EndpointGroup endpointGroup;
 
-        StickyEndpointSelector(ToLongFunction<ClientRequestContext> requestContextHasher,
-                               EndpointGroup endpointGroup) {
+        StickyEndpointSelector(EndpointGroup endpointGroup,
+                               ToLongFunction<ClientRequestContext> requestContextHasher) {
+            super(endpointGroup);
             this.requestContextHasher = requireNonNull(requestContextHasher, "requestContextHasher");
-            this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
         }
 
         @Override
-        public Endpoint select(ClientRequestContext ctx) {
+        public Endpoint selectNow(ClientRequestContext ctx) {
 
-            final List<Endpoint> endpoints = endpointGroup.endpoints();
+            final List<Endpoint> endpoints = group().endpoints();
             if (endpoints.isEmpty()) {
                 return null;
             }

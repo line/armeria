@@ -18,18 +18,22 @@ package com.linecorp.armeria.internal.client;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 public final class ClientUtil {
@@ -39,41 +43,77 @@ public final class ClientUtil {
             U delegate,
             DefaultClientRequestContext ctx,
             EndpointGroup endpointGroup,
-            BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
+            Function<CompletableFuture<O>, O> futureConverter,
+            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
         requireNonNull(endpointGroup, "endpointGroup");
-        requireNonNull(fallbackResponseFactory, "fallbackResponseFactory");
+        requireNonNull(futureConverter, "futureConverter");
+        requireNonNull(errorResponseFactory, "errorResponseFactory");
 
         try {
             endpointGroup = mapEndpoint(ctx, endpointGroup);
-            if (ctx.init(endpointGroup)) {
-                return pushAndExecute(delegate, ctx);
-            } else {
-                // Context initialization has failed, which means:
-                // - ctx.log() has been completed with an exception.
-                // - ctx.request() has been aborted (if not null).
-                // - the decorator chain was not invoked at all.
-                // See `init()` and `failEarly()` in `DefaultClientRequestContext`.
-
-                // Call the decorator chain anyway so that the request is seen by the decorators.
-                final O res = pushAndExecute(delegate, ctx);
-
-                // We will use the fallback response which is created from the exception
-                // raised in ctx.init(), so the response returned can be aborted.
-                if (res instanceof StreamMessage) {
-                    ((StreamMessage<?>) res).abort();
+            final CompletableFuture<Boolean> initFuture = ctx.init(endpointGroup);
+            if (initFuture.isDone()) {
+                // Initialization has been done immediately.
+                final boolean success;
+                try {
+                    success = initFuture.get();
+                } catch (Exception e) {
+                    throw UnprocessedRequestException.of(Exceptions.peel(e));
                 }
 
-                // No need to call `fail()` because failed by `DefaultRequestContext.init()` already.
-                final Throwable cause = ctx.log().partial().requestCause();
-                assert cause != null;
-                return fallbackResponseFactory.apply(ctx, cause);
+                return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
+            } else {
+                return futureConverter.apply(initFuture.handle((success, cause) -> {
+                    try {
+                        if (cause != null) {
+                            throw UnprocessedRequestException.of(Exceptions.peel(cause));
+                        }
+
+                        return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
+                    } catch (Throwable t) {
+                        fail(ctx, t);
+                        return errorResponseFactory.apply(ctx, t);
+                    }
+                }));
             }
         } catch (Throwable cause) {
             fail(ctx, cause);
-            return fallbackResponseFactory.apply(ctx, cause);
+            return errorResponseFactory.apply(ctx, cause);
+        }
+    }
+
+    private static <I extends Request, O extends Response, U extends Client<I, O>>
+    O initContextAndExecuteWithFallback(
+            U delegate, DefaultClientRequestContext ctx,
+            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, boolean succeeded)
+            throws Exception {
+
+        if (succeeded) {
+            return pushAndExecute(delegate, ctx);
+        } else {
+            final Throwable cause = ctx.log().partial().requestCause();
+            assert cause != null;
+
+            // Context initialization has failed, which means:
+            // - ctx.log() has been completed with an exception.
+            // - ctx.request() has been aborted (if not null).
+            // - the decorator chain was not invoked at all.
+            // See `init()` and `failEarly()` in `DefaultClientRequestContext`.
+
+            // Call the decorator chain anyway so that the request is seen by the decorators.
+            final O res = pushAndExecute(delegate, ctx);
+
+            // We will use the fallback response which is created from the exception
+            // raised in ctx.init(), so the response returned can be aborted.
+            if (res instanceof StreamMessage) {
+                ((StreamMessage<?>) res).abort(cause);
+            }
+
+            // No need to call `fail()` because failed by `DefaultRequestContext.init()` already.
+            return errorResponseFactory.apply(ctx, cause);
         }
     }
 
@@ -88,17 +128,17 @@ public final class ClientUtil {
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O executeWithFallback(U delegate, ClientRequestContext ctx,
-                          BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
+                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
-        requireNonNull(fallbackResponseFactory, "fallbackResponseFactory");
+        requireNonNull(errorResponseFactory, "errorResponseFactory");
 
         try {
             return pushAndExecute(delegate, ctx);
         } catch (Throwable cause) {
             fail(ctx, cause);
-            return fallbackResponseFactory.apply(ctx, cause);
+            return errorResponseFactory.apply(ctx, cause);
         }
     }
 

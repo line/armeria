@@ -3,7 +3,7 @@ final def MICROMETER_VERSION = '1.3.9'
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift')
+    compileOnly project(':thrift0.13')
     implementation project(':logback')
 
     [ 'micrometer-core', 'micrometer-spring-legacy' ].each {
@@ -40,7 +40,7 @@ dependencies {
     }
 
     testImplementation project(':grpc')
-    testImplementation project(':thrift')
+    testImplementation project(':thrift0.13')
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         version {
             // Will fail the build if the override doesn't work
@@ -49,13 +49,13 @@ dependencies {
     }
 }
 
-// Use the sources from ':spring:boot-autoconfigure'.
+// Use the sources from ':spring:boot2-autoconfigure'.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot-autoconfigure"
+def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot2-autoconfigure"
 // Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.
-task copyFiles(type: Copy) {
+task generateSources(type: Copy) {
     from "${autoconfigureProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
     exclude '**/ArmeriaBeanPostProcessor.java'
@@ -63,16 +63,16 @@ task copyFiles(type: Copy) {
     exclude '**/package-info.java'
 }
 
-tasks.compileJava.dependsOn(copyFiles)
+tasks.compileJava.dependsOn(generateSources)
 tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
         "${autoconfigureProjectDir}/gen-src/test/grpc",
         "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${autoconfigureProjectDir}/src/main/resources"
 
-tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.generateSources)
+tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.compileTestJava)
 
-// Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
+// Disable checkstyle because it's checked by ':spring:boot2-autoconfigure'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
 }

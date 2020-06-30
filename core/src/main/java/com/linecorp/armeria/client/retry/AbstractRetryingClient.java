@@ -293,7 +293,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final EndpointGroup endpointGroup = ctx.endpointGroup();
         final ClientRequestContext derived;
         if (endpointGroup != null && !initialAttempt) {
-            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.select(ctx));
+            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.selectNow(ctx));
         } else {
             derived = ctx.newDerivedContext(id, req, rpcReq);
         }

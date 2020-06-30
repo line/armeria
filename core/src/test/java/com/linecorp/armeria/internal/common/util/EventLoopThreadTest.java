@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.testing.junit.common.EventLoopGroupExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
 
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;

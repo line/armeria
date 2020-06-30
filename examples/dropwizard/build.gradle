@@ -7,7 +7,7 @@ application {
 }
 
 dependencies {
-    implementation project(':dropwizard')
+    implementation project(':dropwizard2')
 
     testImplementation 'io.dropwizard:dropwizard-testing'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

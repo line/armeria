@@ -1,11 +1,11 @@
 // This module builds and publishes 'armeria-thrift0.9', which is compiled with
-// the source code of ':thrift' and libthrift 0.9.
+// the source code of ':thrift0.13' and libthrift 0.9.
 //
 // The reason we have to do this is because libthrift kept API compatibility but
-// not ABI compatibility between 0.9 and 0.10, i.e. we can use the same source
+// not ABI compatibility between 0.9 and 0.13, i.e. we can use the same source
 // but not the same class files.
 //
-// See also: ../thrift0.11/build.gradle
+// See also: ../thrift0.12/build.gradle
 
 final def THRIFT_VERSION = '0.9.3-1'
 
@@ -29,17 +29,17 @@ dependencies {
     testImplementation 'io.prometheus:simpleclient_common'
 }
 
-// Use the sources from ':thrift'.
+// Use the sources from ':thrift0.13'.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-tasks.compileJava.source "${rootProject.projectDir}/thrift/src/main/java"
-tasks.processResources.from "${rootProject.projectDir}/thrift/src/main/resources"
-tasks.compileTestJava.source "${rootProject.projectDir}/thrift/src/test/java"
-tasks.processTestResources.from "${rootProject.projectDir}/thrift/src/test/resources"
-tasks.sourcesJar.from "${rootProject.projectDir}/thrift/src/main/java"
-tasks.sourcesJar.from "${rootProject.projectDir}/thrift/src/main/resources"
-tasks.javadoc.source "${rootProject.projectDir}/thrift/src/main/java"
+tasks.compileJava.source "${rootProject.projectDir}/thrift0.13/src/main/java"
+tasks.processResources.from "${rootProject.projectDir}/thrift0.13/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/thrift0.13/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/thrift0.13/src/test/resources"
+tasks.sourcesJar.from "${rootProject.projectDir}/thrift0.13/src/main/java"
+tasks.sourcesJar.from "${rootProject.projectDir}/thrift0.13/src/main/resources"
+tasks.javadoc.source "${rootProject.projectDir}/thrift0.13/src/main/java"
 
 // Use the old compiler.
 ext {
@@ -49,7 +49,7 @@ ext {
 
 // Keep the original Guava references in ThriftListenableFuture,
 // which is the only place we expose Guava classes in our public API.
-// NB: Keep this same with ':thrift'.
+// NB: Keep this same with ':thrift0.13'.
 tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
 tasks.shadedJar.doLast {
     ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
@@ -60,7 +60,7 @@ tasks.shadedJar.doLast {
     }
 }
 
-// Disable checkstyle because it's checked by ':thrift'.
+// Disable checkstyle because it's checked by ':thrift0.13'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
 }
