@@ -16,106 +16,25 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
+import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 /**
  * A delegating {@link ExecutorService} that makes sure all submitted tasks are
  * executed within the {@link RequestContext}.
  */
-class ContextAwareExecutorService implements ExecutorService {
+interface ContextAwareExecutorService extends ExecutorService, ContextHolder {
 
-    private final RequestContext context;
-    private final ExecutorService delegate;
-
-    ContextAwareExecutorService(RequestContext context, ExecutorService delegate) {
-        this.context = context;
-        this.delegate = delegate;
-    }
-
-    RequestContext context() {
-        return context;
-    }
-
-    @Override
-    public final void shutdown() {
-        delegate.shutdown();
-    }
-
-    @Override
-    public final List<Runnable> shutdownNow() {
-        return delegate.shutdownNow();
-    }
-
-    @Override
-    public Future<?> submit(Runnable task) {
-        return delegate.submit(context.makeContextAware(task));
-    }
-
-    @Override
-    public <T> Future<T> submit(Runnable task, T result) {
-        return delegate.submit(context.makeContextAware(task), result);
-    }
-
-    @Override
-    public <T> Future<T> submit(Callable<T> task) {
-        return delegate.submit(context.makeContextAware(task));
-    }
-
-    @Override
-    public final boolean isShutdown() {
-        return delegate.isShutdown();
-    }
-
-    @Override
-    public final boolean isTerminated() {
-        return delegate.isTerminated();
-    }
-
-    @Override
-    public final boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        return delegate.awaitTermination(timeout, unit);
-    }
-
-    @Override
-    public final <T> List<Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks) throws InterruptedException {
-        return delegate.invokeAll(makeContextAware(tasks));
-    }
-
-    @Override
-    public final <T> List<Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
-        return delegate.invokeAll(makeContextAware(tasks), timeout, unit);
-    }
-
-    @Override
-    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException, ExecutionException {
-        return delegate.invokeAny(makeContextAware(tasks));
-    }
-
-    @Override
-    public final <T> T invokeAny(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        return delegate.invokeAny(makeContextAware(tasks), timeout, unit);
-    }
-
-    @Override
-    public final void execute(Runnable command) {
-        delegate.execute(context.makeContextAware(command));
-    }
-
-    private <T> Collection<? extends Callable<T>> makeContextAware(
-            Collection<? extends Callable<T>> tasks) {
-        return tasks.stream().map(context::makeContextAware).collect(Collectors.toList());
+    static ContextAwareExecutorService of(RequestContext context, ExecutorService executor) {
+        requireNonNull(context, "context");
+        requireNonNull(executor, "executor");
+        if (executor instanceof ContextAwareExecutorService) {
+            validateSameCtx(context, (ContextAwareExecutorService) executor,
+                            ContextAwareExecutorService.class);
+            return (ContextAwareExecutorService) executor;
+        }
+        return new DefaultContextAwareExecutorService(context, executor);
     }
 }

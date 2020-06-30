@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -24,7 +24,8 @@ import java.util.concurrent.ScheduledExecutorService;
  * A delegating {@link ScheduledExecutorService} that sets the {@link RequestContext} before executing any
  * submitted tasks.
  */
-public interface ContextAwareScheduledExecutorService extends ScheduledExecutorService {
+public interface ContextAwareScheduledExecutorService
+        extends ScheduledExecutorService, ContextAwareExecutorService {
 
     /**
      * Returns a new {@link ContextAwareScheduledExecutorService} that sets the specified
@@ -35,13 +36,9 @@ public interface ContextAwareScheduledExecutorService extends ScheduledExecutorS
         requireNonNull(context, "context");
         requireNonNull(executor, "executor");
         if (executor instanceof ContextAwareScheduledExecutorService) {
-            final RequestContext ctx = ((ContextAwareScheduledExecutorService) executor).context();
-            if (context == ctx) {
-                return (ContextAwareScheduledExecutorService) executor;
-            }
-            throw new IllegalArgumentException(
-                    "cannot create a " + ContextAwareScheduledExecutorService.class.getSimpleName() +
-                    " using another " + executor);
+            validateSameCtx(context, (ContextAwareScheduledExecutorService) executor,
+                            ContextAwareScheduledExecutorService.class);
+            return (ContextAwareScheduledExecutorService) executor;
         }
         return new DefaultContextAwareScheduledExecutorService(context, executor);
     }
@@ -56,5 +53,6 @@ public interface ContextAwareScheduledExecutorService extends ScheduledExecutorS
      * Returns the {@link RequestContext} that is specified when creating
      * this {@link ContextAwareScheduledExecutorService}.
      */
+    @Override
     RequestContext context();
 }

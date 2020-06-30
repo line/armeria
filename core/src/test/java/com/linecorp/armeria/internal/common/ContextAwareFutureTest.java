@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
@@ -26,6 +27,7 @@ import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.mockito.ArgumentCaptor;
@@ -85,5 +87,25 @@ class ContextAwareFutureTest {
                 assertThat(event.getMessage()).startsWith("An error occurred while pushing");
             });
         }
+    }
+
+    @Test
+    void exceptionIfDifferentCtxsAreUsed() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx1 = ServiceRequestContext.builder(req).build();
+        final ServiceRequestContext ctx2 = ServiceRequestContext.builder(req).build();
+        final CompletableFuture<Object> future = new CompletableFuture<>();
+        final CompletableFuture<Object> contextAwareFuture = ctx1.makeContextAware(future);
+        assertThatThrownBy(() -> ctx2.makeContextAware(contextAwareFuture))
+                .isExactlyInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void theSameFutureIsReturnedIfMakeContextAwareIsCalledTwice() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(req).build();
+        final CompletableFuture<Object> future = new CompletableFuture<>();
+        final CompletableFuture<Object> contextAwareFuture = ctx.makeContextAware(future);
+        assertThat(ctx.makeContextAware(contextAwareFuture)).isSameAs(contextAwareFuture);
     }
 }

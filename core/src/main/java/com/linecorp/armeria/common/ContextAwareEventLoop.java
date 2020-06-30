@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.channel.EventLoop;
@@ -23,7 +24,7 @@ import io.netty.channel.EventLoop;
 /**
  * A delegating {@link EventLoop} that sets the {@link RequestContext} before executing any submitted tasks.
  */
-public interface ContextAwareEventLoop extends EventLoop {
+public interface ContextAwareEventLoop extends EventLoop, ContextAwareScheduledExecutorService {
 
     /**
      * Returns a new {@link ContextAwareEventLoop} that sets the specified {@link RequestContext}
@@ -33,13 +34,9 @@ public interface ContextAwareEventLoop extends EventLoop {
         requireNonNull(context, "context");
         requireNonNull(eventLoop, "eventLoop");
         if (eventLoop instanceof ContextAwareEventLoop) {
-            final RequestContext ctx = ((ContextAwareEventLoop) eventLoop).context();
-            if (context == ctx) {
-                return (ContextAwareEventLoop) eventLoop;
-            }
-            throw new IllegalArgumentException(
-                    "cannot create a " + ContextAwareEventLoop.class.getSimpleName() +
-                    " using another " + eventLoop);
+            validateSameCtx(context, (ContextAwareEventLoop) eventLoop,
+                            ContextAwareEventLoop.class);
+            return (ContextAwareEventLoop) eventLoop;
         }
         return new DefaultContextAwareEventLoop(context, eventLoop);
     }
@@ -48,11 +45,13 @@ public interface ContextAwareEventLoop extends EventLoop {
      * Returns the {@link EventLoop} that is executing submitted tasks without setting
      * the {@link RequestContext}.
      */
+    @Override
     EventLoop withoutContext();
 
     /**
      * Returns the {@link RequestContext} that is specified when creating
      * this {@link ContextAwareEventLoop}.
      */
+    @Override
     RequestContext context();
 }

@@ -32,7 +32,8 @@ import io.netty.util.concurrent.ProgressivePromise;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 
-final class DefaultContextAwareEventLoop extends ContextAwareExecutorService implements ContextAwareEventLoop {
+final class DefaultContextAwareEventLoop
+        extends DefaultContextAwareExecutorService implements ContextAwareEventLoop {
 
     private final EventLoop eventLoop;
 
@@ -44,11 +45,6 @@ final class DefaultContextAwareEventLoop extends ContextAwareExecutorService imp
     @Override
     public EventLoop withoutContext() {
         return eventLoop;
-    }
-
-    @Override
-    public RequestContext context() {
-        return super.context();
     }
 
     @Override

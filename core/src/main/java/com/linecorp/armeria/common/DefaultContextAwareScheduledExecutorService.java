@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.base.MoreObjects;
 
 final class DefaultContextAwareScheduledExecutorService
-        extends ContextAwareExecutorService implements ContextAwareScheduledExecutorService {
+        extends DefaultContextAwareExecutorService implements ContextAwareScheduledExecutorService {
 
     private final ScheduledExecutorService executor;
 
@@ -33,22 +33,9 @@ final class DefaultContextAwareScheduledExecutorService
         this.executor = executor;
     }
 
-    /**
-     * Returns the {@link ScheduledExecutorService} that is executing submitted tasks without setting
-     * the {@link RequestContext}.
-     */
     @Override
     public ScheduledExecutorService withoutContext() {
         return executor;
-    }
-
-    /**
-     * Returns the {@link RequestContext} that is specified when creating
-     * this {@link ContextAwareScheduledExecutorService}.
-     */
-    @Override
-    public RequestContext context() {
-        return super.context();
     }
 
     @Override

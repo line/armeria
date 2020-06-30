@@ -473,6 +473,7 @@ public interface RequestContext {
      * use {@link #eventLoop()} to ensure the callback stays on the same thread as well.
      */
     default Executor makeContextAware(Executor executor) {
+        requireNonNull(executor, "executor");
         return runnable -> executor.execute(makeContextAware(runnable));
     }
 
@@ -481,7 +482,7 @@ public interface RequestContext {
      * sure to propagate the current {@link RequestContext} into the callback execution.
      */
     default ExecutorService makeContextAware(ExecutorService executor) {
-        return new ContextAwareExecutorService(this, executor);
+        return ContextAwareExecutorService.of(this, executor);
     }
 
     /**
@@ -497,6 +498,7 @@ public interface RequestContext {
      * the input {@code callable}.
      */
     default <T> Callable<T> makeContextAware(Callable<T> callable) {
+        requireNonNull(callable, "callable");
         return () -> {
             try (SafeCloseable ignored = push()) {
                 return callable.call();
@@ -509,6 +511,7 @@ public interface RequestContext {
      * the input {@code runnable}.
      */
     default Runnable makeContextAware(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
         return () -> {
             try (SafeCloseable ignored = push()) {
                 runnable.run();
@@ -521,6 +524,7 @@ public interface RequestContext {
      * the input {@code function}.
      */
     default <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
+        requireNonNull(function, "function");
         return t -> {
             try (SafeCloseable ignored = push()) {
                 return function.apply(t);
@@ -533,6 +537,7 @@ public interface RequestContext {
      * the input {@code function}.
      */
     default <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
+        requireNonNull(function, "function");
         return (t, u) -> {
             try (SafeCloseable ignored = push()) {
                 return function.apply(t, u);
@@ -545,6 +550,7 @@ public interface RequestContext {
      * the input {@code action}.
      */
     default <T> Consumer<T> makeContextAware(Consumer<T> action) {
+        requireNonNull(action, "action");
         return t -> {
             try (SafeCloseable ignored = push()) {
                 action.accept(t);
@@ -557,6 +563,7 @@ public interface RequestContext {
      * the input {@code action}.
      */
     default <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
+        requireNonNull(action, "action");
         return (t, u) -> {
             try (SafeCloseable ignored = push()) {
                 action.accept(t, u);
@@ -569,6 +576,17 @@ public interface RequestContext {
      * then invokes the input {@code stage}.
      */
     default <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
+        requireNonNull(stage, "stage");
+        if (stage instanceof ContextHolder) {
+            final RequestContext context = ((ContextHolder) stage).context();
+            if (this == context) {
+                return stage;
+            }
+            if (root() != context.root()) {
+                throw new IllegalArgumentException(
+                        "cannot create a context aware future using " + stage);
+            }
+        }
         final CompletableFuture<T> future = JavaVersionSpecific.get().newContextAwareFuture(this);
         stage.handle((result, cause) -> {
             try (SafeCloseable ignored = push()) {
@@ -590,6 +608,7 @@ public interface RequestContext {
      * then invokes the input {@code future}.
      */
     default <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
+        requireNonNull(future, "future");
         return makeContextAware((CompletionStage<T>) future).toCompletableFuture();
     }
 
@@ -599,7 +618,7 @@ public interface RequestContext {
      * @param logger the {@link Logger} to decorate.
      */
     default Logger makeContextAware(Logger logger) {
-        return new ContextAwareLogger(this, requireNonNull(logger, "logger"));
+        return ContextAwareLogger.of(this, logger);
     }
 
     /**

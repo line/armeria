@@ -275,7 +275,7 @@ final class Java9ContextAwareFuture<T> extends AbstractContextAwareFuture<T> {
 
     @Override
     public <U> CompletableFuture<U> newIncompleteFuture() {
-        return new Java9ContextAwareFuture<>(ctx());
+        return new Java9ContextAwareFuture<>(context());
     }
 
     @Override

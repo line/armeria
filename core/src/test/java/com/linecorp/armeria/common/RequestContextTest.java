@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,43 +40,23 @@ import java.util.stream.IntStream;
 
 import javax.annotation.Nullable;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
-import io.netty.channel.Channel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ProgressivePromise;
 import io.netty.util.concurrent.Promise;
 
-public class RequestContextTest {
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Rule
-    public final EventLoopRule eventLoop = new EventLoopRule();
-
-    @Mock
-    private Channel channel;
+class RequestContextTest {
 
     @Test
-    public void contextAwareEventExecutor() throws Exception {
-        when(channel.eventLoop()).thenReturn(eventLoop.get());
+    void contextAwareEventExecutor() throws Exception {
         final RequestContext context = createContext();
         final Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
         final EventExecutor executor = context.eventLoop();
@@ -113,7 +92,6 @@ public class RequestContextTest {
         progressivePromise.addListener(f -> checkCallback(18, context, callbacksCalled, latch));
         progressivePromise.setSuccess("success");
         latch.await();
-        eventLoop.get().shutdownGracefully();
         await().untilAsserted(() -> {
             assertThat(callbacksCalled).containsExactlyElementsOf(IntStream.rangeClosed(1, 18)
                                                                            .boxed()::iterator);
@@ -121,7 +99,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareExecutor() {
+    void makeContextAwareExecutor() {
         final RequestContext context = createContext();
         final Executor executor = context.makeContextAware(MoreExecutors.directExecutor());
         final AtomicBoolean callbackCalled = new AtomicBoolean(false);
@@ -134,7 +112,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareCallable() throws Exception {
+    void makeContextAwareCallable() throws Exception {
         final RequestContext context = createContext();
         context.makeContextAware(() -> {
             assertCurrentContext(context);
@@ -144,7 +122,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareRunnable() {
+    void makeContextAwareRunnable() {
         final RequestContext context = createContext();
         context.makeContextAware(() -> {
             assertCurrentContext(context);
@@ -153,7 +131,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void contextAwareScheduledExecutorService() throws Exception {
+    void contextAwareScheduledExecutorService() throws Exception {
         final RequestContext context = createContext();
         final ScheduledExecutorService executor = context.makeContextAware(
                 Executors.newSingleThreadScheduledExecutor());
@@ -165,7 +143,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareCompletableFutureInSameThread() throws Exception {
+    void makeContextAwareCompletableFutureInSameThread() throws Exception {
         final RequestContext context = createContext();
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
         final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
@@ -180,7 +158,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareCompletableFutureWithExecutor() throws Exception {
+    void makeContextAwareCompletableFutureWithExecutor() throws Exception {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             final RequestContext context = createContext();
@@ -223,7 +201,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareCompletableFutureWithAsyncChaining() throws Exception {
+    void makeContextAwareCompletableFutureWithAsyncChaining() throws Exception {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             final RequestContext context = createContext();
@@ -262,7 +240,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void replace() {
+    void replace() {
         final RequestContext ctx1 = createContext();
         final RequestContext ctx2 = createContext();
         try (SafeCloseable ignored = ctx1.push()) {
@@ -273,6 +251,14 @@ public class RequestContextTest {
             assertCurrentContext(ctx1);
         }
         assertCurrentContext(null);
+    }
+
+    @Test
+    void makeContextAwareLogger() {
+        final RequestContext ctx = createContext();
+        final Logger logger = LoggerFactory.getLogger(RequestContextTest.class);
+        final Logger contextAwareLogger = ctx.makeContextAware(logger);
+        assertThat(ctx.makeContextAware(contextAwareLogger)).isSameAs(contextAwareLogger);
     }
 
     private static List<Callable<String>> makeTaskList(int startId,
