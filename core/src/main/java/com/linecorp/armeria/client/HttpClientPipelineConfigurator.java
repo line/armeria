@@ -471,7 +471,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 // The server rejected the upgrade request and sent its response in HTTP/1.
                 assert upgradeEvt == UPGRADE_REJECTED;
                 final HttpResponse res = (HttpResponse) msg;
-                upgradeRejectionCause = "Upgrade request rejected with: " + res.headers();
+                upgradeRejectionCause = "Upgrade request rejected with: " + res;
                 // We can persist connection only when:
                 // - The response has 'Connection: keep-alive' header on HTTP/1.0.
                 // - The response has no 'Connection: close' header on HTTP/1.1.
