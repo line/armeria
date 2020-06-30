@@ -198,7 +198,8 @@ class HttpHeadersBase
 
     @Nullable
     String authority() {
-        return get(HttpHeaderNames.AUTHORITY);
+        final String authority = get(HttpHeaderNames.AUTHORITY);
+        return authority != null ? authority : get(HttpHeaderNames.HOST);
     }
 
     final void authority(String authority) {

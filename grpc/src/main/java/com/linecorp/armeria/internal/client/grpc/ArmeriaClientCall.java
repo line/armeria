@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -207,7 +208,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata);
 
         final HttpResponse res = initContextAndExecuteWithFallback(
-                httpClient, ctx, endpointGroup,
+                httpClient, ctx, endpointGroup, HttpResponse::from,
                 (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
@@ -327,9 +328,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 final HttpHeaders trailers = parseGrpcWebTrailers(buf);
                 if (trailers == null) {
                     // Malformed trailers.
-                    close(Status.INTERNAL
-                                  .withDescription("grpc-web trailers malformed: " +
-                                                   buf.toString(StandardCharsets.UTF_8)),
+                    close(Status.INTERNAL.withDescription("grpc-web trailers malformed: " +
+                                                          buf.toString(StandardCharsets.UTF_8)),
                           new Metadata());
                 } else {
                     GrpcStatus.reportStatus(trailers, responseReader, this);
@@ -400,7 +400,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
         }
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
         if (status.isOk()) {
             req.abort();
         } else {

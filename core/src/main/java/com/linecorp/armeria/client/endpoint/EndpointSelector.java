@@ -16,15 +16,18 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.Request;
 
 /**
  * Selects an {@link Endpoint} from an {@link EndpointGroup}.
  */
-@FunctionalInterface
 public interface EndpointSelector {
     /**
      * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
@@ -35,5 +38,23 @@ public interface EndpointSelector {
      *         if the {@link EndpointGroup} is empty.
      */
     @Nullable
-    Endpoint select(ClientRequestContext ctx);
+    Endpoint selectNow(ClientRequestContext ctx);
+
+    /**
+     * Selects an {@link Endpoint} asynchronously from the {@link EndpointGroup} associated with the specified
+     * {@link ClientRequestContext}, waiting up to the specified {@code timeoutMillis}.
+     *
+     * @param ctx the {@link ClientRequestContext} of the {@link Request} being handled.
+     * @param executor the {@link ScheduledExecutorService} used for notifying the {@link CompletableFuture}
+     *                 being returned and scheduling timeout tasks.
+     * @param timeoutMillis the amount of milliseconds to wait until a successful {@link Endpoint} selection.
+     *
+     * @return the {@link CompletableFuture} that will be completed with the {@link Endpoint} selected by
+     *         this {@link EndpointSelector}'s selection strategy, or completed with {@code null} if no
+     *         {@link Endpoint} was selected within the specified {@code timeoutMillis}, which can happen
+     *         if the {@link EndpointGroup} is empty.
+     */
+    CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                       ScheduledExecutorService executor,
+                                       long timeoutMillis);
 }

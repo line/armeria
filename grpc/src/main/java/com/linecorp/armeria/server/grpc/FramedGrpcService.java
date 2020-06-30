@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -196,8 +197,8 @@ final class FramedGrpcService extends AbstractPooledHttpService implements GrpcS
 
         final int methodIndex = methodName.lastIndexOf('/') + 1;
         ctx.logBuilder().name(method.getMethodDescriptor().getServiceName(), methodName.substring(methodIndex));
-        ctx.logBuilder().deferRequestContent();
-        ctx.logBuilder().deferResponseContent();
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
+                               RequestLogProperty.RESPONSE_CONTENT);
 
         final HttpResponseWriter res = HttpResponse.streaming();
         final ArmeriaServerCall<?, ?> call = startCall(
