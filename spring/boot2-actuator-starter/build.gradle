@@ -1,0 +1,3 @@
+dependencies {
+    implementation project(':spring:boot2-actuator-autoconfigure')
+}

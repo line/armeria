@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.server.RequestTimeoutException;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class ConcurrencyLimitingClientTest {
 

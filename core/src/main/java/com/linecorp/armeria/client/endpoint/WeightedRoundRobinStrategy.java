@@ -51,18 +51,19 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
      *   <li>if endpoint weights are 3,5,7, then select result is abcabcabcbcbcbb abcabcabcbcbcbb ...</li>
      * </ul>
      */
-    private static final class WeightedRoundRobinSelector implements EndpointSelector {
+    private static final class WeightedRoundRobinSelector extends AbstractEndpointSelector {
 
         private final AtomicInteger sequence = new AtomicInteger();
         private volatile EndpointsAndWeights endpointsAndWeights;
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
+            super(endpointGroup);
             endpointsAndWeights = new EndpointsAndWeights(endpointGroup.endpoints());
             endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
         }
 
         @Override
-        public Endpoint select(ClientRequestContext ctx) {
+        public Endpoint selectNow(ClientRequestContext ctx) {
             final int currentSequence = sequence.getAndIncrement();
             return endpointsAndWeights.selectEndpoint(currentSequence);
         }

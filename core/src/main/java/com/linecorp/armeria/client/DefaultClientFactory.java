@@ -45,6 +45,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.ResourceLeakTracker;
 
 /**
  * A {@link ClientFactory} which combines all discovered {@link ClientFactory} implementations.
@@ -58,6 +61,9 @@ import io.netty.resolver.AddressResolverGroup;
 final class DefaultClientFactory implements ClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultClientFactory.class);
+
+    private static final ResourceLeakDetector<ClientFactory> leakDetector =
+            ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ClientFactory.class);
 
     private static volatile boolean shutdownHookDisabled;
 
@@ -85,6 +91,8 @@ final class DefaultClientFactory implements ClientFactory {
     private final Map<Scheme, ClientFactory> clientFactories;
     private final List<ClientFactory> clientFactoriesToClose;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+    @Nullable
+    private final ResourceLeakTracker<ClientFactory> leakTracker = leakDetector.track(this);
 
     DefaultClientFactory(HttpClientFactory httpClientFactory) {
         this.httpClientFactory = httpClientFactory;
@@ -198,6 +206,10 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     private void closeAsync(CompletableFuture<?> future) {
+        if (leakTracker != null) {
+            leakTracker.close(this);
+        }
+
         final CompletableFuture<?>[] delegateCloseFutures =
                 clientFactoriesToClose.stream()
                                       .map(ClientFactory::closeAsync)
