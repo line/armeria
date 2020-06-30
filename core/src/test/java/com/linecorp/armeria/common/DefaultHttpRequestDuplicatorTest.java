@@ -32,8 +32,8 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class DefaultHttpRequestDuplicatorTest {
 
