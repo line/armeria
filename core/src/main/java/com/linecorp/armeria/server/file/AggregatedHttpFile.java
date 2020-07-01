@@ -15,29 +15,36 @@
  */
 package com.linecorp.armeria.server.file;
 
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.buffer.ByteBufAllocator;
 
 /**
  * An immutable variant of {@link HttpFile} which has its attributes and content readily available.
- * Unlike {@link HttpFile}, an {@link AggregatedHttpFile} does not raise an {@link IOException} for
+ * Unlike {@link HttpFile}, the following operations in {@link AggregatedHttpFile} neither blocks nor raises
+ * an exception:
  * <ul>
- *   <li>{@link #readAttributes()}</li>
- *   <li>{@link #readHeaders()}</li>
+ *   <li>{@link #readAttributes(Executor)}</li>
+ *   <li>{@link #readHeaders(Executor)}</li>
  *   <li>{@link #read(Executor, ByteBufAllocator)}</li>
  *   <li>{@link #aggregate(Executor)}</li>
  *   <li>{@link #aggregateWithPooledObjects(Executor, ByteBufAllocator)}</li>
  * </ul>
- * It also has an additional method {@link #content()} which gives you an immediate access to the file's
- * content.
+ * It also has the following additional methods that give you an immediate access to the file:
+ * <ul>
+ *   <li>{@link #readAttributes()}</li>
+ *   <li>{@link #readHeaders()}</li>
+ *   <li>{@link #read()}</li>
+ * </ul>
  */
 public interface AggregatedHttpFile extends HttpFile {
 
@@ -47,8 +54,12 @@ public interface AggregatedHttpFile extends HttpFile {
      * @return the attributes, or {@code null} if the file does not exist.
      */
     @Nullable
-    @Override
     HttpFileAttributes readAttributes();
+
+    @Override
+    default CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+        return UnmodifiableFuture.completedFuture(readAttributes());
+    }
 
     /**
      * Returns the attributes of this file as {@link ResponseHeaders}, which could be useful for building
@@ -57,8 +68,39 @@ public interface AggregatedHttpFile extends HttpFile {
      * @return the headers, or {@code null} if the file does not exist.
      */
     @Nullable
-    @Override
     ResponseHeaders readHeaders();
+
+    @Override
+    default CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
+        return UnmodifiableFuture.completedFuture(readHeaders());
+    }
+
+    /**
+     * Returns the {@link AggregatedHttpResponse} generated from this file.
+     *
+     * @return the {@link AggregatedHttpResponse} of the file, or {@code null} if the file does not exist.
+     */
+    @Nullable
+    default AggregatedHttpResponse read() {
+        final ResponseHeaders headers = readHeaders();
+        if (headers == null) {
+            return null;
+        } else {
+            final HttpData content = content();
+            assert content != null;
+            return AggregatedHttpResponse.of(headers, content);
+        }
+    }
+
+    @Override
+    default CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+        final AggregatedHttpResponse res = read();
+        if (res == null) {
+            return UnmodifiableFuture.completedFuture(null);
+        } else {
+            return UnmodifiableFuture.completedFuture(res.toHttpResponse());
+        }
+    }
 
     /**
      * Returns the content of the file.

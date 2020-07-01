@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -372,8 +373,9 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
         private volatile HttpFile file = HttpFile.nonExistent();
 
         @Override
-        public HttpFile get(String path, Clock clock, @Nullable String contentEncoding,
-                            HttpHeaders additionalHeaders) {
+        public HttpFile get(
+                Executor fileReadExecutor, String path, Clock clock,
+                @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
             return file;
         }
 

@@ -19,14 +19,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
@@ -123,6 +121,14 @@ public interface HttpFile {
     }
 
     /**
+     * Returns an {@link HttpFile} that becomes readable when the specified {@link CompletionStage} is complete.
+     * All {@link HttpFile} operations will wait until the specified {@link CompletionStage} is completed.
+     */
+    static HttpFile from(CompletionStage<? extends HttpFile> stage) {
+        return new DeferredHttpFile(requireNonNull(stage, "stage"));
+    }
+
+    /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the file at the specified
      * {@link File}.
      */
@@ -135,7 +141,7 @@ public interface HttpFile {
      * {@link Path}.
      */
     static HttpFileBuilder builder(Path path) {
-        return new FileSystemHttpFileBuilder(path);
+        return new FileSystemHttpFileBuilder(requireNonNull(path, "path"));
     }
 
     /**
@@ -209,21 +215,23 @@ public interface HttpFile {
     /**
      * Retrieves the attributes of this file.
      *
-     * @return the attributes of this file, or {@code null} if the file does not exist.
-     * @throws IOException if failed to retrieve the attributes of this file.
+     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
+     *
+     * @return the {@link CompletableFuture} that will be completed with the attributes of this file.
+     *         It will be completed with {@code null} if the file does not exist.
      */
-    @Nullable
-    HttpFileAttributes readAttributes() throws IOException;
+    CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor);
 
     /**
      * Reads the attributes of this file as {@link ResponseHeaders}, which could be useful for building
      * a response for a {@code HEAD} request.
      *
-     * @return the headers, or {@code null} if the file does not exist.
-     * @throws IOException if failed to retrieve the attributes of this file.
+     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
+     *
+     * @return the {@link CompletableFuture} that will be completed with the headers.
+     *         It will be completed with {@code null} if the file does not exist.
      */
-    @Nullable
-    ResponseHeaders readHeaders() throws IOException;
+    CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor);
 
     /**
      * Starts to stream this file into the returned {@link HttpResponse}.
@@ -231,10 +239,10 @@ public interface HttpFile {
      * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
      * @param alloc the {@link ByteBufAllocator} which will allocate the buffers that hold the content of
      *              the file
-     * @return the response, or {@code null} if the file does not exist.
+     * @return the {@link CompletableFuture} that will be completed with the response.
+     *         It will be completed with {@code null} if the file does not exist.
      */
-    @Nullable
-    HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc);
+    CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc);
 
     /**
      * Converts this file into an {@link AggregatedHttpFile}.

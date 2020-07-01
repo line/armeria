@@ -13,26 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.file;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * A skeletal {@link HttpVfs} implementation.
  */
 public abstract class AbstractHttpVfs implements HttpVfs {
 
+    private static final UnmodifiableFuture<List<String>> EMPTY_LIST_FUTURE =
+            UnmodifiableFuture.completedFuture(ImmutableList.of());
+
     @Override
-    public boolean canList(String path) {
-        return false;
+    public CompletableFuture<Boolean> canList(Executor fileReadExecutor, String path) {
+        return UnmodifiableFuture.completedFuture(false);
     }
 
     @Override
-    public List<String> list(String path) {
-        return ImmutableList.of();
+    public CompletableFuture<List<String>> list(Executor fileReadExecutor, String path) {
+        return EMPTY_LIST_FUTURE;
     }
 
     /**

@@ -38,19 +38,19 @@ class RoundRobinStrategyTest {
 
     @Test
     void select() {
-        assertThat(group.select(ctx))
+        assertThat(group.selectNow(ctx))
                 .isEqualTo(group.endpoints().get(0));
-        assertThat(group.select(ctx))
+        assertThat(group.selectNow(ctx))
                 .isEqualTo(group.endpoints().get(1));
-        assertThat(group.select(ctx))
+        assertThat(group.selectNow(ctx))
                 .isEqualTo(group.endpoints().get(0));
-        assertThat(group.select(ctx))
+        assertThat(group.selectNow(ctx))
                 .isEqualTo(group.endpoints().get(1));
     }
 
     @Test
     void selectEmpty() {
-        assertThat(group.select(ctx)).isNotNull();
-        assertThat(emptyGroup.select(ctx)).isNull();
+        assertThat(group.selectNow(ctx)).isNotNull();
+        assertThat(emptyGroup.selectNow(ctx)).isNull();
     }
 }

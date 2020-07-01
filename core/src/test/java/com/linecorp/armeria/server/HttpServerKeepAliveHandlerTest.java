@@ -51,7 +51,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -141,10 +141,10 @@ class HttpServerKeepAliveHandlerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "H1C", "H2C" })
-    void closeByClientIdleTimeout(SessionProtocol protocol) throws InterruptedException {
+    @CsvSource({ "H1C, false", "H2C, false", "H2C, true" })
+    void closeByClientIdleTimeout(SessionProtocol protocol, boolean useHttp2Preface) {
         final long clientIdleTimeout = 2000;
-        final WebClient client = newWebClient(clientIdleTimeout, server.uri(protocol));
+        final WebClient client = newWebClient(clientIdleTimeout, useHttp2Preface, server.uri(protocol));
         final MeterRegistry meterRegistry = client.options().factory().meterRegistry();
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -162,10 +162,10 @@ class HttpServerKeepAliveHandlerTest {
     }
 
     @Test
-    void http1CloseByServerIdleTimeout() throws InterruptedException {
+    void http1CloseByServerIdleTimeout() {
         // longer than the idle timeout of the server.
         final long clientIdleTimeout = serverIdleTimeout + 5000;
-        final WebClient client = newWebClient(clientIdleTimeout, server.uri(SessionProtocol.H1C));
+        final WebClient client = newWebClient(clientIdleTimeout, false, server.uri(SessionProtocol.H1C));
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/").aggregate().join();
@@ -178,11 +178,12 @@ class HttpServerKeepAliveHandlerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "H1C", "H2C" })
-    void shouldCloseConnectionWheNoActiveRequests(SessionProtocol protocol) throws InterruptedException {
+    @CsvSource({ "H1C, false", "H2C, false", "H2C, true" })
+    void shouldCloseConnectionWheNoActiveRequests(SessionProtocol protocol, boolean useHttp2Preface) {
         final long clientIdleTimeout = 10000;
         final long tolerance = 3000;
-        final WebClient client = newWebClient(clientIdleTimeout, 0, 0, serverWithNoKeepAlive.uri(protocol));
+        final WebClient client = newWebClient(clientIdleTimeout, 0, 0, useHttp2Preface,
+                                              serverWithNoKeepAlive.uri(protocol));
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         client.get("/streaming").aggregate().join();
@@ -196,14 +197,16 @@ class HttpServerKeepAliveHandlerTest {
         assertThat(elapsed).isBetween(clientIdleTimeout - tolerance, clientIdleTimeout * 2 + tolerance);
     }
 
-    @Test
-    void serverShouldSendPingWithNoIdleTimeout() throws InterruptedException {
+    @ParameterizedTest
+    @CsvSource({ "false", "true" })
+    void serverShouldSendPingWithNoIdleTimeout(boolean useHttp2Preface) {
         final long clientIdleTimeout = 0;
         final long clientPingInterval = 0;
         final long responseTimeout = 0;
         final WebClient client = newWebClient(clientIdleTimeout,
                                               clientPingInterval,
                                               responseTimeout,
+                                              useHttp2Preface,
                                               serverWithNoIdleTimeout.uri(SessionProtocol.H2C));
 
         client.get("/").aggregate().join();
@@ -211,26 +214,27 @@ class HttpServerKeepAliveHandlerTest {
         await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
     }
 
-    @CsvSource({ "H1C", "H2C" })
+    @CsvSource({ "H1C, false", "H2C, false", "H2C, true" })
     @ParameterizedTest
-    void clientShouldSendPingWithNoIdleTimeout(SessionProtocol protocol) throws InterruptedException {
+    void clientShouldSendPingWithNoIdleTimeout(SessionProtocol protocol, boolean useHttp2Preface) {
         final long clientIdleTimeout = 0;
         final long clientPingInterval = 10000;
         final long responseTimeout = 0;
-        final WebClient client = newWebClient(clientIdleTimeout, clientPingInterval,
-                                              responseTimeout, serverWithNoKeepAlive.uri(protocol));
+        final WebClient client = newWebClient(clientIdleTimeout, clientPingInterval, responseTimeout,
+                                              useHttp2Preface, serverWithNoKeepAlive.uri(protocol));
 
         client.get("/").aggregate().join();
         await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
     }
 
     private WebClient newWebClient(long clientIdleTimeout, long pingIntervalMillis, long responseTimeout,
-                                   URI uri) {
+                                   boolean useHttp2Preface, URI uri) {
         final ClientFactory factory = ClientFactory.builder()
                                                    .meterRegistry(new SimpleMeterRegistry())
                                                    .idleTimeoutMillis(clientIdleTimeout)
                                                    .pingIntervalMillis(pingIntervalMillis)
                                                    .connectionPoolListener(listener)
+                                                   .useHttp2Preface(useHttp2Preface)
                                                    .build();
         return WebClient.builder(uri)
                         .factory(factory)
@@ -238,10 +242,11 @@ class HttpServerKeepAliveHandlerTest {
                         .build();
     }
 
-    private WebClient newWebClient(long clientIdleTimeout, URI uri) {
+    private WebClient newWebClient(long clientIdleTimeout, boolean useHttp2Preface, URI uri) {
         return newWebClient(clientIdleTimeout,
                             Flags.defaultPingIntervalMillis(),
                             Flags.defaultResponseTimeoutMillis(),
+                            useHttp2Preface,
                             uri);
     }
 
