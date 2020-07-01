@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.unsafe.UnsafeStreamUtil.withPooledObje
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -31,10 +30,9 @@ import com.linecorp.armeria.internal.stream.InternalSubscriptionOption;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A {@link StreamMessage} of {@link HttpObject} which exposes unsafe APIs for subscribing to pooled objects
- * from the stream.
+ * A {@link StreamMessage} that exposes unsafe APIs for subscribing to pooled objects from the stream.
  */
-public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
+public interface PooledStreamMessage<T> extends StreamMessage<T> {
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -48,7 +46,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      */
-    default void subscribeWithPooledObjects(Subscriber<? super HttpObject> subscriber) {
+    default void subscribeWithPooledObjects(Subscriber<? super T> subscriber) {
         subscribeWithPooledObjects(subscriber, defaultSubscriberExecutor());
     }
 
@@ -67,7 +65,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      * @param options {@link SubscriptionOption}s to subscribe with
      */
     default void subscribeWithPooledObjects(
-            Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
+            Subscriber<? super T> subscriber, SubscriptionOption... options) {
         subscribeWithPooledObjects(subscriber, defaultSubscriberExecutor(), options);
     }
 
@@ -85,7 +83,7 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      *
      * @param executor the executor to subscribe
      */
-    default void subscribeWithPooledObjects(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
+    default void subscribeWithPooledObjects(Subscriber<? super T> subscriber, EventExecutor executor) {
         subscribe(subscriber, executor, InternalSubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
@@ -105,52 +103,51 @@ public interface PooledHttpStreamMessage extends StreamMessage<HttpObject> {
      * @param options {@link SubscriptionOption}s to subscribe with
      */
     default void subscribeWithPooledObjects(
-            Subscriber<? super HttpObject> subscriber, EventExecutor executor, SubscriptionOption... options) {
+            Subscriber<? super T> subscriber, EventExecutor executor, SubscriptionOption... options) {
         subscribe(subscriber, executor, withPooledObjects(options));
     }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber)}.
      */
     @Override
     @Deprecated
-    default void subscribe(Subscriber<? super HttpObject> subscriber) {
+    default void subscribe(Subscriber<? super T> subscriber) {
         StreamMessage.super.subscribe(subscriber);
     }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber, SubscriptionOption...)}.
      */
     @Override
     @Deprecated
-    default void subscribe(Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
+    default void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
         subscribe(subscriber, defaultSubscriberExecutor(), options);
     }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber, EventExecutor)}.
      */
     @Override
     @Deprecated
-    void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber} without pooled objects. When
-     * operating on {@link PooledHttpStreamMessage} this should be avoided.
+     * operating on {@link PooledStreamMessage} this should be avoided.
      *
      * @deprecated Use {@link #subscribeWithPooledObjects(Subscriber, EventExecutor, SubscriptionOption...)}.
      */
     @Override
     @Deprecated
-    void subscribe(
-            Subscriber<? super HttpObject> subscriber, EventExecutor executor, SubscriptionOption... options);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, SubscriptionOption... options);
 }
