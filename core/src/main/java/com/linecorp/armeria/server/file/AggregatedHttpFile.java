@@ -30,7 +30,7 @@ public interface AggregatedHttpFile {
 
     /**
      * Creates a new {@link AggregatedHttpFile} which streams the specified {@link HttpData}. This method is
-     * a shortcut for {@code HttpFile.of(data, System.currentTimeMillis()}.
+     * a shortcut for {@code AggregatedHttpFile.of(data, System.currentTimeMillis()}.
      */
     static AggregatedHttpFile of(HttpData data) {
         return builder(data).build();
@@ -121,7 +121,7 @@ public interface AggregatedHttpFile {
     HttpData content();
 
     /**
-     * Converts this request into a new {@link HttpFile}.
+     * Converts this file into an {@link HttpFile}.
      *
      * @return the {@link HttpFile} converted from this file.
      */
