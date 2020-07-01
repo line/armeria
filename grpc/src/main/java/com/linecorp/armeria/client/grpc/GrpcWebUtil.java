@@ -26,14 +26,20 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil;
 
+import io.grpc.ClientInterceptor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
  * Utilities for working with <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a>.
+ *
+ * <p>Note that this class will be removed once a retry {@link ClientInterceptor} is added.
+ * See: https://github.com/line/armeria/issues/2860
  */
+@UnstableApi
 public final class GrpcWebUtil {
 
     private static final int HEADER_LENGTH = 5;
