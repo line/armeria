@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
@@ -35,6 +34,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.ContextAwareEventLoop;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -59,7 +60,6 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 
 /**
@@ -95,7 +95,9 @@ public final class DefaultServiceRequestContext
     private final RequestLogBuilder log;
 
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private ContextAwareEventLoop contextAwareEventLoop;
+    @Nullable
+    private ContextAwareScheduledExecutorService blockingTaskExecutor;
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
@@ -261,12 +263,13 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = makeContextAware(config().server().config().blockingTaskExecutor());
+        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(
+                this, config().server().config().blockingTaskExecutor());
     }
 
     @Override
@@ -286,8 +289,11 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public EventLoop eventLoop() {
-        return ch.eventLoop();
+    public ContextAwareEventLoop eventLoop() {
+        if (contextAwareEventLoop != null) {
+            return contextAwareEventLoop;
+        }
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, ch.eventLoop());
     }
 
     @Override
@@ -445,7 +451,7 @@ public final class DefaultServiceRequestContext
      * a timeout task when a user updates the request timeout configuration.
      */
     void setRequestTimeoutController(TimeoutController requestTimeoutController) {
-        timeoutScheduler.setTimeoutController(requestTimeoutController, eventLoop());
+        timeoutScheduler.setTimeoutController(requestTimeoutController, ch.eventLoop());
     }
 
     @Override

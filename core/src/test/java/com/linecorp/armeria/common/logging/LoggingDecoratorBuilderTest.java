@@ -78,7 +78,7 @@ class LoggingDecoratorBuilderTest {
     void requestLog() {
         assertThatThrownBy(() -> builder.requestLogLevel(null))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.requestLogLevel()).isEqualTo(LogLevel.TRACE);
+        assertThat(builder.requestLogLevel()).isEqualTo(LogLevel.DEBUG);
 
         builder.requestLogLevel(LogLevel.ERROR);
         assertThat(builder.requestLogLevel()).isEqualTo(LogLevel.ERROR);
@@ -88,7 +88,7 @@ class LoggingDecoratorBuilderTest {
     public void successfulResponseLogLevel() {
         assertThatThrownBy(() -> builder.successfulResponseLogLevel(null))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.successfulResponseLogLevel()).isEqualTo(LogLevel.TRACE);
+        assertThat(builder.successfulResponseLogLevel()).isEqualTo(LogLevel.DEBUG);
 
         builder.successfulResponseLogLevel(LogLevel.ERROR);
         assertThat(builder.successfulResponseLogLevel()).isEqualTo(LogLevel.ERROR);

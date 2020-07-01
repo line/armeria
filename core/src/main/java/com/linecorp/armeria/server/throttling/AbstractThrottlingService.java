@@ -64,6 +64,6 @@ public abstract class AbstractThrottlingService<I extends Request, O extends Res
                     } catch (Exception e) {
                         return Exceptions.throwUnsafely(e);
                     }
-                }, ctx.contextAwareEventLoop()));
+                }, ctx.eventLoop()));
     }
 }

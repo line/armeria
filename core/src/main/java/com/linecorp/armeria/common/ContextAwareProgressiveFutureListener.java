@@ -24,21 +24,21 @@ import io.netty.util.concurrent.GenericProgressiveFutureListener;
 import io.netty.util.concurrent.ProgressiveFuture;
 
 @SuppressWarnings("rawtypes")
-final class RequestContextAwareProgressiveFutureListener implements GenericProgressiveFutureListener {
+final class ContextAwareProgressiveFutureListener implements GenericProgressiveFutureListener {
 
     @SuppressWarnings("unchecked")
     static <T extends ProgressiveFuture<?>> GenericProgressiveFutureListener<T> of(
             RequestContext ctx, GenericProgressiveFutureListener listener) {
         requireNonNull(ctx, "ctx");
         requireNonNull(listener, "listener");
-        return new RequestContextAwareProgressiveFutureListener(ctx, listener);
+        return new ContextAwareProgressiveFutureListener(ctx, listener);
     }
 
     private final RequestContext ctx;
     private final GenericProgressiveFutureListener listener;
 
-    private RequestContextAwareProgressiveFutureListener(RequestContext ctx,
-                                                         GenericProgressiveFutureListener listener) {
+    private ContextAwareProgressiveFutureListener(RequestContext ctx,
+                                                  GenericProgressiveFutureListener listener) {
         this.ctx = ctx;
         this.listener = listener;
     }

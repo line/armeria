@@ -79,7 +79,7 @@ class LoggingServiceTest {
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
-        verify(logger, times(2)).isTraceEnabled();
+        verify(logger, times(2)).isDebugEnabled();
     }
 
     @Test
@@ -98,7 +98,7 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
 
-        verify(logger, times(2)).isTraceEnabled();
+        verify(logger, times(2)).isDebugEnabled();
         verify(logger).isWarnEnabled();
         verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
                             matches(".*headers=\\[:method=GET, :path=/].*"));

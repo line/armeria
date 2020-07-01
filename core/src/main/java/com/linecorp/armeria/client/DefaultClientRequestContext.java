@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -91,6 +92,8 @@ public final class DefaultClientRequestContext
     private EndpointGroup endpointGroup;
     @Nullable
     private Endpoint endpoint;
+    @Nullable
+    private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private final String fragment;
     @Nullable
@@ -347,7 +350,7 @@ public final class DefaultClientRequestContext
             requireNonNull(rpcReq, "rpcReq");
         }
 
-        eventLoop = ctx.eventLoop();
+        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         endpointGroup = ctx.endpointGroup();
         updateEndpoint(endpoint);
@@ -418,9 +421,12 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public EventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
-        return eventLoop;
+        if (contextAwareEventLoop != null) {
+            return contextAwareEventLoop;
+        }
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override

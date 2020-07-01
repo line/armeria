@@ -99,7 +99,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
 
     companion object {
         fun armeriaDispatcher(): CoroutineDispatcher =
-            ServiceRequestContext.current().contextAwareExecutor().asCoroutineDispatcher()
+            ServiceRequestContext.current().eventLoop().asCoroutineDispatcher()
 
         suspend fun <T> withArmeriaContext(block: suspend CoroutineScope.() -> T): T =
             withContext(armeriaDispatcher(), block)
