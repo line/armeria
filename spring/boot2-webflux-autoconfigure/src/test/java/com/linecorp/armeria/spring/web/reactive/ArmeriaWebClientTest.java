@@ -67,29 +67,29 @@ public class ArmeriaWebClientTest {
 
             @GetMapping("/hello")
             Flux<String> hello() {
-                ensureInRequestContextAwareEventLoop();
+                ensureInContextAwareEventLoop();
                 return Flux.just("hello", "\n", "armeria", "\n", "world");
             }
 
             @GetMapping("/conflict")
             @ResponseStatus(HttpStatus.CONFLICT)
             void conflict() {
-                ensureInRequestContextAwareEventLoop();
+                ensureInContextAwareEventLoop();
             }
 
             @GetMapping("/resource")
             ClassPathResource resource() {
-                ensureInRequestContextAwareEventLoop();
+                ensureInContextAwareEventLoop();
                 return new ClassPathResource("largeTextFile.txt", getClass());
             }
 
             @PostMapping("/birthday")
             Person birthday(@RequestBody Person person) {
-                ensureInRequestContextAwareEventLoop();
+                ensureInContextAwareEventLoop();
                 return new Person(person.name(), person.age() + 1);
             }
 
-            private static void ensureInRequestContextAwareEventLoop() {
+            private static void ensureInContextAwareEventLoop() {
                 assertThat(ServiceRequestContext.current()).isNotNull();
             }
         }

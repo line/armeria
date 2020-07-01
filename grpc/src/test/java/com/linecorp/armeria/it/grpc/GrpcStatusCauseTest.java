@@ -50,6 +50,7 @@ public class GrpcStatusCauseTest {
             final AssertionError e3 = new AssertionError("Exception 3");
             Exceptions.clearTrace(e3);
             final RuntimeException e4 = new RuntimeException("Exception 4");
+            Exceptions.clearTrace(e4);
 
             e1.initCause(e2);
             e2.initCause(e3);
@@ -80,8 +81,9 @@ public class GrpcStatusCauseTest {
 
     @Test
     public void normal() {
-        // This test doesn't work if verbose exceptions aren't fully enabled.
+        // These two properties are set in build.gradle.
         assumeTrue("always".equals(Flags.verboseExceptionSamplerSpec()));
+        assumeTrue(Flags.verboseResponses());
 
         assertThatThrownBy(() -> stub.unaryCall(SimpleRequest.getDefaultInstance()))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, t -> {

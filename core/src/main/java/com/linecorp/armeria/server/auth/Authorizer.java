@@ -61,7 +61,7 @@ public interface Authorizer<T> {
                         return result ? CompletableFuture.completedFuture(true)
                                       : AuthorizerUtil.authorize(nextAuthorizer, ctx, data);
                     }
-                }, ctx.contextAwareEventLoop());
+                }, ctx.eventLoop());
             }
 
             @Override

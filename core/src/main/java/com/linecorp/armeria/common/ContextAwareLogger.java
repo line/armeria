@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
+import static java.util.Objects.requireNonNull;
+
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 
@@ -25,14 +28,29 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 @SuppressWarnings("MethodParameterNamingConvention")
-final class RequestContextAwareLogger implements Logger {
+final class ContextAwareLogger implements Logger, ContextHolder {
+
+    static Logger of(RequestContext ctx, Logger logger) {
+        requireNonNull(ctx, "ctx");
+        requireNonNull(logger, "logger");
+        if (logger instanceof ContextHolder) {
+            ensureSameCtx(ctx, (ContextHolder) logger, ContextAwareLogger.class);
+            return logger;
+        }
+        return new ContextAwareLogger(ctx, logger);
+    }
 
     private final RequestContext ctx;
     private final Logger logger;
 
-    RequestContextAwareLogger(RequestContext ctx, Logger logger) {
+    private ContextAwareLogger(RequestContext ctx, Logger logger) {
         this.ctx = ctx;
         this.logger = logger;
+    }
+
+    @Override
+    public RequestContext context() {
+        return ctx;
     }
 
     private String decorate(String msg) {

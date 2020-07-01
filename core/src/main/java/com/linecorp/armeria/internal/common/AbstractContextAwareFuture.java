@@ -28,6 +28,9 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -36,19 +39,20 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * A base class for {@link CompletableFuture} which pushing {@link RequestContext} into the thread-local
  * when executes callbacks.
  */
-public abstract class AbstractRequestContextAwareFuture<T> extends EventLoopCheckingFuture<T> {
+public abstract class AbstractContextAwareFuture<T>
+        extends EventLoopCheckingFuture<T> implements ContextHolder {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(AbstractRequestContextAwareFuture.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractContextAwareFuture.class);
 
-    private final RequestContext ctx;
+    private final RequestContext context;
 
-    protected AbstractRequestContextAwareFuture(RequestContext ctx) {
-        this.ctx = ctx;
+    protected AbstractContextAwareFuture(RequestContext context) {
+        this.context = context;
     }
 
-    protected RequestContext ctx() {
-        return ctx;
+    @Override
+    public RequestContext context() {
+        return context;
     }
 
     protected Runnable makeContextAwareLoggingException(Runnable action) {
@@ -84,7 +88,7 @@ public abstract class AbstractRequestContextAwareFuture<T> extends EventLoopChec
     private void makeContextAwareLoggingException0(Runnable action) {
         final SafeCloseable handle;
         try {
-            handle = ctx.push();
+            handle = context.push();
         } catch (Throwable th) {
             logger.warn("An error occurred while pushing a context", th);
             throw th;
@@ -100,7 +104,7 @@ public abstract class AbstractRequestContextAwareFuture<T> extends EventLoopChec
     private <V> V makeContextAwareLoggingException0(Supplier<? extends V> fn) {
         final SafeCloseable handle;
         try {
-            handle = ctx.push();
+            handle = context.push();
         } catch (Throwable th) {
             logger.warn("An error occurred while pushing a context", th);
             throw th;
@@ -111,5 +115,12 @@ public abstract class AbstractRequestContextAwareFuture<T> extends EventLoopChec
         } finally {
             handle.close();
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("context", context)
+                          .toString();
     }
 }

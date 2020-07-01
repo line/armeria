@@ -37,7 +37,7 @@ public class MainService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-        final Executor ctxExecutor = ctx.contextAwareExecutor();
+        final Executor ctxExecutor = ctx.eventLoop();
 
         final CompletableFuture<AggregatedHttpRequest> aggregated = req.aggregate();
 

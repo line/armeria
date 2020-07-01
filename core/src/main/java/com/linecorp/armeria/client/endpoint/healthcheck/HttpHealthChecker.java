@@ -111,7 +111,7 @@ final class HttpHealthChecker implements AsyncCloseable {
             lastResponse = webClient.execute(headers);
             final ClientRequestContext reqCtx = reqCtxCaptor.get();
             lastResponse.subscribeWithPooledObjects(new HealthCheckResponseSubscriber(reqCtx, lastResponse),
-                                                    reqCtx.eventLoop());
+                                                    reqCtx.eventLoop().withoutContext());
         }
     }
 
@@ -280,7 +280,7 @@ final class HttpHealthChecker implements AsyncCloseable {
             }
 
             final long pingTimeoutNanos = TimeUnit.SECONDS.toNanos(pingIntervalSeconds) * 2;
-            pingCheckFuture = reqCtx.eventLoop().scheduleWithFixedDelay(() -> {
+            pingCheckFuture = reqCtx.eventLoop().withoutContext().scheduleWithFixedDelay(() -> {
                 if (System.nanoTime() - lastPingTimeNanos >= pingTimeoutNanos) {
                     // Did not receive a ping on time.
                     res.abort(ResponseTimeoutException.get());

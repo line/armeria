@@ -70,7 +70,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractPooledHttpS
     @Override
     protected final HttpResponse doPost(ServiceRequestContext ctx, PooledHttpRequest req) {
         final CompletableFuture<HttpResponse> responseFuture =
-                req.aggregateWithPooledObjects(ctx.contextAwareEventLoop(), ctx.alloc())
+                req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                    .thenCompose(msg -> deframeMessage(msg.content(), ctx.alloc()))
                    .thenCompose(this::handleMessage)
                    .thenApply(responseMessage -> {

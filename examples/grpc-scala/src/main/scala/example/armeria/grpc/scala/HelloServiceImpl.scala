@@ -41,7 +41,7 @@ class HelloServiceImpl extends HelloServiceGrpc.HelloService {
   override def lazyHello(request: HelloRequest): Future[HelloReply] = {
     ServiceRequestContext.current()
     for {
-      _ <- delay(1000)(ServiceRequestContext.current().contextAwareEventLoop())
+      _ <- delay(1000)(ServiceRequestContext.current().eventLoop())
       _ = ServiceRequestContext.current()
     } yield HelloReply(toMessage(request.name))
   }
@@ -133,7 +133,7 @@ object HelloServiceImpl {
     ExecutionContext.fromExecutor(ServiceRequestContext.current().blockingTaskExecutor())
 
   implicit def contextAwareScheduler: Scheduler = {
-    execution.Scheduler(ServiceRequestContext.current().contextAwareEventLoop())
+    execution.Scheduler(ServiceRequestContext.current().eventLoop())
   }
 
   def toMessage(name: String): String = s"Hello, $name!"

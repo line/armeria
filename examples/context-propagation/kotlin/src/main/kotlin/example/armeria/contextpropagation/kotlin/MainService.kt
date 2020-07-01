@@ -39,7 +39,7 @@ import java.util.stream.Collectors
 
 class MainService(private val backendClient: WebClient) : HttpService {
     override fun serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {
-        val ctxExecutor = ctx.contextAwareExecutor()
+        val ctxExecutor = ctx.eventLoop()
         val response = GlobalScope.future(ctxExecutor.asCoroutineDispatcher()) {
 
             val numsFromRequest = async { fetchFromRequest(ctx, req) }

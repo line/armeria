@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -302,14 +303,14 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
-     * long-running task. The {@link ScheduledExecutorService} will propagate the {@link ServiceRequestContext}
-     * automatically when running a task.
-     *
-     * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
-     * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
+     * Returns the {@link ContextAwareScheduledExecutorService} that could be used for executing
+     * a potentially long-running task. The {@link ContextAwareScheduledExecutorService}
+     * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
+     * If you want to use {@link ScheduledExecutorService} without setting this context,
+     * call {@link ContextAwareScheduledExecutorService#withoutContext()} and use the returned
+     * {@link ScheduledExecutorService}.
      */
-    ScheduledExecutorService blockingTaskExecutor();
+    ContextAwareScheduledExecutorService blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable

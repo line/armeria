@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,12 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+
+import com.google.common.base.MoreObjects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -31,19 +32,19 @@ import io.netty.util.concurrent.ProgressivePromise;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 
-/**
- * A delegating {@link EventLoop} that makes sure all submitted tasks are
- * executed within the {@link RequestContext}.
- */
-final class RequestContextAwareEventLoop extends RequestContextAwareExecutorService implements EventLoop {
+final class DefaultContextAwareEventLoop
+        extends DefaultContextAwareExecutorService implements ContextAwareEventLoop {
 
-    RequestContextAwareEventLoop(RequestContext context, EventLoop delegate) {
-        super(context, delegate);
+    private final EventLoop eventLoop;
+
+    DefaultContextAwareEventLoop(RequestContext context, EventLoop eventLoop) {
+        super(context, eventLoop);
+        this.eventLoop = eventLoop;
     }
 
     @Override
-    protected EventLoop delegate() {
-        return (EventLoop) super.delegate();
+    public EventLoop withoutContext() {
+        return eventLoop;
     }
 
     @Override
@@ -53,63 +54,63 @@ final class RequestContextAwareEventLoop extends RequestContextAwareExecutorServ
 
     @Override
     public EventLoopGroup parent() {
-        return delegate().parent();
+        return eventLoop.parent();
     }
 
     @Override
     public boolean inEventLoop() {
-        return delegate().inEventLoop();
+        return eventLoop.inEventLoop();
     }
 
     @Override
     public boolean inEventLoop(Thread thread) {
-        return delegate().inEventLoop(thread);
+        return eventLoop.inEventLoop(thread);
     }
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new RequestContextAwarePromise<>(context(), delegate().newPromise());
+        return new ContextAwarePromise<>(context(), eventLoop.newPromise());
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new RequestContextAwareProgressivePromise<>(context(), delegate().newProgressivePromise());
+        return new ContextAwareProgressivePromise<>(context(), eventLoop.newProgressivePromise());
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new RequestContextAwareFuture<>(context(), delegate().newSucceededFuture(result));
+        return new ContextAwareFuture<>(context(), eventLoop.newSucceededFuture(result));
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new RequestContextAwareFuture<>(context(), delegate().newFailedFuture(cause));
+        return new ContextAwareFuture<>(context(), eventLoop.newFailedFuture(cause));
     }
 
     @Override
     public boolean isShuttingDown() {
-        return delegate().isShuttingDown();
+        return eventLoop.isShuttingDown();
     }
 
     @Override
     public Future<?> shutdownGracefully() {
-        return delegate().shutdownGracefully();
+        return eventLoop.shutdownGracefully();
     }
 
     @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout,
                                         TimeUnit unit) {
-        return delegate().shutdownGracefully(quietPeriod, timeout, unit);
+        return eventLoop.shutdownGracefully(quietPeriod, timeout, unit);
     }
 
     @Override
     public Future<?> terminationFuture() {
-        return delegate().terminationFuture();
+        return eventLoop.terminationFuture();
     }
 
     @Override
     public Iterator<EventExecutor> iterator() {
-        return delegate().iterator();
+        return eventLoop.iterator();
     }
 
     @Override
@@ -129,40 +130,48 @@ final class RequestContextAwareEventLoop extends RequestContextAwareExecutorServ
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return delegate().schedule(context().makeContextAware(command), delay, unit);
+        return eventLoop.schedule(context().makeContextAware(command), delay, unit);
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return delegate().schedule(context().makeContextAware(callable), delay, unit);
+        return eventLoop.schedule(context().makeContextAware(callable), delay, unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(
             Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return delegate().scheduleAtFixedRate(context().makeContextAware(command), initialDelay, period, unit);
+        return eventLoop.scheduleAtFixedRate(context().makeContextAware(command), initialDelay, period, unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(
             Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return delegate().scheduleWithFixedDelay(
-                context().makeContextAware(command), initialDelay, delay, unit);
+        return eventLoop.scheduleWithFixedDelay(context().makeContextAware(command), initialDelay, delay, unit);
     }
 
     @Override
     public ChannelFuture register(Channel channel) {
-        return delegate().register(channel);
+        return eventLoop.register(channel);
     }
 
     @Override
     public ChannelFuture register(ChannelPromise channelPromise) {
-        return delegate().register(channelPromise);
+        return eventLoop.register(channelPromise);
     }
 
     @Override
     public ChannelFuture register(Channel channel,
                                   ChannelPromise channelPromise) {
-        return delegate().register(channel, channelPromise);
+        return eventLoop.register(channel, channelPromise);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("eventLoop", eventLoop)
+                          .add("context", context())
+                          .toString();
     }
 }
+
