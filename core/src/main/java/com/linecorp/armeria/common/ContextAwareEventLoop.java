@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
+import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.channel.EventLoop;
@@ -33,7 +33,7 @@ public interface ContextAwareEventLoop extends EventLoop, ContextAwareScheduledE
         requireNonNull(context, "context");
         requireNonNull(eventLoop, "eventLoop");
         if (eventLoop instanceof ContextAwareEventLoop) {
-            validateSameCtx(context, (ContextAwareEventLoop) eventLoop, ContextAwareEventLoop.class);
+            ensureSameCtx(context, (ContextAwareEventLoop) eventLoop, ContextAwareEventLoop.class);
             return (ContextAwareEventLoop) eventLoop;
         }
         return new DefaultContextAwareEventLoop(context, eventLoop);

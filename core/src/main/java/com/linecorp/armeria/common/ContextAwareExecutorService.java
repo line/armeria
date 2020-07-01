@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
+import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ExecutorService;
@@ -30,7 +30,7 @@ interface ContextAwareExecutorService extends ExecutorService, ContextHolder {
         requireNonNull(context, "context");
         requireNonNull(executor, "executor");
         if (executor instanceof ContextAwareExecutorService) {
-            validateSameCtx(context, (ContextAwareExecutorService) executor, ContextAwareExecutorService.class);
+            ensureSameCtx(context, (ContextAwareExecutorService) executor, ContextAwareExecutorService.class);
             return (ContextAwareExecutorService) executor;
         }
         return new DefaultContextAwareExecutorService(context, executor);

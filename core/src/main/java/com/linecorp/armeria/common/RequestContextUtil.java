@@ -17,7 +17,7 @@ package com.linecorp.armeria.common;
 
 final class RequestContextUtil {
 
-    static void validateSameCtx(RequestContext ctx, ContextHolder contextHolder, Class<?> type) {
+    static void ensureSameCtx(RequestContext ctx, ContextHolder contextHolder, Class<?> type) {
         if (ctx != contextHolder.context()) {
             throw new IllegalArgumentException(
                     "cannot create a " + type.getSimpleName() + " using another " + contextHolder);

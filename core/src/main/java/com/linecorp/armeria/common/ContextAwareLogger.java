@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.RequestContextUtil.validateSameCtx;
+import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;
@@ -34,7 +34,7 @@ final class ContextAwareLogger implements Logger, ContextHolder {
         requireNonNull(ctx, "ctx");
         requireNonNull(logger, "logger");
         if (logger instanceof ContextHolder) {
-            validateSameCtx(ctx, (ContextHolder) logger, ContextAwareLogger.class);
+            ensureSameCtx(ctx, (ContextHolder) logger, ContextAwareLogger.class);
             return logger;
         }
         return new ContextAwareLogger(ctx, logger);
