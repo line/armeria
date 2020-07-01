@@ -73,4 +73,9 @@ final class NonExistentHttpFile implements HttpFile {
                                                                             ByteBufAllocator alloc) {
         return AGGREGATED_FUTURE;
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
 }

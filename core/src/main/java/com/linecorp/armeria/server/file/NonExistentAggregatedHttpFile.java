@@ -55,4 +55,9 @@ final class NonExistentAggregatedHttpFile implements AggregatedHttpFile {
     public HttpFile toHttpFile() {
         return NonExistentHttpFile.INSTANCE;
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
 }

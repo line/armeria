@@ -143,7 +143,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
                           .add("lastModified", DateFormatter.format(new Date(attrs.lastModifiedMillis())))
                           .add("dateEnabled", isDateEnabled())
                           .add("lastModifiedEnabled", isLastModifiedEnabled())
-                          .add("headers", headers())
+                          .add("additionalHeaders", additionalHeaders())
                           .toString();
     }
 }
