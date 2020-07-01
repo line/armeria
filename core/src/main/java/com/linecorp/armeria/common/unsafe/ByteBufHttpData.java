@@ -102,25 +102,25 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
     }
 
     @Override
-    public ByteBufHttpData retain() {
+    public PooledHttpData retain() {
         buf.retain();
         return this;
     }
 
     @Override
-    public ByteBufHttpData retain(int increment) {
+    public PooledHttpData retain(int increment) {
         buf.retain(increment);
         return this;
     }
 
     @Override
-    public ByteBufHttpData touch() {
+    public PooledHttpData touch() {
         buf.touch();
         return this;
     }
 
     @Override
-    public ByteBufHttpData touch(Object hint) {
+    public PooledHttpData touch(Object hint) {
         buf.touch(hint);
         return this;
     }
@@ -142,22 +142,22 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
     }
 
     @Override
-    public ByteBufHttpData copy() {
+    public PooledHttpData copy() {
         return new ByteBufHttpData(buf.copy(), endOfStream);
     }
 
     @Override
-    public ByteBufHttpData duplicate() {
+    public PooledHttpData duplicate() {
         return new ByteBufHttpData(buf.duplicate(), endOfStream);
     }
 
     @Override
-    public ByteBufHttpData retainedDuplicate() {
+    public PooledHttpData retainedDuplicate() {
         return new ByteBufHttpData(buf.retainedDuplicate(), endOfStream);
     }
 
     @Override
-    public ByteBufHttpData replace(ByteBuf content) {
+    public PooledHttpData replace(ByteBuf content) {
         requireNonNull(content, "content");
         content.touch();
         return new ByteBufHttpData(content, endOfStream);
@@ -185,7 +185,7 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
     }
 
     @Override
-    public ByteBufHttpData withEndOfStream(boolean endOfStream) {
+    public PooledHttpData withEndOfStream(boolean endOfStream) {
         if (endOfStream == this.endOfStream) {
             return this;
         }
