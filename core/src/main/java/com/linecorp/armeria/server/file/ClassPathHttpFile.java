@@ -95,7 +95,7 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
                           .add("contentType", contentType())
                           .add("dateEnabled", isDateEnabled())
                           .add("lastModifiedEnabled", isLastModifiedEnabled())
-                          .add("headers", headers())
+                          .add("headers", additionalHeaders())
                           .toString();
     }
 }

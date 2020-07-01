@@ -13,8 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.unsafe;
+
+import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -24,6 +25,19 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * {@link AutoCloseable#close()} on this response or the {@code content} to release pooled resources.
  */
 public interface PooledAggregatedHttpResponse extends AggregatedHttpResponse, SafeCloseable {
+
+    /**
+     * Returns a {@link PooledAggregatedHttpResponse} that wraps the {@link AggregatedHttpResponse}, ensuring
+     * all published data is a {@link PooledHttpData}.
+     */
+    static PooledAggregatedHttpResponse of(AggregatedHttpResponse res) {
+        requireNonNull(res, "res");
+        if (res instanceof PooledAggregatedHttpResponse) {
+            return (PooledAggregatedHttpResponse) res;
+        }
+
+        return new DefaultPooledAggregatedHttpResponse(res);
+    }
 
     @Override
     PooledHttpData content();

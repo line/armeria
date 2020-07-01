@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -42,6 +43,8 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
 
     private final HttpData content;
     private final HttpFileAttributes attrs;
+    @Nullable
+    private UnmodifiableFuture<AggregatedHttpFile> aggregateFuture;
 
     HttpDataFile(HttpData content,
                  Clock clock,
@@ -73,23 +76,23 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     }
 
     @Override
-    public HttpFileAttributes readAttributes() {
+    public HttpFileAttributes attributes() {
         return attrs;
     }
 
     @Override
     public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
-        return AggregatedHttpFile.super.readAttributes(fileReadExecutor);
+        return UnmodifiableFuture.completedFuture(attrs);
     }
 
     @Override
-    public ResponseHeaders readHeaders() {
+    public ResponseHeaders headers() {
         return readHeaders(attrs);
     }
 
     @Override
     public CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
-        return AggregatedHttpFile.super.readHeaders(fileReadExecutor);
+        return UnmodifiableFuture.completedFuture(headers());
     }
 
     @Override
@@ -107,6 +110,29 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     @Override
     public HttpData content() {
         return content;
+    }
+
+    @Override
+    public CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor) {
+        return aggregate();
+    }
+
+    private UnmodifiableFuture<AggregatedHttpFile> aggregate() {
+        if (aggregateFuture == null) {
+            aggregateFuture = UnmodifiableFuture.completedFuture(this);
+        }
+        return aggregateFuture;
+    }
+
+    @Override
+    public CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(Executor fileReadExecutor,
+                                                                            ByteBufAllocator alloc) {
+        return aggregate();
+    }
+
+    @Override
+    public HttpFile toHttpFile() {
+        return this;
     }
 
     @Override

@@ -84,7 +84,7 @@ public interface PooledHttpResponse extends HttpResponse, PooledHttpStreamMessag
         final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         subscribeWithPooledObjects(aggregator, executor);
-        return future.thenApply(DefaultPooledAggregatedHttpResponse::new);
+        return future.thenApply(PooledAggregatedHttpResponse::of);
     }
 
     /**
