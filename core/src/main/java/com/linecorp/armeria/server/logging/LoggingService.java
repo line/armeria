@@ -52,7 +52,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     /**
      * Returns a new {@link HttpService} decorator that logs {@link HttpRequest}s and {@link HttpResponse}s at
-     * {@link LogLevel#TRACE} for success, {@link LogLevel#WARN} for failure. See {@link LoggingServiceBuilder}
+     * {@link LogLevel#DEBUG} for success, {@link LogLevel#WARN} for failure. See {@link LoggingServiceBuilder}
      * for more information on the default settings.
      */
     public static Function<? super HttpService, LoggingService> newDecorator() {

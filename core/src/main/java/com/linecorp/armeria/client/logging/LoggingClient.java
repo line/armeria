@@ -43,14 +43,11 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
 
     /**
      * Returns a new {@link HttpClient} decorator that logs {@link Request}s and {@link Response}s at
-     * {@link LogLevel#TRACE} for success, {@link LogLevel#WARN} for failure. See {@link LoggingClientBuilder}
+     * {@link LogLevel#DEBUG} for success, {@link LogLevel#WARN} for failure. See {@link LoggingClientBuilder}
      * for more information on the default settings.
      */
     public static Function<? super HttpClient, LoggingClient> newDecorator() {
-        return builder().requestLogLevel(LogLevel.INFO)
-                        .successfulResponseLogLevel(LogLevel.INFO)
-                        .failureResponseLogLevel(LogLevel.WARN)
-                        .newDecorator();
+        return builder().newDecorator();
     }
 
     /**
