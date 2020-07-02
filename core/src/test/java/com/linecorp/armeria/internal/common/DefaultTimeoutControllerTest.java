@@ -104,28 +104,29 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void resetTimeout_withoutInit() {
-        timeoutController.resetTimeoutNanos(500);
-        assertThat(timeoutController.timeoutNanos()).isEqualTo(500);
+        final Duration newTimeout = Duration.ofMillis(500);
+        timeoutController.resetTimeoutNanos(newTimeout.toNanos());
+        assertThat(timeoutController.timeoutNanos()).isEqualTo(newTimeout.toNanos());
         assertThat((Object) timeoutController.timeoutFuture()).isNotNull();
     }
 
     @Test
     void resetTimout_multipleZero() {
-        timeoutController.scheduleTimeoutNanos(1000);
+        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
         timeoutController.resetTimeoutNanos(0);
         timeoutController.resetTimeoutNanos(0);
     }
 
     @Test
     void resetTimout_multipleNonZero() {
-        timeoutController.scheduleTimeoutNanos(1000);
+        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
         timeoutController.resetTimeoutNanos(0);
         timeoutController.resetTimeoutNanos(500);
     }
 
     @Test
     void cancelTimeout_beforeDeadline() {
-        timeoutController.scheduleTimeoutNanos(1000);
+        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
         assertThat(timeoutController.cancelTimeout()).isTrue();
         assertThat(isTimedOut).isFalse();
     }
@@ -155,12 +156,12 @@ class DefaultTimeoutControllerTest {
     @Test
     void scheduleTimeoutWhenTimedOut() {
         assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.scheduleTimeoutNanos(1000)).isFalse();
+        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
     }
 
     @Test
     void extendTimeoutWhenDisabled() {
-        assertThat(timeoutController.extendTimeoutNanos(1000)).isFalse();
+        assertThat(timeoutController.extendTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
     }
 
     @Test
@@ -172,12 +173,12 @@ class DefaultTimeoutControllerTest {
     @Test
     void extendTimeoutWhenTimedOut() {
         assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.extendTimeoutNanos(1000)).isFalse();
+        assertThat(timeoutController.extendTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
     }
 
     @Test
     void resetTimeoutWhenDisabled() {
-        assertThat(timeoutController.resetTimeoutNanos(1000)).isTrue();
+        assertThat(timeoutController.resetTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
     }
 
     @Test
@@ -189,7 +190,7 @@ class DefaultTimeoutControllerTest {
     @Test
     void resetTimeoutWhenTimedOut() {
         assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.resetTimeoutNanos(1000)).isFalse();
+        assertThat(timeoutController.resetTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
     }
 
     @Test
@@ -199,7 +200,7 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void cancelTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeoutNanos(1000)).isTrue();
+        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
         assertThat(timeoutController.cancelTimeout()).isTrue();
     }
 
