@@ -121,7 +121,7 @@ class DefaultTimeoutControllerTest {
     void resetTimout_multipleNonZero() {
         timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
         timeoutController.resetTimeoutNanos(0);
-        timeoutController.resetTimeoutNanos(500);
+        timeoutController.resetTimeoutNanos(Duration.ofMillis(500).toNanos());
     }
 
     @Test
@@ -217,7 +217,7 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void timeoutNowWhenScheduled() {
-        timeoutController.scheduleTimeoutNanos(1000);
+        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
         assertThat(timeoutController.timeoutNow()).isTrue();
     }
 
@@ -235,7 +235,7 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void ignoreScheduledTimeoutAfterReset() {
-        timeoutController.resetTimeoutNanos(1000);
+        timeoutController.resetTimeoutNanos(Duration.ofMillis(1000).toNanos());
         assertThat(timeoutController.scheduleTimeoutNanos(1)).isFalse();
     }
 
