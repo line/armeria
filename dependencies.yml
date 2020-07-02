@@ -3,10 +3,10 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.11.0
+  - com.fasterxml.jackson:jackson-bom:2.11.1
   - io.dropwizard.metrics:metrics-bom:4.1.9
-  - io.grpc:grpc-bom:1.30.1
-  - io.micrometer:micrometer-bom:1.5.1
+  - io.grpc:grpc-bom:1.30.2
+  - io.micrometer:micrometer-bom:1.5.2
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.50.Final
   - io.zipkin.brave:brave-bom:5.12.3
@@ -41,11 +41,11 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.8.4'
+    version: '2.8.5'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.2/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.5/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -63,7 +63,7 @@ com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.28' }
+  dagger: { version: &DAGGER_VERSION '2.28.1' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
@@ -117,11 +117,11 @@ com.google.protobuf:
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
-  eureka-client: { version: &EUREKA_VERSION '1.9.23' }
+  eureka-client: { version: &EUREKA_VERSION '1.9.25' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.33' }
+  checkstyle: { version: '8.34' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -143,14 +143,14 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 com.thesamet.scalapb:
-  scalapb-runtime_2.13: { version: &SCALAPB_VERSION '0.10.1' }
+  scalapb-runtime_2.13: { version: &SCALAPB_VERSION '0.10.6' }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
-  scalapb-json4s_2.13: { version: *SCALAPB_VERSION }
+  scalapb-json4s_2.13: { version: '0.10.1' }
 
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '20.5.0'
+    version: '20.6.0'
 
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
@@ -216,7 +216,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.3' }
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.4' }
   protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
@@ -235,7 +235,7 @@ io.micrometer:
 
 # This is only used for examples/grpc-scala
 io.monix:
-  monix-reactive_2.13: { version: '3.2.1' }
+  monix-reactive_2.13: { version: '3.2.2' }
 
 io.netty:
   netty-common:
@@ -246,7 +246,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.6.RELEASE'
+    version: &REACTOR_VERSION '3.3.7.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
