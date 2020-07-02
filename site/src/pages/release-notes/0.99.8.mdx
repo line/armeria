@@ -57,20 +57,20 @@
   ```java
   ClientRequestContext ctx = ...
   EndpointGroup group = ...
-   // synchronous selection!
+  // synchronous selection!
   Endpoint endpoint = group.selectNow(ctx);
-   // asynchronous selection!
+  // asynchronous selection!
   CompletableFuture<Endpoint> future = group.select(ctx, ctx.eventLoop(), 1000 /* timeout */ );
   ```
   - Thanks to this change, you can now avoid the <type://EmptyEndpointGroupException> at least
     for the case where the <typeplural://Endpoint> disappear temporarily.
 - You can now get the snapshot status of circuit breakers from monitoring system. #2841
-- You can now schedule a request timeout in nanoseconds. #2864
-  - <type://ServiceRequestContext#setRequestTimeout(TimeoutMode,Duration)>
-  - <type://ClientRequestContext#setResponseTimeout(TimeoutMode,Duration)>
 
 ## 📈 Improvements
 
+- You can now schedule a request timeout in nanoseconds. #2864
+  - <type://ServiceRequestContext#setRequestTimeout(TimeoutMode,Duration)>
+  - <type://ClientRequestContext#setResponseTimeout(TimeoutMode,Duration)>
 - You can now see the error message by `ResourceLeakDetector` if the `DefaultClientFactory` is not closed
   properly. #2847
 - The initial connection latency is lowered by giving up hopeless HTTP/1.1 connection early when
@@ -81,7 +81,7 @@
 - Armeria server does not convert the `Host` header to `:authority` header anymore. #2846 #2850
   - <type://RequestHeaders#authority()> looks into `Host` header if `:authority` header is missing.
 - You can retry when <type://DnsTimeoutException> is raised using <type://RetryRule#onUnprocessed()>. #2836
-- You no longer see `Http2Exception: failed to consume a HEADE` error. #2832
+- You no longer see `Http2Exception: failed to consume a HEADERS frame` error. #2832
 - You no longer see `You tried to set the content preview twice` warning unless
   you really did apply content previewing decorator twice. #2830 #2832
 - A non-base <type://WebClient> respects the user defined scheme correctly. #2835
@@ -94,6 +94,7 @@
   <type://DocServiceConfigurator> instead. #2787 #2838
   - Deprecated beans: `HttpServiceRegistrationBean`, `AnnotatedServiceRegistrationBean`,
     `GrpcServiceRegistrationBean` and `ThriftServiceRegistrationBean`
+- `MeterIdPrefixFunctionFactory` has been deprecated in favor of <type://RequestLog#serviceName()>. #2780 #2820
 - `executor()`, `contextAwareExecutor()` and `contextAwareEventLoop()` methods in
   <type://RequestContext> are deprecated. #2834
 - `on*(Predicate)` methods in the followings classes are deprecated. #2851
@@ -102,11 +103,11 @@
   - <type://CircuitBreakerRule> and <type://CircuitBreakerRuleBuilder>
   - <type://CircuitBreakerRuleWithContent> and <type://CircuitBreakerRuleWithContentBuilder>
   - Use `on*(BiPredicate)` methods instead.
-- `RequestLogBuilder.defer*Content*()` and `isDefer*Content*Set()`` have been deprecated in favor of
+- `RequestLogBuilder.defer*Content*()` and `isDefer*Content*Set()` have been deprecated in favor of
   `defer(RequestLogProperty)` and `isDeferred(RequestLogProperty)`. #2832
 - `MeterIdPrefixFunction.andThen(BiFunction<MeterRegistry, MeterIdPrefix, MeterIdPrefix>` is deprecated. #2839
 - `UnprocessedRequestException(Throwable)` constructor is deprecated.
-  `Use <type://UnprocessedRequestException#of(Throwable)> instead. #2836
+  Use <type://UnprocessedRequestException#of(Throwable)> instead. #2836
 
 ## ☢️ Breaking changes
 
