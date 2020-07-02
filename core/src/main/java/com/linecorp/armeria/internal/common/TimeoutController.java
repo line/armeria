@@ -34,7 +34,7 @@ public interface TimeoutController {
      *         {@code false} if the timeout has been scheduled, triggered already
      *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    boolean scheduleTimeout(long timeoutNanos);
+    boolean scheduleTimeoutNanos(long timeoutNanos);
 
     /**
      * Extends the current timeout by the specified {@code adjustmentNanos}.
@@ -45,7 +45,7 @@ public interface TimeoutController {
      *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
      *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    boolean extendTimeout(long adjustmentNanos);
+    boolean extendTimeoutNanos(long adjustmentNanos);
 
     /**
      * Sets the amount of time that is after the specified {@code newTimeoutNanos} from now.
@@ -55,7 +55,7 @@ public interface TimeoutController {
      *         {@code false} if the timeout has been triggered already
      *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    boolean resetTimeout(long newTimeoutNanos);
+    boolean resetTimeoutNanos(long newTimeoutNanos);
 
     /**
      * Trigger the current timeout immediately.
@@ -68,7 +68,7 @@ public interface TimeoutController {
 
     /**
      * Cancels the current timeout scheduled. You can schedule a new timeout with
-     * {@link #scheduleTimeout(long)} if the current timeout is cancelled successfully.
+     * {@link #scheduleTimeoutNanos(long)} if the current timeout is cancelled successfully.
      * @return {@code true} if the current timeout is cancelled.
      *         {@code false} if the timeout has been triggered already or no timeout was scheduled previously.
      */

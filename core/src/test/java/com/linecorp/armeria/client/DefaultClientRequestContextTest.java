@@ -23,7 +23,6 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;

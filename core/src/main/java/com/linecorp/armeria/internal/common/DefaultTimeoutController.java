@@ -89,7 +89,7 @@ public class DefaultTimeoutController implements TimeoutController {
      *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
-    public boolean scheduleTimeout(long timeoutNanos) {
+    public boolean scheduleTimeoutNanos(long timeoutNanos) {
         checkArgument(timeoutNanos > 0,
                       "timeoutNanos: %s (expected: > 0)", timeoutNanos);
         ensureInitialized();
@@ -115,7 +115,7 @@ public class DefaultTimeoutController implements TimeoutController {
      *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
-    public boolean extendTimeout(long adjustmentNanos) {
+    public boolean extendTimeoutNanos(long adjustmentNanos) {
         ensureInitialized();
         if (state != State.SCHEDULED || !timeoutTask.canSchedule()) {
             return false;
@@ -157,7 +157,7 @@ public class DefaultTimeoutController implements TimeoutController {
      *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
-    public boolean resetTimeout(long newTimeoutNanos) {
+    public boolean resetTimeoutNanos(long newTimeoutNanos) {
         ensureInitialized();
         if (state == State.TIMED_OUT || !timeoutTask.canSchedule()) {
             return false;

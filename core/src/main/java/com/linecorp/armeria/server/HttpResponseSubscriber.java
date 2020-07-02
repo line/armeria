@@ -116,7 +116,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         // Schedule the initial request timeout.
         final long requestTimeoutMillis = reqCtx.requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
-            scheduleTimeout(TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
+            scheduleTimeoutNanos(TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
         }
 
         // Start consuming.

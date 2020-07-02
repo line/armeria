@@ -102,12 +102,12 @@ public final class TimeoutScheduler {
         final TimeoutController timeoutController = this.timeoutController;
         if (timeoutController != null) {
             if (eventLoop.inEventLoop()) {
-                timeoutController.extendTimeout(adjustmentNanos);
+                timeoutController.extendTimeoutNanos(adjustmentNanos);
             } else {
-                eventLoop.execute(() -> timeoutController.extendTimeout(adjustmentNanos));
+                eventLoop.execute(() -> timeoutController.extendTimeoutNanos(adjustmentNanos));
             }
         } else {
-            addPendingTimeoutTask(controller -> controller.extendTimeout(adjustmentNanos));
+            addPendingTimeoutTask(controller -> controller.extendTimeoutNanos(adjustmentNanos));
         }
     }
 
@@ -122,16 +122,16 @@ public final class TimeoutScheduler {
                 passedTimeNanos = System.nanoTime() - startTimeNanos;
             }
             if (eventLoop.inEventLoop()) {
-                timeoutController.resetTimeout(timeoutNanos);
+                timeoutController.resetTimeoutNanos(timeoutNanos);
             } else {
-                eventLoop.execute(() -> timeoutController.resetTimeout(timeoutNanos));
+                eventLoop.execute(() -> timeoutController.resetTimeoutNanos(timeoutNanos));
             }
         } else {
             final long startTimeNanos = System.nanoTime();
             addPendingTimeoutTask(controller -> {
                 final long passedTimeNanos0 = System.nanoTime() - startTimeNanos;
                 final long timeoutNanos0 = Math.max(1, timeoutNanos - passedTimeNanos0);
-                controller.resetTimeout(timeoutNanos0);
+                controller.resetTimeoutNanos(timeoutNanos0);
             });
         }
 

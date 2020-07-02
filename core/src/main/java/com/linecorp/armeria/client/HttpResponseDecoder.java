@@ -366,7 +366,7 @@ abstract class HttpResponseDecoder {
 
         void initTimeout() {
             if (responseTimeoutMillis > 0) {
-                scheduleTimeout(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                scheduleTimeoutNanos(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
             }
         }
 
