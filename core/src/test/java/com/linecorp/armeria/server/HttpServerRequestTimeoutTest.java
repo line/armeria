@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -70,7 +69,7 @@ class HttpServerRequestTimeoutTest {
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-immediately", (ctx, req) -> {
-                  ctx.setRequestTimeoutAt(Instant.now().minusSeconds(1));
+                  ctx.timeoutNow();
                   return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->
@@ -80,7 +79,7 @@ class HttpServerRequestTimeoutTest {
                   return delegate.serve(ctx, req);
               })
               .decorator("/timeout-by-decorator/deadline", (delegate, ctx, req) -> {
-                  ctx.setRequestTimeoutAt(Instant.now().plusSeconds(2));
+                  ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(2));
                   return delegate.serve(ctx, req);
               })
               .decorator("/timeout-by-decorator/clear", (delegate, ctx, req) -> {
@@ -111,10 +110,6 @@ class HttpServerRequestTimeoutTest {
                   return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) -> HttpResponse.streaming())
-              .decorator("/timeout-by-decorator/deadline", (delegate, ctx, req) -> {
-                  ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
-                  return delegate.serve(ctx, req);
-              })
               .decorator("/timeout-by-decorator/from_now", (delegate, ctx, req) -> {
                   ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(1));
                   return delegate.serve(ctx, req);
@@ -186,7 +181,6 @@ class HttpServerRequestTimeoutTest {
 
     @ParameterizedTest
     @CsvSource({
-            "/timeout-by-decorator/deadline",
             "/timeout-by-decorator/from_now",
             "/timeout-by-decorator/from_start",
     })

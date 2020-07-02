@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -182,7 +183,7 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new TimeoutScheduler(options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
 
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
@@ -358,7 +359,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(ctx.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
@@ -485,7 +486,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return timeoutScheduler.timeoutMillis();
+        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
     }
 
     @Override
@@ -495,13 +496,14 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(requireNonNull(mode, "mode"), responseTimeoutMillis);
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
     }
 
-    @Deprecated
     @Override
-    public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
-        timeoutScheduler.setTimeoutAtMillis(responseTimeoutAtMillis);
+    public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override
