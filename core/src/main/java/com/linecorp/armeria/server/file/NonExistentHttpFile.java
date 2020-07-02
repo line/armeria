@@ -18,10 +18,6 @@ package com.linecorp.armeria.server.file;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -30,27 +26,18 @@ import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
 
-final class NonExistentHttpFile implements AggregatedHttpFile {
+final class NonExistentHttpFile implements HttpFile {
 
     static final NonExistentHttpFile INSTANCE = new NonExistentHttpFile();
 
-    private NonExistentHttpFile() {}
+    private static final CompletableFuture<AggregatedHttpFile> AGGREGATED_FUTURE =
+            UnmodifiableFuture.completedFuture(NonExistentAggregatedHttpFile.INSTANCE);
 
-    @Nullable
-    @Override
-    public HttpFileAttributes readAttributes() {
-        return null;
-    }
+    private NonExistentHttpFile() {}
 
     @Override
     public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
         return UnmodifiableFuture.completedFuture(null);
-    }
-
-    @Nullable
-    @Override
-    public ResponseHeaders readHeaders() {
-        return null;
     }
 
     @Override
@@ -58,21 +45,9 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
         return UnmodifiableFuture.completedFuture(null);
     }
 
-    @Nullable
-    @Override
-    public AggregatedHttpResponse read() {
-        return null;
-    }
-
     @Override
     public CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
         return UnmodifiableFuture.completedFuture(null);
-    }
-
-    @Nullable
-    @Override
-    public HttpData content() {
-        return null;
     }
 
     @Override
@@ -86,5 +61,21 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
                     return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }
         };
+    }
+
+    @Override
+    public CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor) {
+        return AGGREGATED_FUTURE;
+    }
+
+    @Override
+    public CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(Executor fileReadExecutor,
+                                                                            ByteBufAllocator alloc) {
+        return AGGREGATED_FUTURE;
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
     }
 }

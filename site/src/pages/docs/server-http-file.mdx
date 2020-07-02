@@ -241,9 +241,6 @@ HttpFile file = HttpFile.of(Paths.get("/var/lib/www/img/logo.png");
 CompletableFuture<AggregatedHttpFile> future = file.aggregate(ioExecutor);
 AggregatedHttpFile aggregated = future.join();
 
-// Note that AggregatedHttpFile is a subtype of HttpFile.
-assert aggregated instanceof HttpFile;
-
 // The content of the file can now be retrieved from memory.
 HttpData content = aggregated.content();
 ```
@@ -259,16 +256,14 @@ The content you need to serve is not always from an external resource but someti
 
 ```java
 // Build from a byte array.
-AggregatedHttpFile f1 = HttpFile.of(HttpData.of(new byte[] { 1, 2, 3, 4 }));
+AggregatedHttpFile f1 = AggregatedHttpFile.of(HttpData.of(new byte[] { 1, 2, 3, 4 }));
 
 // Build from a String.
-AggregatedHttpFile f2 = HttpFile.of(HttpData.ofUtf8("Hello, world!"));
+AggregatedHttpFile f2 = AggregatedHttpFile.of(HttpData.ofUtf8("Hello, world!"));
 
-// Build using a builder with downcast.
-// Note: HttpFileBuilder.build() returns an AggregatedHttpFile
-//       if HttpFileBuilder was created from an HttpData.
+// Build using a builder.
 AggregatedHttpFile f3 =
-    (AggregatedHttpFile) HttpFile.builder(HttpData.ofAscii("Armeria"))
-                                 .lastModified(false)
-                                 .build();
+    AggregatedHttpFile.builder(HttpData.ofAscii("Armeria"))
+                      .lastModified(false)
+                      .build();
 ```

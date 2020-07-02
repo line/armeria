@@ -41,11 +41,10 @@ import com.linecorp.armeria.common.MediaType;
  *                      .setHeader(HttpHeaderNames.CONTENT_ENCODING, "gzip")
  *                      .build();
  *
- * // Build from an HttpData. Can be downcast into AggregatedHttpFile.
- * AggregatedHttpFile f = (AggregatedHttpFile)
- *         HttpFile.builder(HttpData.ofUtf8("content"), System.currentTimeMillis())
- *                 .entityTag((pathOrUri, attrs) -> "myCustomEntityTag")
- *                 .build();
+ * // Build from an HttpData.
+ * HttpFile f = HttpFile.builder(HttpData.ofUtf8("content"), System.currentTimeMillis())
+ *                      .entityTag((pathOrUri, attrs) -> "myCustomEntityTag")
+ *                      .build();
  * }</pre>
  */
 public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
@@ -181,7 +180,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
         }
 
         @Override
-        public AggregatedHttpFile build() {
+        public HttpFile build() {
             return new HttpDataFile(content, clock(), lastModifiedMillis,
                                     isDateEnabled(), isLastModifiedEnabled(),
                                     entityTagFunction(), buildHeaders());

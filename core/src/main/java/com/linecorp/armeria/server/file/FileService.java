@@ -349,11 +349,11 @@ public final class FileService extends AbstractHttpService {
                 return cache(ctx, pathAndEncoding, uncachedFile);
             }
 
-            final HttpFileAttributes cachedAttrs = cachedFile.readAttributes();
+            final HttpFileAttributes cachedAttrs = cachedFile.attributes();
             assert cachedAttrs != null;
             if (cachedAttrs.equals(uncachedAttrs)) {
                 // Cache hit, and the cached file is up-to-date.
-                return cachedFile;
+                return cachedFile.toHttpFile();
             }
 
             // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
@@ -372,7 +372,7 @@ public final class FileService extends AbstractHttpService {
 
         return HttpFile.from(uncachedFile.aggregateWithPooledObjects(executor, alloc).thenApply(aggregated -> {
             cache.put(pathAndEncoding, aggregated);
-            return (HttpFile) aggregated;
+            return aggregated.toHttpFile();
         }).exceptionally(cause -> {
             logger.warn("{} Failed to cache a file: {}", ctx, uncachedFile, Exceptions.peel(cause));
             return uncachedFile;
@@ -407,7 +407,7 @@ public final class FileService extends AbstractHttpService {
         }
 
         @Override
-        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
             return HttpResponse.from(
                     first.findFile(ctx, req)
                          .readAttributes(ctx.blockingTaskExecutor())

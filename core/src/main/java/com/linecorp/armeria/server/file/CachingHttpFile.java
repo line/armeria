@@ -106,11 +106,11 @@ final class CachingHttpFile implements HttpFile {
                 return cache(fileReadExecutor);
             }
 
-            final HttpFileAttributes cachedAttrs = cachedFile.readAttributes();
+            final HttpFileAttributes cachedAttrs = cachedFile.attributes();
             assert cachedAttrs != null;
             if (cachedAttrs.equals(uncachedAttrs)) {
                 // Cache hit, and the cached file is up-to-date.
-                return cachedFile;
+                return cachedFile.toHttpFile();
             }
 
             // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
@@ -122,7 +122,7 @@ final class CachingHttpFile implements HttpFile {
     private HttpFile cache(Executor fileReadExecutor) {
         return HttpFile.from(file.aggregate(fileReadExecutor).thenApply(aggregated -> {
             cachedFile = aggregated;
-            return (HttpFile) aggregated;
+            return aggregated.toHttpFile();
         }).exceptionally(cause -> {
             logger.warn("Failed to cache a file: {}", file, Exceptions.peel(cause));
             return file;

@@ -65,8 +65,9 @@ public class CachingHttpFileTest {
         assertThat(cached.readAttributes(executor).join()).isNull();
         assertThat(cached.readHeaders(executor).join()).isNull();
         assertThat(cached.read(executor, alloc).join()).isNull();
-        assertThat(cached.aggregate(executor).join()).isSameAs(HttpFile.nonExistent());
-        assertThat(cached.aggregateWithPooledObjects(executor, alloc).join()).isSameAs(HttpFile.nonExistent());
+        assertThat(cached.aggregate(executor).join()).isSameAs(AggregatedHttpFile.nonExistent());
+        assertThat(cached.aggregateWithPooledObjects(executor, alloc).join())
+                .isSameAs(AggregatedHttpFile.nonExistent());
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertThat(cached.asService().serve(ctx, ctx.request()).aggregate().join().status())
@@ -152,8 +153,8 @@ public class CachingHttpFileTest {
         final HttpFileAttributes attrs = new HttpFileAttributes(5, 0);
         final ResponseHeaders headers = ResponseHeaders.of(200);
         final HttpResponse res = HttpResponse.of("large");
-        final AggregatedHttpFile aggregated = HttpFile.of(HttpData.ofUtf8("large"), 0);
-        final AggregatedHttpFile aggregatedWithPooledObjs = HttpFile.of(HttpData.ofUtf8("large"), 0);
+        final AggregatedHttpFile aggregated = AggregatedHttpFile.of(HttpData.ofUtf8("large"), 0);
+        final AggregatedHttpFile aggregatedWithPooledObjs = AggregatedHttpFile.of(HttpData.ofUtf8("large"), 0);
         final HttpFile uncached = mock(HttpFile.class);
         when(uncached.readAttributes(executor)).thenReturn(UnmodifiableFuture.completedFuture(attrs));
         when(uncached.readHeaders(executor)).thenReturn(UnmodifiableFuture.completedFuture(headers));
