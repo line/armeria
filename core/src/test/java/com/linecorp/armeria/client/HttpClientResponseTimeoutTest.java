@@ -53,21 +53,6 @@ class HttpClientResponseTimeoutTest {
     };
 
     @Test
-    void setRequestTimeoutAtPastTimeClient() {
-        final WebClient client = WebClient
-                .builder(server.httpUri())
-                .decorator((delegate, ctx, req) -> {
-                    ctx.eventLoop().schedule(() -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
-                                             1, TimeUnit.SECONDS);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
-        assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(ResponseTimeoutException.class);
-    }
-
-    @Test
     void shouldSetResponseTimeoutWithNoTimeout() {
         final WebClient client = WebClient
                 .builder(server.httpUri())
@@ -111,7 +96,6 @@ class HttpClientResponseTimeoutTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext)
                 throws Exception {
             final Stream<Consumer<? super ClientRequestContext>> timeoutCustomizers = Stream.of(
-                    ctx -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
                     ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000),
                     ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000),
                     RequestContext::timeoutNow

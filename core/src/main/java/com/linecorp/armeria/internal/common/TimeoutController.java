@@ -26,36 +26,36 @@ import javax.annotation.Nullable;
 public interface TimeoutController {
 
     /**
-     * Schedules a new timeout with the specified {@code timeoutMillis}.
+     * Schedules a new timeout with the specified {@code timeoutNanos}.
      * If a timeout is scheduled already, this method will not start a new timeout.
      *
-     * @param timeoutMillis a positive time amount value in milliseconds.
+     * @param timeoutNanos a positive time amount value in nanoseconds.
      * @return {@code true} if the timeout is scheduled.
      *         {@code false} if the timeout has been scheduled, triggered already
      *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    boolean scheduleTimeout(long timeoutMillis);
+    boolean scheduleTimeout(long timeoutNanos);
 
     /**
-     * Extends the current timeout by the specified {@code adjustmentMillis}.
-     * Note that a negative {@code adjustmentMillis} reduces the current timeout.
+     * Extends the current timeout by the specified {@code adjustmentNanos}.
+     * Note that a negative {@code adjustmentNanos} reduces the current timeout.
      *
-     * @param adjustmentMillis the adjustment of time amount value in milliseconds.
-     * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
+     * @param adjustmentNanos the adjustment of time amount value in nanoseconds.
+     * @return {@code true} if the current timeout is extended by the specified {@code adjustmentNanos}.
      *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
      *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    boolean extendTimeout(long adjustmentMillis);
+    boolean extendTimeout(long adjustmentNanos);
 
     /**
-     * Sets the amount of time that is after the specified {@code newTimeoutMillis} from now.
+     * Sets the amount of time that is after the specified {@code newTimeoutNanos} from now.
      *
-     * @param newTimeoutMillis the new timeout value in milliseconds. {@code 0} if disabled.
-     * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
+     * @param newTimeoutNanos the new timeout value in nanoseconds. {@code 0} if disabled.
+     * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutNanos}.
      *         {@code false} if the timeout has been triggered already
      *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    boolean resetTimeout(long newTimeoutMillis);
+    boolean resetTimeout(long newTimeoutNanos);
 
     /**
      * Trigger the current timeout immediately.

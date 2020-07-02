@@ -178,33 +178,6 @@ class DefaultServiceRequestContextTest {
     }
 
     @Test
-    void setRequestTimeoutAt() throws InterruptedException {
-        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
-        final long tolerance = 100;
-
-        ctx.eventLoop().execute(() -> {
-            ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
-            final long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
-            ctx.setRequestTimeoutAtMillis(Instant.now().plusMillis(1500).toEpochMilli());
-            assertThat(ctx.requestTimeoutMillis()).isBetween(oldRequestTimeoutMillis + 500 - tolerance,
-                                                             oldRequestTimeoutMillis + 500 + tolerance);
-            finished.set(true);
-        });
-
-        await().untilTrue(finished);
-    }
-
-    @Test
-    void setRequestTimeoutAtWithNonPositive() throws InterruptedException {
-        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
-
-        ctx.setRequestTimeoutAt(Instant.now().minusSeconds(1));
-        await().untilAsserted(() -> assertThat(ctx.isTimedOut()).isTrue());
-    }
-
-    @Test
     void clearRequestTimeout() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);

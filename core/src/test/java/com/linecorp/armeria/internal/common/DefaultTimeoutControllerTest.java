@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -41,11 +42,11 @@ class DefaultTimeoutControllerTest {
     }
 
     StatusCheckedTaskTimeoutController timeoutController;
-    volatile boolean isTimeout;
+    volatile boolean isTimedOut;
 
     @BeforeEach
     void setUp() {
-        isTimeout = false;
+        isTimedOut = false;
         final TimeoutTask timeoutTask = new TimeoutTask() {
             @Override
             public boolean canSchedule() {
@@ -54,7 +55,7 @@ class DefaultTimeoutControllerTest {
 
             @Override
             public void run() {
-                isTimeout = true;
+                isTimedOut = true;
             }
         };
         timeoutController =
@@ -73,38 +74,38 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void adjustTimeout() {
-        final long initTimeoutMillis = 1000;
-        final long adjustmentMillis = 200;
-        final long tolerance = 100;
+        final long initTimeoutNanos = Duration.ofMillis(1000).toNanos();
+        final long adjustmentNanos = Duration.ofMillis(200).toNanos();
+        final long tolerance = Duration.ofMillis(100).toNanos();
 
-        timeoutController.scheduleTimeout(initTimeoutMillis);
+        timeoutController.scheduleTimeout(initTimeoutNanos);
         final long startTimeNanos = timeoutController.startTimeNanos();
 
-        timeoutController.extendTimeout(adjustmentMillis);
-        final long passedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-        assertThat(timeoutController.timeoutMillis()).isBetween(
-                initTimeoutMillis + adjustmentMillis - passedMillis - tolerance,
-                initTimeoutMillis + adjustmentMillis - passedMillis + tolerance);
+        timeoutController.extendTimeout(adjustmentNanos);
+        final long passedNanos = System.nanoTime() - startTimeNanos;
+        assertThat(timeoutController.timeoutNanos()).isBetween(
+                initTimeoutNanos + adjustmentNanos - passedNanos - tolerance,
+                initTimeoutNanos + adjustmentNanos - passedNanos + tolerance);
 
-        final long adjustmentMillis2 = -200;
-        timeoutController.extendTimeout(adjustmentMillis2);
-        final long passedMillis2 = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-        assertThat(timeoutController.timeoutMillis()).isBetween(
-                initTimeoutMillis + adjustmentMillis + adjustmentMillis2 - passedMillis2 - tolerance,
-                initTimeoutMillis + adjustmentMillis + adjustmentMillis2 - passedMillis2 + tolerance);
+        final long adjustmentNanos2 = Duration.ofMillis(-200).toNanos();
+        timeoutController.extendTimeout(adjustmentNanos2);
+        final long passedMillis2 = System.nanoTime() - startTimeNanos;
+        assertThat(timeoutController.timeoutNanos()).isBetween(
+                initTimeoutNanos + adjustmentNanos + adjustmentNanos2 - passedMillis2 - tolerance,
+                initTimeoutNanos + adjustmentNanos + adjustmentNanos2 - passedMillis2 + tolerance);
     }
 
     @Test
     void resetTimeout() {
-        timeoutController.scheduleTimeout(1000);
-        timeoutController.resetTimeout(500);
-        assertThat(timeoutController.timeoutMillis()).isEqualTo(500);
+        timeoutController.scheduleTimeout(Duration.ofMillis(1000).toNanos());
+        timeoutController.resetTimeout(Duration.ofMillis(500).toNanos());
+        assertThat(timeoutController.timeoutNanos()).isEqualTo(Duration.ofMillis(500).toNanos());
     }
 
     @Test
     void resetTimeout_withoutInit() {
         timeoutController.resetTimeout(500);
-        assertThat(timeoutController.timeoutMillis()).isEqualTo(500);
+        assertThat(timeoutController.timeoutNanos()).isEqualTo(500);
         assertThat((Object) timeoutController.timeoutFuture()).isNotNull();
     }
 
@@ -126,29 +127,29 @@ class DefaultTimeoutControllerTest {
     void cancelTimeout_beforeDeadline() {
         timeoutController.scheduleTimeout(1000);
         assertThat(timeoutController.cancelTimeout()).isTrue();
-        assertThat(isTimeout).isFalse();
+        assertThat(isTimedOut).isFalse();
     }
 
     @Test
     void cancelTimeout_afterDeadline() {
-        timeoutController.scheduleTimeout(500);
+        timeoutController.scheduleTimeout(Duration.ofMillis(500).toNanos());
         Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
         assertThat(timeoutController.cancelTimeout()).isFalse();
-        assertThat(isTimeout).isTrue();
+        assertThat(isTimedOut).isTrue();
     }
 
     @Test
     void cancelTimeout_byResetTimeoutZero() {
-        timeoutController.scheduleTimeout(1000);
+        timeoutController.scheduleTimeout(Duration.ofMillis(1000).toNanos());
         timeoutController.resetTimeout(0);
-        assertThat(timeoutController.timeoutMillis()).isEqualTo(0);
+        assertThat(timeoutController.timeoutNanos()).isEqualTo(0);
         assertThat((Object) timeoutController.timeoutFuture()).isNull();
     }
 
     @Test
     void scheduleTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeout(1000)).isTrue();
-        assertThat(timeoutController.scheduleTimeout(1000)).isFalse();
+        assertThat(timeoutController.scheduleTimeout(Duration.ofMillis(1000).toNanos())).isTrue();
+        assertThat(timeoutController.scheduleTimeout(Duration.ofMillis(1000).toNanos())).isFalse();
     }
 
     @Test
@@ -164,8 +165,8 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void extendTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeout(1000)).isTrue();
-        assertThat(timeoutController.extendTimeout(1000)).isTrue();
+        assertThat(timeoutController.scheduleTimeout(Duration.ofMillis(1000).toNanos())).isTrue();
+        assertThat(timeoutController.extendTimeout(Duration.ofMillis(1000).toNanos())).isTrue();
     }
 
     @Test
@@ -181,8 +182,8 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void resetTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeout(1000)).isTrue();
-        assertThat(timeoutController.resetTimeout(1000)).isTrue();
+        assertThat(timeoutController.scheduleTimeout(Duration.ofMillis(1000).toNanos())).isTrue();
+        assertThat(timeoutController.resetTimeout(Duration.ofMillis(1000).toNanos())).isTrue();
     }
 
     @Test
@@ -272,9 +273,9 @@ class DefaultTimeoutControllerTest {
         }
 
         @Override
-        public boolean scheduleTimeout(long timeoutMillis) {
+        public boolean scheduleTimeout(long timeoutNanos) {
             final State prevState = delegate.state();
-            final boolean result = delegate.scheduleTimeout(timeoutMillis);
+            final boolean result = delegate.scheduleTimeout(timeoutNanos);
             if (result) {
                 // Previous: DISABLED
                 assertThat(prevState).isIn(State.INIT, State.INACTIVE);
@@ -290,9 +291,9 @@ class DefaultTimeoutControllerTest {
         }
 
         @Override
-        public boolean extendTimeout(long adjustmentMillis) {
+        public boolean extendTimeout(long adjustmentNanos) {
             final State prevState = delegate.state();
-            final boolean result = delegate.extendTimeout(adjustmentMillis);
+            final boolean result = delegate.extendTimeout(adjustmentNanos);
             if (result) {
                 // Previous: SCHEDULE
                 assertThat(prevState).isEqualTo(State.SCHEDULED);
@@ -312,14 +313,14 @@ class DefaultTimeoutControllerTest {
         }
 
         @Override
-        public boolean resetTimeout(long newTimeoutMillis) {
+        public boolean resetTimeout(long newTimeoutNanos) {
             final State prevState = delegate.state();
-            final boolean result = delegate.resetTimeout(newTimeoutMillis);
+            final boolean result = delegate.resetTimeout(newTimeoutNanos);
             if (result) {
                 // Previous: SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
                 // Transition to: SCHEDULE or DISABLED
-                if (newTimeoutMillis > 0) {
+                if (newTimeoutNanos > 0) {
                     assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
                 } else {
                     assertThat(delegate.state()).isEqualTo(State.INACTIVE);
@@ -379,8 +380,8 @@ class DefaultTimeoutControllerTest {
             return delegate.startTimeNanos();
         }
 
-        long timeoutMillis() {
-            return delegate.timeoutMillis();
+        long timeoutNanos() {
+            return delegate.timeoutNanos();
         }
 
         @Nullable

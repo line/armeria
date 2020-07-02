@@ -23,10 +23,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
@@ -156,7 +158,7 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        timeoutScheduler = new TimeoutScheduler(cfg.requestTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -309,7 +311,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public long requestTimeoutMillis() {
-        return timeoutScheduler.timeoutMillis();
+        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
     }
 
     @Override
@@ -319,13 +321,14 @@ public final class DefaultServiceRequestContext
 
     @Override
     public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(mode, requestTimeoutMillis);
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
     }
 
-    @Deprecated
     @Override
-    public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
-        timeoutScheduler.setTimeoutAtMillis(requestTimeoutAtMillis);
+    public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         requireNonNull(requestTimeout, "requestTimeout").toNanos());
     }
 
     @Nullable

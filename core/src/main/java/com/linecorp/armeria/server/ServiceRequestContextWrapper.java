@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -132,9 +133,8 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    @Deprecated
-    public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
-        delegate().setRequestTimeoutAtMillis(requestTimeoutAtMillis);
+    public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
+        delegate().setRequestTimeout(mode, requestTimeout);
     }
 
     @Nullable

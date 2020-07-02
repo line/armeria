@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponse
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -115,7 +116,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         // Schedule the initial request timeout.
         final long requestTimeoutMillis = reqCtx.requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
-            scheduleTimeout(requestTimeoutMillis);
+            scheduleTimeout(TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
         }
 
         // Start consuming.
