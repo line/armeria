@@ -27,7 +27,7 @@
                  RetryRuleWithContent.onResponse(response -> {
                      return response.aggregate().thenApply(aggregated -> {
                         HttpHeaders trailers =
-                            GrpcWebUtil.parseTrailers(aggregated.content());
+                                GrpcWebUtil.parseTrailers(aggregated.content());
                         // Retry if the 'grpc-status' is not equal to 0.
                         return trailers != null &&
                                trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
@@ -39,18 +39,17 @@
   ```java
   HttpFile httpFile = HttpFile.of(...);
   CompletableFuture<HttpFileAttributes> attrs =
-      httpFile.readAttributes(CommonPools.blockingTaskExecutor());
+          httpFile.readAttributes(CommonPools.blockingTaskExecutor());
   CompletableFuture<ResponseHeaders> headers =
-      httpFile.readHeaders(CommonPools.blockingTaskExecutor());
+          httpFile.readHeaders(CommonPools.blockingTaskExecutor());
   ```
 - You can now easily customize <type://MeterIdPrefixFunction> using
   <type://MeterIdPrefixFunction#andThen(MeterIdPrefixFunctionCustomizer)>. #2839
   ```java
   MeterIdPrefixFunction
           .ofDefault("hoge")
-          .andThen((registry, log, id) -> {
-              return id.withTags("grpc-status", log.responseTrailers().get("grpc-status"));
-          });
+          .andThen((registry, log, id) -> id.withTags(
+                  "grpc-status", log.responseTrailers().get("grpc-status")));
   ```
 - Both synchronous and asynchronous APIs to select an <type://Endpoint> are added to
   <type://EndpointSelector> and thus <type://EndpointGroup> which is a sub-interface. #1910 #2837
@@ -60,7 +59,8 @@
   // synchronous selection!
   Endpoint endpoint = group.selectNow(ctx);
   // asynchronous selection!
-  CompletableFuture<Endpoint> future = group.select(ctx, ctx.eventLoop(), 1000 /* timeout */ );
+  CompletableFuture<Endpoint> future =
+          group.select(ctx, ctx.eventLoop(), 1000 /* timeout */ );
   ```
   - Thanks to this change, you can now avoid the <type://EmptyEndpointGroupException> at least
     for the case where the <typeplural://Endpoint> disappear temporarily.
