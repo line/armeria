@@ -169,11 +169,6 @@ public final class AnnotatedServiceFactory {
                     .build();
 
     /**
-     * A value to specify if HTTP method annotation value is empty or not specified.
-     */
-    private static final String EMPTY_PATH = "";
-
-    /**
      * Returns the list of {@link AnnotatedService} defined by {@link Path} and HTTP method annotations
      * from the specified {@code object}, {@link RequestConverterFunction}s, {@link ResponseConverterFunction}s,
      * {@link ExceptionHandlerFunction}s and {@link AnnotatedServiceExtensions}.
@@ -509,7 +504,8 @@ public final class AnnotatedServiceFactory {
                             if (usePathPatterns) {
                                 httpMethodPaths.addAll(pathPatterns);
                             } else if (httpMethodPaths.isEmpty()) {
-                                httpMethodPaths.add(EMPTY_PATH);
+                                // Add an empty value if HTTP method annotation value is empty or not specified.
+                                httpMethodPaths.add("");
                             }
                             if (httpMethodPaths.isEmpty()) {
                                 throw new IllegalArgumentException("A path pattern should be specified by" +
