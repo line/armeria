@@ -99,7 +99,7 @@ public final class RouteBuilder {
      */
     public RouteBuilder path(String prefix, String pathPattern) {
         prefix = ensureAbsolutePath(prefix, "prefix");
-        if (Strings.isNullOrEmpty(pathPattern)) {
+        if (pathPattern.isEmpty()) {
             return path(concatPaths(prefix, pathPattern));
         }
 
@@ -466,7 +466,7 @@ public final class RouteBuilder {
 
     private static PathMapping getPathMapping(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
-        if (Strings.isNullOrEmpty(pathPattern)) {
+        if (pathPattern.isEmpty()) {
             return new ExactPathMapping(pathPattern);
         }
         if (pathPattern.startsWith(EXACT)) {
