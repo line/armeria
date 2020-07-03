@@ -1,0 +1,97 @@
+# Armeria Newsletter vol. 1
+
+3rd July 2020
+
+<img src="https://i.imgur.com/iZf8DeG.gif" loading="lazy" width="250" height="159" />
+
+Do you remember that once we told us Armeria 1.0.0 will be out around the end of 2019? It's already 50% past
+2020, COVID-19 still strays around the city, and we have yet a few issues in our ever growing backlog for
+the next release. Nevertheless, I feel like 1.0.0 is really close this time.
+[Así es la vida!](https://en.wiktionary.org/wiki/as%C3%AD_es_la_vida) 😅
+
+## From the devs
+
+- We now have our own domain, [armeria.dev](https://armeria.dev/)! 🌟
+- [Armeria 0.99.8](/release-notes/0.99.8), [0.99.7](/release-notes/0.99.7) and [0.99.6](/release-notes/0.99.6)
+  have been released.
+  - New <type://CircuitBreakerRule> and <type://CircuitBreakerRuleWithContent> API let you define a complex
+    circuit breaking policy conveniently.
+  - You can now specify the maximum lifespan of server-side connections using
+    <type://ServerBuilder#maxConnectionAge(Duration)>. This is useful when you have to deal with a load
+    balancer without HTTP/2 support.
+  - Service discovery and registration for
+    [Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html) and
+    [Finagle ServerSets](http://stevenskelton.ca/finagle-serverset-clusters-using-zookeeper/).
+  - [ScalaPB](https://scalapb.github.io/) support with
+    [a fully working example](https://github.com/line/armeria/tree/master/examples/grpc-scala).
+
+## From the community
+
+- [Using Reactive Streams with Armeria - Part 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/)
+  and [Part 2](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-2/)
+  - @ikhoon introduces the basic concepts of Reactive Streams, and explains how you can use Reactive Streams
+    with Armeria, including the details about:
+    - How to handle backpressure - observer pattern, push method and pull method
+    - How Reactive Streams API work - `Publisher`, `Subscriber`, and `Subscription`
+    - How to interoperate between different Reactive Streams impls, such as Reactor and RxJava
+    - Cool Armeria features that helps you implement a microservice
+- [LINE Bot API with Armeria](https://sookiwi.com/posts/tech/2019/11/17/LINE-Bot-API-with-Armeria/)
+  - @carlsagan21 shows how his team uses Armeria for Thrift and gRPC services in an Envoy-based service mesh.
+
+## We need your comments
+
+Your opinion means a lot to us. Please let us know what you think about these proposals:
+
+- #2793 Which nullness annotation library should we use?
+  Stick to JSR-305, or use [JetBrains Java annotations](https://github.com/JetBrains/java-annotations/)?
+- #2862 Should `PooledAggregatedHttp{Request,Response}` extend <type://SafeCloseable>?
+  What's the best way to handle reference-counted objects and their access?
+
+## Good first issues
+
+Want to contribute but not sure where to start from? Try one of these:
+
+- #1934 `:examples:static-files:test` fails when a home directory has `index.html`.
+- #2119 Override new `CompletableFuture` methods in Java 12 for `RequestContextAwareCompletableFuture`
+
+## Stay tuned
+
+Sign up for our newsletters to keep up-to-date with new releases and useful tips!
+
+<div style="max-width: 320px; margin-top: 0.5rem;">
+  <Mailchimp />
+</div>
+
+## Thank you!
+
+<ThankYou
+  message={() => <p>Since our last newsletter, we received awesome contributions from the following contributors:</p>}
+  usernames={[
+    'adriancole',
+    'amitvc',
+    'andrey-tpt',
+    'anuraaga',
+    'cbornet',
+    'eonezhang',
+    'gary-lo',
+    'ghkim3221',
+    'heowc',
+    'hexoul',
+    'hueneburg',
+    'huydx',
+    'ikhoon',
+    'imasahiro',
+    'jongmin92',
+    'joonhaeng',
+    'jrhee17',
+    'KarboniteKream',
+    'kojilin',
+    'matsumana',
+    'max904-github',
+    'minwoox',
+    'okue',
+    'sokangmin',
+    'tobias-',
+    'trustin',
+  ]}
+/>
