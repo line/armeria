@@ -15,44 +15,68 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class AnnotatedServiceNullablePathTest {
 
-    @Test
-    void testNullablePathSuccessService() {
-        Server.builder()
-              .annotatedService("/1", new Object() {
-                  @Get
-                  public HttpResponse nullable() {
-                      return HttpResponse.of(HttpStatus.OK);
-                  }
-              })
-              .annotatedService("/2", new Object() {
-                  @Get("")
-                  public HttpResponse nullable() {
-                      return HttpResponse.of(HttpStatus.OK);
-                  }
-              })
-              .build();
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.annotatedService("/default", new Object() {
+                @Get
+                public HttpResponse defaultValue() {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
+
+            sb.annotatedService("/empty", new Object() {
+                @Get("")
+                public HttpResponse emptyValue() {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
+
+            sb.annotatedService("/multiple", new Object() {
+                @Get
+                @Path("/")
+                public HttpResponse multipleValue() {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
+        }
+    };
+
+    @ParameterizedTest
+    @CsvSource({ "/default, 200", "/empty, 200", "/multiple, 307", "/multiple/, 200" })
+    void params(String path, int statusCode) {
+        final WebClient client = WebClient.of(server.httpUri());
+        assertThat(client.get(path).aggregate().join().status().code()).isEqualTo(statusCode);
     }
 
     @Test
     void testNullablePathFailureService() {
         assertThatThrownBy(() -> {
             Server.builder()
-                  .annotatedService("/1", new Object() {
+                  .annotatedService("/multiple", new Object() {
                       @Get("")
                       @Path("/")
-                      public HttpResponse nullable() {
+                      public HttpResponse multipleValue() {
                           return HttpResponse.of(HttpStatus.OK);
                       }
                   })
