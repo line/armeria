@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -38,6 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -91,11 +91,16 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             // `baseEpochMicros + (System.nanoTime() - baseTickNanos)`.
             // However, Armeria achieves the current time using `System.currentTimeMillis() * 1000` in Java8.
             // The two different way of getting the current time could cause an error of a millisecond.
-            // Sometimes the tolerance makes the server appear to finish earlier than child in test case.
-            // This is not a problem in the Brave{Service,Client} because they only use Armeria timestamp.
+            // Sometimes the tolerance makes the server appear to finish earlier than child in this test case.
+            // This is not a problem in the Brave{Service,Client} because they only use Armeria's timestamp.
             tracing.tracer().nextSpan().name("child").start().finish();
-            return HttpResponse.delayed(
-                    HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "happy"), Duration.ofMillis(1));
+            final Duration delay;
+            if (SystemInfo.javaVersion() > 8) {
+                delay = Duration.ofNanos(1000);
+            } else {
+                delay = Duration.ofMillis(1);
+            }
+            return HttpResponse.delayed(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "happy"), delay);
         });
         sb.service("/baggage", (ctx, req) -> {
             final String value = String.valueOf(BAGGAGE_FIELD.getValue());
