@@ -507,10 +507,6 @@ public final class AnnotatedServiceFactory {
                                 // Add an empty value if HTTP method annotation value is empty or not specified.
                                 httpMethodPaths.add("");
                             }
-                            if (httpMethodPaths.isEmpty()) {
-                                throw new IllegalArgumentException("A path pattern should be specified by" +
-                                                                   " @Path or HTTP method annotations.");
-                            }
                             return ImmutableList.copyOf(httpMethodPaths);
                         }));
     }
