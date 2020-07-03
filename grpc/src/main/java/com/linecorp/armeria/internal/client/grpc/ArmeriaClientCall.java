@@ -34,7 +34,6 @@ import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
@@ -73,8 +72,6 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ByteProcessor;
-import io.netty.util.ByteProcessor.IndexOfProcessor;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -87,8 +84,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     };
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaClientCall.class);
-
-    private static final ByteProcessor FIND_COLON = new IndexOfProcessor((byte) ':');
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<ArmeriaClientCall> pendingMessagesUpdater =
@@ -108,7 +103,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Nullable
     private final Executor executor;
     private final String advertisedEncodingsHeader;
-    private final SerializationFormat serializationFormat;
+    private final boolean isGrpcWeb;
 
     // Effectively final, only set once during start()
     @Nullable
@@ -144,7 +139,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.compressorRegistry = compressorRegistry;
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
-        this.serializationFormat = serializationFormat;
+        isGrpcWeb = GrpcSerializationFormats.isGrpcWeb(serializationFormat);
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
         marshaller = new GrpcMessageMarshaller<>(
                 ctx.alloc(), serializationFormat, method, jsonMarshaller,
@@ -208,7 +203,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata);
 
         final HttpResponse res = initContextAndExecuteWithFallback(
-                httpClient, ctx, endpointGroup,
+                httpClient, ctx, endpointGroup, HttpResponse::from,
                 (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
@@ -319,18 +314,17 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void messageRead(DeframedMessage message) {
-        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
+        if (isGrpcWeb && message.type() >> 7 == 1) {
             // grpc-web trailers
             final ByteBuf buf = message.buf();
             // trailers never compressed
             assert buf != null;
             try {
-                final HttpHeaders trailers = parseGrpcWebTrailers(buf);
+                final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                 if (trailers == null) {
                     // Malformed trailers.
-                    close(Status.INTERNAL
-                                  .withDescription("grpc-web trailers malformed: " +
-                                                   buf.toString(StandardCharsets.UTF_8)),
+                    close(Status.INTERNAL.withDescription("grpc-web trailers malformed: " +
+                                                          buf.toString(StandardCharsets.UTF_8)),
                           new Metadata());
                 } else {
                     GrpcStatus.reportStatus(trailers, responseReader, this);
@@ -430,43 +424,5 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (executor != null) {
             executor.execute(NO_OP);
         }
-    }
-
-    @Nullable
-    private static HttpHeaders parseGrpcWebTrailers(ByteBuf buf) {
-        final HttpHeadersBuilder trailers = HttpHeaders.builder();
-        while (buf.readableBytes() > 0) {
-            int start = buf.forEachByte(ByteProcessor.FIND_NON_LINEAR_WHITESPACE);
-            if (start == -1) {
-                return null;
-            }
-            int endExclusive;
-            if (buf.getByte(start) == ':') {
-                // We need to skip the pseudoheader colon when searching for the separator.
-                buf.skipBytes(1);
-                endExclusive = buf.forEachByte(FIND_COLON);
-                buf.readerIndex(start);
-            } else {
-                endExclusive = buf.forEachByte(FIND_COLON);
-            }
-            if (endExclusive == -1) {
-                return null;
-            }
-            final CharSequence name = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
-            buf.readerIndex(endExclusive + 1);
-            start = buf.forEachByte(ByteProcessor.FIND_NON_LINEAR_WHITESPACE);
-            buf.readerIndex(start);
-            endExclusive = buf.forEachByte(ByteProcessor.FIND_CRLF);
-            final CharSequence value = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
-            trailers.add(name, value.toString());
-            start = buf.forEachByte(ByteProcessor.FIND_NON_CRLF);
-            if (start != -1) {
-                buf.readerIndex(start);
-            } else {
-                // Nothing but CRLF remaining, we're done.
-                buf.skipBytes(buf.readableBytes());
-            }
-        }
-        return trailers.build();
     }
 }

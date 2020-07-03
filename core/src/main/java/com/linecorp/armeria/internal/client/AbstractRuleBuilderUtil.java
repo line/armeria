@@ -17,7 +17,7 @@
 package com.linecorp.armeria.internal.client;
 
 import java.util.function.BiFunction;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -38,16 +38,16 @@ public final class AbstractRuleBuilderUtil {
      * a given {@link ClientRequestContext} and {@link Throwable}.
      */
     public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
-    buildFilter(Predicate<RequestHeaders> requestHeadersFilter,
-                @Nullable Predicate<ResponseHeaders> responseHeadersFilter,
-                @Nullable Predicate<HttpHeaders> responseTrailersFilter,
-                @Nullable Predicate<Throwable> exceptionFilter,
+    buildFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
+                @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
+                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
+                @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
                 boolean hasResponseFilter) {
         return (ctx, cause) -> {
             final RequestLog log = ctx.log().partial();
             if (log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
                 final RequestHeaders requestHeaders = log.requestHeaders();
-                if (!requestHeadersFilter.test(requestHeaders)) {
+                if (!requestHeadersFilter.test(ctx, requestHeaders)) {
                     return false;
                 }
             }
@@ -58,20 +58,20 @@ public final class AbstractRuleBuilderUtil {
                 return true;
             }
 
-            if (cause != null && exceptionFilter != null && exceptionFilter.test(Exceptions.peel(cause))) {
+            if (cause != null && exceptionFilter != null && exceptionFilter.test(ctx, Exceptions.peel(cause))) {
                 return true;
             }
 
             if (responseHeadersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
                 final ResponseHeaders responseHeaders = log.responseHeaders();
-                if (responseHeadersFilter.test(responseHeaders)) {
+                if (responseHeadersFilter.test(ctx, responseHeaders)) {
                     return true;
                 }
             }
 
             if (responseTrailersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
                 final HttpHeaders responseTrailers = log.responseTrailers();
-                if (responseTrailersFilter.test(responseTrailers)) {
+                if (responseTrailersFilter.test(ctx, responseTrailers)) {
                     return true;
                 }
             }

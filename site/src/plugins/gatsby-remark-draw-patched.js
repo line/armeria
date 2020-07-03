@@ -53,7 +53,6 @@ module.exports = ({ markdownAST, pathPrefix }, pluginOptions = {}) => {
       value: `<span class="${draw.className} ${
         draw.className
       }-${lang}"><object data="${urljoin(
-        '/',
         pathPrefix,
         fileName,
       )}" role="img" aria-label="" /></span>`,

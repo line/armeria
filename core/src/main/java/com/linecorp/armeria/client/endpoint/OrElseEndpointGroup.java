@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -67,8 +68,15 @@ final class OrElseEndpointGroup
     }
 
     @Override
-    public Endpoint select(ClientRequestContext ctx) {
-        return selector.select(ctx);
+    public Endpoint selectNow(ClientRequestContext ctx) {
+        return selector.selectNow(ctx);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                              ScheduledExecutorService executor,
+                                              long timeoutMillis) {
+        return selector.select(ctx, executor, timeoutMillis);
     }
 
     @Override

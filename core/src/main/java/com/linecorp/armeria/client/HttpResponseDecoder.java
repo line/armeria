@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -96,6 +97,7 @@ abstract class HttpResponseDecoder {
         final HttpResponseWrapper removed = responses.remove(id);
         if (removed != null) {
             unfinishedResponses--;
+            assert unfinishedResponses >= 0 : unfinishedResponses;
         }
         return removed;
     }
@@ -364,7 +366,7 @@ abstract class HttpResponseDecoder {
 
         void initTimeout() {
             if (responseTimeoutMillis > 0) {
-                scheduleTimeout(responseTimeoutMillis);
+                scheduleTimeoutNanos(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
             }
         }
 

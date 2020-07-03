@@ -67,24 +67,24 @@ class StickyEndpointSelectionStrategyTest {
         assertThat(strategy.newSelector(staticGroup)).isNotNull();
         final int selectTime = 5;
 
-        final Endpoint ep1 = staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"));
-        final Endpoint ep2 = staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria2"));
-        final Endpoint ep3 = staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria3"));
+        final Endpoint ep1 = staticGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria1"));
+        final Endpoint ep2 = staticGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria2"));
+        final Endpoint ep3 = staticGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria3"));
 
         // select few times to confirm that same header will be routed to same endpoint
         for (int i = 0; i < selectTime; i++) {
-            assertThat(staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isEqualTo(ep1);
-            assertThat(staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria2"))).isEqualTo(ep2);
-            assertThat(staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria3"))).isEqualTo(ep3);
+            assertThat(staticGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isEqualTo(ep1);
+            assertThat(staticGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria2"))).isEqualTo(ep2);
+            assertThat(staticGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria3"))).isEqualTo(ep3);
         }
 
         //confirm rebuild tree of dynamic
         final Endpoint ep4 = Endpoint.parse("localhost:9494");
         dynamicGroup.addEndpoint(ep4);
-        assertThat(dynamicGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isEqualTo(ep4);
+        assertThat(dynamicGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isEqualTo(ep4);
 
         dynamicGroup.removeEndpoint(ep4);
-        assertThat(dynamicGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isNull();
+        assertThat(dynamicGroup.selectNow(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isNull();
     }
 
     private static ClientRequestContext contextWithHeader(String k, String v) {

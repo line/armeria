@@ -1,6 +1,42 @@
 [
   {
     "title": {
+      "en": "Using Reactive Streams with Armeria - Part 2",
+      "ja": "Let’s play Reactive Streams with Armeria vol.2",
+      "ko": "Armeria로 Reactive Streams와 놀자! – 2"
+    },
+    "url": {
+      "en": "https://engineering.linecorp.com/en/blog/reactive-streams-armeria-2/",
+      "ja": "https://engineering.linecorp.com/ja/blog/reactive-streams-with-armeria-2/",
+      "ko": "https://engineering.linecorp.com/ko/blog/reactive-streams-with-armeria-2/"
+    },
+    "author": {
+      "en": "Ikhoon Um",
+      "ko": "엄익훈"
+    },
+    "date": "20200703",
+    "tags": ["articles", "knowledge"]
+  },
+  {
+    "title": {
+      "en": "Using Reactive Streams with Armeria - Part 1",
+      "ja": "Let’s play Reactive Streams with Armeria vol.1",
+      "ko": "Armeria로 Reactive Streams와 놀자! – 1"
+    },
+    "url": {
+      "en": "https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/",
+      "ja": "https://engineering.linecorp.com/ja/blog/reactive-streams-with-armeria-1/",
+      "ko": "https://engineering.linecorp.com/ko/blog/reactive-streams-with-armeria-1/"
+    },
+    "author": {
+      "en": "Ikhoon Um",
+      "ko": "엄익훈"
+    },
+    "date": "20200506",
+    "tags": ["articles", "knowledge"]
+  },
+  {
+    "title": {
       "en": "Reactive programming and RPC for microservices using Spring WebFlux and Armeria",
       "ja": "Spring WebFluxとArmeriaを利用してMicroserviceに必要なReactiveとRPCを同時に解決しよう",
       "ko": "Spring WebFlux와 Armeria를 이용하여 Microservice에 필요한 Reactive + RPC 동시에 잡기"
@@ -79,6 +115,21 @@
     },
     "date": "20191130",
     "tags": ["articles", "knowledge"]
+  },
+  {
+    "title": {
+      "en": "LINE Bot API with Armeria"
+    },
+    "url": {
+      "en": "https://sookiwi.com/posts/tech/2019/11/17/LINE-Bot-API-with-Armeria/"
+    },
+    "author": {
+      "en": "Soo Kim",
+      "ko": "김수"
+    },
+    "date": "20191117",
+    "tags": ["slides", "knowledge"],
+    "machineTranslation": false
   },
   {
     "title": {

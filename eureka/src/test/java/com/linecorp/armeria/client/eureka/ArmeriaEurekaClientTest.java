@@ -63,15 +63,30 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
 
     @Override
     protected EurekaHttpClient getEurekaHttpClient(URI serviceURI) {
-        return new EurekaHttpClientWrapper(WebClient.of(serviceURI));
+        return new EurekaHttpClientWrapper(WebClient.of(toH1C(serviceURI)));
     }
 
     @Override
     protected EurekaHttpClient getEurekaClientWithBasicAuthentication(String userName, String password) {
-        final WebClient webClient = WebClient.builder(getHttpServer().getServiceURI())
+        final WebClient webClient = WebClient.builder(toH1C(getHttpServer().getServiceURI()))
                                              .auth(BasicToken.of(userName, password))
                                              .build();
         return new EurekaHttpClientWrapper(webClient);
+    }
+
+    private static String toH1C(URI serviceURI) {
+        // When an Armeria client sends an HTTP/2 upgrade request, `com.sun.net.httpserver.HttpServer`,
+        // the HTTP server implementation used by this test suite, closes the connection prematurely
+        // even without `Connection: close` header, violating the HTTP/1.1 specification.
+        // As a result, the Armeria client will fail to send the actual request to the test suite server.
+        //
+        // To work around this problem, we make Armeria client not send an HTTP/2 upgrade request
+        // by using the HTTP/1-only scheme.
+        //
+        // In the real world, the Eureka server will handle persistent HTTP/1 connections properly,
+        // so we keep this work around only in this test case.
+        return serviceURI.toASCIIString()
+                         .replaceFirst("^http:", "h1c:");
     }
 
     @Ignore

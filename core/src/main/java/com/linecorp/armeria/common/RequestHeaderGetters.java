@@ -57,7 +57,8 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
     String scheme();
 
     /**
-     * Returns the value of the {@code ":authority"} header or {@code null} if there is no such header.
+     * Returns the value of the {@code ":authority"} for HTTP/2 request or {@code "Host"} header for HTTP/1.1.
+     * {@code null} if there is no such headers.
      */
     @Nullable
     String authority();

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.common.CustomRequestContextStorageProvider.CustomRequestContextStorage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.EventLoop;
 

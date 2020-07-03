@@ -100,6 +100,6 @@ public final class AuthService extends SimpleDecoratingHttpService {
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
             }
-        }, ctx.contextAwareEventLoop()));
+        }, ctx.eventLoop()));
     }
 }

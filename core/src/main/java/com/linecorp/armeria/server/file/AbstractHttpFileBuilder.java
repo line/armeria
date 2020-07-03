@@ -31,7 +31,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 
 /**
- * A skeletal builder class which helps easier implementation of an {@link HttpFile} builder.
+ * A skeletal builder class which helps easier implementation of {@link HttpFileBuilder} or
+ * {@link AggregatedHttpFileBuilder}.
  */
 public abstract class AbstractHttpFileBuilder {
 

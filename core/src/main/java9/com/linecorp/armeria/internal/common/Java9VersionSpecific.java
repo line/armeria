@@ -43,7 +43,7 @@ class Java9VersionSpecific extends JavaVersionSpecific {
     }
 
     @Override
-    public final <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
-        return new Java9RequestContextAwareFuture<>(requireNonNull(ctx, "ctx"));
+    public final <T> CompletableFuture<T> newContextAwareFuture(RequestContext ctx) {
+        return new Java9ContextAwareFuture<>(requireNonNull(ctx, "ctx"));
     }
 }

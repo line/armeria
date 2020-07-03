@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class CircuitBreakerClientRuleTest {
 
@@ -58,7 +58,7 @@ class CircuitBreakerClientRuleTest {
         final CircuitBreakerRuleWithContent<HttpResponse> rule =
                 CircuitBreakerRuleWithContent
                         .<HttpResponse>builder()
-                        .onResponse(response -> {
+                        .onResponse((unused, response) -> {
                             return response.aggregate()
                                            .thenApply(content -> content.contentUtf8().contains("Hello"));
                         })
@@ -98,7 +98,7 @@ class CircuitBreakerClientRuleTest {
     void openCircuitWithTrailer() {
         final CircuitBreakerRule rule =
                 CircuitBreakerRule.builder()
-                                  .onResponseTrailers(trailers -> trailers.containsInt("grpc-status", 3))
+                                  .onResponseTrailers((ctx, trailers) -> trailers.containsInt("grpc-status", 3))
                                   .thenFailure();
 
         final WebClient client =
