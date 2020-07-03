@@ -20,6 +20,8 @@ import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -84,8 +86,16 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         // "/nested" left out as there's no sub-routing feature at the moment.
 
         sb.service("/child", (ctx, req) -> {
+
+            // The `Span.start()` and `Span.finish()` estimate the current time using
+            // `baseEpochMicros + (System.nanoTime() - baseTickNanos)`.
+            // However, Armeria achieves the current time using `System.currentTimeMillis() * 1000` in Java8.
+            // The two different way of getting the current time could cause an error of a millisecond.
+            // Sometimes the tolerance makes the server appear to finish earlier than child in test case.
+            // This is not a problem in the Brave{Service,Client} because they only use Armeria timestamp.
             tracing.tracer().nextSpan().name("child").start().finish();
-            return HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "happy");
+            return HttpResponse.delayed(
+                    HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "happy"), Duration.ofMillis(1));
         });
         sb.service("/baggage", (ctx, req) -> {
             final String value = String.valueOf(BAGGAGE_FIELD.getValue());
