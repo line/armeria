@@ -26,7 +26,7 @@
     "url": {
       "en": "https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/",
       "ja": "https://engineering.linecorp.com/ja/blog/reactive-streams-with-armeria-1/",
-      "ko": "https://engineering.linecorp.com/ko/blog/reactive-streams-armeria-1/"
+      "ko": "https://engineering.linecorp.com/ko/blog/reactive-streams-with-armeria-1/"
     },
     "author": {
       "en": "Ikhoon Um",
