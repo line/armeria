@@ -359,7 +359,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
       case ToCState.OPEN:
         return {
           display: 'block',
-          opacity: 0.9,
+          opacity: 0.95,
           zIndex: 8,
         };
       case ToCState.CLOSING:
