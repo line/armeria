@@ -23,6 +23,8 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -34,10 +36,21 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
- * See {@link ProxyConfigSelector#wrap(ProxySelector)} for more information.
+ * See {@link ProxyConfigSelector#of(ProxySelector)} for more information.
  */
 final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     private static final Logger logger = LoggerFactory.getLogger(WrappingProxyConfigSelector.class);
+
+    /**
+     * Converts {@link SessionProtocol}, {@link Endpoint} to a uri without serialization format.
+     */
+    private static URI toUri(SessionProtocol sessionProtocol, Endpoint endpoint) {
+        try {
+            return new URI(sessionProtocol.uriText(), endpoint.authority(), null, null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
 
     private static InetSocketAddress resolve(InetSocketAddress inetSocketAddress) {
         if (!inetSocketAddress.isUnresolved()) {
@@ -78,7 +91,7 @@ final class WrappingProxyConfigSelector implements ProxyConfigSelector {
     public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpoint, "endpoint");
-        final List<Proxy> proxies = proxySelector.select(endpoint.toUri(protocol));
+        final List<Proxy> proxies = proxySelector.select(toUri(protocol, endpoint));
         if (proxies == null || proxies.isEmpty()) {
             return ProxyConfig.direct();
         }

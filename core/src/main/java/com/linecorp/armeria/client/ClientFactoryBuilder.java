@@ -47,7 +47,6 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
-import com.linecorp.armeria.client.proxy.StaticProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -516,7 +515,7 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder proxyConfig(ProxyConfig proxyConfig) {
         requireNonNull(proxyConfig, "proxyConfig");
-        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, StaticProxyConfigSelector.of(proxyConfig));
+        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, ProxyConfigSelector.of(proxyConfig));
         return this;
     }
 
@@ -524,13 +523,11 @@ public final class ClientFactoryBuilder {
      * Sets the {@link ProxySelector} which determines the {@link ProxyConfig} to be used.
      *
      * <p>This method makes a best effort to provide compatibility with {@link ProxySelector}.
-     * Some known limitations include:
-     * 1) Limited compatibility with sun's {@code DefaultProxySelector}
-     * 2) Only selecting a single {@link ProxyConfig} is supported</p>
+     * See {@link ProxyConfigSelector#of(ProxySelector)} for more information.
      */
     public ClientFactoryBuilder proxyConfig(ProxySelector proxySelector) {
         requireNonNull(proxySelector, "proxySelector");
-        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, ProxyConfigSelector.wrap(proxySelector));
+        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, ProxyConfigSelector.of(proxySelector));
         return this;
     }
 

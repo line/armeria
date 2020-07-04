@@ -23,19 +23,11 @@ import java.net.SocketAddress;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 
-/**
- * A {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
- * for all requests.
- */
-public final class StaticProxyConfigSelector implements ProxyConfigSelector {
+final class StaticProxyConfigSelector implements ProxyConfigSelector {
 
     private static final StaticProxyConfigSelector DIRECT = new StaticProxyConfigSelector(ProxyConfig.direct());
 
-    /**
-     * Returns a {@link ProxyConfigSelector} which selects a static {@link ProxyConfig}
-     * for all requests.
-     */
-    public static StaticProxyConfigSelector of(ProxyConfig proxyConfig) {
+    static StaticProxyConfigSelector of(ProxyConfig proxyConfig) {
         if (proxyConfig == ProxyConfig.direct()) {
             return DIRECT;
         }

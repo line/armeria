@@ -33,18 +33,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 
 public class WrappingProxyConfigSelectorTest {
 
     @Test
     void testSelectUsesFirstProxy() {
         final Proxy proxy1 = new Proxy(Type.HTTP, new InetSocketAddress(80));
-        final ProxyConfigSelector selector = ProxyConfigSelector.wrap(new ProxySelector() {
+        final ProxyConfigSelector selector = ProxyConfigSelector.of(new ProxySelector() {
             @Override
             public List<Proxy> select(URI uri) {
                 return ImmutableList.of(
@@ -65,7 +68,7 @@ public class WrappingProxyConfigSelectorTest {
 
     @Test
     void testSelectNullProxyReturnsDirect() {
-        ProxyConfigSelector selector = ProxyConfigSelector.wrap(new ProxySelector() {
+        ProxyConfigSelector selector = ProxyConfigSelector.of(new ProxySelector() {
             @Override
             public List<Proxy> select(URI uri) {
                 return null;
@@ -78,7 +81,7 @@ public class WrappingProxyConfigSelectorTest {
         ProxyConfig proxyConfig = selector.select(HTTP, Endpoint.of("127.0.0.1"));
         assertThat(proxyConfig).isEqualTo(ProxyConfig.direct());
 
-        selector = ProxyConfigSelector.wrap(new ProxySelector() {
+        selector = ProxyConfigSelector.of(new ProxySelector() {
             @Override
             public List<Proxy> select(URI uri) {
                 final ArrayList<Proxy> list = new ArrayList<>();
@@ -96,7 +99,7 @@ public class WrappingProxyConfigSelectorTest {
 
     @Test
     void testSelectUnresolvedAddress() {
-        final ProxyConfigSelector selector = ProxyConfigSelector.wrap(new ProxySelector() {
+        final ProxyConfigSelector selector = ProxyConfigSelector.of(new ProxySelector() {
             @Override
             public List<Proxy> select(URI uri) {
                 return ImmutableList.of(new Proxy(
@@ -123,7 +126,7 @@ public class WrappingProxyConfigSelectorTest {
         final SocketAddress socketAddress = new InetSocketAddress(81);
         final RuntimeException exception = new RuntimeException("expected");
 
-        final ProxyConfigSelector selector = ProxyConfigSelector.wrap(new ProxySelector() {
+        final ProxyConfigSelector selector = ProxyConfigSelector.of(new ProxySelector() {
             @Override
             public List<Proxy> select(URI uri) {
                 return ImmutableList.of(Proxy.NO_PROXY);
@@ -140,5 +143,25 @@ public class WrappingProxyConfigSelectorTest {
         });
 
         selector.connectFailed(H1C, endpoint, socketAddress, exception);
+    }
+
+    @ParameterizedTest
+    @EnumSource(SessionProtocol.class)
+    void testProxySchemeForSessionProtocols(SessionProtocol sessionProtocol) {
+        final Proxy proxy = new Proxy(Type.HTTP, new InetSocketAddress(80));
+        final ProxyConfigSelector selector = ProxyConfigSelector.of(new ProxySelector() {
+            @Override
+            public List<Proxy> select(URI uri) {
+                assertThat(uri.getScheme()).isEqualTo(sessionProtocol.uriText());
+                return ImmutableList.of(proxy);
+            }
+
+            @Override
+            public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+            }
+        });
+        final ProxyConfig proxyConfig = selector.select(sessionProtocol, Endpoint.of("127.0.0.1"));
+        assertThat(proxyConfig.proxyType()).isEqualTo(ProxyType.CONNECT);
+        assertThat(proxyConfig.proxyAddress()).isEqualTo(proxy.address());
     }
 }

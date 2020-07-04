@@ -31,15 +31,16 @@ import com.linecorp.armeria.common.util.UnstableApi;
  * resource specified by the {@link SessionProtocol} and {@link Endpoint} parameter.
  * This class may be used to dynamically control what proxy configuration
  * to use for each request.
-
- * <p>It should be noted that the only guarantee provided is for a single request,
- * the {@link Endpoint} called with {@code select} will be equal to the {@link Endpoint}
- * called with {@code connectFailed}.</p>
  *
- * <p>For instance, the invoked {@link SessionProtocol} may change depending on the result of
- * protocol negotiation.
- * Additionally, we should note the {@link Endpoint} used to construct the request will not
- * necessarily be equal to the {@link Endpoint} in either callback method parameter.</p>
+ * <p>It should be noted that the only guarantee provided is for a single request,
+ * the {@link Endpoint} called with {@link #select(SessionProtocol, Endpoint)} will be equal to
+ * the {@link Endpoint} called with {@link #connectFailed(SessionProtocol, Endpoint,
+ * SocketAddress, Throwable)}.
+ *
+ * <p>For instance, the actual {@link SessionProtocol} of the connection may differ from
+ * the originally requested {@link SessionProtocol} depending on the result of protocol negotiation.
+ * Similarly, the actual {@link Endpoint} of the request may differ from the originally requested
+ * {@link Endpoint}.
  */
 @UnstableApi
 public interface ProxyConfigSelector {
@@ -67,16 +68,27 @@ public interface ProxyConfigSelector {
                        SocketAddress sa, Throwable throwable);
 
     /**
-     * Provides a way to re-use an existing {@link ProxySelector} with some limitations:
-     * 1. Some incompatibilities when used with sun's {@code DefaultProxySelector}
-     *     - Some properties like socksProxyVersion aren't respected
-     *     - This class doesn't attempt to resolve scheme format differences.
-     *       For instance, sun's {@code DefaultProxySelector} requires basic scheme formats "http", "https".
-     *       However, armeria uses scheme formats including serialization format ("none+http", "tbinary+h1c").
-     *       This may be a source of unexpected behavior.
-     * 2. Selecting multiple {@link Proxy} isn't supported.
+     * Provides a way to re-use an existing {@link ProxySelector} with some limitations.
+     * <ul>
+     *     <li>Incompatibilities when used with JDK's default {@link ProxySelector} implementation:
+     *       <ul>
+     *         <li>Some properties like socksProxyVersion aren't respected</li>
+     *         <li>This class doesn't attempt to resolve scheme format differences.
+     *         However, armeria uses some schemes such as "h1c", "h2" which aren't supported by JDK's
+     *         default {@link ProxySelector}. This may be a source of unexpected behavior.</li>
+     *       </ul>
+     *     </li>
+     *     <li>Selecting multiple {@link Proxy} isn't supported</li>
+     * </ul>
      */
-    static ProxyConfigSelector wrap(ProxySelector proxySelector) {
+    static ProxyConfigSelector of(ProxySelector proxySelector) {
         return WrappingProxyConfigSelector.of(requireNonNull(proxySelector, "proxySelector"));
+    }
+
+    /**
+     * A {@link ProxyConfigSelector} which selects a static {@link ProxyConfig} for all requests.
+     */
+    static ProxyConfigSelector of(ProxyConfig proxyConfig) {
+        return StaticProxyConfigSelector.of(requireNonNull(proxyConfig, "proxyConfig"));
     }
 }

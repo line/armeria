@@ -57,15 +57,6 @@ public final class Socks4ProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("proxyType", proxyType())
-                          .add("proxyAddress", proxyAddress())
-                          .add("username", username())
-                          .toString();
-    }
-
-    @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
@@ -81,5 +72,14 @@ public final class Socks4ProxyConfig extends ProxyConfig {
     @Override
     public int hashCode() {
         return Objects.hash(proxyAddress, username);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("proxyType", proxyType())
+                          .add("proxyAddress", proxyAddress())
+                          .add("username", username())
+                          .toString();
     }
 }

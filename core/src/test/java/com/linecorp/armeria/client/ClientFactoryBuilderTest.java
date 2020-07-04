@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_PING_INTERVAL_MILLIS;
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -29,8 +28,6 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.client.proxy.ProxyConfig;
-import com.linecorp.armeria.client.proxy.StaticProxyConfigSelector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
@@ -187,13 +184,5 @@ class ClientFactoryBuilderTest {
         } else {
             assertThat(factory1.options().pingIntervalMillis()).isEqualTo(pingIntervalMillis);
         }
-    }
-
-    @Test
-    void defaultProxySelectorShouldBeStaticDirect() {
-        final ClientFactory factory = ClientFactory.ofDefault();
-        assertThat(factory.options().proxyConfigSelector()).isInstanceOf(StaticProxyConfigSelector.class);
-        assertThat(factory.options().proxyConfigSelector().select(
-                HTTP, Endpoint.of("any.uri"))).isEqualTo(ProxyConfig.direct());
     }
 }

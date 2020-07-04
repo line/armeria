@@ -80,18 +80,6 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("proxyType", proxyType())
-                          .add("proxyAddress", proxyAddress())
-                          .add("username", username())
-                          .add("password", maskPassword(username(), password()))
-                          .add("useTls", useTls())
-                          .omitNullValues()
-                          .toString();
-    }
-
-    @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
@@ -109,5 +97,17 @@ public final class ConnectProxyConfig extends ProxyConfig {
     @Override
     public int hashCode() {
         return Objects.hash(proxyAddress, username, password, useTls);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("proxyType", proxyType())
+                          .add("proxyAddress", proxyAddress())
+                          .add("username", username())
+                          .add("password", maskPassword(username(), password()))
+                          .add("useTls", useTls())
+                          .omitNullValues()
+                          .toString();
     }
 }

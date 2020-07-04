@@ -20,8 +20,6 @@ import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-
 /**
  * Represents a direct connection without a proxy.
  */
@@ -43,11 +41,6 @@ public final class DirectProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).add("proxyType", proxyType()).toString();
-    }
-
-    @Override
     public boolean equals(@Nullable Object obj) {
         return this == obj;
     }
@@ -55,5 +48,10 @@ public final class DirectProxyConfig extends ProxyConfig {
     @Override
     public int hashCode() {
         return System.identityHashCode(this);
+    }
+
+    @Override
+    public String toString() {
+        return "DirectProxyConfig{proxyType=DIRECT}";
     }
 }
