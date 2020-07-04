@@ -58,7 +58,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
     private static final int MAX_CHUNK_SIZE = 8192;
 
     private static final UnmodifiableFuture<AggregatedHttpFile> NON_EXISTENT_FILE_FUTURE =
-            UnmodifiableFuture.completedFuture(HttpFile.nonExistent());
+            UnmodifiableFuture.completedFuture(NonExistentAggregatedHttpFile.INSTANCE);
 
     /**
      * Creates a new instance.
@@ -219,12 +219,13 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                             }
                         }
 
-                        final HttpFileBuilder builder =
-                                HttpFile.builder(array != null ? HttpData.wrap(array)
-                                                               : PooledHttpData.wrap(buf).withEndOfStream(),
-                                                 attrs.lastModifiedMillis())
-                                        .date(isDateEnabled())
-                                        .lastModified(isLastModifiedEnabled());
+                        final AggregatedHttpFileBuilder builder =
+                                AggregatedHttpFile.builder(array != null ? HttpData.wrap(array)
+                                                                         : PooledHttpData.wrap(buf)
+                                                                                         .withEndOfStream(),
+                                                           attrs.lastModifiedMillis())
+                                                  .date(isDateEnabled())
+                                                  .lastModified(isLastModifiedEnabled());
 
                         if (contentType() != null) {
                             builder.contentType(contentType());
@@ -237,8 +238,8 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                             builder.entityTag(false);
                         }
 
-                        builder.setHeaders(headers());
-                        success = future.complete((AggregatedHttpFile) builder.build());
+                        builder.setHeaders(additionalHeaders());
+                        success = future.complete(builder.build());
                     } catch (Exception e) {
                         future.completeExceptionally(e);
                     } finally {

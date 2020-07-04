@@ -46,8 +46,8 @@ public abstract class LoggingDecoratorBuilder {
 
     @Nullable
     private Logger logger;
-    private LogLevel requestLogLevel = LogLevel.TRACE;
-    private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
+    private LogLevel requestLogLevel = LogLevel.DEBUG;
+    private LogLevel successfulResponseLogLevel = LogLevel.DEBUG;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
     private Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper =
             log -> requestLogLevel();
@@ -92,7 +92,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
+     * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#DEBUG}.
      */
     public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
         if (isRequestLogLevelMapperSet) {
@@ -113,7 +113,7 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
-     * If unset, will use {@link LogLevel#TRACE}.
+     * If unset, will use {@link LogLevel#DEBUG}.
      */
     public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         if (isResponseLogLevelMapperSet) {

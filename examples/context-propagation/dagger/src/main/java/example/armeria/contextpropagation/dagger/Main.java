@@ -54,7 +54,7 @@ public class Main {
         @Provides
         @Production
         static Executor executor(ServiceRequestContext ctx) {
-            return ctx.contextAwareEventLoop();
+            return ctx.eventLoop();
         }
 
         // ServiceRequestContext.blockingTaskExecutor should be used to run blocking logic with context mounted

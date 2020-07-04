@@ -76,23 +76,23 @@ public interface HttpFile {
     }
 
     /**
-     * Creates a new {@link AggregatedHttpFile} which streams the specified {@link HttpData}. This method is
+     * Creates a new {@link HttpFile} which streams the specified {@link HttpData}. This method is
      * a shortcut for {@code HttpFile.of(data, System.currentTimeMillis()}.
      */
-    static AggregatedHttpFile of(HttpData data) {
-        return (AggregatedHttpFile) builder(data).build();
+    static HttpFile of(HttpData data) {
+        return builder(data).build();
     }
 
     /**
-     * Creates a new {@link AggregatedHttpFile} which streams the specified {@link HttpData} with the specified
+     * Creates a new {@link HttpFile} which streams the specified {@link HttpData} with the specified
      * {@code lastModifiedMillis}.
      *
      * @param data the data that provides the content of an HTTP response
      * @param lastModifiedMillis when the {@code data} has been last modified, represented as the number of
      *                           millisecond since the epoch
      */
-    static AggregatedHttpFile of(HttpData data, long lastModifiedMillis) {
-        return (AggregatedHttpFile) builder(data, lastModifiedMillis).build();
+    static HttpFile of(HttpData data, long lastModifiedMillis) {
+        return builder(data, lastModifiedMillis).build();
     }
 
     /**
@@ -114,9 +114,9 @@ public interface HttpFile {
     }
 
     /**
-     * Returns an {@link AggregatedHttpFile} which represents a non-existent file.
+     * Returns an {@link HttpFile} which represents a non-existent file.
      */
-    static AggregatedHttpFile nonExistent() {
+    static HttpFile nonExistent() {
         return NonExistentHttpFile.INSTANCE;
     }
 
@@ -145,27 +145,16 @@ public interface HttpFile {
     }
 
     /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
-     * {@link HttpData}. The last modified date of the file is set to 'now'. Note that the
-     * {@link HttpFileBuilder#build()} method of the returned builder will always return
-     * an {@link AggregatedHttpFile}, which guarantees a safe downcast:
-     * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo")).build();
-     * }</pre>
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified
+     * {@link HttpData}. The last modified date of the file is set to 'now'.
      */
     static HttpFileBuilder builder(HttpData data) {
         return builder(data, System.currentTimeMillis());
     }
 
     /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
-     * {@link HttpData} and {@code lastModifiedMillis}. Note that the {@link HttpFileBuilder#build()} method
-     * of the returned builder will always return an {@link AggregatedHttpFile}, which guarantees a safe
-     * downcast:
-     * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo"), 1546923055020)
-     *                                                     .build();
-     * }</pre>
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified
+     * {@link HttpData} and {@code lastModifiedMillis}.
      *
      * @param data the content of the file
      * @param lastModifiedMillis the last modified time represented as the number of milliseconds

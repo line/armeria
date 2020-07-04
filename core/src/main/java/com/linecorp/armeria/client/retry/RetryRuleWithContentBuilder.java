@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -40,7 +41,8 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  */
 public final class RetryRuleWithContentBuilder<T extends Response> extends AbstractRuleWithContentBuilder<T> {
 
-    RetryRuleWithContentBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    RetryRuleWithContentBuilder(
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
@@ -48,6 +50,20 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      * Adds the specified {@code responseFilter} for a {@link RetryRuleWithContent} which will retry
      * if the specified {@code responseFilter} completes with {@code true}.
      */
+    @Override
+    public RetryRuleWithContentBuilder<T> onResponse(
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> responseFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onResponse(responseFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the specified {@code responseFilter} completes with {@code true}.
+     *
+     * @deprecated Use {@link #onResponse(BiFunction)}.
+     */
+    @Deprecated
     @Override
     public RetryRuleWithContentBuilder<T> onResponse(
             Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
@@ -78,7 +94,8 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     }
 
     RetryRuleWithContent<T> build(RetryDecision decision) {
-        final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
+        final BiFunction<? super ClientRequestContext, ? super T,
+                ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         final boolean hasResponseFilter = responseFilter != null;
         if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
             responseHeadersFilter() == null && !hasResponseFilter) {
@@ -99,7 +116,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
             if (content == null) {
                 return NEXT_DECISION;
             }
-            return responseFilter.apply(content)
+            return responseFilter.apply(ctx, content)
                                  .handle((matched, cause0) -> {
                                      if (cause0 != null) {
                                          return RetryDecision.next();
@@ -119,6 +136,20 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @SuppressWarnings("unchecked")
     @Override
     public RetryRuleWithContentBuilder<T> onResponseHeaders(
+            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseHeadersFilter} returns {@code true}.
+     *
+     * @deprecated Use {@link #onResponseHeaders(BiPredicate)}.
+     */
+    @Deprecated
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
     }
@@ -128,6 +159,21 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
      * response buffered, which may lead to excessive memory usage.
      */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onResponseTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
+     * response buffered, which may lead to excessive memory usage.
+     *
+     * @deprecated Use {@link #onResponseTrailers(BiPredicate)}.
+     */
+    @Deprecated
     @SuppressWarnings("unchecked")
     @Override
     public RetryRuleWithContentBuilder<T> onResponseTrailers(
@@ -191,6 +237,20 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      */
     @SuppressWarnings("unchecked")
     @Override
+    public RetryRuleWithContentBuilder<T> onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onStatus(statusFilter);
+    }
+
+    /**
+     * Adds the specified {@code statusFilter} for a {@link RetryRuleWithContent} which will retry
+     * if a response status matches the specified {@code statusFilter}.
+     *
+     * @deprecated Use {@link #onStatus(BiPredicate)}.
+     */
+    @Deprecated
+    @SuppressWarnings("unchecked")
+    @Override
     public RetryRuleWithContentBuilder<T> onStatus(Predicate<? super HttpStatus> statusFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onStatus(statusFilter);
     }
@@ -209,6 +269,20 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      * Adds the specified {@code exceptionFilter} for a {@link RetryRuleWithContent} which will retry
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onException(exceptionFilter);
+    }
+
+    /**
+     * Adds the specified {@code exceptionFilter} for a {@link RetryRuleWithContent} which will retry
+     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     *
+     * @deprecated Use {@link #onException(BiPredicate)}.
+     */
+    @Deprecated
     @SuppressWarnings("unchecked")
     @Override
     public RetryRuleWithContentBuilder<T> onException(Predicate<? super Throwable> exceptionFilter) {

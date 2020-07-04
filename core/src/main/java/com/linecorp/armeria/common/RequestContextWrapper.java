@@ -32,7 +32,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 
 /**
@@ -189,7 +188,7 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     }
 
     @Override
-    public EventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         return delegate().eventLoop();
     }
 

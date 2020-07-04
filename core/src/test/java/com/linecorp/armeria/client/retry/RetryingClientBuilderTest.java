@@ -43,7 +43,8 @@ class RetryingClientBuilderTest {
 
     @Test
     void buildWithMaxContentLength() {
-        final RetryRuleWithContent<HttpResponse> rule = RetryRuleWithContent.onResponse(unused -> null);
+        final RetryRuleWithContent<HttpResponse> rule =
+                RetryRuleWithContent.onResponse((unused1, unused2) -> null);
 
         RetryingClient.builder(rule, 1);
         RetryingClient.builder(rule).contentPreviewLength(10);

@@ -45,7 +45,7 @@ public class DefaultTimeoutController implements TimeoutController {
     private TimeoutTask timeoutTask;
     private final EventExecutor executor;
 
-    private long timeoutMillis;
+    private long timeoutNanos;
     private long firstExecutionTimeNanos;
     private long lastExecutionTimeNanos;
 
@@ -89,18 +89,18 @@ public class DefaultTimeoutController implements TimeoutController {
      *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
-    public boolean scheduleTimeout(long timeoutMillis) {
-        checkArgument(timeoutMillis > 0,
-                      "timeoutMillis: %s (expected: > 0)", timeoutMillis);
+    public boolean scheduleTimeoutNanos(long timeoutNanos) {
+        checkArgument(timeoutNanos > 0,
+                      "timeoutNanos: %s (expected: > 0)", timeoutNanos);
         ensureInitialized();
         if (state != State.INACTIVE || !timeoutTask.canSchedule()) {
             return false;
         }
 
         cancelTimeout();
-        this.timeoutMillis = timeoutMillis;
+        this.timeoutNanos = timeoutNanos;
         state = State.SCHEDULED;
-        timeoutFuture = executor.schedule(this::invokeTimeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
+        timeoutFuture = executor.schedule(this::invokeTimeoutTask, timeoutNanos, TimeUnit.NANOSECONDS);
         return true;
     }
 
@@ -110,18 +110,18 @@ public class DefaultTimeoutController implements TimeoutController {
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
      * the {@link #DefaultTimeoutController(TimeoutTask, EventExecutor)} before calling this method.
      *
-     * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
+     * @return {@code true} if the current timeout is extended by the specified {@code adjustmentNanos}.
      *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
      *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
-    public boolean extendTimeout(long adjustmentMillis) {
+    public boolean extendTimeoutNanos(long adjustmentNanos) {
         ensureInitialized();
         if (state != State.SCHEDULED || !timeoutTask.canSchedule()) {
             return false;
         }
 
-        if (adjustmentMillis == 0) {
+        if (adjustmentNanos == 0) {
             return true;
         }
 
@@ -129,20 +129,20 @@ public class DefaultTimeoutController implements TimeoutController {
         cancelTimeout();
 
         // Calculate the amount of time passed since lastStart
-        final long currentNanoTime = System.nanoTime();
-        final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastExecutionTimeNanos);
-        final long newTimeoutMillis = LongMath.saturatedAdd(
-                LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis), adjustmentMillis);
-        timeoutMillis = newTimeoutMillis;
-        lastExecutionTimeNanos = currentNanoTime;
+        final long currentTimeNanos = System.nanoTime();
+        final long passedTimeNanos = currentTimeNanos - lastExecutionTimeNanos;
+        final long newTimeoutNanos = LongMath.saturatedAdd(
+                LongMath.saturatedSubtract(timeoutNanos, passedTimeNanos), adjustmentNanos);
+        timeoutNanos = newTimeoutNanos;
+        lastExecutionTimeNanos = currentTimeNanos;
 
-        if (newTimeoutMillis <= 0) {
+        if (newTimeoutNanos <= 0) {
             invokeTimeoutTask();
             return true;
         }
 
         state = State.SCHEDULED;
-        timeoutFuture = executor.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        timeoutFuture = executor.schedule(this::invokeTimeoutTask, newTimeoutNanos, TimeUnit.NANOSECONDS);
         return true;
     }
 
@@ -152,27 +152,27 @@ public class DefaultTimeoutController implements TimeoutController {
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
      * the {@link #DefaultTimeoutController(TimeoutTask, EventExecutor)} before calling this method.
      *
-     * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
+     * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutNanos}.
      *         {@code false} if the timeout has been triggered already
      *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
-    public boolean resetTimeout(long newTimeoutMillis) {
+    public boolean resetTimeoutNanos(long newTimeoutNanos) {
         ensureInitialized();
         if (state == State.TIMED_OUT || !timeoutTask.canSchedule()) {
             return false;
         }
-        if (newTimeoutMillis <= 0) {
-            timeoutMillis = newTimeoutMillis;
+        if (newTimeoutNanos <= 0) {
+            timeoutNanos = newTimeoutNanos;
             cancelTimeout();
             return true;
         }
 
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
-        timeoutMillis = newTimeoutMillis;
+        timeoutNanos = newTimeoutNanos;
         state = State.SCHEDULED;
-        timeoutFuture = executor.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        timeoutFuture = executor.schedule(this::invokeTimeoutTask, newTimeoutNanos, TimeUnit.NANOSECONDS);
         return true;
     }
 
@@ -259,8 +259,8 @@ public class DefaultTimeoutController implements TimeoutController {
     }
 
     @VisibleForTesting
-    long timeoutMillis() {
-        return timeoutMillis;
+    long timeoutNanos() {
+        return timeoutNanos;
     }
 
     @Nullable

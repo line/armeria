@@ -44,15 +44,11 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
 
     /**
      * Returns a new {@link RpcClient} decorator that logs {@link Request}s and {@link Response}s at
-     * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
-     *
-     * @see LoggingRpcClientBuilder for more information on the default settings.
+     * {@link LogLevel#DEBUG} for success, {@link LogLevel#WARN} for failure.
+     * See {@link LoggingRpcClientBuilder} for more information on the default settings.
      */
     public static Function<? super RpcClient, LoggingRpcClient> newDecorator() {
-        return builder().requestLogLevel(LogLevel.INFO)
-                        .successfulResponseLogLevel(LogLevel.INFO)
-                        .failureResponseLogLevel(LogLevel.WARN)
-                        .newDecorator();
+        return builder().newDecorator();
     }
 
     /**

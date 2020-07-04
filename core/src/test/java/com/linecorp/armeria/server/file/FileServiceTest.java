@@ -688,7 +688,7 @@ class FileServiceTest {
 
     private static String header(CloseableHttpResponse res, String name) {
         final String value = headerOrNull(res, name);
-        assertThat(value).withFailMessage("The response must contains the header '%s'.", name).isNotNull();
+        assertThat(value).withFailMessage("The response must contain the header '%s'.", name).isNotNull();
         return value;
     }
 

@@ -111,7 +111,7 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
                           .add("contentType", contentType())
                           .add("dateEnabled", isDateEnabled())
                           .add("lastModifiedEnabled", isLastModifiedEnabled())
-                          .add("headers", headers())
+                          .add("additionalHeaders", additionalHeaders())
                           .toString();
     }
 }

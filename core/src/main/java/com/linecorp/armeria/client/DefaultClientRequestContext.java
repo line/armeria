@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -32,6 +33,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -91,6 +93,8 @@ public final class DefaultClientRequestContext
     private EndpointGroup endpointGroup;
     @Nullable
     private Endpoint endpoint;
+    @Nullable
+    private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private final String fragment;
     @Nullable
@@ -179,7 +183,7 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new TimeoutScheduler(options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
 
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
@@ -347,7 +351,7 @@ public final class DefaultClientRequestContext
             requireNonNull(rpcReq, "rpcReq");
         }
 
-        eventLoop = ctx.eventLoop();
+        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         endpointGroup = ctx.endpointGroup();
         updateEndpoint(endpoint);
@@ -355,7 +359,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(ctx.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
@@ -418,9 +422,12 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public EventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
-        return eventLoop;
+        if (contextAwareEventLoop != null) {
+            return contextAwareEventLoop;
+        }
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override
@@ -479,7 +486,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return timeoutScheduler.timeoutMillis();
+        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
     }
 
     @Override
@@ -489,13 +496,14 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(requireNonNull(mode, "mode"), responseTimeoutMillis);
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
     }
 
-    @Deprecated
     @Override
-    public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
-        timeoutScheduler.setTimeoutAtMillis(responseTimeoutAtMillis);
+    public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override

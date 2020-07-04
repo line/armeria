@@ -58,7 +58,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 
-class Java9RequestContextAwareFutureTest {
+class Java9ContextAwareFutureTest {
 
     // TODO(minwoox) Make an extesion which a user can easily check the logs.
     @Mock

@@ -39,7 +39,7 @@ public final class AbortedStreamException extends RuntimeException {
                new AbortedStreamException() : INSTANCE;
     }
 
-    AbortedStreamException() {}
+    private AbortedStreamException() {}
 
     private AbortedStreamException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);

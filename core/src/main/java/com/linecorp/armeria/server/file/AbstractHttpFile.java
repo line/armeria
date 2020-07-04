@@ -56,7 +56,7 @@ public abstract class AbstractHttpFile implements HttpFile {
     private final boolean lastModifiedEnabled;
     @Nullable
     private final BiFunction<String, HttpFileAttributes, String> entityTagFunction;
-    private final HttpHeaders headers;
+    private final HttpHeaders additionalHeaders;
 
     /**
      * Creates a new instance.
@@ -68,21 +68,21 @@ public abstract class AbstractHttpFile implements HttpFile {
      * @param lastModifiedEnabled whether to add the {@code "last-modified"} header automatically
      * @param entityTagFunction the {@link BiFunction} that generates an entity tag from the file's attributes.
      *                          {@code null} to disable setting the {@code "etag"} header.
-     * @param headers the additional headers to set
+     * @param additionalHeaders the additional headers to set
      */
     protected AbstractHttpFile(@Nullable MediaType contentType,
                                Clock clock,
                                boolean dateEnabled,
                                boolean lastModifiedEnabled,
                                @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
-                               HttpHeaders headers) {
+                               HttpHeaders additionalHeaders) {
 
         this.contentType = contentType;
         this.clock = requireNonNull(clock, "clock");
         this.dateEnabled = dateEnabled;
         this.lastModifiedEnabled = lastModifiedEnabled;
         this.entityTagFunction = entityTagFunction;
-        this.headers = requireNonNull(headers, "headers");
+        this.additionalHeaders = requireNonNull(additionalHeaders, "additionalHeaders");
     }
 
     /**
@@ -128,8 +128,8 @@ public abstract class AbstractHttpFile implements HttpFile {
      * Returns the immutable additional {@link HttpHeaders} which will be set when building an
      * {@link HttpResponse}.
      */
-    protected final HttpHeaders headers() {
-        return headers;
+    protected final HttpHeaders additionalHeaders() {
+        return additionalHeaders;
     }
 
     /**
@@ -183,7 +183,7 @@ public abstract class AbstractHttpFile implements HttpFile {
             headers.set(HttpHeaderNames.ETAG, '\"' + etag + '\"');
         }
 
-        headers.set(this.headers);
+        headers.set(this.additionalHeaders);
         return headers.build();
     }
 

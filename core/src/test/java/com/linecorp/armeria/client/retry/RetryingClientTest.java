@@ -316,7 +316,7 @@ class RetryingClientTest {
     void retryWhenTrailerMatched() {
         final WebClient client =
                 client(RetryRule.builder()
-                                .onResponseTrailers(trailers -> {
+                                .onResponseTrailers((unused, trailers) -> {
                                     return trailers.getInt("grpc-status", -1) != 0;
                                 })
                                 .thenBackoff());
@@ -405,12 +405,12 @@ class RetryingClientTest {
     void retryWithContentOnResponseTimeout() {
         final Backoff backoff = Backoff.fixed(100);
         final RetryRuleWithContent<HttpResponse> strategy =
-                RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                }).orElse(RetryRuleWithContent.onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
+                RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                }).orElse(RetryRuleWithContent.onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
                                    .onException(ResponseTimeoutException.class)
                                    .thenBackoff(backoff)));
@@ -423,12 +423,12 @@ class RetryingClientTest {
     void retryWithContentOnUnprocessedException() {
         final Backoff backoff = Backoff.fixed(2000);
         final RetryRuleWithContent<HttpResponse> strategy =
-                RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                }).orElse(RetryRuleWithContent.onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
+                RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                }).orElse(RetryRuleWithContent.onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
                                    .onException(UnprocessedRequestException.class)
                                    .thenBackoff(backoff)));
