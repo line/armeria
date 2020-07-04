@@ -42,13 +42,38 @@
 .globalTocWrapper {
   padding: @padding-lg @padding-xl;
 
-  // No or single sidebar
-  @media (max-width: @layout-width-1-max) {
+  // No sidebar
+  @media (max-width: @layout-width-0-max) {
+    box-shadow: @box-shadow-base;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+    direction: rtl; // To place the scrollbar on the left side
+
+    width: @layout-sidebar-width;
+    max-width: 100%;
+    margin-left: @margin-xl;
+    margin-right: -6px;
+    padding: 0;
+    background: white;
+
+    transition-property: opacity;
+    transition-duration: 0.3s;
+
+    // These two properties are overridden dynamically.
     display: none;
+    opacity: 0;
+
+    nav {
+      direction: ltr; // Revert the rtl direction above.
+      padding: @padding-lg @padding-xl;
+    }
   }
 
-  // Double sidebar
-  @media (min-width: @layout-width-2-min) {
+  // Single or double sidebar
+  @media (min-width: @layout-width-1-min) {
     flex-basis: @layout-sidebar-width;
     flex-grow: 0;
     flex-shrink: 0;
@@ -162,32 +187,12 @@
   padding: @padding-lg @padding-md @padding-lg 0;
 
   // No sidebar
-  @media (max-width: @layout-width-0-max) {
-    position: absolute;
-    top: 0;
-    left: @margin-xl;
-    right: @margin-xl;
-    bottom: 0;
-
-    width: calc(100% - @margin-xl * 2);
-    max-width: calc(100% - @margin-xl * 2);
-    padding-right: 0;
-
-    transition-property: opacity;
-    transition-duration: 0.3s;
-
-    // These two properties are overridden dynamically.
+  @media (max-width: @layout-width-1-max) {
     display: none;
-    opacity: 0;
-
-    nav {
-      background: white;
-      padding-top: 1rem;
-    }
   }
 
   // Single or double sidebar
-  @media (min-width: @layout-width-1-min) {
+  @media (min-width: @layout-width-2-min) {
     flex-basis: @layout-sidebar-width;
     flex-grow: 0;
     flex-shrink: 0;

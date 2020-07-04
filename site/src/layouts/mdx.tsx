@@ -288,10 +288,10 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     nextHref = nameToMdxNode[currentMdxNode.nextNodeName].href;
   }
 
-  // States required for opening and closing ToC
-  const [tocState, setTocState] = useState(ToCState.CLOSED);
-  const tocStateRef = useRef(tocState);
-  tocStateRef.current = tocState;
+  // States required for opening and closing global ToC
+  const [globalTocState, setGlobalTocState] = useState(ToCState.CLOSED);
+  const globalTocStateRef = useRef(globalTocState);
+  globalTocStateRef.current = globalTocState;
 
   function findCurrentMdxNode(): any {
     const path = pagePath(props.location);
@@ -324,32 +324,32 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     return undefined;
   }
 
-  const toggleToC = useCallback(() => {
-    switch (tocState) {
+  const toggleGlobalToC = useCallback(() => {
+    switch (globalTocState) {
       case ToCState.CLOSED:
-        setTocState(ToCState.OPENING);
+        setGlobalTocState(ToCState.OPENING);
         setTimeout(() => {
-          if (tocStateRef.current === ToCState.OPENING) {
-            setTocState(ToCState.OPEN);
+          if (globalTocStateRef.current === ToCState.OPENING) {
+            setGlobalTocState(ToCState.OPEN);
           }
         });
         break;
       case ToCState.OPEN:
-        setTocState(ToCState.CLOSING);
+        setGlobalTocState(ToCState.CLOSING);
         setTimeout(() => {
-          if (tocStateRef.current === ToCState.CLOSING) {
-            setTocState(ToCState.CLOSED);
+          if (globalTocStateRef.current === ToCState.CLOSING) {
+            setGlobalTocState(ToCState.CLOSED);
           }
         }, tocAnimationDurationMillis);
         break;
       default:
       // Animation in progress. Let the user wait a little bit.
     }
-  }, [tocState]);
+  }, [globalTocState]);
 
   // Style functions for fading in/out table of contents.
-  function pageTocWrapperStyle(): React.CSSProperties {
-    switch (tocState) {
+  function globalTocWrapperStyle(): React.CSSProperties {
+    switch (globalTocState) {
       case ToCState.OPENING:
         return {
           display: 'block',
@@ -359,7 +359,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
       case ToCState.OPEN:
         return {
           display: 'block',
-          opacity: 1,
+          opacity: 0.9,
           zIndex: 8,
         };
       case ToCState.CLOSING:
@@ -382,7 +382,10 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
         main={false}
       >
         <div className={styles.wrapper}>
-          <div className={styles.globalTocWrapper}>
+          <div
+            className={styles.globalTocWrapper}
+            style={globalTocWrapperStyle()}
+          >
             <nav>
               <ol>
                 {Object.entries(groupToMdxNodes).map(
@@ -476,8 +479,8 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
           </div>
           <div className={styles.tocButton}>
             <StickyBox offsetTop={24} offsetBottom={24}>
-              <Button onClick={toggleToC}>
-                {tocState === ToCState.OPEN ? (
+              <Button onClick={toggleGlobalToC}>
+                {globalTocState === ToCState.OPEN ? (
                   <CloseOutlined title="Close table of contents" />
                 ) : (
                   <UnorderedListOutlined title="Open table of contents" />
@@ -489,18 +492,17 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
           {/* eslint-disable jsx-a11y/click-events-have-key-events */}
           <div
             className={styles.pageTocWrapper}
-            style={pageTocWrapperStyle()}
             role="directory"
             onClick={useCallback(
               (e: any) => {
                 if (
-                  tocState === ToCState.OPEN &&
+                  globalTocState === ToCState.OPEN &&
                   e.target.className === styles.pageTocWrapper
                 ) {
-                  toggleToC();
+                  toggleGlobalToC();
                 }
               },
-              [tocState, toggleToC],
+              [globalTocState, toggleGlobalToC],
             )}
           >
             {/* eslint-enable jsx-a11y/click-events-have-key-events */}

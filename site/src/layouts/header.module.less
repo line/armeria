@@ -80,12 +80,20 @@
   .menuIcons;
   padding-top: @padding-xss;
 
-  @media (max-width: @layout-width-0-max) {
-    margin-right: @margin-xl;
+  @media (max-width: @layout-width-0-min + @margin-sm * 2) {
+    margin-right: @margin-sm;
+  }
+
+  @media (min-width: @layout-width-0-min + @margin-sm * 2) {
+    margin-right: 0;
   }
 
   @media (min-width: @layout-width-1-min) {
-    margin-right: @margin-xs;
+    margin-right: @margin-sm;
+  }
+
+  @media (min-width: @layout-width-1-min + @margin-sm * 2 ) {
+    margin-right: 0;
   }
 }
 
@@ -103,7 +111,7 @@
     background: transparent;
     color: @menu-dark-color;
     border-color: @menu-dark-color;
-    margin-right: @margin-sm;
+    margin-right: @margin-xl;
 
     &:hover {
       color: @menu-dark-highlight-color;
