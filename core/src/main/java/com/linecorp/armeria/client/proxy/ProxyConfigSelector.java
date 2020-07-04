@@ -86,7 +86,7 @@ public interface ProxyConfigSelector {
     }
 
     /**
-     * A {@link ProxyConfigSelector} which selects a static {@link ProxyConfig} for all requests.
+     * Returns a {@link ProxyConfigSelector} which selects a static {@link ProxyConfig} for all requests.
      */
     static ProxyConfigSelector of(ProxyConfig proxyConfig) {
         return StaticProxyConfigSelector.of(requireNonNull(proxyConfig, "proxyConfig"));

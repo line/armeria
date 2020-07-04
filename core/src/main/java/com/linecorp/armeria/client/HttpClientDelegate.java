@@ -172,7 +172,7 @@ final class HttpClientDelegate implements HttpClient {
             proxyConfig = factory.proxyConfigSelector().select(sessionProtocol, endpoint);
             requireNonNull(proxyConfig, "proxyConfig");
         } catch (Throwable t) {
-            logger.warn("Failed to select ProxyConfig for <{}:{}>; falling back to DIRECT ",
+            logger.warn("Failed to select ProxyConfig for {}:{}, falling back to DIRECT",
                         host, port, t);
             proxyConfig = ProxyConfig.direct();
         }
