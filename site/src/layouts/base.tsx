@@ -22,7 +22,7 @@ interface BaseLayoutProps extends RouteComponentProps {
   pageTitle?: string;
   contentClassName?: string;
   main?: boolean;
-  extraVerticalMenuContent?: React.ReactNode;
+  extraSidebarContent?: React.ReactNode;
 }
 
 let firstRender = true;
@@ -78,7 +78,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
       <Layout className={styles.layout}>
         <Header
           location={props.location}
-          extraVerticalMenuContent={props.extraVerticalMenuContent}
+          extraSidebarContent={props.extraSidebarContent}
         />
         {props.main === false ? (
           <div className={`ant-layout-content ${props.contentClassName || ''}`}>

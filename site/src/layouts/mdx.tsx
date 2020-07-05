@@ -360,7 +360,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
         pageTitle={pageTitle}
         contentClassName={styles.outerWrapper}
         main={false}
-        extraVerticalMenuContent={globalToc}
+        extraSidebarContent={globalToc}
       >
         <div className={styles.wrapper}>
           <div className={styles.globalTocWrapper}>
