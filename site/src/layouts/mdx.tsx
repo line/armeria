@@ -1,17 +1,11 @@
-import {
-  CloseOutlined,
-  GithubOutlined,
-  LeftOutlined,
-  RightOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons';
+import { GithubOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import loadable from '@loadable/component';
 import { MDXProvider } from '@mdx-js/react';
 import { globalHistory, RouteComponentProps } from '@reach/router';
 import { Button, Layout, Select, Tabs as AntdTabs } from 'antd';
 import { Link, navigate, withPrefix } from 'gatsby';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React, { useLayoutEffect, useRef, useState, useCallback } from 'react';
+import React, { useLayoutEffect, useCallback } from 'react';
 import StickyBox from 'react-sticky-box';
 import tocbot from 'tocbot';
 
@@ -41,14 +35,6 @@ interface MdxLayoutProps extends RouteComponentProps {
   noEdit?: boolean;
 }
 
-enum ToCState {
-  CLOSED,
-  OPENING,
-  OPEN,
-  CLOSING,
-}
-
-const tocAnimationDurationMillis = 300;
 const pathPrefix = withPrefix('/');
 
 // Use our CodeBlock component for <a> and <pre>.
@@ -288,11 +274,6 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     nextHref = nameToMdxNode[currentMdxNode.nextNodeName].href;
   }
 
-  // States required for opening and closing global ToC
-  const [globalTocState, setGlobalTocState] = useState(ToCState.CLOSED);
-  const globalTocStateRef = useRef(globalTocState);
-  globalTocStateRef.current = globalTocState;
-
   function findCurrentMdxNode(): any {
     const path = pagePath(props.location);
     const prefix = `/${props.prefix}`;
@@ -324,54 +305,53 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     return undefined;
   }
 
-  const toggleGlobalToC = useCallback(() => {
-    switch (globalTocState) {
-      case ToCState.CLOSED:
-        setGlobalTocState(ToCState.OPENING);
-        setTimeout(() => {
-          if (globalTocStateRef.current === ToCState.OPENING) {
-            setGlobalTocState(ToCState.OPEN);
-          }
-        });
-        break;
-      case ToCState.OPEN:
-        setGlobalTocState(ToCState.CLOSING);
-        setTimeout(() => {
-          if (globalTocStateRef.current === ToCState.CLOSING) {
-            setGlobalTocState(ToCState.CLOSED);
-          }
-        }, tocAnimationDurationMillis);
-        break;
-      default:
-      // Animation in progress. Let the user wait a little bit.
-    }
-  }, [globalTocState]);
+  const globalToc = (
+    <ol>
+      {Object.entries(groupToMdxNodes).map(([group, groupedMdxNodes]) => {
+        function renderMdxNodes() {
+          return groupedMdxNodes.flatMap((mdxNode) => {
+            return mdxNode.tableOfContents.items.map(
+              (tocItem: any, i: number) => {
+                const href = `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`;
 
-  // Style functions for fading in/out table of contents.
-  function globalTocWrapperStyle(): React.CSSProperties {
-    switch (globalTocState) {
-      case ToCState.OPENING:
-        return {
-          display: 'block',
-          opacity: 0,
-          zIndex: 8,
-        };
-      case ToCState.OPEN:
-        return {
-          display: 'block',
-          opacity: 0.95,
-          zIndex: 8,
-        };
-      case ToCState.CLOSING:
-        return {
-          display: 'block',
-          opacity: 0,
-          zIndex: 8,
-        };
-      default:
-        return { zIndex: 'auto' };
-    }
-  }
+                return (
+                  <li
+                    key={href}
+                    className={`${styles.tocLeaf} ${
+                      href === pagePath(props.location)
+                        ? styles.tocLeafActive
+                        : ''
+                    }`}
+                  >
+                    {href.includes('://') ? (
+                      <OutboundLink href={href} title={tocItem.title}>
+                        {tocItem.title}
+                      </OutboundLink>
+                    ) : (
+                      <Link to={href} title={tocItem.title}>
+                        {tocItem.title}
+                      </Link>
+                    )}
+                  </li>
+                );
+              },
+            );
+          });
+        }
+
+        if (group === 'root') {
+          return renderMdxNodes();
+        }
+
+        return (
+          <li key={`group-${group}`} className={styles.tocGroup}>
+            <span className={styles.tocGroupLabel}>{group}</span>
+            <ol>{renderMdxNodes()}</ol>
+          </li>
+        );
+      })}
+    </ol>
+  );
 
   return (
     <MDXProvider components={mdxComponents}>
@@ -380,66 +360,11 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
         pageTitle={pageTitle}
         contentClassName={styles.outerWrapper}
         main={false}
+        extraVerticalMenuContent={globalToc}
       >
         <div className={styles.wrapper}>
-          <div
-            className={styles.globalTocWrapper}
-            style={globalTocWrapperStyle()}
-          >
-            <nav>
-              <ol>
-                {Object.entries(groupToMdxNodes).map(
-                  ([group, groupedMdxNodes]) => {
-                    function renderMdxNodes() {
-                      return groupedMdxNodes.flatMap((mdxNode) => {
-                        return mdxNode.tableOfContents.items.map(
-                          (tocItem: any, i: number) => {
-                            const href = `${mdxNode.href}${
-                              i !== 0 ? tocItem.url : ''
-                            }`;
-
-                            return (
-                              <li
-                                key={href}
-                                className={`${styles.tocLeaf} ${
-                                  href === pagePath(props.location)
-                                    ? styles.tocLeafActive
-                                    : ''
-                                }`}
-                              >
-                                {href.includes('://') ? (
-                                  <OutboundLink
-                                    href={href}
-                                    title={tocItem.title}
-                                  >
-                                    {tocItem.title}
-                                  </OutboundLink>
-                                ) : (
-                                  <Link to={href} title={tocItem.title}>
-                                    {tocItem.title}
-                                  </Link>
-                                )}
-                              </li>
-                            );
-                          },
-                        );
-                      });
-                    }
-
-                    if (group === 'root') {
-                      return renderMdxNodes();
-                    }
-
-                    return (
-                      <li key={`group-${group}`} className={styles.tocGroup}>
-                        <span className={styles.tocGroupLabel}>{group}</span>
-                        <ol>{renderMdxNodes()}</ol>
-                      </li>
-                    );
-                  },
-                )}
-              </ol>
-            </nav>
+          <div className={styles.globalTocWrapper}>
+            <nav>{globalToc}</nav>
           </div>
           <div className={styles.content}>
             <Content className="ant-typography" role="main">
@@ -477,41 +402,8 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
               </div>
             </Content>
           </div>
-          <div className={styles.tocButton}>
+          <div className={styles.pageTocWrapper} role="directory">
             <StickyBox offsetTop={24} offsetBottom={24}>
-              <Button onClick={toggleGlobalToC}>
-                {globalTocState === ToCState.OPEN ? (
-                  <CloseOutlined title="Close table of contents" />
-                ) : (
-                  <UnorderedListOutlined title="Open table of contents" />
-                )}
-              </Button>
-            </StickyBox>
-          </div>
-          {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */}
-          {/* eslint-disable jsx-a11y/click-events-have-key-events */}
-          <div
-            className={styles.pageTocWrapper}
-            role="directory"
-            onClick={useCallback(
-              (e: any) => {
-                if (
-                  globalTocState === ToCState.OPEN &&
-                  e.target.className === styles.pageTocWrapper
-                ) {
-                  toggleGlobalToC();
-                }
-              },
-              [globalTocState, toggleGlobalToC],
-            )}
-          >
-            {/* eslint-enable jsx-a11y/click-events-have-key-events */}
-            {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions */}
-            <StickyBox
-              offsetTop={24}
-              offsetBottom={24}
-              className={styles.pageTocShadow}
-            >
               <nav>
                 <div className={styles.pageToc} />
                 <Select

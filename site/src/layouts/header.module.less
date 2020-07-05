@@ -62,24 +62,7 @@
   }
 }
 
-.horizontalMenu {
-  @media (max-width: @screen-sm-max) {
-    display: none;
-  }
-
-  @media (min-width: @screen-md-min) {
-    flex-grow: 1;
-    line-height: @layout-header-height;
-    text-align: right;
-    overflow: hidden;
-    background-color: @armeria-darkgray;
-  }
-}
-
-.horizontalMenuIcons {
-  .menuIcons;
-  padding-top: @padding-xss;
-
+.responseRightMargin {
   @media (max-width: @layout-width-0-min + @margin-sm * 2) {
     margin-right: @margin-sm;
   }
@@ -97,21 +80,41 @@
   }
 }
 
+.horizontalMenu {
+  @media (max-width: @layout-width-0-max) {
+    display: none;
+  }
+
+  @media (min-width: @layout-width-1-min) {
+    flex-grow: 1;
+    line-height: @layout-header-height;
+    text-align: right;
+    overflow: hidden;
+    background-color: @armeria-darkgray;
+  }
+}
+
+.horizontalMenuIcons {
+  .menuIcons;
+  .responseRightMargin;
+  padding-top: @padding-xss;
+}
+
 .verticalMenuWrapper {
-  @media (max-width: @screen-sm-max) {
+  @media (max-width: @layout-width-0-max) {
     flex-grow: 1;
     text-align: right;
   }
 
-  @media (min-width: @screen-md-min) {
+  @media (min-width: @layout-width-1-min) {
     display: none;
   }
 
   .verticalMenuOpenButton {
+    .responseRightMargin;
     background: transparent;
     color: @menu-dark-color;
     border-color: @menu-dark-color;
-    margin-right: @margin-sm;
 
     &:hover {
       color: @menu-dark-highlight-color;
@@ -130,7 +133,7 @@
     background-color: @armeria-darkgray;
   }
   :global(.ant-drawer-body) {
-    padding: calc(@btn-height-base + 1rem) 0 0 0;
+    padding: 4px 0 0 0;
   }
   :global(.ant-drawer-close) {
     color: @menu-dark-color;
@@ -142,5 +145,11 @@
   .verticalMenuIcons {
     padding-top: @padding-sm;
     .menuIcons;
+  }
+
+  .verticalMenuExtra {
+    border-top: dotted 1px @armeria-gray;
+    margin: @margin-lg 0;
+    padding-top: @margin-lg;
   }
 }

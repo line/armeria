@@ -1,4 +1,5 @@
 import {
+  CloseCircleOutlined,
   GithubOutlined,
   TwitterOutlined,
   MenuOutlined,
@@ -24,7 +25,11 @@ const selectableKeysAndRegexes = {
   home: /.?/,
 };
 
-const HeaderComponent: React.FC<RouteComponentProps> = (props) => {
+interface HeaderComponentProps extends RouteComponentProps {
+  extraVerticalMenuContent?: React.ReactNode;
+}
+
+const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
   const [verticalMenuOpen, setVerticalMenuOpen] = useState(false);
 
   const selectedKeyAndRegex = Object.entries(
@@ -81,39 +86,50 @@ const HeaderComponent: React.FC<RouteComponentProps> = (props) => {
           </Button>
           <Drawer
             className={styles.verticalMenuDrawer}
+            width={320}
             visible={verticalMenuOpen}
+            closeIcon={<CloseCircleOutlined />}
             onClose={useCallback(() => setVerticalMenuOpen(false), [])}
           >
-            <Menu
-              theme="dark"
-              mode="vertical"
-              selectedKeys={selectedKeys}
-              className={styles.verticalMenu}
-            >
-              <Menu.Item key="home">
-                <Link to="/">Home</Link>
-              </Menu.Item>
-              <Menu.Item key="news">
-                <Link to="/news">News</Link>
-              </Menu.Item>
-              <Menu.Item key="docs">
-                <Link to="/docs">Documentation</Link>
-              </Menu.Item>
-              <Menu.Item key="community">
-                <Link to="/community">Community</Link>
-              </Menu.Item>
-            </Menu>
-            <div className={styles.verticalMenuIcons}>
-              <OutboundLink href="https://github.com/line/armeria">
-                <GithubOutlined />
-              </OutboundLink>
-              <Link to="/s/slack">
-                <SlackOutlined />
-              </Link>
-              <OutboundLink href="https://twitter.com/armeria_project">
-                <TwitterOutlined />
-              </OutboundLink>
-            </div>
+            <nav>
+              <Menu
+                theme="dark"
+                mode="vertical"
+                selectedKeys={selectedKeys}
+                className={styles.verticalMenu}
+              >
+                <Menu.Item key="home">
+                  <Link to="/">Home</Link>
+                </Menu.Item>
+                <Menu.Item key="news">
+                  <Link to="/news">News</Link>
+                </Menu.Item>
+                <Menu.Item key="docs">
+                  <Link to="/docs">Documentation</Link>
+                </Menu.Item>
+                <Menu.Item key="community">
+                  <Link to="/community">Community</Link>
+                </Menu.Item>
+              </Menu>
+              <div className={styles.verticalMenuIcons}>
+                <OutboundLink href="https://github.com/line/armeria">
+                  <GithubOutlined />
+                </OutboundLink>
+                <Link to="/s/slack">
+                  <SlackOutlined />
+                </Link>
+                <OutboundLink href="https://twitter.com/armeria_project">
+                  <TwitterOutlined />
+                </OutboundLink>
+              </div>
+              {props.extraVerticalMenuContent ? (
+                <>
+                  <div className={styles.verticalMenuExtra}>
+                    {props.extraVerticalMenuContent}
+                  </div>
+                </>
+              ) : null}
+            </nav>
           </Drawer>
         </div>
       </Header>
