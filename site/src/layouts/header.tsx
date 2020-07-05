@@ -57,9 +57,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
         if (maybeFloatingWrapper.length > 0) {
           const floatingWrapper = maybeFloatingWrapper[0];
           if (window.scrollY < 64) {
-            floatingWrapper.classList.add(styles.hidden);
+            floatingWrapper.classList.remove(styles.visible);
           } else {
-            floatingWrapper.classList.remove(styles.hidden);
+            floatingWrapper.classList.add(styles.visible);
           }
         }
       };

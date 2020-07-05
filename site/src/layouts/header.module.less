@@ -158,8 +158,11 @@
   position: absolute;
   top: 0;
   z-index: @zindex-affix;
-  height: 100vh; // Overridden with document height in header.tsx.
   pointer-events: none;
+
+  // These two properties are overridden by header.tsx.
+  height: 100vh;
+  display: none;
 
   @media (max-width: @layout-width-shrink-max) {
     right: @margin-sm;
@@ -179,6 +182,6 @@
   }
 }
 
-.hidden {
-  display: none;
+.visible {
+  display: block;
 }
