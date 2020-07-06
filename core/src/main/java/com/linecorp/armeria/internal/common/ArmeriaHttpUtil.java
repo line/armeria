@@ -514,7 +514,7 @@ public final class ArmeriaHttpUtil {
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-        if (!builder.contains(HttpHeaderNames.AUTHORITY)) {
+        if (builder.authority() == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
             builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
