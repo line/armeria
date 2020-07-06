@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,19 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+/**
+ * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html>Multiple part messages</a> support.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.common.multipart;
 
-import org.reactivestreams.Subscription;
-
-final class NoopSubscription implements Subscription {
-
-    public static final NoopSubscription INSTANCE = new NoopSubscription();
-
-    private NoopSubscription() {}
-
-    @Override
-    public void request(long n) {}
-
-    @Override
-    public void cancel() {}
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

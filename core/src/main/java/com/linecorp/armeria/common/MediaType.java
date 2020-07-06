@@ -170,6 +170,7 @@ public final class MediaType {
     public static final MediaType HTML_UTF_8 = createConstantUtf8(TEXT_TYPE, "html");
     public static final MediaType I_CALENDAR_UTF_8 = createConstantUtf8(TEXT_TYPE, "calendar");
     public static final MediaType PLAIN_TEXT_UTF_8 = createConstantUtf8(TEXT_TYPE, "plain");
+    public static final MediaType PLAIN_TEXT = createConstant(TEXT_TYPE, "plain");
 
     /**
      * As described in <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a>, this constant
@@ -382,6 +383,11 @@ public final class MediaType {
 
     public static final MediaType FORM_DATA =
             createConstant(APPLICATION_TYPE, "x-www-form-urlencoded");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/form-data} media type.
+     */
+    public static final MediaType MULTIPART_FORM_DATA = createConstant("multipart", "form-data");
 
     /**
      * As described in <a href="https://www.rsa.com/rsalabs/node.asp?id=2138">PKCS #12: Personal
