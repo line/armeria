@@ -57,8 +57,8 @@ the following dependency:
   }\n
   dependencyManagement {
       imports {
-          mavenBom '${versions['com.linecorp.armeria:armeria-bom']}'
-          mavenBom '${versions['io.netty:netty-bom']}'
+          mavenBom 'com.linecorp.armeria:armeria-bom:${versions['com.linecorp.armeria:armeria-bom']}'
+          mavenBom 'io.netty:netty-bom:${versions['io.netty:netty-bom']}'
       }
   }\n
   dependencies {
