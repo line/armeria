@@ -180,8 +180,11 @@
     pointer-events: initial;
     opacity: 0.9;
   }
-}
 
-.visible {
-  display: block;
+  &.visible {
+    display: block;
+    @media (min-width: @layout-width-1-min) {
+      display: none;
+    }
+  }
 }
