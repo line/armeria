@@ -114,7 +114,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *
  * <p>TODO: Support string values for enums that have been typedef'd.
  *
- * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
+ * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}.
  */
 @Deprecated
 public final class TTextProtocol extends TProtocol {

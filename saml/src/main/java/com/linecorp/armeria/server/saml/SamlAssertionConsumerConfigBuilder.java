@@ -35,14 +35,6 @@ public final class SamlAssertionConsumerConfigBuilder {
     }
 
     /**
-     * Returns a {@link SamlEndpoint} of this assertion consumer service.
-     */
-    @Nullable
-    SamlEndpoint endpoint() {
-        return endpoint;
-    }
-
-    /**
      * Sets an endpoint of this assertion consumer service.
      */
     public SamlAssertionConsumerConfigBuilder endpoint(SamlEndpoint endpoint) {
