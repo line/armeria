@@ -25,10 +25,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.concurrent.GuardedBy;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Queues;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
 

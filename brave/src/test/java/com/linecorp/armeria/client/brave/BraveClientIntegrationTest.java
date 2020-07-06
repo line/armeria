@@ -102,7 +102,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Test
     @Override
     public void callbackContextIsFromInvocationTime_root() {
-        try (SafeCloseable context = pushServerContext()) {
+        try (SafeCloseable ignored = serverContext().push()) {
             super.callbackContextIsFromInvocationTime_root();
         }
     }
@@ -110,7 +110,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Test
     @Override
     public void addsStatusCodeWhenNotOk_async() {
-        try (SafeCloseable context = pushServerContext()) {
+        try (SafeCloseable ignored = serverContext().push()) {
             super.addsStatusCodeWhenNotOk_async();
         }
     }
@@ -118,7 +118,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Test
     @Override
     public void usesParentFromInvocationTime() {
-        try (SafeCloseable context = pushServerContext()) {
+        try (SafeCloseable ignored = serverContext().push()) {
             super.usesParentFromInvocationTime();
         }
     }
@@ -175,12 +175,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
         client.post(pathIncludingQuery, body).aggregate().join();
     }
 
-    /**
-     * Try/resources instead of using a lambda, as lambda failures hide the actual failure.
-     *
-     * <p>Note: this could probably be rewritten as a test rule..
-     */
-    static SafeCloseable pushServerContext() {
-        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).push();
+    static ServiceRequestContext serverContext() {
+        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
     }
 }

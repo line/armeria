@@ -29,6 +29,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.MustBeClosed;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -207,6 +209,7 @@ public interface ClientRequestContext extends RequestContext {
      * Otherwise, this method will throw an {@link IllegalStateException}.
      */
     @Override
+    @MustBeClosed
     default SafeCloseable push() {
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {

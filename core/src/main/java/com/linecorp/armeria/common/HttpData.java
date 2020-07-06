@@ -29,6 +29,9 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
+
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -212,7 +215,8 @@ public interface HttpData extends HttpObject {
      *
      * @return a new {@link HttpData}. {@link #empty()} if {@code format} is empty.
      */
-    static HttpData of(Charset charset, String format, Object... args) {
+    @FormatMethod
+    static HttpData of(Charset charset, @FormatString String format, Object... args) {
         requireNonNull(charset, "charset");
         requireNonNull(format, "format");
         requireNonNull(args, "args");
@@ -255,7 +259,8 @@ public interface HttpData extends HttpObject {
      *
      * @return a new {@link HttpData}. {@link #empty()} if {@code format} is empty.
      */
-    static HttpData ofUtf8(String format, Object... args) {
+    @FormatMethod
+    static HttpData ofUtf8(@FormatString String format, Object... args) {
         return of(StandardCharsets.UTF_8, format, args);
     }
 
@@ -290,7 +295,8 @@ public interface HttpData extends HttpObject {
      *
      * @return a new {@link HttpData}. {@link #empty()} if {@code format} is empty.
      */
-    static HttpData ofAscii(String format, Object... args) {
+    @FormatMethod
+    static HttpData ofAscii(@FormatString String format, Object... args) {
         return of(StandardCharsets.US_ASCII, format, args);
     }
 
