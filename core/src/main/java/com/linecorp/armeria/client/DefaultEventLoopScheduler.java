@@ -40,6 +40,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.internal.client.SessionProtocolNegotiationCache;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;

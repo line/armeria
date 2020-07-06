@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.unsafe.PooledStreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -45,9 +46,9 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * after all subscriptions are done. If you want to stop publishing and clean up the resources immediately,
  * call {@link #abort()}. If you do none of these, memory leak might happen.</p>
  *
- * <p>If you subscribe to the {@linkplain #duplicate() duplicated stream message} with the
- * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
- * {@link Subscriber}s. So do not manipulate the data unless you copy them.
+ * <p>If you subscribe to the {@linkplain #duplicate() duplicated stream message} using the
+ * {@link PooledStreamMessage#subscribeWithPooledObjects(Subscriber)} or its variants, the published elements
+ * can be shared across {@link Subscriber}s. So do not manipulate the data unless you copy them.
  *
  * @param <T> the type of elements
  */

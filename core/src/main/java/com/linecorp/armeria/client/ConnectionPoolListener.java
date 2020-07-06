@@ -17,7 +17,9 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 
+import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Ticker;
 
 import io.netty.util.AttributeMap;
 
@@ -31,6 +33,21 @@ public interface ConnectionPoolListener {
      */
     static ConnectionPoolListener noop() {
         return ConnectionPoolListenerAdapter.NOOP;
+    }
+
+    /**
+     * Returns a {@link ConnectionPoolListener} that logs the connection pool events.
+     */
+    static ConnectionPoolListener loggingListener() {
+        return new ConnectionPoolLoggingListener();
+    }
+
+    /**
+     * Returns a {@link ConnectionPoolListener} that logs the connection pool events with an alternative
+     * {@link Ticker}.
+     */
+    static ConnectionPoolListener loggingListener(Ticker ticker) {
+        return new ConnectionPoolLoggingListener(ticker);
     }
 
     /**

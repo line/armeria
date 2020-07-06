@@ -24,8 +24,7 @@ import io.reactivex.CompletableObserver;
 import io.reactivex.CompletableSource;
 import io.reactivex.internal.fuseable.ScalarCallable;
 
-final class RequestContextScalarCallableCompletable<T> extends Completable
-        implements ScalarCallable<T> {
+final class RequestContextScalarCallableCompletable<T> extends Completable implements ScalarCallable<T> {
 
     private final CompletableSource source;
     private final RequestContext assemblyContext;

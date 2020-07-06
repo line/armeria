@@ -96,16 +96,6 @@ public final class EventCount {
     }
 
     @Override
-    public String toString() {
-        final long total = total();
-        if (total == 0) {
-            return "success% = NaN (0/0)";
-        }
-        final double percentageOfSuccess = 100 * successRate();
-        return String.format("success%% = %.2f%% (%d/%d)", percentageOfSuccess, success(), total);
-    }
-
-    @Override
     public int hashCode() {
         return (int) (31 * success + failure);
     }
@@ -120,5 +110,15 @@ public final class EventCount {
         }
         final EventCount that = (EventCount) o;
         return success == that.success && failure == that.failure;
+    }
+
+    @Override
+    public String toString() {
+        final long total = total();
+        if (total == 0) {
+            return "success% = NaN (0/0)";
+        }
+        final double percentageOfSuccess = 100 * successRate();
+        return String.format("success%% = %.2f%% (%d/%d)", percentageOfSuccess, success(), total);
     }
 }

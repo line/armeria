@@ -84,7 +84,10 @@ public final class Routers {
 
     /**
      * Returns the default implementation of the {@link Router} to find a {@link CompositeServiceEntry}.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public static <T extends Service<?, ?>> Router<T> ofCompositeService(
             List<CompositeServiceEntry<T>> entries) {
         requireNonNull(entries, "entries");

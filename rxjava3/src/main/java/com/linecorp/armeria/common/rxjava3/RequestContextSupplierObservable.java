@@ -24,8 +24,7 @@ import io.reactivex.rxjava3.core.ObservableSource;
 import io.reactivex.rxjava3.core.Observer;
 import io.reactivex.rxjava3.functions.Supplier;
 
-final class RequestContextSupplierObservable<T> extends Observable<T>
-        implements Supplier<T> {
+final class RequestContextSupplierObservable<T> extends Observable<T> implements Supplier<T> {
 
     private final ObservableSource<T> source;
     private final RequestContext assemblyContext;

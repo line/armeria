@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.grpc;
+package com.linecorp.armeria.common.grpc;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -32,7 +32,7 @@ import io.grpc.MethodDescriptor.PrototypeMarshaller;
 /**
  * Utilities for dealing with JSON marshalling in server/client.
  */
-public final class GrpcJsonUtil {
+final class GrpcJsonUtil {
 
     /**
      * Returns a {@link MessageMarshaller} with the request/response {@link Message}s of all the {@code methods}

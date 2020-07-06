@@ -113,7 +113,10 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * <p>TODO: Support map enum keys specified as strings.
  *
  * <p>TODO: Support string values for enums that have been typedef'd.
+ *
+ * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
  */
+@Deprecated
 public final class TTextProtocol extends TProtocol {
 
     private static final String SEQUENCE_AS_KEY_ILLEGAL =
@@ -138,7 +141,10 @@ public final class TTextProtocol extends TProtocol {
     /**
      * Create a parser which can read from trans, and create the output writer
      * that can write to a TTransport.
+     *
+     * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
      */
+    @Deprecated
     public TTextProtocol(TTransport trans) {
         this(trans, false);
     }
@@ -146,7 +152,10 @@ public final class TTextProtocol extends TProtocol {
     /**
      * Create a parser which can read from trans, and create the output writer
      * that can write to a TTransport, optionally enabling serialization of named enums.
+     *
+     * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
      */
+    @Deprecated
     public TTextProtocol(TTransport trans, boolean useNamedEnums) {
         super(trans);
 

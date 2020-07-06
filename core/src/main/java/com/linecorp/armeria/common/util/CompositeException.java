@@ -75,7 +75,7 @@ public final class CompositeException extends RuntimeException {
      * list of suppressed exceptions.
      * @param exceptions the Throwables to have as initially suppressed exceptions
      *
-     * @throws IllegalArgumentException if <code>exceptions</code> is empty.
+     * @throws IllegalArgumentException if {@code exceptions} is empty.
      */
     public CompositeException(Throwable... exceptions) {
         this(ImmutableList.copyOf(requireNonNull(exceptions, "exceptions")));
@@ -86,7 +86,7 @@ public final class CompositeException extends RuntimeException {
      * list of suppressed exceptions.
      * @param errors the Throwables to have as initially suppressed exceptions
      *
-     * @throws IllegalArgumentException if <code>errors</code> is empty.
+     * @throws IllegalArgumentException if {@code errors} is empty.
      */
     public CompositeException(Iterable<? extends Throwable> errors) {
         requireNonNull(errors, "errors");

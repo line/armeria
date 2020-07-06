@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import java.util.function.ToLongFunction;
+
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpRequest;
 
 /**
  * {@link Endpoint} selection strategy that creates a {@link EndpointSelector}.
@@ -28,6 +32,7 @@ public interface EndpointSelectionStrategy {
      * Returns a weighted round-robin strategy.
      *
      * @see #roundRobin()
+     * @see #sticky(ToLongFunction)
      */
     static EndpointSelectionStrategy weightedRoundRobin() {
         return WeightedRoundRobinStrategy.INSTANCE;
@@ -37,9 +42,35 @@ public interface EndpointSelectionStrategy {
      * Returns a round-robin strategy, which ignores {@link Endpoint#weight()}.
      *
      * @see #weightedRoundRobin()
+     * @see #sticky(ToLongFunction)
      */
     static EndpointSelectionStrategy roundRobin() {
         return RoundRobinStrategy.INSTANCE;
+    }
+
+    /**
+     * Returns a sticky strategy which uses user passed {@link ToLongFunction} to compute hashes for consistent
+     * hashing.
+     *
+     * <p>This strategy can be useful when all requests that qualify some given criteria must be sent to
+     * the same backend server. A common use case is to send all requests for the same logged-in user to
+     * the same backend, which could have a local cache keyed by user id.
+     *
+     * <p>In below example, created strategy will route all {@link HttpRequest} which have the same value for
+     * key "cookie" of its header to the same server:
+     *
+     * <pre>{@code
+     * ToLongFunction<ClientRequestContext> hasher = (ClientRequestContext ctx) -> {
+     *     return ((HttpRequest) ctx.request()).headers().get(HttpHeaderNames.COOKIE).hashCode();
+     * };
+     * final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
+     * }</pre>
+     *
+     * @see #roundRobin()
+     * @see #weightedRoundRobin()
+     */
+    static EndpointSelectionStrategy sticky(ToLongFunction<ClientRequestContext> requestContextHasher) {
+        return new StickyEndpointSelectionStrategy(requestContextHasher);
     }
 
     /**
