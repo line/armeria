@@ -9,8 +9,8 @@ A unit test of a client or a service will require you to prepare two objects:
 object easily:
 
 ```java
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -18,19 +18,19 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class MyJUnit4Test {
+class MyJUnit5Test {
 
     private MyClient client;
     private MyService service;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         client = ...;
         service = ...;
     }
 
     @Test
-    public void testClient() throws Exception {
+    void testClient() throws Exception {
         // Given
         HttpRequest req = HttpRequest.of(HttpMethod.GET, "/greet?name=foo");
         ClientRequestContext cctx = ClientRequestContext.of(req);
@@ -44,7 +44,7 @@ public class MyJUnit4Test {
     }
 
     @Test
-    public void testService() throws Exception {
+    void testService() throws Exception {
         // Given
         HttpRequest req = HttpRequest.of(HttpMethod.POST, "/greet",
                                          MediaType.JSON_UTF_8,
@@ -61,8 +61,9 @@ public class MyJUnit4Test {
 }
 ```
 
-Although the fake context returned by `ClientRequestContext.of()` and `ServiceRequestContext.of()` will
-provide sensible defaults, you can override its default properties using a builder:
+Although the fake context returned by <type://ClientRequestContext#of(HttpRequest)> and
+<type://ServiceRequestContext#of(HttpRequest)> will provide sensible defaults,
+you can override its default properties using a builder:
 
 ```java
 import java.net.InetAddress;

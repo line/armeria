@@ -263,8 +263,8 @@ clients:
 
 1. Create a <type://CircuitBreaker>.
 2. Guard your client calls with `CircuitBreaker.canRequest()`.
-3. Update the state of <type://CircuitBreaker> by calling `CircuitBreaker.onSuccess()` or `onFailure()`
-   depending on the outcome of the client call.
+3. Update the state of <type://CircuitBreaker> by calling <type://CircuitBreaker#onSuccess()> or
+   <type://CircuitBreaker#onFailure()> depending on the outcome of the client call.
 
 For example:
 
