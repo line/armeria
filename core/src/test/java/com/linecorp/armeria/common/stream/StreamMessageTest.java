@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
@@ -265,7 +264,7 @@ class StreamMessageTest {
             public void onComplete() {
                 fail("onComplete() invoked unexpectedly");
             }
-        }, WITH_POOLED_OBJECTS);
+        }, SubscriptionOption.WITH_POOLED_OBJECTS);
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         await().untilAsserted(() -> assertThat(data.refCnt()).isZero());
@@ -301,7 +300,7 @@ class StreamMessageTest {
             public void onComplete() {
                 fail("onComplete() invoked unexpectedly");
             }
-        }, WITH_POOLED_OBJECTS);
+        }, SubscriptionOption.WITH_POOLED_OBJECTS);
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         await().untilAsserted(() -> assertThat(data.refCnt()).isZero());

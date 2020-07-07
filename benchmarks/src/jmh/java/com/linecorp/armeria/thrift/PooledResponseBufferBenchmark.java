@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.thrift;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -25,14 +24,15 @@ import org.openjdk.jmh.infra.Blackhole;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
-import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -40,12 +40,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.server.unsafe.PooledHttpService;
-import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
 import com.linecorp.armeria.thrift.services.HelloService;
 import com.linecorp.armeria.thrift.services.HelloService.AsyncIface;
-
-import joptsimple.internal.Strings;
 
 /**
  * Compare performance of pooled vs unpooled {@link Service} response buffers.
@@ -63,20 +59,19 @@ import joptsimple.internal.Strings;
 public class PooledResponseBufferBenchmark {
 
     private static final int RESPONSE_SIZE = 500 * 1024;
-    private static final String RESPONSE = Strings.repeat('a', RESPONSE_SIZE);
+    private static final String RESPONSE = Strings.repeat("a", RESPONSE_SIZE);
 
-    private static final class PooledDecoratingService extends SimplePooledDecoratingHttpService {
+    private static final class PooledDecoratingService extends SimpleDecoratingHttpService {
 
         private PooledDecoratingService(HttpService delegate) {
             super(delegate);
         }
 
         @Override
-        protected HttpResponse serve(PooledHttpService delegate, ServiceRequestContext ctx,
-                                     PooledHttpRequest req) throws Exception {
-            final PooledHttpResponse res = delegate.serve(ctx, req);
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            final HttpResponse res = unwrap().serve(ctx, req);
             final HttpResponseWriter decorated = HttpResponse.streaming();
-            res.subscribeWithPooledObjects(new Subscriber<HttpObject>() {
+            res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
                     s.request(Long.MAX_VALUE);
@@ -96,7 +91,7 @@ public class PooledResponseBufferBenchmark {
                 public void onComplete() {
                     decorated.close();
                 }
-            });
+            }, SubscriptionOption.WITH_POOLED_OBJECTS);
             return decorated;
         }
     }

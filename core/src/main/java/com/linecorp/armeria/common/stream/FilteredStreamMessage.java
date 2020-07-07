@@ -18,8 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -144,10 +142,10 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     private SubscriptionOption[] filteringSubscriptionOptions(boolean notifyCancellation) {
         final ArrayList<SubscriptionOption> list = new ArrayList<>(2);
         if (filterSupportsPooledObjects) {
-            list.add(WITH_POOLED_OBJECTS);
+            list.add(SubscriptionOption.WITH_POOLED_OBJECTS);
         }
         if (notifyCancellation) {
-            list.add(NOTIFY_CANCELLATION);
+            list.add(SubscriptionOption.NOTIFY_CANCELLATION);
         }
         return list.toArray(EMPTY_OPTIONS);
     }

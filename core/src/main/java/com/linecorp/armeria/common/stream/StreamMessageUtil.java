@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import org.reactivestreams.Subscriber;
@@ -35,7 +33,7 @@ final class StreamMessageUtil {
     static boolean containsWithPooledObjects(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {
-            if (option == WITH_POOLED_OBJECTS) {
+            if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
                 return true;
             }
         }
@@ -46,7 +44,7 @@ final class StreamMessageUtil {
     static boolean containsNotifyCancellation(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {
-            if (option == NOTIFY_CANCELLATION) {
+            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
                 return true;
             }
         }

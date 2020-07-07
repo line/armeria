@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -31,12 +32,10 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcTrailersUtil;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.unsafe.AbstractPooledHttpService;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -53,7 +52,7 @@ import io.netty.buffer.Unpooled;
  * normal gRPC stubs or file a feature request.
  */
 @UnstableApi
-public abstract class AbstractUnsafeUnaryGrpcService extends AbstractPooledHttpService {
+public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService {
 
     private static final ResponseHeaders RESPONSE_HEADERS =
             ResponseHeaders.of(HttpStatus.OK,
@@ -68,7 +67,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractPooledHttpS
     protected abstract CompletableFuture<ByteBuf> handleMessage(ByteBuf message);
 
     @Override
-    protected final HttpResponse doPost(ServiceRequestContext ctx, PooledHttpRequest req) {
+    protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> responseFuture =
                 req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                    .thenCompose(msg -> deframeMessage(msg.content(), ctx.alloc()))
@@ -98,7 +97,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractPooledHttpS
         return HttpResponse.from(responseFuture);
     }
 
-    private static CompletableFuture<ByteBuf> deframeMessage(PooledHttpData framed, ByteBufAllocator alloc) {
+    private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed, ByteBufAllocator alloc) {
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 new Listener() {
