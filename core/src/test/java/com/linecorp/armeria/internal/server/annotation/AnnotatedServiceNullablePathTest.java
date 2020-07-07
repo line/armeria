@@ -81,6 +81,7 @@ class AnnotatedServiceNullablePathTest {
                       }
                   })
                   .build();
-        }).isInstanceOf(IllegalArgumentException.class);
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("cannot specify both an HTTP mapping and a Path mapping");
     }
 }
