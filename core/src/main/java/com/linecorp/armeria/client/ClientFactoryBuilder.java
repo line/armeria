@@ -522,8 +522,8 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the {@link ProxySelector} which determines the {@link ProxyConfig} to be used.
      *
-     * <p>This method makes a best effort to provide compatibility with {@link ProxySelector}.
-     * See {@link ProxyConfigSelector#of(ProxySelector)} for more information.
+     * <p>This method makes a best effort to provide compatibility with {@link ProxySelector},
+     * but it has some limitations. See {@link ProxyConfigSelector#of(ProxySelector)} for more information.
      */
     public ClientFactoryBuilder proxyConfig(ProxySelector proxySelector) {
         requireNonNull(proxySelector, "proxySelector");

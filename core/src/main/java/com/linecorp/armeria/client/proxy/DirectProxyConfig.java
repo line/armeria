@@ -18,8 +18,6 @@ package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
 
-import javax.annotation.Nullable;
-
 /**
  * Represents a direct connection without a proxy.
  */
@@ -38,16 +36,6 @@ public final class DirectProxyConfig extends ProxyConfig {
     @Override
     public InetSocketAddress proxyAddress() {
         return null;
-    }
-
-    @Override
-    public boolean equals(@Nullable Object obj) {
-        return this == obj;
-    }
-
-    @Override
-    public int hashCode() {
-        return System.identityHashCode(this);
     }
 
     @Override

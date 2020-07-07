@@ -131,7 +131,6 @@ class ProxyClientIntegrationTest {
     static ServerExtension backendServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.port(0, HTTP);
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };

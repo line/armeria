@@ -422,7 +422,8 @@ final class HttpChannelPool implements AsyncCloseable {
                                                   proxyAddress, UnprocessedRequestException.of(cause));
             }
         } catch (Throwable t) {
-            logger.warn("Exception while invoking proxy connectFailed for {}", poolKey, t);
+            logger.warn("Exception while invoking {}.connectFailed() for {}",
+                        ProxyConfigSelector.class.getSimpleName(), poolKey, t);
         }
     }
 

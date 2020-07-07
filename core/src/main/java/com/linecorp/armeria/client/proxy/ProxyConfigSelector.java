@@ -68,17 +68,17 @@ public interface ProxyConfigSelector {
                        SocketAddress sa, Throwable throwable);
 
     /**
-     * Provides a way to re-use an existing {@link ProxySelector} with some limitations.
+     * Provides a way to reuse an existing {@link ProxySelector} with some limitations.
      * <ul>
-     *     <li>Incompatibilities when used with JDK's default {@link ProxySelector} implementation:
-     *       <ul>
-     *         <li>Some properties like socksProxyVersion aren't respected</li>
-     *         <li>This class doesn't attempt to resolve scheme format differences.
-     *         However, armeria uses some schemes such as "h1c", "h2" which aren't supported by JDK's
-     *         default {@link ProxySelector}. This may be a source of unexpected behavior.</li>
-     *       </ul>
-     *     </li>
-     *     <li>Selecting multiple {@link Proxy} isn't supported</li>
+     *   <li>Incompatibilities when used with JDK's default {@link ProxySelector} implementation:
+     *     <ul>
+     *       <li>Some properties like socksProxyVersion aren't respected</li>
+     *       <li>This class doesn't attempt to resolve scheme format differences.
+     *       However, armeria uses some schemes such as "h1c", "h2" which aren't supported by JDK's
+     *       default {@link ProxySelector}. This may be a source of unexpected behavior.</li>
+     *     </ul>
+     *   </li>
+     *   <li>Selecting multiple {@link Proxy} isn't supported</li>
      * </ul>
      */
     static ProxyConfigSelector of(ProxySelector proxySelector) {
