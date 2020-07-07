@@ -30,17 +30,21 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserver;
 public class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
 
     private final MeterRegistry meterRegistry;
+    private final DnsQuestion dnsQuestion;
 
     /**
      * Accepts meterRegistry.
      * @param meterRegistry {@link MeterRegistry} MeterRegistry to capture metrics.
+     * @param question {@link DnsQuestion} DnsQuestion.
      */
-    public DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry) {
+    public DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry, DnsQuestion question) {
+        this.dnsQuestion = question;
         this.meterRegistry = meterRegistry;
     }
 
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
+        meterRegistry.counter("dns.query.count", dnsQuestion.name(), dnsQuestion.type().name()).increment();
     }
 
     @Override
@@ -64,10 +68,11 @@ public class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserv
 
     @Override
     public void queryFailed(Throwable cause) {
+        meterRegistry.counter("dns.query.failed").increment();
     }
 
     @Override
     public void querySucceed() {
-        meterRegistry.counter("query.succeeded");
+        meterRegistry.counter("dns.query.succeeded").increment();
     }
 }
