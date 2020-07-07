@@ -89,7 +89,8 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
                                                                        : SessionProtocol.HTTP.uriText());
         }
 
-        if (!outputHeaders.contains(HttpHeaderNames.AUTHORITY)) {
+        if (!outputHeaders.contains(HttpHeaderNames.AUTHORITY) &&
+            !outputHeaders.contains(HttpHeaderNames.HOST)) {
             final InetSocketAddress remoteAddress = (InetSocketAddress) channel().remoteAddress();
             outputHeaders.add(HttpHeaderNames.AUTHORITY,
                               ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostName(),

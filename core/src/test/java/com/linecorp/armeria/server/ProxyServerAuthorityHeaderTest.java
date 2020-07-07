@@ -109,8 +109,8 @@ class ProxyServerAuthorityHeaderTest {
         assertThat(proxyRequestHeaders.get(HttpHeaderNames.AUTHORITY)).isNull();
 
         final RequestHeaders backendRequestHeaders = backendHeaders.get();
-        assertThat(backendRequestHeaders.get(HttpHeaderNames.HOST)).isNull();
-        assertThat(backendRequestHeaders.get(HttpHeaderNames.AUTHORITY)).isNotNull();
+        assertThat(backendRequestHeaders.get(HttpHeaderNames.HOST)).isNotNull();
+        assertThat(backendRequestHeaders.get(HttpHeaderNames.AUTHORITY)).isNull();
     }
 
     @Test
