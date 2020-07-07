@@ -45,7 +45,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.KeepAliveHandler.PingState;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;

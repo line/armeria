@@ -17,12 +17,10 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
-import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -34,6 +32,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -302,14 +301,14 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
-     * long-running task. The {@link ScheduledExecutorService} will propagate the {@link ServiceRequestContext}
-     * automatically when running a task.
-     *
-     * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
-     * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
+     * Returns the {@link ContextAwareScheduledExecutorService} that could be used for executing
+     * a potentially long-running task. The {@link ContextAwareScheduledExecutorService}
+     * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
+     * If you want to use {@link ScheduledExecutorService} without setting this context,
+     * call {@link ContextAwareScheduledExecutorService#withoutContext()} and use the returned
+     * {@link ScheduledExecutorService}.
      */
-    ScheduledExecutorService blockingTaskExecutor();
+    ContextAwareScheduledExecutorService blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable
@@ -458,151 +457,7 @@ public interface ServiceRequestContext extends RequestContext {
      * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
      * }</pre>
      */
-    default void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
-        setRequestTimeoutMillis(mode, requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
-
-    /**
-     * Extends the previously scheduled request timeout by the specified amount of {@code adjustmentMillis}.
-     * This method does nothing if no request timeout was scheduled previously.
-     * Note that a negative {@code adjustment} reduces the current timeout.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
-     * ctx.extendRequestTimeoutMillis(1000);
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
-     * ctx.extendRequestTimeoutMillis(-500);
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
-     * }</pre>
-     *
-     * @param adjustmentMillis the amount of time in milliseconds to extend the current timeout by
-     *
-     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}} with {@link TimeoutMode#EXTEND}.
-     */
-    @Deprecated
-    default void extendRequestTimeoutMillis(long adjustmentMillis) {
-        setRequestTimeoutMillis(TimeoutMode.EXTEND, adjustmentMillis);
-    }
-
-    /**
-     * Extends the previously scheduled request timeout by the specified amount of {@code adjustment}.
-     * This method does nothing if no response timeout was scheduled previously.
-     * Note that a negative {@code adjustment} reduces the current timeout.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
-     * ctx.extendRequestTimeout(Duration.ofSeconds(1));
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
-     * ctx.extendRequestTimeout(Duration.ofMillis(-500));
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
-     * }</pre>
-     *
-     * @param adjustment the amount of time to extend the current timeout by
-     *
-     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#EXTEND}.
-     */
-    @Deprecated
-    default void extendRequestTimeout(Duration adjustment) {
-        extendRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
-    }
-
-    /**
-     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely within the specified amount of time from now.
-     * Note that the specified {@code requestTimeoutMillis} must be positive.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * ctx.setRequestTimeoutAfterMillis(1000);
-     * }</pre>
-     *
-     * @param requestTimeoutMillis the amount of time allowed in milliseconds from now
-     *
-     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}}
-     *             with {@link TimeoutMode#SET_FROM_NOW}.
-     */
-    @Deprecated
-    default void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
-        setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
-    }
-
-    /**
-     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely within the specified amount time from now.
-     * Note that the specified {@code requestTimeout} must be positive.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * ctx.setRequestTimeoutAfter(Duration.ofSeconds(1));
-     * }</pre>
-     *
-     * @param requestTimeout the amount of time allowed from now
-     *
-     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#SET_FROM_NOW}.
-     */
-    @Deprecated
-    default void setRequestTimeoutAfter(Duration requestTimeout) {
-        setRequestTimeoutAfterMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
-
-    /**
-     * Schedules the request timeout that is triggered at the specified time represented
-     * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
-     * Note that the request will be timed out immediately if the specified time is before now.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * long responseTimeoutAt = Instant.now().plus(1, ChronoUnit.SECONDS).toEpochMilli();
-     * ctx.setRequestTimeoutAtMillis(responseTimeoutAt);
-     * }</pre>
-     *
-     * @param requestTimeoutAtMillis the request timeout represented as the number of milliseconds
-     *                               since the epoch ({@code 1970-01-01T00:00:00Z})
-     *
-     * @deprecated This method will be removed without a replacement.
-     *             Use {@link #setRequestTimeout(TimeoutMode, Duration)} or {@link #clearRequestTimeout()}.
-     */
-    @Deprecated
-    void setRequestTimeoutAtMillis(long requestTimeoutAtMillis);
-
-    /**
-     * Schedules the request timeout that is triggered at the specified time represented
-     * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
-     * Note that the request will be timed out immediately if the specified time is before now.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * ctx.setRequestTimeoutAt(Instant.now().plus(1, ChronoUnit.SECONDS));
-     * }</pre>
-     *
-     * @param requestTimeoutAt the request timeout represented as the number of milliseconds
-     *                         since the epoch ({@code 1970-01-01T00:00:00Z})
-     *
-     * @deprecated This method will be removed without a replacement.
-     *             Use {@link #setRequestTimeout(TimeoutMode, Duration)} or {@link #clearRequestTimeout()}.
-     */
-    @Deprecated
-    default void setRequestTimeoutAt(Instant requestTimeoutAt) {
-        setRequestTimeoutAtMillis(requireNonNull(requestTimeoutAt, "requestTimeoutAt").toEpochMilli());
-    }
+    void setRequestTimeout(TimeoutMode mode, Duration requestTimeout);
 
     /**
      * Returns {@link Request} timeout handler which is executed when

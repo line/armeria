@@ -17,14 +17,16 @@
 package com.linecorp.armeria.internal.client;
 
 import java.util.function.BiFunction;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -36,30 +38,40 @@ public final class AbstractRuleBuilderUtil {
      * a given {@link ClientRequestContext} and {@link Throwable}.
      */
     public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
-    buildFilter(Predicate<RequestHeaders> requestHeadersFilter,
-                @Nullable Predicate<ResponseHeaders> responseHeadersFilter,
-                @Nullable Predicate<Throwable> exceptionFilter,
+    buildFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
+                @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
+                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
+                @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
                 boolean hasResponseFilter) {
         return (ctx, cause) -> {
-            if (ctx.log().isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
-                final RequestHeaders requestHeaders = ctx.log().partial().requestHeaders();
-                if (!requestHeadersFilter.test(requestHeaders)) {
+            final RequestLog log = ctx.log().partial();
+            if (log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
+                final RequestHeaders requestHeaders = log.requestHeaders();
+                if (!requestHeadersFilter.test(ctx, requestHeaders)) {
                     return false;
                 }
             }
 
             // Safe to return true since no filters are set
-            if (exceptionFilter == null && responseHeadersFilter == null && !hasResponseFilter) {
+            if (exceptionFilter == null && responseHeadersFilter == null &&
+                responseTrailersFilter == null && !hasResponseFilter) {
                 return true;
             }
 
-            if (cause != null && exceptionFilter != null && exceptionFilter.test(Exceptions.peel(cause))) {
+            if (cause != null && exceptionFilter != null && exceptionFilter.test(ctx, Exceptions.peel(cause))) {
                 return true;
             }
 
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                final ResponseHeaders responseHeaders = ctx.log().partial().responseHeaders();
-                if (responseHeadersFilter != null && responseHeadersFilter.test(responseHeaders)) {
+            if (responseHeadersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                final ResponseHeaders responseHeaders = log.responseHeaders();
+                if (responseHeadersFilter.test(ctx, responseHeaders)) {
+                    return true;
+                }
+            }
+
+            if (responseTrailersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+                final HttpHeaders responseTrailers = log.responseTrailers();
+                if (responseTrailersFilter.test(ctx, responseTrailers)) {
                     return true;
                 }
             }

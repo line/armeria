@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
+import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;

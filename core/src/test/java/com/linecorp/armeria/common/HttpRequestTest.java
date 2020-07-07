@@ -18,12 +18,13 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import reactor.test.StepVerifier;
 
 class HttpRequestTest {
 
@@ -32,9 +33,12 @@ class HttpRequestTest {
         final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.GET, "/foo");
         final HttpRequest request = HttpRequest.of(requestHeaders, HttpData.ofUtf8("a"), HttpData.ofUtf8("b"),
                                                    HttpData.ofUtf8("c"));
-
-        final List<HttpObject> objects = request.drainAll().join();
-        assertThat(objects).containsExactly(HttpData.ofUtf8("a"), HttpData.ofUtf8("b"), HttpData.ofUtf8("c"));
+        StepVerifier.create(request)
+                    .expectNext(HttpData.ofUtf8("a"))
+                    .expectNext(HttpData.ofUtf8("b"))
+                    .expectNext(HttpData.ofUtf8("c"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test

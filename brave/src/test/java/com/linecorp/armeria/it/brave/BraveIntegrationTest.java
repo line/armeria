@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -70,21 +71,22 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import brave.ScopedSpan;
+import brave.Span;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
+import brave.handler.MutableSpan;
+import brave.handler.SpanHandler;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
+import brave.propagation.TraceContext;
 import brave.sampler.Sampler;
-import zipkin2.Annotation;
-import zipkin2.Span;
-import zipkin2.reporter.Reporter;
 
 class BraveIntegrationTest {
 
-    private static final ReporterImpl spanReporter = new ReporterImpl();
+    private static final SpanHandlerImpl spanHandler = new SpanHandlerImpl();
 
     private static HelloService.Iface fooClient;
     private static HelloService.Iface fooClientWithoutTracing;
@@ -124,7 +126,7 @@ class BraveIntegrationTest {
                         quxClient.hello(name, f2);
                         CompletableFuture.allOf(f1, f2).whenCompleteAsync((aVoid, throwable) -> {
                             resultHandler.onComplete(f1.getNow(null) + ", and " + f2.getNow(null));
-                        }, RequestContext.current().contextAwareExecutor());
+                        }, RequestContext.current().eventLoop());
                     })));
 
             sb.service("/qux", decorate("service/qux", THttpService.of(
@@ -145,8 +147,8 @@ class BraveIntegrationTest {
                                             countDownLatch.countDown();
                                             countDownLatch.await();
                                         }
-                                        final brave.Span span = Tracing.currentTracer().nextSpan().start();
-                                        try (SpanInScope spanInScope =
+                                        final Span span = Tracing.currentTracer().nextSpan().start();
+                                        try (SpanInScope unused =
                                                      Tracing.currentTracer().withSpanInScope(span)) {
                                             if (i == 1) {
                                                 countDownLatch.countDown();
@@ -175,12 +177,12 @@ class BraveIntegrationTest {
                                                        }
                                                    })
                                            )).collect(toImmutableList())),
-                                   RequestContext.current().contextAwareExecutor())
+                                   RequestContext.current().eventLoop())
                             .addListener(() -> {
                                 responseFuture.complete(HttpResponse.of(HttpStatus.OK,
                                                                         MediaType.PLAIN_TEXT_UTF_8,
                                                                         "Lee"));
-                            }, RequestContext.current().contextAwareExecutor());
+                            }, RequestContext.current().eventLoop());
                     return res;
                 }
             }));
@@ -228,7 +230,7 @@ class BraveIntegrationTest {
 
     @AfterEach
     void shouldHaveNoExtraSpans() {
-        assertThat(spanReporter.spans).isEmpty();
+        assertThat(spanHandler.spans).isEmpty();
     }
 
     private static BraveService decorate(String name, HttpService service) {
@@ -250,7 +252,7 @@ class BraveIntegrationTest {
         return Tracing.newBuilder()
                       .currentTraceContext(currentTraceContext)
                       .localServiceName(name)
-                      .spanReporter(spanReporter)
+                      .addSpanHandler(spanHandler)
                       .sampler(Sampler.ALWAYS_SAMPLE)
                       .build();
     }
@@ -264,9 +266,9 @@ class BraveIntegrationTest {
                                           .decorator(BraveClient.newDecorator(newTracing("timed-client")))
                                           .build();
         assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
-        final Span[] initialConnectSpans = spanReporter.take(1);
+        final MutableSpan[] initialConnectSpans = spanHandler.take(1);
         assertThat(initialConnectSpans[0].annotations())
-                .extracting(Annotation::value).containsExactlyInAnyOrder(
+                .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
                 "connection-acquire.start",
                 "socket-connect.start",
                 "socket-connect.end",
@@ -277,9 +279,9 @@ class BraveIntegrationTest {
         // Make another request which will reuse the connection so no connection timing.
         assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
 
-        final Span[] secondConnectSpans = spanReporter.take(1);
+        final MutableSpan[] secondConnectSpans = spanHandler.take(1);
         assertThat(secondConnectSpans[0].annotations())
-                .extracting(Annotation::value).containsExactlyInAnyOrder(
+                .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
                 "ws",
                 "wr");
     }
@@ -288,7 +290,7 @@ class BraveIntegrationTest {
     void testServiceHasMultipleClientRequests() throws Exception {
         assertThat(zipClient.hello("Lee")).isEqualTo("Hello, Lee!, and Hello, Lee!");
 
-        final Span[] spans = spanReporter.take(6);
+        final MutableSpan[] spans = spanHandler.take(6);
         final String traceId = spans[0].traceId();
         assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
     }
@@ -297,17 +299,17 @@ class BraveIntegrationTest {
     void testClientInitiatedTrace() throws Exception {
         assertThat(fooClient.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
-        final Span[] spans = spanReporter.take(6);
+        final MutableSpan[] spans = spanHandler.take(6);
         final String traceId = spans[0].traceId();
         assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
 
         // Find all spans.
-        final Span clientFooSpan = findSpan(spans, "client/foo");
-        final Span serviceFooSpan = findSpan(spans, "service/foo");
-        final Span clientBarSpan = findSpan(spans, "client/bar");
-        final Span serviceBarSpan = findSpan(spans, "service/bar");
-        final Span clientQuxSpan = findSpan(spans, "client/qux");
-        final Span serviceQuxSpan = findSpan(spans, "service/qux");
+        final MutableSpan clientFooSpan = findSpan(spans, "client/foo");
+        final MutableSpan serviceFooSpan = findSpan(spans, "service/foo");
+        final MutableSpan clientBarSpan = findSpan(spans, "client/bar");
+        final MutableSpan serviceBarSpan = findSpan(spans, "service/bar");
+        final MutableSpan clientQuxSpan = findSpan(spans, "client/qux");
+        final MutableSpan serviceQuxSpan = findSpan(spans, "service/qux");
 
         // client/foo and service/foo should have no parents.
         assertThat(clientFooSpan.parentId()).isNull();
@@ -344,23 +346,23 @@ class BraveIntegrationTest {
         assertThat(spans).allMatch(s -> "hello".equals(s.name()));
 
         // Check wire times
-        final long clientStartTime = clientFooSpan.timestampAsLong();
+        final long clientStartTime = clientFooSpan.startTimestamp();
         final long clientWireSendTime = clientFooSpan.annotations().stream()
-                                                     .filter(a -> "ws".equals(a.value()))
-                                                     .findFirst().get().timestamp();
+                                                     .filter(a -> "ws".equals(a.getValue()))
+                                                     .findFirst().get().getKey();
         final long clientWireReceiveTime = clientFooSpan.annotations().stream()
-                                                        .filter(a -> "wr".equals(a.value()))
-                                                        .findFirst().get().timestamp();
-        final long clientEndTime = clientStartTime + clientFooSpan.durationAsLong();
+                                                        .filter(a -> "wr".equals(a.getValue()))
+                                                        .findFirst().get().getKey();
+        final long clientEndTime = clientFooSpan.finishTimestamp();
 
-        final long serverStartTime = serviceFooSpan.timestampAsLong();
+        final long serverStartTime = serviceFooSpan.startTimestamp();
         final long serverWireSendTime = serviceFooSpan.annotations().stream()
-                                                      .filter(a -> "ws".equals(a.value()))
-                                                      .findFirst().get().timestamp();
+                                                      .filter(a -> "ws".equals(a.getValue()))
+                                                      .findFirst().get().getKey();
         final long serverWireReceiveTime = serviceFooSpan.annotations().stream()
-                                                         .filter(a -> "wr".equals(a.value()))
-                                                         .findFirst().get().timestamp();
-        final long serverEndTime = serverStartTime + serviceFooSpan.durationAsLong();
+                                                         .filter(a -> "wr".equals(a.getValue()))
+                                                         .findFirst().get().getKey();
+        final long serverEndTime = serviceFooSpan.finishTimestamp();
 
         // These values are taken at microsecond precision and should be reliable to compare to each other.
 
@@ -386,16 +388,16 @@ class BraveIntegrationTest {
     void testServiceInitiatedTrace() throws Exception {
         assertThat(fooClientWithoutTracing.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
-        final Span[] spans = spanReporter.take(5);
+        final MutableSpan[] spans = spanHandler.take(5);
         final String traceId = spans[0].traceId();
         assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
 
         // Find all spans.
-        final Span serviceFooSpan = findSpan(spans, "service/foo");
-        final Span clientBarSpan = findSpan(spans, "client/bar");
-        final Span serviceBarSpan = findSpan(spans, "service/bar");
-        final Span clientQuxSpan = findSpan(spans, "client/qux");
-        final Span serviceQuxSpan = findSpan(spans, "service/qux");
+        final MutableSpan serviceFooSpan = findSpan(spans, "service/foo");
+        final MutableSpan clientBarSpan = findSpan(spans, "client/bar");
+        final MutableSpan serviceBarSpan = findSpan(spans, "service/bar");
+        final MutableSpan clientQuxSpan = findSpan(spans, "client/qux");
+        final MutableSpan serviceQuxSpan = findSpan(spans, "service/qux");
 
         // service/foo should have no parent.
         assertThat(serviceFooSpan.parentId()).isNull();
@@ -427,9 +429,9 @@ class BraveIntegrationTest {
     @Test
     void testSpanInThreadPoolHasSameTraceId() throws Exception {
         poolWebClient.get("pool").aggregate().get();
-        final Span[] spans = spanReporter.take(5);
-        assertThat(Arrays.stream(spans).map(Span::traceId).collect(toImmutableSet())).hasSize(1);
-        assertThat(Arrays.stream(spans).map(Span::parentId)
+        final MutableSpan[] spans = spanHandler.take(5);
+        assertThat(Arrays.stream(spans).map(MutableSpan::traceId).collect(toImmutableSet())).hasSize(1);
+        assertThat(Arrays.stream(spans).map(MutableSpan::parentId)
                          .filter(Objects::nonNull)
                          .collect(toImmutableSet())).hasSize(1);
     }
@@ -438,10 +440,10 @@ class BraveIntegrationTest {
     void testServerTimesOut() throws Exception {
         assertThatThrownBy(() -> timeoutClient.hello("name"))
                 .isInstanceOf(InvalidResponseHeadersException.class);
-        final Span[] spans = spanReporter.take(2);
+        final MutableSpan[] spans = spanHandler.take(2);
 
-        final Span serverSpan = findSpan(spans, "service/timeout");
-        final Span clientSpan = findSpan(spans, "client/timeout");
+        final MutableSpan serverSpan = findSpan(spans, "service/timeout");
+        final MutableSpan clientSpan = findSpan(spans, "client/timeout");
 
         // Server timed out meaning it did still send a timeout response to the client and we have all
         // annotations.
@@ -462,23 +464,24 @@ class BraveIntegrationTest {
     private static void testClientTimesOut(HelloService.Iface client) {
         assertThatThrownBy(() -> client.hello("name"))
                 .isInstanceOf(ResponseTimeoutException.class);
-        final Span[] spans = spanReporter.take(2);
+        final MutableSpan[] spans = spanHandler.take(2);
 
-        final Span serverSpan = findSpan(spans, "service/timeout");
-        final Span clientSpan = findSpan(spans, "client/timeout");
+        final MutableSpan serverSpan = findSpan(spans, "service/timeout");
+        final MutableSpan clientSpan = findSpan(spans, "client/timeout");
 
         // Collect all annotations except for connection attempts.
-        final List<Annotation> serverAnnotations = serverSpan.annotations();
-        final List<Annotation> clientAnnotations = clientSpan.annotations().stream()
-                                                             .filter(a -> !a.value().contains("connect"))
-                                                             .collect(toImmutableList());
+        final List<String> serverAnnotations = serverSpan.annotations().stream()
+                                                         .map(Map.Entry::getValue)
+                                                         .collect(toImmutableList());
+        final List<String> clientAnnotations = clientSpan.annotations().stream()
+                                                         .filter(a -> !a.getValue().contains("connect"))
+                                                         .map(Map.Entry::getValue)
+                                                         .collect(toImmutableList());
 
         // Client timed out, so no response data was ever sent from the server.
         // There is a wire send in the server and no wire receive in the client.
-        assertThat(serverAnnotations).hasSize(1);
-        assertThat(serverAnnotations.get(0).value()).isEqualTo("wr");
-        assertThat(clientAnnotations).hasSize(1);
-        assertThat(clientAnnotations.get(0).value()).isEqualTo("ws");
+        assertThat(serverAnnotations).containsExactly("wr");
+        assertThat(clientAnnotations).containsExactly("ws");
     }
 
     @Test
@@ -494,7 +497,7 @@ class BraveIntegrationTest {
             span2.finish();
             span1.finish();
 
-            spanReporter.take(2);
+            spanHandler.take(2);
         } finally {
             RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(false);
         }
@@ -515,13 +518,13 @@ class BraveIntegrationTest {
                            span2.finish();
                            span1.finish();
 
-                           spanReporter.take(2);
+                           spanHandler.take(2);
                            done.countDown();
                        }).start();
         done.await();
     }
 
-    private static Span findSpan(Span[] spans, String serviceName) {
+    private static MutableSpan findSpan(MutableSpan[] spans, String serviceName) {
         return Arrays.stream(spans)
                      .filter(s -> serviceName.equals(s.localServiceName()))
                      .findAny()
@@ -548,23 +551,23 @@ class BraveIntegrationTest {
         }
     }
 
-    private static class ReporterImpl implements Reporter<Span> {
-        private final BlockingQueue<Span> spans = new LinkedBlockingQueue<>();
+    private static class SpanHandlerImpl extends SpanHandler {
+        private final BlockingQueue<MutableSpan> spans = new LinkedBlockingQueue<>();
 
         @Override
-        public void report(Span span) {
-            spans.add(span);
+        public boolean end(TraceContext context, MutableSpan span, Cause cause) {
+            return spans.add(span);
         }
 
-        Span[] take(int numSpans) {
-            final List<Span> taken = new ArrayList<>();
+        MutableSpan[] take(int numSpans) {
+            final List<MutableSpan> taken = new ArrayList<>();
             while (taken.size() < numSpans) {
                 taken.add(Uninterruptibles.takeUninterruptibly(spans));
             }
 
             // Reverse the collected spans to sort the spans by request time.
             Collections.reverse(taken);
-            return taken.toArray(new Span[numSpans]);
+            return taken.toArray(new MutableSpan[numSpans]);
         }
     }
 }

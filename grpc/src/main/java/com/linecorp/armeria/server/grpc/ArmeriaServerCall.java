@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,13 +39,13 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
@@ -56,6 +55,7 @@ import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
@@ -66,7 +66,6 @@ import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.Codec;
@@ -153,7 +152,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       int maxOutboundMessageSizeBytes,
                       ServiceRequestContext ctx,
                       SerializationFormat serializationFormat,
-                      @Nullable MessageMarshaller jsonMarshaller,
+                      @Nullable GrpcJsonMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
                       ResponseHeaders defaultHeaders) {
@@ -545,7 +544,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.listener = requireNonNull(listener, "listener");
     }
 
-    private HttpData serializeTrailersAsMessage(HttpHeaders trailers) {
+    private PooledHttpData serializeTrailersAsMessage(HttpHeaders trailers) {
         final ByteBuf serialized = ctx.alloc().buffer();
         boolean success = false;
         try {
@@ -563,7 +562,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 serialized.release();
             }
         }
-        return new ByteBufHttpData(serialized, true);
+        return PooledHttpData.wrap(serialized).withEndOfStream();
     }
 
     @Nullable

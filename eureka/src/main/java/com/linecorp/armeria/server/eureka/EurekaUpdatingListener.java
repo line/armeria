@@ -171,7 +171,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                 newInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
                 } else {
                     logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
-                    scheduleHeartBeat(ctx.eventLoop(), newInfo);
+                    scheduleHeartBeat(ctx.eventLoop().withoutContext(), newInfo);
                 }
                 return null;
             });
@@ -240,6 +240,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
             }
             logger.warn("The specified port number {} does not exist. (expected one of activePorts: {})",
                         oldPortWrapper.getPort(), server.activePorts());
+            return oldPortWrapper;
         }
 
         final ServerPort serverPort = server.activePort(protocol);

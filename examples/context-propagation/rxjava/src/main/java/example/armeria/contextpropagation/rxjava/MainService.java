@@ -36,7 +36,7 @@ public class MainService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-        final Scheduler contextAwareScheduler = Schedulers.from(ctx.contextAwareExecutor());
+        final Scheduler contextAwareScheduler = Schedulers.from(ctx.eventLoop());
 
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.

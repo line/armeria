@@ -22,8 +22,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -543,36 +543,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
                 }
             });
-        }
-
-        @Override
-        public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-            return drainAll(executor, false);
-        }
-
-        @Override
-        public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-            requireNonNull(options, "options");
-
-            final boolean withPooledObjects = containsWithPooledObjects(options);
-            return drainAll(executor, withPooledObjects);
-        }
-
-        private CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-            requireNonNull(executor, "executor");
-
-            final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
-            final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, drainer, processor, executor, withPooledObjects,
-                    false /* We do not call Subscription.cancel() in StreamMessageDrainer. */);
-            if (!subscribe0(subscription)) {
-                final DownstreamSubscription<T> oldSubscription = this.subscription;
-                assert oldSubscription != null;
-                return CompletableFutures.exceptionallyCompletedFuture(
-                        abortedOrLate(oldSubscription.subscriber()));
-            }
-
-            return drainer.future();
         }
 
         @Override

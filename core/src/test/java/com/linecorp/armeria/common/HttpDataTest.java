@@ -91,31 +91,14 @@ class HttpDataTest {
         }
     }
 
-    @Nested
-    class ByteBufData {
-        // Not immutable
-        private ByteBuf payload;
-
-        @BeforeEach
-        void initPayload() {
-            payload = Unpooled.copiedBuffer(new byte[] { 1, 2, 3, 4 });
-        }
-
-        @Test
-        void wrap() {
-            final HttpData data = HttpData.wrap(payload);
-            payload.setByte(1, 5);
-            assertThat(ByteBufUtil.getBytes(payload)).containsExactly(1, 5, 3, 4);
-            assertThat(data.array()).containsExactly(1, 5, 3, 4);
-        }
-
-        @Test
-        void copyOf() {
-            final HttpData data = HttpData.copyOf(payload);
-            payload.setByte(1, 5);
-            assertThat(ByteBufUtil.getBytes(payload)).containsExactly(1, 5, 3, 4);
-            assertThat(data.array()).containsExactly(1, 2, 3, 4);
-        }
+    @Test
+    void copyOfByteBuf() {
+        final ByteBuf payload = Unpooled.copiedBuffer(new byte[] { 1, 2, 3, 4 });
+        final HttpData data = HttpData.copyOf(payload);
+        payload.setByte(1, 5);
+        assertThat(ByteBufUtil.getBytes(payload)).containsExactly(1, 5, 3, 4);
+        assertThat(data.array()).containsExactly(1, 2, 3, 4);
+        payload.release();
     }
 
     @Test
@@ -133,47 +116,21 @@ class HttpDataTest {
         assertThat(in2.read()).isEqualTo(2);
         assertThat(in2.read()).isEqualTo(3);
         assertThat(in2.read()).isEqualTo(-1);
-
-        final ByteBuf buf = Unpooled.copiedBuffer(new byte[] { 1, 2, 3, 4 });
-        try {
-            assertThat(buf.refCnt()).isOne();
-            final HttpData data = HttpData.wrap(buf);
-            try (InputStream in3 = data.toInputStream()) {
-                assertThat(buf.refCnt()).isEqualTo(2);
-                assertThat(in3.read()).isOne();
-                assertThat(in3.read()).isEqualTo(2);
-                assertThat(in3.read()).isEqualTo(3);
-                assertThat(in3.read()).isEqualTo(4);
-                assertThat(in3.read()).isEqualTo(-1);
-            }
-            assertThat(buf.refCnt()).isOne();
-            // Can call toInputstream again
-            try (InputStream in3 = data.toInputStream()) {
-                assertThat(buf.refCnt()).isEqualTo(2);
-                assertThat(in3.read()).isOne();
-                assertThat(in3.read()).isEqualTo(2);
-                assertThat(in3.read()).isEqualTo(3);
-                assertThat(in3.read()).isEqualTo(4);
-                assertThat(in3.read()).isEqualTo(-1);
-            }
-        } finally {
-            buf.release();
-        }
     }
 
     @Test
     void toReader() throws Exception {
         final Reader in = HttpData.ofUtf8("가A").toReader(StandardCharsets.UTF_8);
-        assertThat(in.read()).isEqualTo((int) '가');
-        assertThat(in.read()).isEqualTo((int) 'A');
+        assertThat(in.read()).isEqualTo('가');
+        assertThat(in.read()).isEqualTo('A');
         assertThat(in.read()).isEqualTo(-1);
     }
 
     @Test
     void toReaderUtf8() throws Exception {
         final Reader in = HttpData.ofUtf8("あB").toReaderUtf8();
-        assertThat(in.read()).isEqualTo((int) 'あ');
-        assertThat(in.read()).isEqualTo((int) 'B');
+        assertThat(in.read()).isEqualTo('あ');
+        assertThat(in.read()).isEqualTo('B');
         assertThat(in.read()).isEqualTo(-1);
     }
 
@@ -184,7 +141,7 @@ class HttpDataTest {
         assertThat(in.read()).isEqualTo(65533);
         assertThat(in.read()).isEqualTo(65533);
         assertThat(in.read()).isEqualTo(65533);
-        assertThat(in.read()).isEqualTo((int) 'C');
+        assertThat(in.read()).isEqualTo('C');
         assertThat(in.read()).isEqualTo(-1);
     }
 

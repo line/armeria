@@ -28,6 +28,6 @@ public class BackoffWrapper extends AbstractUnwrappable<Backoff> implements Back
 
     @Override
     public long nextDelayMillis(int numAttemptsSoFar) {
-        return delegate().nextDelayMillis(numAttemptsSoFar);
+        return unwrap().nextDelayMillis(numAttemptsSoFar);
     }
 }

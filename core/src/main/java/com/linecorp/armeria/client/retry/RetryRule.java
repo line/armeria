@@ -17,9 +17,11 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.BiPredicateUtil.toBiPredicateForSecond;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -121,8 +123,20 @@ public interface RetryRule {
      * {@linkplain Backoff#ofDefault() default backoff} if the response status matches
      * the specified {@code statusFilter}.
      */
-    static RetryRule onStatus(Predicate<? super HttpStatus> statusFilter) {
+    static RetryRule onStatus(BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
         return builder().onStatus(statusFilter).thenBackoff();
+    }
+
+    /**
+     * Returns a newly created a {@link RetryRule} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the response status matches
+     * the specified {@code statusFilter}.
+     *
+     * @deprecated Use {@link #onStatus(BiPredicate)}.
+     */
+    @Deprecated
+    static RetryRule onStatus(Predicate<? super HttpStatus> statusFilter) {
+        return onStatus(toBiPredicateForSecond(statusFilter));
     }
 
     /**
@@ -139,8 +153,20 @@ public interface RetryRule {
      * {@linkplain Backoff#ofDefault() default backoff} if an {@link Exception} is raised and
      * the specified {@code exceptionFilter} returns {@code true}.
      */
-    static RetryRule onException(Predicate<? super Throwable> exceptionFilter) {
+    static RetryRule onException(BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
         return builder().onException(exceptionFilter).thenBackoff();
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if an {@link Exception} is raised and
+     * the specified {@code exceptionFilter} returns {@code true}.
+     *
+     * @deprecated Use {@link #onException(BiPredicate)}.
+     */
+    @Deprecated
+    static RetryRule onException(Predicate<? super Throwable> exceptionFilter) {
+        return onException(toBiPredicateForSecond(exceptionFilter));
     }
 
     /**
@@ -191,8 +217,19 @@ public interface RetryRule {
     /**
      * Returns a newly created {@link RetryRuleBuilder} with the specified {@code requestHeadersFilter}.
      */
-    static RetryRuleBuilder builder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    static RetryRuleBuilder builder(
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         return new RetryRuleBuilder(requireNonNull(requestHeadersFilter, "requestHeadersFilter"));
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleBuilder} with the specified {@code requestHeadersFilter}.
+     *
+     * @deprecated Use {@link #builder(BiPredicate)}.
+     */
+    @Deprecated
+    static RetryRuleBuilder builder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+        return builder(toBiPredicateForSecond(requireNonNull(requestHeadersFilter, "requestHeadersFilter")));
     }
 
     /**
@@ -267,4 +304,12 @@ public interface RetryRule {
      *              exception.
      */
     CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);
+
+    /**
+     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
+     * successful or not.
+     */
+    default boolean requiresResponseTrailers() {
+        return false;
+    }
 }

@@ -193,7 +193,7 @@ public class AnnotatedServiceAnnotationAliasTest {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     appendAttribute(ctx, " (decorated-3)");
-                    return delegate().serve(ctx, req);
+                    return unwrap().serve(ctx, req);
                 }
             };
         }

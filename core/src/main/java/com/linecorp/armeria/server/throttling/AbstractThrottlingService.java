@@ -58,12 +58,12 @@ public abstract class AbstractThrottlingService<I extends Request, O extends Res
                 strategy.accept(ctx, req).handleAsync((accept, cause) -> {
                     try {
                         if (cause != null || !accept) {
-                            return rejectHandler.handleRejected(delegate(), ctx, req, cause);
+                            return rejectHandler.handleRejected(unwrap(), ctx, req, cause);
                         }
-                        return acceptHandler.handleAccepted(delegate(), ctx, req);
+                        return acceptHandler.handleAccepted(unwrap(), ctx, req);
                     } catch (Exception e) {
                         return Exceptions.throwUnsafely(e);
                     }
-                }, ctx.contextAwareEventLoop()));
+                }, ctx.eventLoop()));
     }
 }

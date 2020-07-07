@@ -24,11 +24,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+
+import reactor.test.StepVerifier;
 
 class DefaultAggregatedHttpResponseTest {
 
@@ -37,13 +38,13 @@ class DefaultAggregatedHttpResponseTest {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, "alice");
         final HttpResponse res = aRes.toHttpResponse();
-        final List<HttpObject> drained = res.drainAll().join();
-
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK,
-                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8,
-                                   CONTENT_LENGTH, 5),
-                HttpData.of(StandardCharsets.UTF_8, "alice"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
+                                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                                   CONTENT_LENGTH, 5))
+                    .expectNext(HttpData.of(StandardCharsets.UTF_8, "alice"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -51,12 +52,12 @@ class DefaultAggregatedHttpResponseTest {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(HttpStatus.OK, PLAIN_TEXT_UTF_8,
                                                                       HttpData.empty());
         final HttpResponse res = aRes.toHttpResponse();
-        final List<HttpObject> drained = res.drainAll().join();
-
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK,
-                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8,
-                                   CONTENT_LENGTH, 0));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
+                                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                                   CONTENT_LENGTH, 0))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -65,13 +66,12 @@ class DefaultAggregatedHttpResponseTest {
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
         final HttpResponse res = aRes.toHttpResponse();
-        final List<HttpObject> drained = res.drainAll().join();
-
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK,
-                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8),
-                HttpData.of(StandardCharsets.UTF_8, "bob"),
-                HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, CONTENT_TYPE, PLAIN_TEXT_UTF_8))
+                    .expectNext(HttpData.of(StandardCharsets.UTF_8, "bob"))
+                    .expectNext(HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -81,11 +81,11 @@ class DefaultAggregatedHttpResponseTest {
                 ResponseHeaders.of(HttpStatus.OK), HttpData.empty(), HttpHeaders.of());
 
         final HttpResponse res = aRes.toHttpResponse();
-        final List<HttpObject> drained = res.drainAll().join();
-
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(HttpStatus.CONTINUE),
-                ResponseHeaders.of(HttpStatus.OK, CONTENT_LENGTH, 0));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(HttpStatus.CONTINUE))
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, CONTENT_LENGTH, 0))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test

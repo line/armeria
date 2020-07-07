@@ -22,11 +22,22 @@ interface BaseLayoutProps extends RouteComponentProps {
   pageTitle?: string;
   contentClassName?: string;
   main?: boolean;
+  extraSidebarContent?: React.ReactNode;
 }
 
 let firstRender = true;
 
 const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
+  // Redirect to the new URL if at the old URL.
+  const hrefMatches = props.location.href?.match(
+    /:\/\/line\.github\.io\/armeria(.*)/,
+  );
+  let redirectUrl;
+  if (hrefMatches && hrefMatches.length === 2) {
+    redirectUrl = `https://armeria.dev${hrefMatches[1]}`;
+    globalHistory.navigate(redirectUrl);
+  }
+
   useEffect(() => {
     // Jump to hash or flash at hash only when rendering in a browser.
     if (typeof window !== 'undefined') {
@@ -51,10 +62,24 @@ const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
 
   return (
     <>
-      <Helmet title={props.pageTitle || site.siteMetadata.title} />
+      <Helmet title={props.pageTitle || site.siteMetadata.title}>
+        {redirectUrl ? (
+          <>
+            <meta httpEquiv="refresh" content={`0; url=${redirectUrl}`} />
+            <script>{`
+              window.location = '${redirectUrl}';
+            `}</script>
+          </>
+        ) : (
+          ''
+        )}
+      </Helmet>
       <BackTop />
       <Layout className={styles.layout}>
-        <Header location={props.location} />
+        <Header
+          location={props.location}
+          extraSidebarContent={props.extraSidebarContent}
+        />
         {props.main === false ? (
           <div className={`ant-layout-content ${props.contentClassName || ''}`}>
             {props.children}

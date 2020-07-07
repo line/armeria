@@ -65,7 +65,7 @@ class RetryRuleWithContentBuilderTest {
                 .hasMessageContaining("Should set at least one retry rule");
 
         RetryRuleWithContent.builder(HttpMethod.HEAD)
-                            .onResponse(response -> CompletableFuture.completedFuture(true))
+                            .onResponse((unused, response) -> CompletableFuture.completedFuture(true))
                             .thenBackoff();
     }
 
@@ -73,7 +73,7 @@ class RetryRuleWithContentBuilderTest {
     void retryWithContent() {
         final RetryRuleWithContent<HttpResponse> rule =
                 RetryRuleWithContent.<HttpResponse>builder()
-                        .onResponse(response -> {
+                        .onResponse((unused, response) -> {
                             return response.aggregate()
                                            .thenApply(content -> content.contentUtf8().contains("hello"));
                         })
@@ -92,20 +92,21 @@ class RetryRuleWithContentBuilderTest {
     void multipleHttpResponseSubscribeWithContent() {
         final RetryRuleWithContent<HttpResponse> rule =
                 RetryRuleWithContent.of(
-                        RetryRuleWithContent.onResponse(response -> {
+                        RetryRuleWithContent.onResponse((unused, response) -> {
                             return response.aggregate().thenApply(content -> false);
                         }),
-                        RetryRuleWithContent.<HttpResponse>onResponse(response -> {
+                        RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
                             return response.aggregate().thenApply(content -> false);
                         }).orElse(RetryRule.builder().onUnprocessed().thenBackoff(backoff)),
                         RetryRuleWithContent.<HttpResponse>builder()
-                                .onResponse(response -> {
+                                .onResponse((unused, response) -> {
                                     return response.aggregate()
                                                    .thenApply(content -> "hello".equals(content.contentUtf8()));
                                 }).thenBackoff());
 
         final HttpResponse response = HttpResponse.of("hello");
-        final UnprocessedRequestException cause = new UnprocessedRequestException(ClosedSessionException.get());
+        final UnprocessedRequestException cause =
+                UnprocessedRequestException.of(ClosedSessionException.get());
         response.abort(cause);
         try (HttpResponseDuplicator duplicator = response.toDuplicator()) {
             assertBackoff(rule.shouldRetry(ctx1, duplicator.duplicate(), cause)).isSameAs(backoff);
@@ -118,27 +119,28 @@ class RetryRuleWithContentBuilderTest {
                 RetryRuleWithContent.of(
                         RetryRuleWithContent
                                 .<HttpResponse>builder()
-                                .onResponse(response -> {
+                                .onResponse((unused, response) -> {
                                     return response.aggregate().thenApply(content -> false);
                                 })
-                                .onResponse(response -> {
+                                .onResponse((unused, response) -> {
                                     return response.aggregate().thenApply(content -> false);
                                 })
-                                .onResponse(response -> {
+                                .onResponse((unused, response) -> {
                                     return response.aggregate().thenApply(content -> false);
                                 }).thenBackoff(),
-                        RetryRuleWithContent.<HttpResponse>onResponse(response -> {
+                        RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
                             return response.aggregate().thenApply(content -> false);
                         }).orElse(RetryRule.builder()
                                            .onUnprocessed()
                                            .thenBackoff(backoff)),
                         RetryRuleWithContent.<HttpResponse>builder()
-                                .onResponse(response -> {
+                                .onResponse((unused, response) -> {
                                     return response.aggregate()
                                                    .thenApply(content -> "hello".equals(content.contentUtf8()));
                                 }).thenBackoff());
 
-        final UnprocessedRequestException cause = new UnprocessedRequestException(ClosedSessionException.get());
+        final UnprocessedRequestException cause =
+                UnprocessedRequestException.of(ClosedSessionException.get());
         final HttpResponse response = HttpResponse.ofFailure(cause);
         try (HttpResponseDuplicator duplicator = response.toDuplicator()) {
             assertBackoff(rule.shouldRetry(ctx1, duplicator.duplicate(), cause)).isSameAs(backoff);
@@ -149,14 +151,14 @@ class RetryRuleWithContentBuilderTest {
     void multipleRpcResponse() {
         final RetryRuleWithContent<RpcResponse> rule =
                 RetryRuleWithContent.of(
-                        RetryRuleWithContent.onResponse(response -> {
+                        RetryRuleWithContent.onResponse((unused, response) -> {
                             return response.thenApply(content -> false);
                         }),
-                        RetryRuleWithContent.<RpcResponse>onResponse(response -> {
+                        RetryRuleWithContent.<RpcResponse>onResponse((unused, response) -> {
                             return response.thenApply(content -> false);
                         }).orElse(RetryRule.onUnprocessed()),
                         RetryRuleWithContent.<RpcResponse>builder()
-                                .onResponse(response -> {
+                                .onResponse((unused, response) -> {
                                     return response.thenApply("hello"::equals);
                                 }).thenBackoff(backoff));
 
@@ -168,7 +170,7 @@ class RetryRuleWithContentBuilderTest {
     void retryWithCause() {
         final RetryRuleWithContent<HttpResponse> rule =
                 RetryRuleWithContent.<HttpResponse>builder()
-                        .onResponse(response -> {
+                        .onResponse((unused, response) -> {
                             return response.aggregate()
                                            .thenApply(content -> content.contentUtf8().contains("hello"));
                         })
@@ -176,7 +178,8 @@ class RetryRuleWithContentBuilderTest {
                         .thenBackoff(backoff);
 
         final HttpResponse response = HttpResponse.streaming();
-        final UnprocessedRequestException cause = new UnprocessedRequestException(ClosedSessionException.get());
+        final UnprocessedRequestException cause =
+                UnprocessedRequestException.of(ClosedSessionException.get());
         response.abort(cause);
         assertBackoff(rule.shouldRetry(ctx1, response, cause)).isSameAs(backoff);
     }
@@ -199,7 +202,7 @@ class RetryRuleWithContentBuilderTest {
             final RetryRuleWithContent<HttpResponse> rule1 =
                     RetryRuleWithContent.of(
                             RetryRuleWithContent.<HttpResponse>builder()
-                                    .onResponse(response -> {
+                                    .onResponse((unused, response) -> {
                                         return response.aggregate()
                                                        .thenApply(content -> content.contentUtf8()
                                                                                     .contains("hello"));
@@ -211,7 +214,7 @@ class RetryRuleWithContentBuilderTest {
 
             final RetryRuleWithContent<HttpResponse> rule2 =
                     RetryRuleWithContent.<HttpResponse>builder()
-                            .onResponse(response -> {
+                            .onResponse((unused, response) -> {
                                 return response.aggregate()
                                                .thenApply(content -> content.contentUtf8().contains("hello"));
                             })
@@ -221,7 +224,7 @@ class RetryRuleWithContentBuilderTest {
                                              .thenBackoff(backoff));
 
             final RetryRuleWithContent<HttpResponse> rule3 =
-                    RetryRuleWithContent.<HttpResponse>onResponse(response -> {
+                    RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
                         return response.aggregate()
                                        .thenApply(content -> content.contentUtf8().contains("hello"));
                     }).orElse(RetryRule.builder()

@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponse
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -115,7 +116,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         // Schedule the initial request timeout.
         final long requestTimeoutMillis = reqCtx.requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
-            scheduleTimeout(requestTimeoutMillis);
+            scheduleTimeoutNanos(TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
         }
 
         // Start consuming.
@@ -169,7 +170,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                         state = State.NEEDS_DATA_OR_TRAILERS;
                     }
                     if (endOfStream) {
-                        setDone();
+                        setDone(true);
                     }
                     merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
                     logBuilder().responseHeaders(merged);
@@ -205,7 +206,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                                 " (service: " + service() + ')'));
                         return;
                     }
-                    setDone();
+                    setDone(true);
                     final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
                     logBuilder().responseTrailers(merged);
                     responseEncoder.writeTrailers(req.id(), req.streamId(), merged)
@@ -215,7 +216,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
-                        setDone();
+                        setDone(true);
                     }
 
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -258,8 +259,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         return false;
     }
 
-    private State setDone() {
-        if (subscription != null) {
+    private State setDone(boolean cancel) {
+        if (cancel && subscription != null) {
             subscription.cancel();
         }
         cancelTimeout();
@@ -279,23 +280,23 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                                                if (throwable != null) {
                                                    failAndRespond(throwable,
                                                                   internalServerErrorResponse,
-                                                                  Http2Error.CANCEL);
+                                                                  Http2Error.CANCEL, false);
                                                } else {
-                                                   failAndRespond(cause, res, Http2Error.CANCEL);
+                                                   failAndRespond(cause, res, Http2Error.CANCEL, false);
                                                }
                                                return null;
                                            }, ctx.executor());
         } else if (cause instanceof HttpStatusException) {
             failAndRespond(cause,
                            AggregatedHttpResponse.of(((HttpStatusException) cause).httpStatus()),
-                           Http2Error.CANCEL);
+                           Http2Error.CANCEL, false);
         } else if (Exceptions.isStreamCancelling(cause)) {
             failAndReset(cause);
         } else {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                         ctx.channel(), service(), cause);
 
-            failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR);
+            failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, false);
         }
     }
 
@@ -306,7 +307,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             return;
         }
 
-        final State oldState = setDone();
+        final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
             logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
@@ -331,7 +332,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void fail(Throwable cause) {
         if (tryComplete()) {
-            setDone();
+            setDone(true);
             logBuilder().endResponse(cause);
             reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
         }
@@ -346,11 +347,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private void failAndRespond(Throwable cause) {
-        failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR);
+        failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, true);
     }
 
-    private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {
-        final State oldState = setDone();
+    private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error, boolean cancel) {
+        final State oldState = setDone(cancel);
         final int id = req.id();
         final int streamId = req.streamId();
 
@@ -380,7 +381,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private void failAndReset(Throwable cause) {
-        final State oldState = setDone();
+        final State oldState = setDone(false);
         final ChannelFuture future =
                 responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL);
 
@@ -420,7 +421,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                         requestTimeoutHandler.run();
                     } else {
                         failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
-                                       Http2Error.INTERNAL_ERROR);
+                                       Http2Error.INTERNAL_ERROR, true);
                     }
                 }
             }

@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -45,7 +46,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeMap;
@@ -275,6 +276,8 @@ public class HttpClientMaxConcurrentStreamTest {
                     assertThat(throwable.getCause().getCause()).satisfiesAnyOf(
                             e -> assertThat(e).isInstanceOf(ClosedSessionException.class),
                             e -> assertThat(e).isInstanceOf(ConnectException.class)
+                                              .hasMessageContaining("reset by peer"),
+                            e -> assertThat(e).isInstanceOf(SocketException.class)
                                               .hasMessageContaining("reset by peer"));
                 });
     }

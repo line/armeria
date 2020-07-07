@@ -1,14 +1,3 @@
-plugins {
-    id 'java'
-}
-
-group 'com.linecorp.armeria'
-version '0.99.4-SNAPSHOT'
-
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     api 'javax.servlet:javax.servlet-api:4.0.1'
     implementation 'org.apache.commons:commons-lang3:3.10'

@@ -61,7 +61,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.DateFormatter;
 
@@ -336,6 +336,26 @@ class FileServiceTest {
                 // Confirm path not cached when cache disabled.
                 assertThat(PathAndQuery.cachedPaths())
                         .doesNotContain("/compressed/foo.txt");
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testGetWithoutPreCompression(String baseUri) throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final HttpGet request = new HttpGet(baseUri + "/compressed/foo_alone.txt");
+            request.setHeader("Accept-Encoding", "gzip");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getFirstHeader("Content-Encoding")).isNull();
+                assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
+                        "text/plain; charset=utf-8");
+                final byte[] content = content(res);
+                assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo_alone");
+
+                // Confirm path not cached when cache disabled.
+                assertThat(PathAndQuery.cachedPaths())
+                        .doesNotContain("/compressed/foo_alone.txt");
             }
         }
     }
@@ -668,7 +688,7 @@ class FileServiceTest {
 
     private static String header(CloseableHttpResponse res, String name) {
         final String value = headerOrNull(res, name);
-        assertThat(value).withFailMessage("The response must contains the header '%s'.", name).isNotNull();
+        assertThat(value).withFailMessage("The response must contain the header '%s'.", name).isNotNull();
         return value;
     }
 

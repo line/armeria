@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -33,7 +32,7 @@ import io.netty.channel.EventLoop;
 
 public final class TimeoutScheduler {
 
-    private long timeoutMillis;
+    private long timeoutNanos;
     @Nullable
     private Consumer<TimeoutController> pendingTimeoutTask;
     @Nullable
@@ -41,17 +40,17 @@ public final class TimeoutScheduler {
     @Nullable
     private TimeoutController timeoutController;
 
-    public TimeoutScheduler(long timeoutMillis) {
-        this.timeoutMillis = timeoutMillis;
+    public TimeoutScheduler(long timeoutNanos) {
+        this.timeoutNanos = timeoutNanos;
     }
 
     public void clearTimeout() {
-        if (timeoutMillis == 0) {
+        if (timeoutNanos == 0) {
             return;
         }
 
         final TimeoutController timeoutController = this.timeoutController;
-        timeoutMillis = 0;
+        timeoutNanos = 0;
         if (timeoutController != null) {
             if (eventLoop.inEventLoop()) {
                 timeoutController.cancelTimeout();
@@ -63,102 +62,80 @@ public final class TimeoutScheduler {
         }
     }
 
-    public void setTimeoutMillis(TimeoutMode mode, long timeoutMillis) {
+    public void setTimeoutNanos(TimeoutMode mode, long timeoutNanos) {
         switch (mode) {
             case SET_FROM_NOW:
-                setTimeoutAfterMillis(timeoutMillis);
+                setTimeoutAfterNanos(timeoutNanos);
                 break;
             case SET_FROM_START:
-                setTimeoutMillis(timeoutMillis);
+                setTimeoutNanos(timeoutNanos);
                 break;
             case EXTEND:
-                extendTimeoutMillis(timeoutMillis);
+                extendTimeoutNanos(timeoutNanos);
                 break;
         }
     }
 
-    private void setTimeoutMillis(long timeoutMillis) {
-        checkArgument(timeoutMillis >= 0, "timeoutMillis: %s (expected: >= 0)", timeoutMillis);
-        if (timeoutMillis == 0) {
+    private void setTimeoutNanos(long timeoutNanos) {
+        checkArgument(timeoutNanos >= 0, "timeoutNanos: %s (expected: >= 0)", timeoutNanos);
+        if (timeoutNanos == 0) {
             clearTimeout();
             return;
         }
 
-        if (this.timeoutMillis == 0) {
-            setTimeoutAfterMillis(timeoutMillis);
+        if (this.timeoutNanos == 0) {
+            setTimeoutAfterNanos(timeoutNanos);
             return;
         }
 
-        final long adjustmentMillis = LongMath.saturatedSubtract(timeoutMillis, this.timeoutMillis);
-        extendTimeoutMillis(adjustmentMillis);
+        final long adjustmentNanos = LongMath.saturatedSubtract(timeoutNanos, this.timeoutNanos);
+        extendTimeoutNanos(adjustmentNanos);
     }
 
-    private void extendTimeoutMillis(long adjustmentMillis) {
-        if (adjustmentMillis == 0 || timeoutMillis == 0) {
+    private void extendTimeoutNanos(long adjustmentNanos) {
+        if (adjustmentNanos == 0 || timeoutNanos == 0) {
             return;
         }
 
-        final long oldTimeoutMillis = timeoutMillis;
-        timeoutMillis = LongMath.saturatedAdd(oldTimeoutMillis, adjustmentMillis);
+        final long oldTimeoutNanos = timeoutNanos;
+        timeoutNanos = LongMath.saturatedAdd(oldTimeoutNanos, adjustmentNanos);
         final TimeoutController timeoutController = this.timeoutController;
         if (timeoutController != null) {
             if (eventLoop.inEventLoop()) {
-                timeoutController.extendTimeout(adjustmentMillis);
+                timeoutController.extendTimeoutNanos(adjustmentNanos);
             } else {
-                eventLoop.execute(() -> timeoutController.extendTimeout(adjustmentMillis));
+                eventLoop.execute(() -> timeoutController.extendTimeoutNanos(adjustmentNanos));
             }
         } else {
-            addPendingTimeoutTask(controller -> controller.extendTimeout(adjustmentMillis));
+            addPendingTimeoutTask(controller -> controller.extendTimeoutNanos(adjustmentNanos));
         }
     }
 
-    private void setTimeoutAfterMillis(long timeoutMillis) {
-        checkArgument(timeoutMillis > 0, "timeoutMillis: %s (expected: > 0)", timeoutMillis);
+    private void setTimeoutAfterNanos(long timeoutNanos) {
+        checkArgument(timeoutNanos > 0, "timeoutNanos: %s (expected: > 0)", timeoutNanos);
 
-        long passedTimeMillis = 0;
+        long passedTimeNanos = 0;
         final TimeoutController timeoutController = this.timeoutController;
         if (timeoutController != null) {
             final Long startTimeNanos = timeoutController.startTimeNanos();
             if (startTimeNanos != null) {
-                passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+                passedTimeNanos = System.nanoTime() - startTimeNanos;
             }
             if (eventLoop.inEventLoop()) {
-                timeoutController.resetTimeout(timeoutMillis);
+                timeoutController.resetTimeoutNanos(timeoutNanos);
             } else {
-                eventLoop.execute(() -> timeoutController.resetTimeout(timeoutMillis));
+                eventLoop.execute(() -> timeoutController.resetTimeoutNanos(timeoutNanos));
             }
         } else {
             final long startTimeNanos = System.nanoTime();
             addPendingTimeoutTask(controller -> {
-                final long passedTimeMillis0 =
-                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-                final long timeoutMillis0 = Math.max(1, timeoutMillis - passedTimeMillis0);
-                controller.resetTimeout(timeoutMillis0);
+                final long passedTimeNanos0 = System.nanoTime() - startTimeNanos;
+                final long timeoutNanos0 = Math.max(1, timeoutNanos - passedTimeNanos0);
+                controller.resetTimeoutNanos(timeoutNanos0);
             });
         }
 
-        this.timeoutMillis = LongMath.saturatedAdd(passedTimeMillis, timeoutMillis);
-    }
-
-    @Deprecated
-    public void setTimeoutAtMillis(long timeoutAtMillis) {
-        checkArgument(timeoutAtMillis >= 0, "timeoutAtMillis: %s (expected: >= 0)", timeoutAtMillis);
-        final long timeoutAfter = timeoutAtMillis - System.currentTimeMillis();
-
-        if (timeoutAfter <= 0) {
-            final TimeoutController timeoutController = this.timeoutController;
-            if (timeoutController != null) {
-                if (eventLoop.inEventLoop()) {
-                    timeoutController.timeoutNow();
-                } else {
-                    eventLoop.execute(timeoutController::timeoutNow);
-                }
-            } else {
-                addPendingTimeoutTask(TimeoutController::timeoutNow);
-            }
-        } else {
-            setTimeoutAfterMillis(timeoutAfter);
-        }
+        this.timeoutNanos = LongMath.saturatedAdd(passedTimeNanos, timeoutNanos);
     }
 
     public void timeoutNow() {
@@ -198,8 +175,8 @@ public final class TimeoutScheduler {
         }
     }
 
-    public long timeoutMillis() {
-        return timeoutMillis;
+    public long timeoutNanos() {
+        return timeoutNanos;
     }
 
     private void addPendingTimeoutTask(Consumer<TimeoutController> pendingTimeoutTask) {

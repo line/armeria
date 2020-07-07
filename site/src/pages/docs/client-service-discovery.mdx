@@ -23,7 +23,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 EndpointGroup searchEngineGroup = EndpointGroup.of(
         Endpoint.of("www.google.com", 443),
         Endpoint.of("www.bing.com", 443),
-        Endpoint.of("duckduckgo.com", 443);
+        Endpoint.of("duckduckgo.com", 443));
 
 List<Endpoint> endpoints = searchEngineGroup.endpoints();
 assert endpoints.contains(Endpoint.of("www.google.com", 443));

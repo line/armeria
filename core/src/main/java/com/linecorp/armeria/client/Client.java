@@ -76,4 +76,13 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
         requireNonNull(type, "type");
         return Unwrappable.super.as(type);
     }
+
+    /**
+     * Unwraps this {@link Client} and returns the object being decorated.
+     * If this {@link Client} is the innermost object, this method returns itself.
+     */
+    @Override
+    default Client<? extends Request, ? extends Response> unwrap() {
+        return (Client<? extends Request, ? extends Response>) Unwrappable.super.unwrap();
+    }
 }

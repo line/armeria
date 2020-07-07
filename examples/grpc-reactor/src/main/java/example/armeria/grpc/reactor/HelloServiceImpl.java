@@ -30,8 +30,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
         // You can use the event loop for scheduling a task.
         return request
                 .delayElement(Duration.ofSeconds(3),
-                              Schedulers.fromExecutor(ServiceRequestContext.current()
-                                                                           .contextAwareEventLoop())
+                              Schedulers.fromExecutor(ServiceRequestContext.current().eventLoop())
                 )
                 .map(it -> buildReply(toMessage(it.getName())));
     }
@@ -39,7 +38,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
     /**
      * Sends a {@link HelloReply} using {@code blockingTaskExecutor}.
      *
-     * @see <a href="https://line.github.io/armeria/docs/server-grpc#blocking-service-implementation">Blocking
+     * @see <a href="https://armeria.dev/docs/server-grpc#blocking-service-implementation">Blocking
      *      service implementation</a>
      */
     @Override
@@ -79,7 +78,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
                                   .map(index -> "Hello, " + it.getName() + "! (sequence: " + (index + 1) + ')')
                 )
                 // You can make your Flux/Mono publish the signals in the RequestContext-aware executor.
-                .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().contextAwareExecutor()))
+                .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().eventLoop()))
                 .map(HelloServiceImpl::buildReply);
     }
 

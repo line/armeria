@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RetryingClientWithLoggingTest {
 
@@ -65,8 +65,7 @@ class RetryingClientWithLoggingTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                        throws Exception {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     ctx.mutateAdditionalResponseTrailers(
                             mutator -> mutator.add(HttpHeaderNames.of("foo"), "bar"));
                     if (reqCount.getAndIncrement() < 1) {
@@ -108,7 +107,7 @@ class RetryingClientWithLoggingTest {
     void retryingThenLogging() throws InterruptedException {
         successLogIndex = 3;
         final RetryRuleWithContent<HttpResponse> retryRule =
-                RetryRuleWithContent.onResponse(response -> {
+                RetryRuleWithContent.onResponse((unused, response) -> {
                     return response.aggregate().thenApply(content -> !"hello".equals(content.contentUtf8()));
                 });
 
@@ -176,7 +175,7 @@ class RetryingClientWithLoggingTest {
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
                 ctx.log().whenRequestComplete().thenAccept(log -> listener.accept(log.partial()));
                 ctx.log().whenComplete().thenAccept(listener);
-                return delegate().execute(ctx, req);
+                return unwrap().execute(ctx, req);
             }
         };
     }

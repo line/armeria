@@ -1,0 +1,202 @@
+/*
+ * Copyright 2020 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.common.unsafe;
+
+import static java.util.Objects.requireNonNull;
+
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.AbstractHttpData;
+import com.linecorp.armeria.common.HttpData;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.EmptyByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+
+/**
+ * An {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
+ * general use.
+ *
+ * @deprecated Use {@link PooledHttpData}.
+ */
+@Deprecated
+public final class ByteBufHttpData extends AbstractHttpData implements PooledHttpData {
+
+    private static final AtomicIntegerFieldUpdater<ByteBufHttpData>
+            closedUpdater = AtomicIntegerFieldUpdater.newUpdater(ByteBufHttpData.class, "closed");
+
+    static final ByteBufHttpData EMPTY = new ByteBufHttpData(
+            new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT), false);
+
+    private final ByteBuf buf;
+    private final boolean endOfStream;
+    private final int length;
+
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `closedUpdater`
+    private volatile int closed;
+
+    /**
+     * Constructs a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
+     * {@link ByteBufHttpData}, which must not be mutated anymore.
+     */
+    public ByteBufHttpData(ByteBuf buf, boolean endOfStream) {
+        length = requireNonNull(buf, "buf").readableBytes();
+        if (length != 0) {
+            this.buf = buf;
+        } else {
+            buf.release();
+            this.buf = Unpooled.EMPTY_BUFFER;
+        }
+        this.endOfStream = endOfStream;
+    }
+
+    @Override
+    public boolean isEndOfStream() {
+        return endOfStream;
+    }
+
+    @Override
+    public byte[] array() {
+        if (buf.hasArray() && buf.arrayOffset() == 0 && buf.array().length == length) {
+            return buf.array();
+        } else {
+            return ByteBufUtil.getBytes(buf);
+        }
+    }
+
+    @Override
+    public int length() {
+        return length;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        buf.touch();
+        return super.isEmpty();
+    }
+
+    @Override
+    public int refCnt() {
+        return buf.refCnt();
+    }
+
+    @Override
+    public PooledHttpData retain() {
+        buf.retain();
+        return this;
+    }
+
+    @Override
+    public PooledHttpData retain(int increment) {
+        buf.retain(increment);
+        return this;
+    }
+
+    @Override
+    public PooledHttpData touch() {
+        buf.touch();
+        return this;
+    }
+
+    @Override
+    public PooledHttpData touch(Object hint) {
+        buf.touch(hint);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return buf.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return buf.release(decrement);
+    }
+
+    @Override
+    public ByteBuf content() {
+        buf.touch();
+        return buf;
+    }
+
+    @Override
+    public PooledHttpData copy() {
+        return new ByteBufHttpData(buf.copy(), endOfStream);
+    }
+
+    @Override
+    public PooledHttpData duplicate() {
+        return new ByteBufHttpData(buf.duplicate(), endOfStream);
+    }
+
+    @Override
+    public PooledHttpData retainedDuplicate() {
+        return new ByteBufHttpData(buf.retainedDuplicate(), endOfStream);
+    }
+
+    @Override
+    public PooledHttpData replace(ByteBuf content) {
+        requireNonNull(content, "content");
+        content.touch();
+        return new ByteBufHttpData(content, endOfStream);
+    }
+
+    @Override
+    protected byte getByte(int index) {
+        return buf.getByte(index);
+    }
+
+    @Override
+    public String toString(Charset charset) {
+        return buf.toString(charset);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("buf", buf.toString()).toString();
+    }
+
+    @Override
+    public InputStream toInputStream() {
+        return new ByteBufInputStream(buf.duplicate(), false);
+    }
+
+    @Override
+    public PooledHttpData withEndOfStream(boolean endOfStream) {
+        if (endOfStream == this.endOfStream) {
+            return this;
+        }
+        return new ByteBufHttpData(buf, endOfStream);
+    }
+
+    @Override
+    public void close() {
+        if (!closedUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
+        release();
+    }
+}

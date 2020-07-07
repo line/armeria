@@ -51,7 +51,7 @@ class UnwrappingServiceTest {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return delegate().serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
     }
 
@@ -62,7 +62,7 @@ class UnwrappingServiceTest {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return delegate().serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
     }
 }

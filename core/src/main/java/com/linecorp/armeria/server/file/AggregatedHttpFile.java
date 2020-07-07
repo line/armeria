@@ -15,31 +15,68 @@
  */
 package com.linecorp.armeria.server.file;
 
-import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ResponseHeaders;
 
-import io.netty.buffer.ByteBufAllocator;
-
 /**
- * An immutable variant of {@link HttpFile} which has its attributes and content readily available.
- * Unlike {@link HttpFile}, an {@link AggregatedHttpFile} does not raise an {@link IOException} for
- * <ul>
- *   <li>{@link #readAttributes()}</li>
- *   <li>{@link #readHeaders()}</li>
- *   <li>{@link #read(Executor, ByteBufAllocator)}</li>
- *   <li>{@link #aggregate(Executor)}</li>
- *   <li>{@link #aggregateWithPooledObjects(Executor, ByteBufAllocator)}</li>
- * </ul>
- * It also has an additional method {@link #content()} which gives you an immediate access to the file's
- * content.
+ * A complete HTTP file whose attributes and content are readily available.
  */
-public interface AggregatedHttpFile extends HttpFile {
+public interface AggregatedHttpFile {
+
+    /**
+     * Creates a new {@link AggregatedHttpFile} which streams the specified {@link HttpData}. This method is
+     * a shortcut for {@code AggregatedHttpFile.of(data, System.currentTimeMillis()}.
+     */
+    static AggregatedHttpFile of(HttpData data) {
+        return builder(data).build();
+    }
+
+    /**
+     * Creates a new {@link AggregatedHttpFile} with the specified {@link HttpData} with the specified
+     * {@code lastModifiedMillis}.
+     *
+     * @param data the data that provides the content of an HTTP response
+     * @param lastModifiedMillis when the {@code data} has been last modified, represented as the number of
+     *                           millisecond since the epoch
+     */
+    static AggregatedHttpFile of(HttpData data, long lastModifiedMillis) {
+        requireNonNull(data, "data");
+        return builder(data, lastModifiedMillis).build();
+    }
+
+    /**
+     * Returns an {@link AggregatedHttpFile} which represents a non-existent file.
+     */
+    static AggregatedHttpFile nonExistent() {
+        return NonExistentAggregatedHttpFile.INSTANCE;
+    }
+
+    /**
+     * Returns a new {@link AggregatedHttpFileBuilder} that builds an {@link AggregatedHttpFile} from
+     * the specified {@link HttpData}. The last modified date of the file is set to 'now'.
+     */
+    static AggregatedHttpFileBuilder builder(HttpData data) {
+        return builder(data, System.currentTimeMillis());
+    }
+
+    /**
+     * Returns a new {@link AggregatedHttpFileBuilder} that builds an {@link AggregatedHttpFile} from
+     * the specified {@link HttpData} and {@code lastModifiedMillis}.
+     *
+     * @param data the content of the file
+     * @param lastModifiedMillis the last modified time represented as the number of milliseconds
+     *                           since the epoch
+     */
+    static AggregatedHttpFileBuilder builder(HttpData data, long lastModifiedMillis) {
+        requireNonNull(data, "data");
+        return new AggregatedHttpFileBuilder(data, lastModifiedMillis)
+                .autoDetectedContentType(false); // Can't auto-detect because there's no path or URI.
+    }
 
     /**
      * Returns the attributes of the file.
@@ -47,8 +84,7 @@ public interface AggregatedHttpFile extends HttpFile {
      * @return the attributes, or {@code null} if the file does not exist.
      */
     @Nullable
-    @Override
-    HttpFileAttributes readAttributes();
+    HttpFileAttributes attributes();
 
     /**
      * Returns the attributes of this file as {@link ResponseHeaders}, which could be useful for building
@@ -57,8 +93,24 @@ public interface AggregatedHttpFile extends HttpFile {
      * @return the headers, or {@code null} if the file does not exist.
      */
     @Nullable
-    @Override
-    ResponseHeaders readHeaders();
+    ResponseHeaders headers();
+
+    /**
+     * Returns the {@link AggregatedHttpResponse} generated from this file.
+     *
+     * @return the {@link AggregatedHttpResponse} of the file, or {@code null} if the file does not exist.
+     */
+    @Nullable
+    default AggregatedHttpResponse response() {
+        final ResponseHeaders headers = headers();
+        if (headers == null) {
+            return null;
+        } else {
+            final HttpData content = content();
+            assert content != null;
+            return AggregatedHttpResponse.of(headers, content);
+        }
+    }
 
     /**
      * Returns the content of the file.
@@ -68,14 +120,10 @@ public interface AggregatedHttpFile extends HttpFile {
     @Nullable
     HttpData content();
 
-    @Override
-    default CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor) {
-        return CompletableFuture.completedFuture(this);
-    }
-
-    @Override
-    default CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(Executor fileReadExecutor,
-                                                                             ByteBufAllocator alloc) {
-        return CompletableFuture.completedFuture(this);
-    }
+    /**
+     * Converts this file into an {@link HttpFile}.
+     *
+     * @return the {@link HttpFile} converted from this file.
+     */
+    HttpFile toHttpFile();
 }

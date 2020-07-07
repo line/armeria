@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Publisher;
@@ -70,10 +69,6 @@ import io.netty.util.concurrent.EventExecutor;
  * <p>For {@link ByteBuf} and {@link ByteBufHolder}, {@link StreamMessage} will convert them into their
  * respective unpooled versions that never leak, so that the {@link Subscriber} does not need to worry about
  * leaks.
- *
- * <p>If a {@link Subscriber} does not want a {@link StreamMessage} to make a copy of a {@link ByteBufHolder},
- * specify {@link SubscriptionOption#WITH_POOLED_OBJECTS} when you subscribe. Note that the {@link Subscriber}
- * is responsible for releasing the objects given with {@link Subscriber#onNext(Object)}.
  *
  * <p>{@link Subscriber#onError(Throwable)} is invoked when any exception is raised except the
  * {@link CancelledSubscriptionException} which is caused by {@link Subscription#cancel()}. If you want your
@@ -244,70 +239,6 @@ public interface StreamMessage<T> extends Publisher<T> {
     void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, SubscriptionOption... options);
 
     /**
-     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
-     * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
-     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
-     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
-     * </ul>
-     *
-     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
-     */
-    default CompletableFuture<List<T>> drainAll() {
-        return drainAll(defaultSubscriberExecutor());
-    }
-
-    /**
-     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
-     * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
-     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
-     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
-     * </ul>
-     *
-     * @param options {@link SubscriptionOption}s to subscribe with. Note that
-     *                {@link SubscriptionOption#NOTIFY_CANCELLATION} is ineffective because there's no
-     *                cancelling while draining all elements.
-     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
-     */
-    default CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
-        return drainAll(defaultSubscriberExecutor(), options);
-    }
-
-    /**
-     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
-     * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
-     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
-     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
-     * </ul>
-     *
-     * @param executor the executor to retrieve all elements
-     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
-     */
-    CompletableFuture<List<T>> drainAll(EventExecutor executor);
-
-    /**
-     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
-     * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
-     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
-     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
-     * </ul>
-     *
-     * @param executor the executor to retrieve all elements
-     * @param options {@link SubscriptionOption}s to subscribe with. Note that
-     *                {@link SubscriptionOption#NOTIFY_CANCELLATION} is ineffective because there's no
-     *                cancelling while draining all elements.
-     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
-     */
-    CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options);
-
-    /**
      * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link StreamMessage} into one or
      * more {@link StreamMessage}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link StreamMessage} anymore after you call this method.
@@ -334,8 +265,7 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes using
-     * {@link #subscribe(Subscriber)}, {@link #subscribe(Subscriber, SubscriptionOption...)},
-     * {@link #drainAll()} and {@link #drainAll(SubscriptionOption...)}.
+     * {@link #subscribe(Subscriber)}, {@link #subscribe(Subscriber, SubscriptionOption...)}.
      *
      * <p>Please note that if this method is called multiple times, the returned {@link EventExecutor}s can be
      * different depending on this {@link StreamMessage} implementation.

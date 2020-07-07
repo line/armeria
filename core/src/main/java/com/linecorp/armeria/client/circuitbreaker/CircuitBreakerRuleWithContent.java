@@ -17,9 +17,12 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.BiPredicateUtil.toBiPredicateForSecond;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -51,8 +54,21 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * a failure if the specified {@code responseFilter} completes with {@code true}.
      */
     static <T extends Response> CircuitBreakerRuleWithContent<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> responseFilter) {
         return CircuitBreakerRuleWithContent.<T>builder().onResponse(responseFilter).thenFailure();
+    }
+
+    /**
+     * Returns a newly created {@link CircuitBreakerRuleWithContent} that will report a {@link Response} as
+     * a failure if the specified {@code responseFilter} completes with {@code true}.
+     *
+     * @deprecated Use {@link #onResponse(BiFunction)}.
+     */
+    @Deprecated
+    static <T extends Response> CircuitBreakerRuleWithContent<T> onResponse(
+            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
+        return onResponse((unused, res) -> responseFilter.apply(res));
     }
 
     /**
@@ -78,7 +94,20 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "methods can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
-        return builder(headers -> httpMethods.contains(headers.method()));
+        return builder((unused, headers) -> httpMethods.contains(headers.method()));
+    }
+
+    /**
+     * Returns a newly created {@link CircuitBreakerRuleWithContentBuilder} with the specified
+     * {@code requestHeadersFilter}.
+     *
+     * @deprecated Use {@link #builder(BiPredicate)}.
+     */
+    @Deprecated
+    static <T extends Response> CircuitBreakerRuleWithContentBuilder<T> builder(
+            Predicate<? super RequestHeaders> requestHeadersFilter) {
+        requireNonNull(requestHeadersFilter, "requestHeadersFilter");
+        return builder(toBiPredicateForSecond(requestHeadersFilter));
     }
 
     /**
@@ -86,7 +115,7 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * {@code requestHeadersFilter}.
      */
     static <T extends Response> CircuitBreakerRuleWithContentBuilder<T> builder(
-            Predicate<? super RequestHeaders> requestHeadersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         requireNonNull(requestHeadersFilter, "requestHeadersFilter");
         return new CircuitBreakerRuleWithContentBuilder<>(requestHeadersFilter);
     }
@@ -170,4 +199,12 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
     CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
                                                                   @Nullable T response,
                                                                   @Nullable Throwable cause);
+
+    /**
+     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
+     * successful or not.
+     */
+    default boolean requiresResponseTrailers() {
+        return false;
+    }
 }

@@ -23,11 +23,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
@@ -35,6 +36,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.ContextAwareEventLoop;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -59,7 +62,6 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 
 /**
@@ -95,7 +97,9 @@ public final class DefaultServiceRequestContext
     private final RequestLogBuilder log;
 
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private ContextAwareEventLoop contextAwareEventLoop;
+    @Nullable
+    private ContextAwareScheduledExecutorService blockingTaskExecutor;
     @Nullable
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
@@ -154,7 +158,7 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        timeoutScheduler = new TimeoutScheduler(cfg.requestTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -261,12 +265,13 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = makeContextAware(config().server().config().blockingTaskExecutor());
+        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(
+                this, config().server().config().blockingTaskExecutor());
     }
 
     @Override
@@ -286,8 +291,11 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public EventLoop eventLoop() {
-        return ch.eventLoop();
+    public ContextAwareEventLoop eventLoop() {
+        if (contextAwareEventLoop != null) {
+            return contextAwareEventLoop;
+        }
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, ch.eventLoop());
     }
 
     @Override
@@ -303,7 +311,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public long requestTimeoutMillis() {
-        return timeoutScheduler.timeoutMillis();
+        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
     }
 
     @Override
@@ -313,13 +321,14 @@ public final class DefaultServiceRequestContext
 
     @Override
     public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(mode, requestTimeoutMillis);
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
     }
 
-    @Deprecated
     @Override
-    public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
-        timeoutScheduler.setTimeoutAtMillis(requestTimeoutAtMillis);
+    public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         requireNonNull(requestTimeout, "requestTimeout").toNanos());
     }
 
     @Nullable
@@ -445,7 +454,7 @@ public final class DefaultServiceRequestContext
      * a timeout task when a user updates the request timeout configuration.
      */
     void setRequestTimeoutController(TimeoutController requestTimeoutController) {
-        timeoutScheduler.setTimeoutController(requestTimeoutController, eventLoop());
+        timeoutScheduler.setTimeoutController(requestTimeoutController, ch.eventLoop());
     }
 
     @Override

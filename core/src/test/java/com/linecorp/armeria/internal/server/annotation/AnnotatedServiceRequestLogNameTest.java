@@ -20,17 +20,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
+import javax.annotation.Nullable;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.server.annotation.ServiceName;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class AnnotatedServiceRequestLogNameTest {
 
@@ -40,16 +48,13 @@ class AnnotatedServiceRequestLogNameTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService(new Object() {
-                @Get("/ok")
-                public String foo() {
-                    return "OK";
-                }
-
-                @Get("/fail_early")
-                public String bar() {
-                    return "Not OK";
-                }
+            sb.annotatedService(new FooService());
+            sb.annotatedService("/serviceName", new BarService());
+            sb.annotatedService("/decorated", new BarService(), service -> {
+                return service.decorate((delegate, ctx, req) -> {
+                    ctx.logBuilder().name("DecoratedService", ctx.method().name());
+                    return delegate.serve(ctx, req);
+                });
             });
 
             sb.decorator((delegate, ctx, req) -> {
@@ -65,9 +70,17 @@ class AnnotatedServiceRequestLogNameTest {
         }
     };
 
+    @Nullable
+    private WebClient client;
+
+    @BeforeEach
+    void setUp() {
+        client = WebClient.of(server.httpUri());
+    }
+
     @Test
     void logNameShouldBeSet() throws Exception {
-        WebClient.of(server.httpUri()).get("/ok").aggregate().join();
+        client.get("/ok").aggregate().join();
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.name()).isEqualTo("foo");
@@ -76,10 +89,78 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void logNameShouldBeSetOnEarlyFailure() throws Exception {
-        WebClient.of(server.httpUri()).get("/fail_early").aggregate().join();
+        client.get("/fail_early").aggregate().join();
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.name()).isEqualTo("bar");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    void defaultServiceName() throws Exception {
+        client.get("/ok").aggregate().join();
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo(FooService.class.getName());
+    }
+
+    @Test
+    void customServiceNameWithClass() throws Exception {
+        client.get("/serviceName/foo").aggregate().join();
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("MyBarService");
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void customServiceNameWithMethod() throws Exception {
+        final AggregatedHttpResponse response = client.get("/serviceName/bar").aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("SecuredBarService");
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void customServiceNameWithDecorator() throws Exception {
+        final AggregatedHttpResponse response = client.get("/decorated/foo").aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("DecoratedService");
+        assertThat(log.name()).isEqualTo(HttpMethod.GET.name());
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    private static class FooService {
+        @Get("/ok")
+        public String foo(ServiceRequestContext ctx) {
+            assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
+                    .isEqualTo(FooService.class.getName());
+            return "OK";
+        }
+
+        @Get("/fail_early")
+        public String bar() {
+            return "Not OK";
+        }
+    }
+
+    @ServiceName("MyBarService")
+    private static class BarService {
+        @Get("/foo")
+        public String foo() {
+            return "OK";
+        }
+
+        @ServiceName("SecuredBarService")
+        @Get("/bar")
+        public String secured(ServiceRequestContext ctx) {
+            assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
+                    .isEqualTo("SecuredBarService");
+            return "OK";
+        }
     }
 }

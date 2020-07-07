@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
+import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
@@ -114,7 +115,7 @@ public class ArmeriaServerCallTest {
                 MAX_MESSAGE_BYTES,
                 ctx,
                 GrpcSerializationFormats.PROTO,
-                MessageMarshaller.builder().build(),
+                new DefaultJsonMarshaller(MessageMarshaller.builder().build()),
                 false,
                 false,
                 ResponseHeaders.builder(HttpStatus.OK)
@@ -169,7 +170,7 @@ public class ArmeriaServerCallTest {
                 MAX_MESSAGE_BYTES,
                 ctx,
                 GrpcSerializationFormats.PROTO,
-                MessageMarshaller.builder().build(),
+                new DefaultJsonMarshaller(MessageMarshaller.builder().build()),
                 true,
                 false,
                 ResponseHeaders.builder(HttpStatus.OK)

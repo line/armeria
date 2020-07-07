@@ -169,25 +169,38 @@ public interface MeterIdPrefixFunction {
      */
     default MeterIdPrefixFunction withTags(Iterable<Tag> tags) {
         requireNonNull(tags, "tags");
-        return andThen((registry, id) -> id.withTags(tags));
+        return andThen((registry, log, meterIdPrefix) -> meterIdPrefix.withTags(tags));
+    }
+
+    /**
+     * Returns a {@link MeterIdPrefixFunction} that applies transformation on the {@link MeterIdPrefix}
+     * returned by this function.
+     *
+     * @deprecated Use {@link #andThen(MeterIdPrefixFunctionCustomizer)} instead.
+     */
+    @Deprecated
+    default MeterIdPrefixFunction andThen(BiFunction<MeterRegistry, MeterIdPrefix, MeterIdPrefix> function) {
+        requireNonNull(function, "function");
+        return andThen((registry, log, meterIdPrefix) -> function.apply(registry, meterIdPrefix));
     }
 
     /**
      * Returns a {@link MeterIdPrefixFunction} that applies transformation on the {@link MeterIdPrefix}
      * returned by this function.
      */
-    default MeterIdPrefixFunction andThen(BiFunction<MeterRegistry, MeterIdPrefix, MeterIdPrefix> function) {
+    default MeterIdPrefixFunction andThen(MeterIdPrefixFunctionCustomizer function) {
         requireNonNull(function, "function");
         return new MeterIdPrefixFunction() {
             @Override
             public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
-                return function.apply(registry, MeterIdPrefixFunction.this.activeRequestPrefix(registry, log));
+                return function.apply(registry, log,
+                                      MeterIdPrefixFunction.this.activeRequestPrefix(registry, log));
             }
 
             @Override
             public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
-                return function.apply(
-                        registry, MeterIdPrefixFunction.this.completeRequestPrefix(registry, log));
+                return function.apply(registry, log,
+                                      MeterIdPrefixFunction.this.completeRequestPrefix(registry, log));
             }
         };
     }

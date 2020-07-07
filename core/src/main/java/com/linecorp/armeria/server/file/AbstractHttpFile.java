@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -54,7 +56,7 @@ public abstract class AbstractHttpFile implements HttpFile {
     private final boolean lastModifiedEnabled;
     @Nullable
     private final BiFunction<String, HttpFileAttributes, String> entityTagFunction;
-    private final HttpHeaders headers;
+    private final HttpHeaders additionalHeaders;
 
     /**
      * Creates a new instance.
@@ -66,21 +68,21 @@ public abstract class AbstractHttpFile implements HttpFile {
      * @param lastModifiedEnabled whether to add the {@code "last-modified"} header automatically
      * @param entityTagFunction the {@link BiFunction} that generates an entity tag from the file's attributes.
      *                          {@code null} to disable setting the {@code "etag"} header.
-     * @param headers the additional headers to set
+     * @param additionalHeaders the additional headers to set
      */
     protected AbstractHttpFile(@Nullable MediaType contentType,
                                Clock clock,
                                boolean dateEnabled,
                                boolean lastModifiedEnabled,
                                @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
-                               HttpHeaders headers) {
+                               HttpHeaders additionalHeaders) {
 
         this.contentType = contentType;
         this.clock = requireNonNull(clock, "clock");
         this.dateEnabled = dateEnabled;
         this.lastModifiedEnabled = lastModifiedEnabled;
         this.entityTagFunction = entityTagFunction;
-        this.headers = requireNonNull(headers, "headers");
+        this.additionalHeaders = requireNonNull(additionalHeaders, "additionalHeaders");
     }
 
     /**
@@ -126,8 +128,8 @@ public abstract class AbstractHttpFile implements HttpFile {
      * Returns the immutable additional {@link HttpHeaders} which will be set when building an
      * {@link HttpResponse}.
      */
-    protected final HttpHeaders headers() {
-        return headers;
+    protected final HttpHeaders additionalHeaders() {
+        return additionalHeaders;
     }
 
     /**
@@ -142,14 +144,18 @@ public abstract class AbstractHttpFile implements HttpFile {
         return entityTagFunction != null ? entityTagFunction.apply(pathOrUri(), attrs) : null;
     }
 
-    @Nullable
     @Override
-    public ResponseHeaders readHeaders() throws IOException {
-        return readHeaders(readAttributes());
+    public CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
+        return readAttributes(fileReadExecutor).thenApply(this::readHeaders);
     }
 
+    /**
+     * Generates the {@link ResponseHeaders} from the specified {@link HttpFileAttributes}.
+     *
+     * @return the {@link ResponseHeaders}, or {@code null} if {@code attrs} is {@code null}.
+     */
     @Nullable
-    private ResponseHeaders readHeaders(@Nullable HttpFileAttributes attrs) throws IOException {
+    protected final ResponseHeaders readHeaders(@Nullable HttpFileAttributes attrs) {
         if (attrs == null) {
             return null;
         }
@@ -177,32 +183,38 @@ public abstract class AbstractHttpFile implements HttpFile {
             headers.set(HttpHeaderNames.ETAG, '\"' + etag + '\"');
         }
 
-        headers.set(this.headers);
+        headers.set(this.additionalHeaders);
         return headers.build();
     }
 
-    @Nullable
     @Override
-    public final HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+    public final CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
         requireNonNull(alloc, "alloc");
 
+        return readAttributes(fileReadExecutor)
+                .thenApply(attrs -> read(fileReadExecutor, alloc, attrs))
+                .exceptionally(cause -> HttpResponse.ofFailure(Exceptions.peel(cause)));
+    }
+
+    @Nullable
+    private HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc,
+                              @Nullable HttpFileAttributes attrs) {
+        final ResponseHeaders headers = readHeaders(attrs);
+        if (headers == null) {
+            return null;
+        }
+
+        final long length = attrs.length();
+        if (length == 0) {
+            // No need to stream an empty file.
+            return HttpResponse.of(headers);
+        }
+
         try {
-            final HttpFileAttributes attrs = readAttributes();
-            final ResponseHeaders headers = readHeaders(attrs);
-            if (headers == null) {
-                return null;
-            }
-
-            final long length = attrs.length();
-            if (length == 0) {
-                // No need to stream an empty file.
-                return HttpResponse.of(headers);
-            }
-
             return doRead(headers, length, fileReadExecutor, alloc);
-        } catch (Exception e) {
-            return HttpResponse.ofFailure(e);
+        } catch (IOException e) {
+            return Exceptions.throwUnsafely(e);
         }
     }
 
@@ -234,60 +246,62 @@ public abstract class AbstractHttpFile implements HttpFile {
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }
 
-            final HttpFileAttributes attrs = readAttributes();
-            if (attrs == null) {
-                return HttpResponse.of(HttpStatus.NOT_FOUND);
-            }
-
-            // See https://tools.ietf.org/html/rfc7232#section-6 for more information
-            // about how conditional requests are handled.
-
-            // Handle 'if-none-match' header.
-            final RequestHeaders reqHeaders = req.headers();
-            final String etag = generateEntityTag(attrs);
-            final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
-            if (etag != null && ifNoneMatch != null) {
-                if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
-                    return newNotModified(attrs, etag);
+            return HttpResponse.from(readAttributes(ctx.blockingTaskExecutor()).thenApply(attrs -> {
+                if (attrs == null) {
+                    return HttpResponse.of(HttpStatus.NOT_FOUND);
                 }
-            }
 
-            // Handle 'if-modified-since' header, only if 'if-none-match' does not exist.
-            if (ifNoneMatch == null) {
-                try {
-                    final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
-                    if (ifModifiedSince != null) {
-                        // HTTP-date does not have subsecond-precision; add 999ms to it.
-                        final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
-                        if (attrs.lastModifiedMillis() <= ifModifiedSinceMillis) {
-                            return newNotModified(attrs, etag);
+                // See https://tools.ietf.org/html/rfc7232#section-6 for more information
+                // about how conditional requests are handled.
+
+                // Handle 'if-none-match' header.
+                final RequestHeaders reqHeaders = req.headers();
+                final String etag = generateEntityTag(attrs);
+                final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
+                if (etag != null && ifNoneMatch != null) {
+                    if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
+                        return newNotModified(attrs, etag);
+                    }
+                }
+
+                // Handle 'if-modified-since' header, only if 'if-none-match' does not exist.
+                if (ifNoneMatch == null) {
+                    try {
+                        final Long ifModifiedSince =
+                                reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
+                        if (ifModifiedSince != null) {
+                            // HTTP-date does not have subsecond-precision; add 999ms to it.
+                            final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
+                            if (attrs.lastModifiedMillis() <= ifModifiedSinceMillis) {
+                                return newNotModified(attrs, etag);
+                            }
                         }
+                    } catch (Exception ignore) {
+                        // Malformed date.
                     }
-                } catch (Exception ignore) {
-                    // Malformed date.
                 }
-            }
 
-            // Precondition did not match. Handle as usual.
-            switch (ctx.method()) {
-                case HEAD:
-                    final ResponseHeaders resHeaders = readHeaders();
-                    if (resHeaders != null) {
-                        return HttpResponse.of(resHeaders);
-                    }
-                    break;
-                case GET:
-                    final HttpResponse res = read(ctx.blockingTaskExecutor(), ctx.alloc());
-                    if (res != null) {
-                        return res;
-                    }
-                    break;
-                default:
-                    throw new Error(); // Never reaches here.
-            }
+                // Precondition did not match. Handle as usual.
+                switch (ctx.method()) {
+                    case HEAD:
+                        final ResponseHeaders resHeaders = readHeaders(attrs);
+                        if (resHeaders != null) {
+                            return HttpResponse.of(resHeaders);
+                        }
+                        break;
+                    case GET:
+                        final HttpResponse res = read(ctx.blockingTaskExecutor(), ctx.alloc(), attrs);
+                        if (res != null) {
+                            return res;
+                        }
+                        break;
+                    default:
+                        throw new Error(); // Never reaches here.
+                }
 
-            // readHeaders() or read() returned null above.
-            return HttpResponse.of(HttpStatus.NOT_FOUND);
+                // readHeaders() or read() returned null above.
+                return HttpResponse.of(HttpStatus.NOT_FOUND);
+            }));
         };
     }
 

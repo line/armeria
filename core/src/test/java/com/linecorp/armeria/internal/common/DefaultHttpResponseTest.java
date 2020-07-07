@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
@@ -41,10 +41,10 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import reactor.test.StepVerifier;
 
 class DefaultHttpResponseTest {
 
@@ -53,36 +53,45 @@ class DefaultHttpResponseTest {
         // Always headers only.
         final HttpResponseWriter res1 = HttpResponse.streaming();
         res1.close(AggregatedHttpResponse.of(204));
-        assertThat(res1.drainAll().join()).containsExactly(ResponseHeaders.of(204));
+        StepVerifier.create(res1)
+                    .expectNext(ResponseHeaders.of(204))
+                    .expectComplete()
+                    .verify();
 
         // Headers only.
         final HttpResponseWriter res2 = HttpResponse.streaming();
         res2.close(AggregatedHttpResponse.of(ResponseHeaders.of(200)));
-        assertThat(res2.drainAll().join()).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 0));
+        StepVerifier.create(res2)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 0))
+                    .expectComplete()
+                    .verify();
 
         // Headers and body.
         final HttpResponseWriter res3 = HttpResponse.streaming();
         res3.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), HttpData.ofUtf8("foo")));
-        assertThat(res3.drainAll().join()).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3),
-                HttpData.ofUtf8("foo"));
+        StepVerifier.create(res3)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3))
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectComplete()
+                    .verify();
 
         // Headers, body and trailers.
         final HttpResponseWriter res4 = HttpResponse.streaming();
         res4.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), HttpData.ofUtf8("bar"),
                                              HttpHeaders.of("x-trailer", true)));
-        assertThat(res4.drainAll().join()).containsExactly(
-                ResponseHeaders.of(200),
-                HttpData.ofUtf8("bar"),
-                HttpHeaders.of("x-trailer", true));
+        StepVerifier.create(res4)
+                    .expectNext(ResponseHeaders.of(200))
+                    .expectNext(HttpData.ofUtf8("bar"))
+                    .expectNext(HttpHeaders.of("x-trailer", true))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
     void closeMustReleaseAggregatedContent() {
         final HttpResponseWriter res = HttpResponse.streaming();
-        final ByteBufHttpData data =
-                new ByteBufHttpData(Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8), true);
+        final PooledHttpData data =
+                PooledHttpData.wrap(Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8)).withEndOfStream();
         res.close();
         res.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), data));
         assertThat(data.refCnt()).isZero();
@@ -92,26 +101,17 @@ class DefaultHttpResponseTest {
      * The aggregation future must be completed even if the response being aggregated has been aborted.
      */
     @ParameterizedTest
-    @ArgumentsSource(ParametersProvider.class)
-    void abortedAggregation(boolean executorSpecified, boolean withPooledObjects) {
+    @ValueSource(booleans = { true, false })
+    void abortedAggregation(boolean executorSpecified) {
         final Thread mainThread = Thread.currentThread();
         final HttpResponseWriter res = HttpResponse.streaming();
         final CompletableFuture<AggregatedHttpResponse> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
-            if (withPooledObjects) {
-                future = res.aggregateWithPooledObjects(
-                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
-            } else {
-                future = res.aggregate(CommonPools.workerGroup().next());
-            }
+             future = res.aggregate(CommonPools.workerGroup().next());
         } else {
-            if (withPooledObjects) {
-                future = res.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
-            } else {
-                future = res.aggregate();
-            }
+            future = res.aggregate();
         }
 
         final AtomicReference<Thread> callbackThread = new AtomicReference<>();

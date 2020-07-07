@@ -72,13 +72,13 @@ import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/docs/server-annotated-service">
- * Annotated HTTP Service</a> to use this.
+ * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
 public class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
@@ -109,6 +109,7 @@ public class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
+    private final String defaultServiceName;
 
     AnnotatedService(Object object, Method method,
                      List<AnnotatedValueResolver> resolvers,
@@ -139,6 +140,16 @@ public class AnnotatedService implements HttpService {
             responseType = ResponseType.COMPLETION_STAGE;
         } else {
             responseType = ResponseType.OTHER_OBJECTS;
+        }
+
+        ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
+        if (serviceName == null) {
+            serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
+        }
+        if (serviceName != null) {
+            defaultServiceName = serviceName.value();
+        } else {
+            defaultServiceName = object.getClass().getName();
         }
 
         this.method.setAccessible(true);
@@ -197,7 +208,7 @@ public class AnnotatedService implements HttpService {
     }
 
     public String serviceName() {
-        return method.getDeclaringClass().getName();
+        return defaultServiceName;
     }
 
     public String methodName() {
@@ -245,44 +256,38 @@ public class AnnotatedService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
+                final Function<AggregatedHttpRequest, HttpResponse> httpResponseApplyFunction =
+                        msg -> new ExceptionFilteredHttpResponse(
+                                ctx, req, (HttpResponse) invoke(ctx, req, msg), exceptionHandler);
                 if (useBlockingTaskExecutor) {
-                    return f.thenApplyAsync(
-                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
-                                                                     (HttpResponse) invoke(ctx, req, msg),
-                                                                     exceptionHandler),
-                            ctx.blockingTaskExecutor());
+                    return f.thenApplyAsync(httpResponseApplyFunction, ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(
-                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
-                                                                     (HttpResponse) invoke(ctx, req, msg),
-                                                                     exceptionHandler));
+                    return f.thenApply(httpResponseApplyFunction);
                 }
 
             case COMPLETION_STAGE:
+                final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
-                    return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
-                                              ctx.blockingTaskExecutor())
-                            .handle((result, cause) ->
-                                            cause == null ? convertResponse(ctx, req, null, result,
-                                                                            HttpHeaders.of())
-                                                          : exceptionHandler.handleException(ctx, req, cause));
+                    composedFuture = f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
+                                                        ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
-                            .handle((result, cause) ->
-                                            cause == null ? convertResponse(ctx, req, null, result,
-                                                                            HttpHeaders.of())
-                                                          : exceptionHandler.handleException(ctx, req, cause));
+                    composedFuture = f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)));
                 }
+                return composedFuture.handle(
+                        (result, cause) -> {
+                            if (cause != null) {
+                                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
+                            }
+                            return convertResponse(ctx, req, null, result, HttpHeaders.of());
+                        });
 
             default:
+                final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
+                        msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());
                 if (useBlockingTaskExecutor) {
-                    return f.thenApplyAsync(
-                            msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                   HttpHeaders.of()),
-                            ctx.blockingTaskExecutor());
+                    return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                              HttpHeaders.of()));
+                    return f.thenApply(defaultApplyFunction);
                 }
         }
     }
@@ -297,6 +302,14 @@ public class AnnotatedService implements HttpService {
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             return method.invoke(object, arguments);
         } catch (Throwable cause) {
+            return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
+        }
+    }
+
+    private static HttpResponse handleExceptionWithContext(ExceptionHandlerFunction exceptionHandler,
+                                                           ServiceRequestContext ctx, HttpRequest req,
+                                                           Throwable cause) {
+        try (SafeCloseable ignored = ctx.push()) {
             return exceptionHandler.handleException(ctx, req, cause);
         }
     }
@@ -332,10 +345,11 @@ public class AnnotatedService implements HttpService {
                     ((CompletionStage<?>) result)
                             .thenApply(object -> convertResponse(ctx, req, newHeaders, object,
                                                                  newTrailers))
-                            .exceptionally(cause -> exceptionHandler.handleException(ctx, req, cause)));
+                            .exceptionally(
+                                    cause -> handleExceptionWithContext(exceptionHandler, ctx, req, cause)));
         }
 
-        try {
+        try (SafeCloseable ignored = ctx.push()) {
             final HttpResponse response =
                     responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
             if (response instanceof HttpResponseWriter) {
@@ -345,7 +359,7 @@ public class AnnotatedService implements HttpService {
                 return response;
             }
         } catch (Exception cause) {
-            return exceptionHandler.handleException(ctx, req, cause);
+            return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
         }
     }
 
@@ -408,13 +422,13 @@ public class AnnotatedService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             try {
-                final HttpResponse response = delegate().serve(ctx, req);
+                final HttpResponse response = unwrap().serve(ctx, req);
                 if (response instanceof ExceptionFilteredHttpResponse) {
                     return response;
                 }
                 return new ExceptionFilteredHttpResponse(ctx, req, response, exceptionHandler);
             } catch (Exception cause) {
-                return exceptionHandler.handleException(ctx, req, cause);
+                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
             }
         }
     }
@@ -450,7 +464,7 @@ public class AnnotatedService implements HttpService {
                 // Do not convert again if it has been already converted.
                 return cause;
             }
-            return HttpResponseException.of(exceptionHandler.handleException(ctx, req, cause));
+            return HttpResponseException.of(handleExceptionWithContext(exceptionHandler, ctx, req, cause));
         }
     }
 
@@ -578,12 +592,12 @@ public class AnnotatedService implements HttpService {
             assert f != null;
             return HttpResponse.from(f.handle((aggregated, cause) -> {
                 if (cause != null) {
-                    return exceptionHandler.handleException(ctx, ctx.request(), cause);
+                    return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), cause);
                 }
                 try {
                     return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
                 } catch (Exception e) {
-                    return exceptionHandler.handleException(ctx, ctx.request(), e);
+                    return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), e);
                 }
             }));
         }

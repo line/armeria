@@ -8,16 +8,16 @@ buildscript {
 }
 
 apply plugin: 'me.champeau.gradle.jmh'
-
 def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
 
 dependencies {
     implementation project(':grpc')
     implementation project(':grpc-protocol')
     implementation project(':retrofit2')
-    implementation project(':thrift')
+    implementation project(':thrift0.13')
 
     implementation 'com.squareup.retrofit2:converter-jackson'
+    implementation 'com.google.protobuf:protobuf-java-util'
     implementation 'io.grpc:grpc-okhttp'
     implementation 'io.grpc:grpc-netty-shaded'
     implementation 'org.awaitility:awaitility'
@@ -76,6 +76,15 @@ jmh {
         rootProject.findProperty('jmh.params').split(';').each {
             def parts = it.split('=')
             benchmarkParameters[parts[0]] = parts[1].tokenize(',')
+        }
+    }
+}
+
+// Workaround a bug where the conflict of output path between 'benchmarks.jmh' and 'benchmarks.test' in IDEA
+project.afterEvaluate {
+    idea {
+        module {
+            testSourceDirs = []
         }
     }
 }

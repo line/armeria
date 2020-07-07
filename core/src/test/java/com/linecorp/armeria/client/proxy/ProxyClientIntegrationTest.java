@@ -59,8 +59,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -103,7 +103,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.ReferenceCountUtil;
 
-public class ProxyClientIntegrationTest {
+class ProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
     private static final String SUCCESS_RESPONSE = "success";
 
@@ -274,8 +274,11 @@ public class ProxyClientIntegrationTest {
         });
 
         final ClientFactory clientFactory =
-                ClientFactory.builder().proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
-                             .useHttp2Preface(false).build();
+                ClientFactory.builder()
+                             .useHttp2Preface(false)
+                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                             .build();
+
         final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -311,7 +314,10 @@ public class ProxyClientIntegrationTest {
         });
 
         final ClientFactory clientFactory =
-                ClientFactory.builder().proxyConfig(ProxyConfig.connect(httpProxyServer.address())).build();
+                ClientFactory.builder()
+                             .useHttp2Preface(true)
+                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                             .build();
         final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())

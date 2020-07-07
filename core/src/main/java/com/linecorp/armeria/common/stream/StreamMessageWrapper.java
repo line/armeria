@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
@@ -74,21 +73,6 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         delegate().subscribe(subscriber, executor, options);
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-        return cast(delegate().drainAll(executor));
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        return cast(delegate().drainAll(executor, options));
-    }
-
-    @SuppressWarnings("unchecked")
-    private CompletableFuture<List<T>> cast(CompletableFuture<? extends List<? extends T>> future) {
-        return (CompletableFuture<List<T>>) future;
     }
 
     @Override

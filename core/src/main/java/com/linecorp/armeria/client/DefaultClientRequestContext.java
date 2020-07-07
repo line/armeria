@@ -23,13 +23,19 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -38,6 +44,7 @@ import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -49,6 +56,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
@@ -59,6 +67,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 
@@ -84,6 +93,8 @@ public final class DefaultClientRequestContext
     private EndpointGroup endpointGroup;
     @Nullable
     private Endpoint endpoint;
+    @Nullable
+    private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private final String fragment;
     @Nullable
@@ -172,7 +183,7 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new TimeoutScheduler(options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
 
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
@@ -194,47 +205,82 @@ public final class DefaultClientRequestContext
      *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
      *         completed with the cause of the failure.
      */
-    public boolean init(EndpointGroup endpointGroup) {
+    public CompletableFuture<Boolean> init(EndpointGroup endpointGroup) {
         assert endpoint == null : endpoint;
         assert !initialized;
         initialized = true;
 
-        Throwable cause = null;
         try {
             if (endpointGroup instanceof Endpoint) {
-                this.endpointGroup = null;
-                updateEndpoint((Endpoint) endpointGroup);
-                runThreadLocalContextCustomizers();
+                return initEndpoint((Endpoint) endpointGroup);
             } else {
-                this.endpointGroup = endpointGroup;
-                // Note: thread-local customizer must be run before EndpointSelector.select()
-                //       so that the customizer can inject the attributes which may be required
-                //       by the EndpointSelector.
-                runThreadLocalContextCustomizers();
-                updateEndpoint(endpointGroup.select(this));
+                return initEndpointGroup(endpointGroup);
             }
         } catch (Throwable t) {
-            cause = t;
+            acquireEventLoop(endpointGroup);
+            failEarly(t);
+            return UnmodifiableFuture.completedFuture(false);
+        }
+    }
+
+    private UnmodifiableFuture<Boolean> initEndpoint(Endpoint endpoint) {
+        endpointGroup = null;
+        updateEndpoint(endpoint);
+        runThreadLocalContextCustomizers();
+        acquireEventLoop(endpoint);
+        return UnmodifiableFuture.completedFuture(true);
+    }
+
+    private CompletableFuture<Boolean> initEndpointGroup(EndpointGroup endpointGroup) {
+        this.endpointGroup = endpointGroup;
+        // Note: thread-local customizer must be run before EndpointSelector.select()
+        //       so that the customizer can inject the attributes which may be required
+        //       by the EndpointSelector.
+        runThreadLocalContextCustomizers();
+        final Endpoint endpoint = endpointGroup.selectNow(this);
+        if (endpoint != null) {
+            updateEndpoint(endpoint);
+            acquireEventLoop(endpointGroup);
+            return UnmodifiableFuture.completedFuture(true);
         }
 
+        // Use an arbitrary event loop for asynchronous Endpoint selection.
+        final EventLoop temporaryEventLoop = options().factory().eventLoopSupplier().get();
+        return endpointGroup.select(this, temporaryEventLoop, connectTimeoutMillis()).handle((e, cause) -> {
+            updateEndpoint(e);
+            acquireEventLoop(endpointGroup);
+
+            final boolean success;
+            if (cause != null) {
+                failEarly(cause);
+                success = false;
+            } else {
+                success = true;
+            }
+
+            final EventLoop acquiredEventLoop = eventLoop();
+            if (acquiredEventLoop == temporaryEventLoop) {
+                // We were lucky. No need to hand over to other EventLoop.
+                return UnmodifiableFuture.completedFuture(success);
+            } else {
+                // We need to hand over to the acquired EventLoop.
+                return CompletableFuture.supplyAsync(() -> success, acquiredEventLoop);
+            }
+        }).thenCompose(Function.identity());
+    }
+
+    private void updateEndpoint(@Nullable Endpoint endpoint) {
+        this.endpoint = endpoint;
+        autoFillSchemeAndAuthority();
+    }
+
+    private void acquireEventLoop(EndpointGroup endpointGroup) {
         if (eventLoop == null) {
             final ReleasableHolder<EventLoop> releasableEventLoop =
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
         }
-
-        if (cause != null) {
-            failEarly(cause);
-            return false;
-        }
-
-        return true;
-    }
-
-    private void updateEndpoint(@Nullable Endpoint endpoint) {
-        this.endpoint = endpoint;
-        autoFillSchemeAndAuthority();
     }
 
     private void runThreadLocalContextCustomizers() {
@@ -247,17 +293,25 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private void failEarly(Throwable cause) {
-        final RequestLogBuilder logBuilder = logBuilder();
-        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
-        logBuilder.endRequest(wrapped);
-        logBuilder.endResponse(wrapped);
+    private long connectTimeoutMillis() {
+        final Integer boxedConnectTimeoutMillis =
+                (Integer) options.factory().options().channelOptions().get(
+                        ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        return boxedConnectTimeoutMillis != null ? boxedConnectTimeoutMillis.longValue()
+                                                 : Flags.defaultConnectTimeoutMillis();
+    }
 
+    private void failEarly(Throwable cause) {
+        final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
             autoFillSchemeAndAuthority();
-            req.abort(cause);
+            req.abort(wrapped);
         }
+
+        final RequestLogBuilder logBuilder = logBuilder();
+        logBuilder.endRequest(wrapped);
+        logBuilder.endResponse(wrapped);
     }
 
     private void autoFillSchemeAndAuthority() {
@@ -269,9 +323,12 @@ public final class DefaultClientRequestContext
         final RequestHeaders headers = req.headers();
         final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
         if (headers.scheme() == null || !authority.equals(headers.authority())) {
-            unsafeUpdateRequest(req.withHeaders(headers.toBuilder()
-                                                       .authority(authority)
-                                                       .scheme(sessionProtocol())));
+            final RequestHeadersBuilder headersBuilder =
+                    headers.toBuilder()
+                           .removeAndThen(HttpHeaderNames.HOST)
+                           .authority(authority)
+                           .scheme(sessionProtocol());
+            unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
     }
 
@@ -294,7 +351,7 @@ public final class DefaultClientRequestContext
             requireNonNull(rpcReq, "rpcReq");
         }
 
-        eventLoop = ctx.eventLoop();
+        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         endpointGroup = ctx.endpointGroup();
         updateEndpoint(endpoint);
@@ -302,7 +359,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(ctx.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
@@ -365,9 +422,12 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public EventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
-        return eventLoop;
+        if (contextAwareEventLoop != null) {
+            return contextAwareEventLoop;
+        }
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override
@@ -426,7 +486,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return timeoutScheduler.timeoutMillis();
+        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
     }
 
     @Override
@@ -436,13 +496,14 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(requireNonNull(mode, "mode"), responseTimeoutMillis);
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
     }
 
-    @Deprecated
     @Override
-    public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
-        timeoutScheduler.setTimeoutAtMillis(responseTimeoutAtMillis);
+    public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
+        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                         requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override
@@ -464,7 +525,7 @@ public final class DefaultClientRequestContext
      * a timeout task when a user updates the response timeout configuration.
      */
     void setResponseTimeoutController(TimeoutController responseTimeoutController) {
-        timeoutScheduler.setTimeoutController(responseTimeoutController, eventLoop);
+        timeoutScheduler.setTimeoutController(responseTimeoutController, eventLoop());
     }
 
     @Override

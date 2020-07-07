@@ -23,13 +23,10 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -38,9 +35,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class KafkaAccessLogWriterTest {
-    @Rule
-    public final MockitoRule mockitoRule = MockitoJUnit.rule();
+class KafkaAccessLogWriterTest {
 
     private static final String TOPIC_NAME = "topic-test";
 
@@ -64,7 +59,7 @@ public class KafkaAccessLogWriterTest {
     private ArgumentCaptor<ProducerRecord<String, String>> captor;
 
     @Test
-    public void withoutKeyExtractor() {
+    void withoutKeyExtractor() {
         final KafkaAccessLogWriter<String, String> service =
                 new KafkaAccessLogWriter<>(producer, TOPIC_NAME, log -> log.requestHeaders().authority());
 
@@ -78,7 +73,7 @@ public class KafkaAccessLogWriterTest {
     }
 
     @Test
-    public void withKeyExtractor() {
+    void withKeyExtractor() {
         final KafkaAccessLogWriter<String, String> service =
                 new KafkaAccessLogWriter<>(producer, TOPIC_NAME,
                                            log -> log.context().decodedPath(),
@@ -94,7 +89,7 @@ public class KafkaAccessLogWriterTest {
     }
 
     @Test
-    public void closeProducerWhenRequested() {
+    void closeProducerWhenRequested() {
         final KafkaAccessLogWriter<String, String> service =
                 new KafkaAccessLogWriter<>(producer, TOPIC_NAME, log -> "");
 

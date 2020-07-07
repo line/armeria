@@ -16,19 +16,20 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -38,7 +39,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -76,8 +77,8 @@ class HttpDecodedResponseTest {
 
     @Test
     void pooledPayload_unpooledDrain() {
-        final ByteBufHttpData payload = new ByteBufHttpData(
-                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
+        final PooledHttpData payload = PooledHttpData.wrap(
+                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD)).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, false);
@@ -99,8 +100,8 @@ class HttpDecodedResponseTest {
 
     @Test
     void pooledPayload_pooledDrain() {
-        final ByteBufHttpData payload = new ByteBufHttpData(
-                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
+        final PooledHttpData payload = PooledHttpData.wrap(
+                ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD)).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, true);
@@ -110,16 +111,48 @@ class HttpDecodedResponseTest {
     }
 
     private static ByteBuf responseBuf(HttpResponse decoded, boolean withPooledObjects) {
-        final CompletableFuture<List<HttpObject>> future;
+        final CompletableFuture<ByteBuf> future = new CompletableFuture<>();
         if (withPooledObjects) {
-            future = decoded.drainAll(WITH_POOLED_OBJECTS);
+            decoded.subscribe(new Subscriber<HttpObject>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Long.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(HttpObject o) {
+                    if (o instanceof PooledHttpData) {
+                        future.complete(((PooledHttpData) o).content());
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onComplete() {}
+            }, WITH_POOLED_OBJECTS);
         } else {
-            future = decoded.drainAll();
+            decoded.subscribe(new Subscriber<HttpObject>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Long.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(HttpObject o) {
+                    if (o instanceof PooledHttpData) {
+                        future.complete(((PooledHttpData) o).content());
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onComplete() {}
+            });
         }
-        return future.join().stream()
-                .filter(o -> o instanceof ByteBufHttpData)
-                .map(o -> ((ByteBufHttpData) o).content())
-                .findFirst()
-                .get();
+        return future.join();
     }
 }

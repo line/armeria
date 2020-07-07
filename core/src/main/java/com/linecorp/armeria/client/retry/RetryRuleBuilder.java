@@ -21,14 +21,17 @@ import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
-import com.google.common.base.MoreObjects;
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -40,7 +43,7 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  */
 public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
-    RetryRuleBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    RetryRuleBuilder(BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
@@ -68,35 +71,36 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     private RetryRule build(RetryDecision decision) {
         if (decision != RetryDecision.noRetry() &&
-            exceptionFilter() == null && responseHeadersFilter() == null) {
+            exceptionFilter() == null && responseHeadersFilter() == null && responseTrailersFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
-                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(),
-                                                    responseHeadersFilter(),
-                                                    exceptionFilter(), false);
-        return build(ruleFilter, decision);
+                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
+                                                    responseTrailersFilter(), exceptionFilter(), false);
+        return build(ruleFilter, decision, responseTrailersFilter() != null);
     }
 
     static RetryRule build(BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
-                           RetryDecision decision) {
+                           RetryDecision decision, boolean requiresResponseTrailers) {
         final CompletableFuture<RetryDecision> decisionFuture;
         if (decision == RetryDecision.DEFAULT) {
             decisionFuture = DEFAULT_DECISION;
         } else {
             decisionFuture = CompletableFuture.completedFuture(decision);
         }
-        return ruleFilter.andThen(matched -> matched ? decisionFuture : NEXT_DECISION)::apply;
-    }
 
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("requestHeadersFilter", requestHeadersFilter())
-                          .add("responseHeadersFilter", responseHeadersFilter())
-                          .add("exceptionFilter", exceptionFilter())
-                          .toString();
+        return new RetryRule() {
+            @Override
+            public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
+                                                              @Nullable Throwable cause) {
+                return ruleFilter.apply(ctx, cause) ? decisionFuture : NEXT_DECISION;
+            }
+
+            @Override
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
+            }
+        };
     }
 
     // Override the return type of the chaining methods in the superclass.
@@ -107,8 +111,46 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public RetryRuleBuilder onResponseHeaders(
+            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
+        return (RetryRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRule} which will retry
+     * if the {@code responseHeadersFilter} returns {@code true}.
+     *
+     * @deprecated Use {@link #onResponseHeaders(BiPredicate)}.
+     */
+    @Deprecated
+    @Override
+    public RetryRuleBuilder onResponseHeaders(
             Predicate<? super ResponseHeaders> responseHeadersFilter) {
         return (RetryRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
+     * response buffered, which may lead to excessive memory usage.
+     */
+    @Override
+    public RetryRuleBuilder onResponseTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
+        return (RetryRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
+     * response buffered, which may lead to excessive memory usage.
+     *
+     * @deprecated Use {@link #onResponseTrailers(BiPredicate)}.
+     */
+    @Deprecated
+    @Override
+    public RetryRuleBuilder onResponseTrailers(
+            Predicate<? super HttpHeaders> responseTrailersFilter) {
+        return (RetryRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
     }
 
     /**
@@ -161,6 +203,19 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      * if a response status matches the specified {@code statusFilter}.
      */
     @Override
+    public RetryRuleBuilder onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
+        return (RetryRuleBuilder) super.onStatus(statusFilter);
+    }
+
+    /**
+     * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
+     * if a response status matches the specified {@code statusFilter}.
+     *
+     * @deprecated Use {@link #onStatus(BiPredicate)}.
+     */
+    @Deprecated
+    @Override
     public RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
         return (RetryRuleBuilder) super.onStatus(statusFilter);
     }
@@ -178,6 +233,19 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
+    @Override
+    public RetryRuleBuilder onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
+        return (RetryRuleBuilder) super.onException(exceptionFilter);
+    }
+
+    /**
+     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
+     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     *
+     * @deprecated Use {@link #onException(BiPredicate)}.
+     */
+    @Deprecated
     @Override
     public RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
         return (RetryRuleBuilder) super.onException(exceptionFilter);

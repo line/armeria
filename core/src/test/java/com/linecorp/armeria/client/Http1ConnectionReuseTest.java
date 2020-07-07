@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -108,17 +108,6 @@ class Http1ConnectionReuseTest {
                 };
                 executor.execute(() -> subscriber.onSubscribe(subscription));
                 executor.execute(subscriber::onComplete);
-            }
-
-            @Override
-            public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
-                return null;
-            }
-
-            @Override
-            public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor,
-                                                                SubscriptionOption... options) {
-                return null;
             }
 
             @Override

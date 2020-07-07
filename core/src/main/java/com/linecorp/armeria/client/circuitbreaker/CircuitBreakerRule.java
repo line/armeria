@@ -17,9 +17,11 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.BiPredicateUtil.toBiPredicateForSecond;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -113,8 +115,21 @@ public interface CircuitBreakerRule {
      * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if the specified {@code statusFilter} returns {@code true}.
      */
-    static CircuitBreakerRule onStatus(Predicate<? super HttpStatus> statusFilter) {
+    static CircuitBreakerRule onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
         return builder().onStatus(statusFilter).thenFailure();
+    }
+
+    /**
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * if the specified {@code statusFilter} returns {@code true}.
+     *
+     * @deprecated Use {@link #onStatus(BiPredicate)}.
+     */
+    @Deprecated
+    static CircuitBreakerRule onStatus(Predicate<? super HttpStatus> statusFilter) {
+        requireNonNull(statusFilter, "statusFilter");
+        return onStatus(toBiPredicateForSecond(statusFilter));
     }
 
     /**
@@ -129,8 +144,20 @@ public interface CircuitBreakerRule {
      * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
-    static CircuitBreakerRule onException(Predicate<? super Throwable> exceptionFilter) {
+    static CircuitBreakerRule onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
         return builder().onException(exceptionFilter).thenFailure();
+    }
+
+    /**
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     *
+     * @deprecated Use {@link #onException(BiPredicate)}.
+     */
+    @Deprecated
+    static CircuitBreakerRule onException(Predicate<? super Throwable> exceptionFilter) {
+        return onException(toBiPredicateForSecond(exceptionFilter));
     }
 
     /**
@@ -163,15 +190,28 @@ public interface CircuitBreakerRule {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "method can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
-        return builder(headers -> httpMethods.contains(headers.method()));
+        return builder((unused, headers) -> httpMethods.contains(headers.method()));
     }
 
     /**
      * Returns a newly created {@link CircuitBreakerRuleBuilder} with the specified
      * {@code requestHeadersFilter}.
      */
-    static CircuitBreakerRuleBuilder builder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    static CircuitBreakerRuleBuilder builder(
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         return new CircuitBreakerRuleBuilder(requireNonNull(requestHeadersFilter, "requestHeadersFilter"));
+    }
+
+    /**
+     * Returns a newly created {@link CircuitBreakerRuleBuilder} with the specified
+     * {@code requestHeadersFilter}.
+     *
+     * @deprecated Use {@link #builder(BiPredicate)}.
+     */
+    @Deprecated
+    static CircuitBreakerRuleBuilder builder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+        requireNonNull(requestHeadersFilter, "requestHeadersFilter");
+        return builder(toBiPredicateForSecond(requestHeadersFilter));
     }
 
     /**
@@ -248,4 +288,12 @@ public interface CircuitBreakerRule {
      */
     CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
                                                                   @Nullable Throwable cause);
+
+    /**
+     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
+     * successful or not.
+     */
+    default boolean requiresResponseTrailers() {
+        return false;
+    }
 }

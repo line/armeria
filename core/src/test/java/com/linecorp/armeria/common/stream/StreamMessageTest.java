@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
@@ -40,9 +40,9 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -218,7 +218,7 @@ class StreamMessageTest {
             @Override
             public void onNext(ByteBufHolder o) {
                 assertThat(o).isNotSameAs(data);
-                assertThat(o).isInstanceOf(ByteBufHttpData.class);
+                assertThat(o).isInstanceOf(PooledHttpData.class);
                 assertThat(o.content()).isInstanceOf(UnpooledHeapByteBuf.class);
                 assertThat(o.refCnt()).isEqualTo(1);
                 assertThat(data.refCnt()).isZero();
@@ -335,10 +335,10 @@ class StreamMessageTest {
     private static class ByteBufHolderStreamProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            final ByteBufHttpData defaultData = new ByteBufHttpData(newPooledBuffer(), true);
+            final PooledHttpData defaultData = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
             final DefaultStreamMessage<ByteBufHolder> defaultStream = new DefaultStreamMessage<>();
 
-            final ByteBufHttpData fixedData = new ByteBufHttpData(newPooledBuffer(), true);
+            final PooledHttpData fixedData = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
             final StreamMessage<ByteBufHolder> fixedStream = StreamMessage.of(fixedData);
 
             return Stream.of(arguments(defaultData, defaultStream), arguments(fixedData, fixedStream));

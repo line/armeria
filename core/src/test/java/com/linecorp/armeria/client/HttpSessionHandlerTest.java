@@ -39,6 +39,7 @@ class HttpSessionHandlerTest {
              ClientFactory clientFactory =
                      ClientFactory.builder()
                                   .idleTimeoutMillis(1000)
+                                  .useHttp2Preface(true)
                                   .build()) {
             final int port = ss.getLocalPort();
             final WebClient client = WebClient.builder("h2c://127.0.0.1:" + port)

@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
@@ -28,7 +26,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -36,6 +33,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.Channel;
+import reactor.test.StepVerifier;
 
 class HttpResponseWrapperTest {
 
@@ -49,10 +47,11 @@ class HttpResponseWrapperTest {
         assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         wrapper.close();
 
-        final List<HttpObject> drained = res.drainAll().join();
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3),
-                HttpData.ofUtf8("foo"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3))
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -64,10 +63,11 @@ class HttpResponseWrapperTest {
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
-        final List<HttpObject> drained = res.drainAll().join();
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(200),
-                HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(200))
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -81,10 +81,11 @@ class HttpResponseWrapperTest {
         assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
         wrapper.close();
 
-        final List<HttpObject> drained = res.drainAll().join();
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(200),
-                HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(200))
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -97,10 +98,11 @@ class HttpResponseWrapperTest {
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         wrapper.close();
 
-        final List<HttpObject> drained = res.drainAll().join();
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(200),
-                HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(200))
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -115,11 +117,12 @@ class HttpResponseWrapperTest {
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         wrapper.close();
 
-        final List<HttpObject> drained = res.drainAll().join();
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3),
-                HttpData.ofUtf8("foo"),
-                HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3))
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
@@ -135,13 +138,14 @@ class HttpResponseWrapperTest {
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
-        final List<HttpObject> drained = res.drainAll().join();
-        assertThat(drained).containsExactly(
-                ResponseHeaders.of(100),
-                HttpHeaders.of(HttpHeaderNames.of("a"), "b"),
-                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()),
-                HttpData.ofUtf8("foo"),
-                HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
+        StepVerifier.create(res)
+                    .expectNext(ResponseHeaders.of(100))
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("a"), "b"))
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3))
+                    .expectNext(HttpData.ofUtf8("foo"))
+                    .expectNext(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))
+                    .expectComplete()
+                    .verify();
     }
 
     private static HttpResponseWrapper httpResponseWrapper(DecodedHttpResponse res) {

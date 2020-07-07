@@ -23,7 +23,6 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -295,33 +294,6 @@ class DefaultClientRequestContextTest {
         assertThatThrownBy(() -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, -10))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("(expected: > 0)");
-    }
-
-    @Test
-    void setResponseTimeoutAt() throws InterruptedException {
-        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
-        final long tolerance = 500;
-
-        ctx.eventLoop().execute(() -> {
-            ctx.setResponseTimeoutAt(Instant.now().plusSeconds(2));
-            final long oldResponseTimeoutMillis = ctx.responseTimeoutMillis();
-            ctx.setResponseTimeoutAt(Instant.now().plusSeconds(3));
-            assertThat(ctx.responseTimeoutMillis()).isBetween(oldResponseTimeoutMillis + 1000 - tolerance,
-                                                              oldResponseTimeoutMillis + 1000 + tolerance);
-            finished.set(true);
-        });
-        await().untilTrue(finished);
-    }
-
-    @Test
-    void setResponseTimeoutAtWithNonPositive() throws InterruptedException {
-        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
-
-        ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1));
-        await().timeout(Duration.ofSeconds(1))
-               .untilAsserted(() -> assertThat(ctx.isTimedOut()).isTrue());
     }
 
     @Test

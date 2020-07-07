@@ -42,13 +42,13 @@
 .globalTocWrapper {
   padding: @padding-lg @padding-xl;
 
-  // No or single sidebar
-  @media (max-width: @layout-width-1-max) {
+  // No sidebar
+  @media (max-width: @layout-width-0-max) {
     display: none;
   }
 
-  // Double sidebar
-  @media (min-width: @layout-width-2-min) {
+  // Single or double sidebar
+  @media (min-width: @layout-width-1-min) {
     flex-basis: @layout-sidebar-width;
     flex-grow: 0;
     flex-shrink: 0;
@@ -56,15 +56,19 @@
 
   a {
     color: @text-color;
+
     &:active {
       color: @link-active-color;
     }
+
     &:hover {
       color: @link-hover-color;
     }
   }
+}
 
-  nav ol {
+.globalTocWrapper nav, :global(.ant-drawer-body) nav {
+  ol {
     margin: 0;
     padding-left: 0;
 
@@ -72,17 +76,7 @@
       list-style: none;
       display: block;
       white-space: nowrap;
-
       width: @layout-sidebar-width - @padding-xl * 2;
-      li {
-        width: @layout-sidebar-width - @padding-xl * 2;
-        li {
-          width: @layout-sidebar-width - @padding-xl * 2 - @padding-md;
-          li {
-            width: @layout-sidebar-width - @padding-xl * 2 - @padding-md * 2;
-          }
-        }
-      }
     }
   }
 
@@ -125,36 +119,51 @@
   }
 }
 
-.tocButton {
-  // Show a floating ToC show/hide button on no sidebar.
-  @media (max-width: @layout-width-0-max) {
-    position: absolute;
-    z-index: @zindex-back-top - 1;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    margin: @margin-lg @margin-xl;
-    text-align: right;
-    pointer-events: none;
-
-    > * {
-      pointer-events: all;
-      :global(.ant-btn) {
-        background-color: rgba(255, 255, 255, 0.7);
-      }
+:global(.ant-drawer-body) nav {
+  ol {
+    margin: 0;
+    li {
+      width: 100%;
+      margin-right: 0;
+      color: @menu-dark-color;
     }
   }
 
-  // Do not show a ToC show/hide button on single or double sidebar.
-  @media (min-width: @layout-width-1-min) {
-    display: none;
-  }
-}
+  a {
+    color: @menu-dark-color;
 
-.pageTocShadow {
-  // Drop shadow onto a ToC on no sidebar.
-  @media (max-width: @layout-width-0-max) {
-    box-shadow: @box-shadow-base;
+    &:active {
+      color: @menu-dark-highlight-color;
+    }
+
+    &:hover {
+      color: @menu-dark-highlight-color;
+    }
+  }
+
+  .tocGroup .tocGroupLabel {
+    color: @text-color-dark;
+    padding-left: (@padding-md - 4px);
+    width: calc(100% - @padding-md);
+    border-left: solid 4px transparent;
+  }
+
+  .tocLeaf {
+    padding-left: (@padding-md - 4px);
+    padding-right: @padding-md;
+    border-left: solid 4px transparent;
+
+    &.tocLeafActive {
+      background-color: inherit;
+      border-radius: 0;
+      border-left: solid 4px @menu-dark-item-active-bg;
+      margin-left: 0;
+
+      &::before,
+      &::after {
+        content: '';
+      }
+    }
   }
 }
 
@@ -162,32 +171,12 @@
   padding: @padding-lg @padding-md @padding-lg 0;
 
   // No sidebar
-  @media (max-width: @layout-width-0-max) {
-    position: absolute;
-    top: 0;
-    left: @margin-xl;
-    right: @margin-xl;
-    bottom: 0;
-
-    width: calc(100% - @margin-xl * 2);
-    max-width: calc(100% - @margin-xl * 2);
-    padding-right: 0;
-
-    transition-property: opacity;
-    transition-duration: 0.3s;
-
-    // These two properties are overridden dynamically.
+  @media (max-width: @layout-width-1-max) {
     display: none;
-    opacity: 0;
-
-    nav {
-      background: white;
-      padding-top: 1rem;
-    }
   }
 
   // Single or double sidebar
-  @media (min-width: @layout-width-1-min) {
+  @media (min-width: @layout-width-2-min) {
     flex-basis: @layout-sidebar-width;
     flex-grow: 0;
     flex-shrink: 0;

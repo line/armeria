@@ -30,14 +30,16 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
-import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -52,7 +54,9 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
+import io.grpc.ServiceDescriptor;
 import io.grpc.protobuf.services.ProtoReflectionService;
 
 /**
@@ -71,13 +75,17 @@ public final class GrpcServiceBuilder {
     @Nullable
     private CompressorRegistry compressorRegistry;
 
+    @Nullable
+    private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
     private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
-    private Consumer<Builder> jsonMarshallerCustomizer = unused -> {};
+    private Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory =
+            GrpcJsonMarshaller::of;
 
     private boolean enableUnframedRequests;
 
@@ -86,9 +94,6 @@ public final class GrpcServiceBuilder {
     private boolean unsafeWrapRequestBuffers;
 
     private boolean useClientTimeoutHeader = true;
-
-    @Nullable
-    private ProtoReflectionService protoReflectionService;
 
     GrpcServiceBuilder() {}
 
@@ -107,10 +112,11 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
         if (bindableService instanceof ProtoReflectionService) {
-            checkState(protoReflectionService == null,
+            checkState(protoReflectionServiceInterceptor == null,
                        "Attempting to add a ProtoReflectionService but one is already present. " +
                        "ProtoReflectionService must only be added once.");
-            protoReflectionService = (ProtoReflectionService) bindableService;
+            protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
+            return addService(ServerInterceptors.intercept(bindableService, protoReflectionServiceInterceptor));
         }
 
         return addService(bindableService.bindService());
@@ -262,14 +268,34 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets a {@link Consumer} that can customize the JSON marshaller used when handling JSON payloads in the
-     * service. This is commonly used to switch from the default of using lowerCamelCase for field names to
-     * using the field name from the proto definition, by setting
-     * {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)}.
+     * Sets the factory that creates a {@link GrpcJsonMarshaller} that serializes and deserializes request or
+     * response messages to and from JSON depending on the {@link SerializationFormat}. The returned
+     * {@link GrpcJsonMarshaller} from the factory replaces the built-in {@link GrpcJsonMarshaller}.
+     *
+     * <p>This is commonly used to:
+     * <ul>
+     *   <li>Switch from the default of using lowerCamelCase for field names to using the field name from
+     *       the proto definition, by setting
+     *       {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)} via
+     *       {@link GrpcJsonMarshallerBuilder#jsonMarshallerCustomizer(Consumer)}.
+     *       <pre>{@code
+     *       GrpcService.builder()
+     *                  .jsonMarshallerFactory(serviceDescriptor -> {
+     *                      return GrpcJsonMarshaller.builder()
+     *                                               .jsonMarshallerCustomizer(builder -> {
+     *                                                    builder.preservingProtoFieldNames(true);
+     *                                               })
+     *                                               .build(serviceDescriptor);
+     *                  })
+     *                  .build();
+     *       }</pre></li>
+     *   <li>Set a customer marshaller for non-{@link Message} types such as {@code scalapb.GeneratedMessage}
+     *       for Scala and {@code pbandk.Message} for Kotlin.</li>
+     * </ul>
      */
-    public GrpcServiceBuilder jsonMarshallerCustomizer(
-            Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
-        this.jsonMarshallerCustomizer = requireNonNull(jsonMarshallerCustomizer, "jsonMarshallerCustomizer");
+    public GrpcServiceBuilder jsonMarshallerFactory(
+            Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
+        this.jsonMarshallerFactory = requireNonNull(jsonMarshallerFactory, "jsonMarshallerFactory");
         return this;
     }
 
@@ -307,12 +333,12 @@ public final class GrpcServiceBuilder {
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
-                jsonMarshallerCustomizer,
+                jsonMarshallerFactory,
+                protoReflectionServiceInterceptor,
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                protoReflectionService,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? new UnframedGrpcService(grpcService) : grpcService;
     }

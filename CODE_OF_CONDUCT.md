@@ -1,1 +1,1 @@
-See [Code of conduct](https://line.github.io/armeria/community/code-of-conduct).
+See [Code of conduct](https://armeria.dev/community/code-of-conduct).

@@ -63,6 +63,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -78,7 +79,7 @@ import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoop;
 
@@ -155,6 +156,17 @@ class RetryingClientTest {
                     } else {
                         return HttpResponse.of("Succeeded after retry");
                     }
+                }
+            });
+
+            sb.service("/trailers-then-success", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    final boolean success = reqCount.getAndIncrement() >= 1;
+                    return HttpResponse.of(
+                            ResponseHeaders.of(200),
+                            HttpData.ofUtf8(success ? "Succeeded after retry" : "See the trailers"),
+                            HttpHeaders.of("grpc-status", success ? 0 : 3));
                 }
             });
 
@@ -301,6 +313,18 @@ class RetryingClientTest {
     }
 
     @Test
+    void retryWhenTrailerMatched() {
+        final WebClient client =
+                client(RetryRule.builder()
+                                .onResponseTrailers((unused, trailers) -> {
+                                    return trailers.getInt("grpc-status", -1) != 0;
+                                })
+                                .thenBackoff());
+        final AggregatedHttpResponse res = client.get("/trailers-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
     void disableResponseTimeout() {
         final WebClient client = client(RetryRule.failsafe(), 0, 0, 100);
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
@@ -381,12 +405,12 @@ class RetryingClientTest {
     void retryWithContentOnResponseTimeout() {
         final Backoff backoff = Backoff.fixed(100);
         final RetryRuleWithContent<HttpResponse> strategy =
-                RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                }).orElse(RetryRuleWithContent.onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
+                RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                }).orElse(RetryRuleWithContent.onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
                                    .onException(ResponseTimeoutException.class)
                                    .thenBackoff(backoff)));
@@ -399,12 +423,12 @@ class RetryingClientTest {
     void retryWithContentOnUnprocessedException() {
         final Backoff backoff = Backoff.fixed(2000);
         final RetryRuleWithContent<HttpResponse> strategy =
-                RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                }).orElse(RetryRuleWithContent.onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
-                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse(response -> {
-                    return response.aggregate().thenApply(unused -> false);
+                RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                }).orElse(RetryRuleWithContent.onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
+                })).orElse(RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
                                    .onException(UnprocessedRequestException.class)
                                    .thenBackoff(backoff)));

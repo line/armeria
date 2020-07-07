@@ -19,11 +19,10 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -151,29 +150,6 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
             list.add(NOTIFY_CANCELLATION);
         }
         return list.toArray(EMPTY_OPTIONS);
-    }
-
-    @Override
-    public CompletableFuture<List<U>> drainAll(EventExecutor executor) {
-        return drainAll(executor, false, false);
-    }
-
-    @Override
-    public CompletableFuture<List<U>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        requireNonNull(options, "options");
-
-        final boolean withPooledObjects = containsWithPooledObjects(options);
-        final boolean notifyCancellation = containsNotifyCancellation(options);
-        return drainAll(executor, withPooledObjects, notifyCancellation);
-    }
-
-    private CompletableFuture<List<U>> drainAll(EventExecutor executor,
-                                                boolean withPooledObjects, boolean notifyCancellation) {
-        requireNonNull(executor, "executor");
-        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
-        delegate.subscribe(new FilteringSubscriber(drainer, withPooledObjects), executor,
-                           filteringSubscriptionOptions(notifyCancellation));
-        return drainer.future();
     }
 
     @Override

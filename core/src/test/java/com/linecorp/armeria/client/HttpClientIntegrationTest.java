@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -77,6 +76,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
+import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
@@ -86,8 +88,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.server.unsafe.PooledHttpService;
+import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -109,7 +112,7 @@ class HttpClientIntegrationTest {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final HttpResponse res = delegate().serve(ctx, req);
+            final HttpResponse res = unwrap().serve(ctx, req);
             final HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
@@ -136,17 +139,18 @@ class HttpClientIntegrationTest {
         }
     }
 
-    private static final class PoolAwareDecorator extends SimpleDecoratingHttpService {
+    private static final class PoolAwareDecorator extends SimplePooledDecoratingHttpService {
 
         private PoolAwareDecorator(HttpService delegate) {
             super(delegate);
         }
 
         @Override
-        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final HttpResponse res = delegate().serve(ctx, req);
+        protected HttpResponse serve(PooledHttpService delegate, ServiceRequestContext ctx,
+                                     PooledHttpRequest req) throws Exception {
+            final PooledHttpResponse res = delegate.serve(ctx, req);
             final HttpResponseWriter decorated = HttpResponse.streaming();
-            res.subscribe(new Subscriber<HttpObject>() {
+            res.subscribeWithPooledObjects(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
                     s.request(Long.MAX_VALUE);
@@ -174,7 +178,7 @@ class HttpClientIntegrationTest {
                 public void onComplete() {
                     decorated.close();
                 }
-            }, WITH_POOLED_OBJECTS);
+            });
             return decorated;
         }
     }
@@ -187,7 +191,7 @@ class HttpClientIntegrationTest {
             final ByteBuf buf = ctx.alloc().buffer();
             buf.writeCharSequence("pooled content", StandardCharsets.UTF_8);
             releasedByteBuf.set(buf);
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, new ByteBufHttpData(buf, false));
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, PooledHttpData.wrap(buf));
         }
     }
 

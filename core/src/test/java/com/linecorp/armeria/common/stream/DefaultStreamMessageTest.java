@@ -32,8 +32,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -133,8 +133,8 @@ class DefaultStreamMessageTest {
     @Test
     void releaseWhenWritingToClosedStream_HttpData() {
         final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
-        final ByteBufHttpData data = new ByteBufHttpData(
-                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0), true).retain();
+        final PooledHttpData data = PooledHttpData.wrap(
+                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0).retain()).withEndOfStream();
         stream.close();
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
@@ -147,8 +147,8 @@ class DefaultStreamMessageTest {
     @Test
     void releaseWhenWritingToClosedStream_HttpData_Supplier() {
         final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
-        final ByteBufHttpData data = new ByteBufHttpData(
-                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0), true).retain();
+        final PooledHttpData data = PooledHttpData.wrap(
+                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0).retain()).withEndOfStream();
         stream.close();
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
@@ -189,8 +189,8 @@ class DefaultStreamMessageTest {
     @Test
     void abortedStreamCallOnErrorAfterCloseIsCalled() throws InterruptedException {
         final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
-        final ByteBufHttpData data = new ByteBufHttpData(
-                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0), true);
+        final PooledHttpData data = PooledHttpData.wrap(
+                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0)).withEndOfStream();
         stream.write(data);
         stream.close();
 
@@ -221,8 +221,8 @@ class DefaultStreamMessageTest {
     @Test
     void requestWithNegativeValue() {
         final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
-        final ByteBufHttpData data = new ByteBufHttpData(
-                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0), true);
+        final PooledHttpData data = PooledHttpData.wrap(
+                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0)).withEndOfStream();
         stream.write(data);
 
         final AtomicBoolean onErrorCalled = new AtomicBoolean();

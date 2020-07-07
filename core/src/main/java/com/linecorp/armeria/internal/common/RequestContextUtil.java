@@ -172,7 +172,7 @@ public final class RequestContextUtil {
     @Nullable
     @SuppressWarnings("unchecked")
     public static <T extends RequestContext> T get() {
-        return (T) requestContextStorage.currentOrNull();
+        return requestContextStorage.currentOrNull();
     }
 
     /**
@@ -183,7 +183,7 @@ public final class RequestContextUtil {
     @SuppressWarnings("unchecked")
     public static <T extends RequestContext> T getAndSet(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        return (T) requestContextStorage.push(ctx);
+        return requestContextStorage.push(ctx);
     }
 
     /**
