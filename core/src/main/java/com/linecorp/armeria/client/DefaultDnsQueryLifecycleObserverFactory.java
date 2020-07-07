@@ -38,6 +38,6 @@ public class DefaultDnsQueryLifecycleObserverFactory implements DnsQueryLifecycl
 
     @Override
     public DnsQueryLifecycleObserver newDnsQueryLifecycleObserver(DnsQuestion question) {
-        return new DefaultDnsQueryLifecycleObserver(meterRegistry);
+        return new DefaultDnsQueryLifecycleObserver(meterRegistry, question);
     }
 }
