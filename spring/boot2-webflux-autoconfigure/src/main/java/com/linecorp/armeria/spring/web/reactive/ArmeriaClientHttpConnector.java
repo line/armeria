@@ -81,7 +81,11 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
      * @param configurators the {@link ArmeriaClientConfigurator}s to be used to build an
      *                      {@link WebClient}
      * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
+     *
+     * @deprecated Use
+     *             {@link ArmeriaClientAutoConfiguration#clientHttpConnector(List, DataBufferFactoryWrapper)}.
      */
+    @Deprecated
     public ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
                                       DataBufferFactoryWrapper<?> factoryWrapper) {
         this.configurators = ImmutableList.copyOf(requireNonNull(configurators, "configurators"));

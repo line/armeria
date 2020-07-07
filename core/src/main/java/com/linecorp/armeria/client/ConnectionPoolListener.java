@@ -38,7 +38,7 @@ public interface ConnectionPoolListener {
     /**
      * Returns a {@link ConnectionPoolListener} that logs the connection pool events.
      */
-    static ConnectionPoolListener loggingListener() {
+    static ConnectionPoolListener logging() {
         return new ConnectionPoolLoggingListener();
     }
 
@@ -46,7 +46,7 @@ public interface ConnectionPoolListener {
      * Returns a {@link ConnectionPoolListener} that logs the connection pool events with an alternative
      * {@link Ticker}.
      */
-    static ConnectionPoolListener loggingListener(Ticker ticker) {
+    static ConnectionPoolListener logging(Ticker ticker) {
         return new ConnectionPoolLoggingListener(ticker);
     }
 

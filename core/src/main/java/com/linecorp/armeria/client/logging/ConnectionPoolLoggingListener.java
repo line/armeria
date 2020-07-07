@@ -34,8 +34,7 @@ import io.netty.util.AttributeMap;
 /**
  * Decorates a {@link ConnectionPoolListener} to log the connection pool events.
  *
- * @deprecated Use {@link ConnectionPoolListener#loggingListener()} or
- * {@link ConnectionPoolListener#loggingListener(Ticker)}.
+ * @deprecated Use {@link ConnectionPoolListener#logging()} or {@link ConnectionPoolListener#logging(Ticker)}.
  */
 @Deprecated
 public final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
@@ -50,7 +49,7 @@ public final class ConnectionPoolLoggingListener implements ConnectionPoolListen
     /**
      * Creates a new instance with a {@linkplain Ticker#systemTicker() system ticker}.
      *
-     * @deprecated Use {@link ConnectionPoolListener#loggingListener()}.
+     * @deprecated Use {@link ConnectionPoolListener#logging()}.
      */
     @Deprecated
     public ConnectionPoolLoggingListener() {
@@ -62,7 +61,7 @@ public final class ConnectionPoolLoggingListener implements ConnectionPoolListen
      *
      * @param ticker an alternative {@link Ticker}
      *
-     * @deprecated Use {@link ConnectionPoolListener#loggingListener(Ticker)}.
+     * @deprecated Use {@link ConnectionPoolListener#logging(Ticker)}.
      */
     @Deprecated
     public ConnectionPoolLoggingListener(Ticker ticker) {
