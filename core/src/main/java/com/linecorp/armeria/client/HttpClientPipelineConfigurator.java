@@ -195,6 +195,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     return;
                 }
 
+                if (!sslHandler.handshakeFuture().isDone()) {
+                    // Ignore successful handshake events for other SslHandlers in the pipeline.
+                    return;
+                }
+
                 final SessionProtocol protocol;
                 if (isHttp2Protocol(sslHandler)) {
                     if (httpPreference == HttpPreference.HTTP1_REQUIRED) {
