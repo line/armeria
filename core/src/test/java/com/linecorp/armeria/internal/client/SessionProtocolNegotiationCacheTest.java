@@ -29,7 +29,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.client.SessionProtocolNegotiationCache;
 
 import io.netty.util.NetUtil;
 
