@@ -98,6 +98,10 @@ public final class RouteBuilder {
      */
     public RouteBuilder path(String prefix, String pathPattern) {
         prefix = ensureAbsolutePath(prefix, "prefix");
+        if (pathPattern.isEmpty()) {
+            return path(prefix);
+        }
+
         if (!prefix.endsWith("/")) {
             prefix += '/';
         }
@@ -461,7 +465,6 @@ public final class RouteBuilder {
 
     private static PathMapping getPathMapping(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
-
         if (pathPattern.startsWith(EXACT)) {
             return new ExactPathMapping(pathPattern.substring(EXACT.length()));
         }

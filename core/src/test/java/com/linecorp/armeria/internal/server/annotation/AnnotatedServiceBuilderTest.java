@@ -51,6 +51,16 @@ class AnnotatedServiceBuilderTest {
     @Test
     void successfulOf() {
         Server.builder().annotatedService(new Object() {
+            @Get
+            public void root() {}
+        }).build();
+
+        Server.builder().annotatedService(new Object() {
+            @Get("")
+            public void root() {}
+        }).build();
+
+        Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root() {}
         }).build();
@@ -300,16 +310,6 @@ class AnnotatedServiceBuilderTest {
     @Test
     void failedOf() {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Get
-            public void root() {}
-        }).build()).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Get("")
-            public void root() {}
-        }).build()).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("  ")
             public void root() {}
         }).build()).isInstanceOf(IllegalArgumentException.class);
@@ -338,12 +338,6 @@ class AnnotatedServiceBuilderTest {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(BeanA a) {}
-        }).build()).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Get
-            @Post("/")
-            public void root() {}
         }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
