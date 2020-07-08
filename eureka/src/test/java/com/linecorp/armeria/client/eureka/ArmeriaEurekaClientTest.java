@@ -24,7 +24,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -332,9 +331,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
         }
 
         private static List<Endpoint> endpoints(EurekaEndpointGroup endpointGroup) {
-            final CompletableFuture<List<Endpoint>> future = new CompletableFuture<>();
-            endpointGroup.addListener(future::complete);
-            return future.join();
+            return endpointGroup.whenReady().join();
         }
 
         private static List<Endpoint> endpointsFromApplications(Applications applications, boolean secureVip) {
