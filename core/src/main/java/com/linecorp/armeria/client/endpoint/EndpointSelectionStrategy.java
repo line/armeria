@@ -49,8 +49,8 @@ public interface EndpointSelectionStrategy {
     }
 
     /**
-     * Returns a sticky strategy which uses user passed {@link ToLongFunction} to compute hashes for consistent
-     * hashing.
+     * Returns a sticky strategy which uses a user passed {@link ToLongFunction} to compute hashes for
+     * consistent hashing.
      *
      * <p>This strategy can be useful when all requests that qualify some given criteria must be sent to
      * the same backend server. A common use case is to send all requests for the same logged-in user to
@@ -63,7 +63,7 @@ public interface EndpointSelectionStrategy {
      * ToLongFunction<ClientRequestContext> hasher = (ClientRequestContext ctx) -> {
      *     return ((HttpRequest) ctx.request()).headers().get(HttpHeaderNames.COOKIE).hashCode();
      * };
-     * final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
+     * EndpointSelectionStrategy strategy = EndpointSelectionStrategy.sticky(hasher);
      * }</pre>
      *
      * @see #roundRobin()

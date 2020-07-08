@@ -19,7 +19,7 @@ package com.linecorp.armeria.common;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.stream.StreamMessageDuplicator;
-import com.linecorp.armeria.common.unsafe.PooledStreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 /**
  * A duplicator that duplicates a {@link HttpRequest} into one or more {@link HttpRequest}s,
@@ -43,9 +43,9 @@ import com.linecorp.armeria.common.unsafe.PooledStreamMessage;
  * after all subscriptions are done. If you want to stop publishing and clean up the resources immediately,
  * call {@link #abort()}. If you do none of these, memory leak might happen.</p>
  *
- * <p>If you subscribe to the {@linkplain #duplicate() duplicated http request} using the
- * {@link PooledStreamMessage#subscribeWithPooledObjects(Subscriber)} or its variants, the published elements
- * can be shared across {@link Subscriber}s. So do not manipulate the data unless you copy them.
+ * <p>If you subscribe to the {@linkplain #duplicate() duplicated http request} with the
+ * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
+ * {@link Subscriber}s. So do not manipulate the data unless you copy them.
  */
 public interface HttpRequestDuplicator extends StreamMessageDuplicator<HttpObject> {
 

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client;
+package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
@@ -27,8 +27,6 @@ import java.net.UnknownHostException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.linecorp.armeria.client.Endpoint;
 
 import io.netty.util.NetUtil;
 
