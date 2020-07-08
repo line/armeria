@@ -28,7 +28,7 @@ Note that we added the serialization format of the call using the `+` operator i
 Because we are calling a Thrift server, we should choose: `tbinary`, `tcompact`, `tjson` or `ttext`.
 
 Since we specified `HelloService.Iface` as the client type, `Clients.newClient()` will return a synchronous
-client implementation.  If we specified `HelloService.AsyncIface`, the calling code would have looked like
+client implementation. If we specified `HelloService.AsyncIface`, the calling code would have looked like
 the following:
 
 ```java
