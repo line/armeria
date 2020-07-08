@@ -48,28 +48,6 @@ public abstract class ThrottlingStrategy<T extends Request> {
                 }
             };
 
-    private final String name;
-
-    /**
-     * Creates a new {@link ThrottlingStrategy} with a default name.
-     */
-    protected ThrottlingStrategy() {
-        this(null);
-    }
-
-    /**
-     * Creates a new {@link ThrottlingStrategy} with specified name.
-     */
-    protected ThrottlingStrategy(@Nullable String name) {
-        if (name != null) {
-            this.name = name;
-        } else {
-            this.name = "throttling-strategy-" +
-                        (getClass().isAnonymousClass() ? Integer.toString(GLOBAL_STRATEGY_ID.getAndIncrement())
-                                                       : getClass().getSimpleName());
-        }
-    }
-
     /**
      * Returns a singleton {@link ThrottlingStrategy} that never accepts requests.
      */
@@ -87,7 +65,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
     }
 
     /**
-     * Creates a new {@link ThrottlingStrategy} that determines whether a request should be accepted or not
+     * Returns a new {@link ThrottlingStrategy} that determines whether a request should be accepted or not
      * using a given {@link BiFunction} instance.
      */
     public static <T extends Request> ThrottlingStrategy<T> of(
@@ -113,6 +91,50 @@ public abstract class ThrottlingStrategy<T extends Request> {
                 return function.apply(ctx, request);
             }
         };
+    }
+
+    /**
+     * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on
+     * requests per second.
+     *
+     * @param requestsPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts
+     */
+    public static <T extends Request> ThrottlingStrategy<T> rateLimiting(double requestsPerSecond) {
+        return new RateLimitingThrottlingStrategy<>(requestsPerSecond);
+    }
+
+    /**
+     * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on
+     * requests per second.
+     *
+     * @param requestsPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts
+     * @param name the name of the {@link ThrottlingStrategy}
+     */
+    public static <T extends Request> ThrottlingStrategy<T> rateLimiting(
+            double requestsPerSecond, String name) {
+        return new RateLimitingThrottlingStrategy<>(requestsPerSecond, name);
+    }
+
+    private final String name;
+
+    /**
+     * Creates a new {@link ThrottlingStrategy} with a default name.
+     */
+    protected ThrottlingStrategy() {
+        this(null);
+    }
+
+    /**
+     * Creates a new {@link ThrottlingStrategy} with specified name.
+     */
+    protected ThrottlingStrategy(@Nullable String name) {
+        if (name != null) {
+            this.name = name;
+        } else {
+            this.name = "throttling-strategy-" +
+                        (getClass().isAnonymousClass() ? Integer.toString(GLOBAL_STRATEGY_ID.getAndIncrement())
+                                                       : getClass().getSimpleName());
+        }
     }
 
     /**

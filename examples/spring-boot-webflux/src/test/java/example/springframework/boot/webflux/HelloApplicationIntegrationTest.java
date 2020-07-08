@@ -1,15 +1,15 @@
 package example.springframework.boot.webflux;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
-
-import com.linecorp.armeria.spring.web.reactive.ArmeriaClientHttpConnector;
 
 @ActiveProfiles("testbed")
 @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)
@@ -20,11 +20,14 @@ class HelloApplicationIntegrationTest {
 
     private WebTestClient client;
 
+    @Inject
+    private ClientHttpConnector connector;
+
     @PostConstruct
     void setUp() {
         // Use ArmeriaClientHttpConnector if you want to send an HTTP request to the running
         // Spring Boot application via Armeria HTTP client.
-        client = WebTestClient.bindToServer(new ArmeriaClientHttpConnector())
+        client = WebTestClient.bindToServer(connector)
                               .baseUrl("http://127.0.0.1:" + port)
                               .build();
     }

@@ -21,4 +21,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.server.saml;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

@@ -26,4 +26,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.common.stream;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

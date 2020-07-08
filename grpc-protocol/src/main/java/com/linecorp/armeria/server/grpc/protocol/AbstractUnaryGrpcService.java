@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;

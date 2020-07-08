@@ -29,5 +29,5 @@
 @NonNullByDefault
 package com.linecorp.armeria.server.grpc.protocol;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

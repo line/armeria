@@ -20,7 +20,7 @@ import java.lang.reflect.Type;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link ResponseConverterFunction} provider interface which creates a new

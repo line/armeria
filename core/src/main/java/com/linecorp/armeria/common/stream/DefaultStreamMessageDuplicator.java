@@ -47,9 +47,9 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

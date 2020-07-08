@@ -20,4 +20,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.client.logging;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

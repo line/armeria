@@ -52,13 +52,13 @@ You may want to consider the following options before putting your Armeria appli
   policy, such as 'fail if the rate of requests exceed a certain threshold.
 
   ```java
-  import com.linecorp.armeria.server.throttling.RateLimitingThrottlingStrategy;
   import com.linecorp.armeria.server.throttling.ThrottlingService;
+  import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 
   ServerBuilder sb = Server.builder();
   sb.service("/my_service", // Allow up to 1000 requests/sec.
              myService.decorate(ThrottlingService.newDecorator(
-                     new RateLimitingThrottlingStrategy(1000.0))));
+                     ThrottlingStrategy.rateLimiting(1000.0))));
   ```
 
 - Decorate your clients with <type://RetryingClient>. See [Automatic retry](/docs/client-retry#automatic-retry).

@@ -32,7 +32,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Service;
 
 /**

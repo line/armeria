@@ -37,7 +37,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
 

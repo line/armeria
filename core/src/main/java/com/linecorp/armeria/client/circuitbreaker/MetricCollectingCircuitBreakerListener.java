@@ -57,22 +57,28 @@ import io.micrometer.core.instrument.MeterRegistry;
  */
 public final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
 
-    private static final String DEFAULT_METER_NAME = "armeria.client.circuit.breaker";
-    private static final String LEGACY_METER_NAME = "armeria.client.circuitBreaker";
+    static final String DEFAULT_METER_NAME = "armeria.client.circuit.breaker";
+    static final String LEGACY_METER_NAME = "armeria.client.circuitBreaker";
 
     private final MeterRegistry registry;
     private final String name;
 
     /**
      * Creates a new instance with the default name {@value #DEFAULT_METER_NAME}.
+     *
+     * @deprecated Use {@link CircuitBreakerListener#metricCollecting(MeterRegistry)}.
      */
+    @Deprecated
     public MetricCollectingCircuitBreakerListener(MeterRegistry registry) {
         this(registry, Flags.useLegacyMeterNames() ? LEGACY_METER_NAME : DEFAULT_METER_NAME);
     }
 
     /**
      * Creates a new instance with the specified {@link Meter} name.
+     *
+     * @deprecated Use {@link CircuitBreakerListener#metricCollecting(MeterRegistry, String)}.
      */
+    @Deprecated
     public MetricCollectingCircuitBreakerListener(MeterRegistry registry, String name) {
         this.registry = requireNonNull(registry, "registry");
         this.name = requireNonNull(name, "name");

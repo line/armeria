@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,11 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.client.circuitbreaker;
+
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 
 /**
- * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> integration.
+ * A key selector that returns the mapping key of the given {@link RequestContext} and {@link Request}.
+ *
+ * @param <K> the key type
  */
-@NonNullByDefault
-package com.linecorp.armeria.spring;
+@FunctionalInterface
+public interface KeySelector<K> {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+    /**
+     * Returns the mapping key of the given {@link RequestContext} and {@link Request}.
+     */
+    K get(ClientRequestContext ctx, Request req) throws Exception;
+}

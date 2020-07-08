@@ -19,3 +19,5 @@
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.util;
+
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
