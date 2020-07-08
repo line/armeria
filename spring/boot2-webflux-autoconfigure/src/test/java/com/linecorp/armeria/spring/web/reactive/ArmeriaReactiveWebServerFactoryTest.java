@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.fail;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.RepeatFailedTest;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
@@ -78,7 +79,7 @@ class ArmeriaReactiveWebServerFactoryTest {
                         .build();
     }
 
-    @Test
+    @RepeatFailedTest(3)
     void shouldRunOnSpecifiedPort() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         final int port = SocketUtils.findAvailableTcpPort();
