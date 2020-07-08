@@ -144,7 +144,18 @@ final class HttpClientDelegate implements HttpClient {
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
 
-        final ProxyConfig proxyConfig = selectProxyConfig(protocol, host, port);
+        final ProxyConfig proxyConfig;
+        try {
+            final Endpoint endpoint = Endpoint.of(host, port);
+            proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
+            requireNonNull(proxyConfig, "proxyConfig");
+        } catch (Throwable t) {
+            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
+            handleEarlyRequestException(ctx, req, wrapped);
+            res.close(wrapped);
+            return;
+        }
+
         final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
@@ -163,20 +174,6 @@ final class HttpClientDelegate implements HttpClient {
                 return null;
             });
         }
-    }
-
-    private ProxyConfig selectProxyConfig(SessionProtocol sessionProtocol, String host, int port) {
-        ProxyConfig proxyConfig;
-        try {
-            final Endpoint endpoint = Endpoint.of(host, port);
-            proxyConfig = factory.proxyConfigSelector().select(sessionProtocol, endpoint);
-            requireNonNull(proxyConfig, "proxyConfig");
-        } catch (Throwable t) {
-            logger.warn("Failed to select ProxyConfig for {}:{}, falling back to DIRECT",
-                        host, port, t);
-            proxyConfig = ProxyConfig.direct();
-        }
-        return proxyConfig;
     }
 
     private static void logSession(ClientRequestContext ctx, @Nullable PooledChannel pooledChannel,

@@ -313,13 +313,14 @@ class ProxyClientIntegrationTest {
     }
 
     @Test
-    void testSelectFailureFallsBackToDirect() throws Exception {
+    void testSelectFailureFailsImmediately() throws Exception {
+        final RuntimeException selectException = new RuntimeException("select exception");
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
             public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
                 assertThat(protocol).isEqualTo(H1C);
                 assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
-                throw new RuntimeException("select exception");
+                throw selectException;
             }
 
             @Override
@@ -340,16 +341,14 @@ class ProxyClientIntegrationTest {
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
-            final AggregatedHttpResponse response = responseFuture.join();
-            assertThat(response.status()).isEqualTo(OK);
-            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(0);
-            assertThat(selector.result()).isTrue();
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCause(selectException);
         }
     }
 
     @Test
-    void testNullProxyConfigFallsBackToDirect() throws Exception {
+    void testNullProxyConfigFailsImmediately() throws Exception {
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
             @Override
             public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
@@ -376,11 +375,10 @@ class ProxyClientIntegrationTest {
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
-            final AggregatedHttpResponse response = responseFuture.join();
-            assertThat(response.status()).isEqualTo(OK);
-            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(0);
-            assertThat(selector.result()).isTrue();
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(NullPointerException.class)
+                                                    .hasRootCauseMessage("proxyConfig");
         }
     }
 
