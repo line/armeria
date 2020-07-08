@@ -24,13 +24,13 @@ class MyJUnit5Test {
     private MyService service;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         client = ...;
         service = ...;
     }
 
     @Test
-    void testClient() throws Exception {
+    void testClient() {
         // Given
         HttpRequest req = HttpRequest.of(HttpMethod.GET, "/greet?name=foo");
         ClientRequestContext cctx = ClientRequestContext.of(req);
@@ -39,12 +39,12 @@ class MyJUnit5Test {
         HttpResponse res = client.execute(cctx, req);
 
         // Then
-        AggregatedHttpResponse aggregatedRes = res.aggregate().get();
+        AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertEquals(200, aggregatedRes.status().code());
     }
 
     @Test
-    void testService() throws Exception {
+    void testService() {
         // Given
         HttpRequest req = HttpRequest.of(HttpMethod.POST, "/greet",
                                          MediaType.JSON_UTF_8,
@@ -55,7 +55,7 @@ class MyJUnit5Test {
         HttpResponse res = service.serve(sctx, req);
 
         // Then
-        AggregatedHttpResponse aggregatedRes = res.aggregate().get();
+        AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertEquals(200, aggregatedRes.status().code());
     }
 }
