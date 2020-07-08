@@ -69,7 +69,7 @@ public interface EndpointSelectionStrategy {
      * @see #roundRobin()
      * @see #weightedRoundRobin()
      */
-    static EndpointSelectionStrategy sticky(ToLongFunction<ClientRequestContext> requestContextHasher) {
+    static EndpointSelectionStrategy sticky(ToLongFunction<? super ClientRequestContext> requestContextHasher) {
         return new StickyEndpointSelectionStrategy(requestContextHasher);
     }
 
