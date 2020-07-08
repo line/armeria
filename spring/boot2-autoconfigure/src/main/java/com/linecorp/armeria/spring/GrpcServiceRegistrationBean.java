@@ -50,15 +50,13 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
  *             > @Bean
  *             > public ArmeriaServerConfigurator myService() {
  *             >     return server -> {
- *             >         server.route()
- *             >               .path("/my-service")
- *             >               .decorator(LoggingService.newDecorator())
- *             >               .build(GrpcService.builder()
- *             >                                 .addService(new HelloService())
- *             >                                 .supportedSerializationFormats(
- *             >                                         GrpcSerializationFormats.values())
- *             >                                 .enableUnframedRequests(true)
- *             >                                 .build());
+ *             >         server.service(GrpcService.builder()
+ *             >                                   .addService(new HelloService())
+ *             >                                   .supportedSerializationFormats(
+ *             >                                           GrpcSerializationFormats.values())
+ *             >                                   .enableUnframedRequests(true)
+ *             >                                   .build(),
+ *             >                        LoggingService.newDecorator());
  *             >     };
  *             > }
  *
