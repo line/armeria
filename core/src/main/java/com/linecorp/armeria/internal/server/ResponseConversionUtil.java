@@ -29,8 +29,6 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -42,8 +40,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * A utility class which helps to send a streaming {@link HttpResponse}.
  */
 public final class ResponseConversionUtil {
-
-    private static final Logger logger = LoggerFactory.getLogger(ResponseConversionUtil.class);
 
     /**
      * Returns a new {@link HttpResponseWriter} which has a content converted from the collected objects.

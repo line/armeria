@@ -25,13 +25,13 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.StreamSupport;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -66,14 +66,16 @@ final class RoutingPredicate<T> {
     private static final Pattern COMPARE_PATTERN = Pattern.compile("^\\s*([^\\s!><=]+)\\s*([><!]?=|>|<)(.*)$");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s");
 
+    @SuppressWarnings("unchecked")
     static List<RoutingPredicate<HttpHeaders>> copyOfHeaderPredicates(Iterable<String> predicates) {
-        return StreamSupport.stream(predicates.spliterator(), false)
-                            .map(RoutingPredicate::ofHeaders).collect(toImmutableList());
+        return Streams.stream(predicates)
+                      .map(RoutingPredicate::ofHeaders).collect(toImmutableList());
     }
 
+    @SuppressWarnings("unchecked")
     static List<RoutingPredicate<QueryParams>> copyOfParamPredicates(Iterable<String> predicates) {
-        return StreamSupport.stream(predicates.spliterator(), false)
-                            .map(RoutingPredicate::ofParams).collect(toImmutableList());
+        return Streams.stream(predicates)
+                      .map(RoutingPredicate::ofParams).collect(toImmutableList());
     }
 
     static RoutingPredicate<HttpHeaders> ofHeaders(CharSequence headerName,
