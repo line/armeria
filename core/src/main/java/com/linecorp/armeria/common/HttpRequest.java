@@ -30,6 +30,9 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
+
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
@@ -124,7 +127,9 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param format {@linkplain Formatter the format string} of the request content
      * @param args the arguments referenced by the format specifiers in the format string
      */
-    static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String format, Object... args) {
+    @FormatMethod
+    static HttpRequest of(HttpMethod method, String path, MediaType mediaType,
+                          @FormatString String format, Object... args) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");

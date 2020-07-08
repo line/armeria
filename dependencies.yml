@@ -68,8 +68,8 @@ com.google.dagger:
   dagger-producers: { version: *DAGGER_VERSION }
 
 com.google.errorprone:
-  error_prone_core:
-    version: '2.4.0'
+  error_prone_core: { version: &ERRORPRONE_VERSION '2.4.0' }
+  error_prone_annotations: { version: *ERRORPRONE_VERSION }
 
 com.google.guava:
   guava:
