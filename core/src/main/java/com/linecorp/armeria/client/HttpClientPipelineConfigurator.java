@@ -197,6 +197,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
                 if (!sslHandler.handshakeFuture().isDone()) {
                     // Ignore successful handshake events for other SslHandlers in the pipeline.
+                    // This can happen when a client connects with ssl to an encrypted proxy server,
+                    // and then to an encrypted backend. Without this check, clients may incorrectly
+                    // conclude protocol negotiation and start a new session.
                     return;
                 }
 
