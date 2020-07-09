@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +55,7 @@ import io.grpc.stub.StreamObserver;
 
 class GrpcWebRetryTest {
 
-    static int retryCounter;
+    private static final AtomicInteger retryCounter = new AtomicInteger();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -71,20 +72,18 @@ class GrpcWebRetryTest {
 
     @BeforeEach
     void setUp() {
-        retryCounter = 0;
+        retryCounter.set(0);
         ruleWithContent =
                 RetryRuleWithContent.<HttpResponse>builder()
-                        .onResponseHeaders(headers -> {
+                        .onResponseHeaders((ctx, headers) -> {
                             // Trailers may be sent together with response headers, with no message in the body.
                             final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
                             return grpcStatus != null && grpcStatus != 0;
                         })
-                        .onResponse(response -> {
-                            return response.aggregate().thenApply(content -> {
-                                final HttpHeaders trailers = GrpcWebUtil.parseTrailers(content.content());
-                                return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
-                            });
-                        })
+                        .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
+                            final HttpHeaders trailers = GrpcWebUtil.parseTrailers(aggregatedRes.content());
+                            return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
+                        }))
                         .thenBackoff();
     }
 
@@ -132,7 +131,7 @@ class GrpcWebRetryTest {
     private static class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
         @Override
         public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
-            switch (retryCounter) {
+            switch (retryCounter.getAndIncrement()) {
                 case 0:
                     responseObserver.onError(new StatusException(Status.INTERNAL));
                     break;
@@ -145,12 +144,11 @@ class GrpcWebRetryTest {
                     responseObserver.onCompleted();
                     break;
             }
-            retryCounter++;
         }
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            switch (retryCounter) {
+            switch (retryCounter.getAndIncrement()) {
                 case 0:
                     responseObserver.onError(new StatusException(Status.INTERNAL));
                     break;
@@ -163,7 +161,6 @@ class GrpcWebRetryTest {
                     responseObserver.onCompleted();
                     break;
             }
-            retryCounter++;
         }
     }
 }
