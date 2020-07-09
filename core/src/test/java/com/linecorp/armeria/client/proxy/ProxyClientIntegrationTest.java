@@ -40,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -48,10 +49,11 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.EnumSource.Mode;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -337,31 +339,12 @@ class ProxyClientIntegrationTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, mode = Mode.INCLUDE, names = {"H1C", "H2C", "HTTP"})
-    void testHttpsProxyBasicCase(SessionProtocol protocol) throws Exception {
+    @MethodSource("sessionAndEndpointProvider")
+    void testHttpsProxy(SessionProtocol protocol, Endpoint endpoint) throws Exception {
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
                         ProxyConfig.connect(httpsProxyServer.address(), true)).build();
-        final WebClient webClient = WebClient.builder(protocol, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, mode = Mode.INCLUDE, names = {"H1", "H2", "HTTPS"})
-    void testHttpsToHttpsEndpoint(SessionProtocol protocol) throws Exception {
-        final ClientFactory clientFactory =
-                ClientFactory.builder().tlsNoVerify().proxyConfig(
-                        ProxyConfig.connect(httpsProxyServer.address(), true)).build();
-        final WebClient webClient = WebClient.builder(protocol, backendServer.httpsEndpoint())
+        final WebClient webClient = WebClient.builder(protocol, endpoint)
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -710,5 +693,16 @@ class ProxyClientIntegrationTest {
                 }
             }
         }
+    }
+
+    static Stream<Arguments> sessionAndEndpointProvider() {
+        return Stream.of(
+                Arguments.arguments(SessionProtocol.HTTP, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H2C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.H2, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.HTTPS, backendServer.httpsEndpoint())
+        );
     }
 }
