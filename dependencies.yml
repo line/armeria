@@ -468,9 +468,6 @@ org.jooq:
 org.jsoup:
   jsoup: { version: '1.13.1' }
 
-org.junit-pioneer:
-  junit-pioneer: { version: '0.6.0' }
-
 org.mockito:
   mockito-core: { version: &MOCKITO_VERSION '3.3.3' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }

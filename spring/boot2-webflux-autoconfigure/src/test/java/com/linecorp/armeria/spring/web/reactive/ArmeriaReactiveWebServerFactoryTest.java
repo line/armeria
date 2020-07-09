@@ -18,11 +18,13 @@ package com.linecorp.armeria.spring.web.reactive;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.RepeatFailedTest;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
@@ -63,8 +65,12 @@ class ArmeriaReactiveWebServerFactoryTest {
                          .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                          .build();
 
-    private ArmeriaReactiveWebServerFactory factory() {
+    private static ArmeriaReactiveWebServerFactory factory(ConfigurableListableBeanFactory beanFactory) {
         return new ArmeriaReactiveWebServerFactory(beanFactory);
+    }
+
+    private ArmeriaReactiveWebServerFactory factory() {
+        return factory(beanFactory);
     }
 
     private WebClient httpsClient(WebServer server) {
@@ -79,12 +85,20 @@ class ArmeriaReactiveWebServerFactoryTest {
                         .build();
     }
 
-    @RepeatFailedTest(3)
+    @Test
     void shouldRunOnSpecifiedPort() {
-        final ArmeriaReactiveWebServerFactory factory = factory();
-        final int port = SocketUtils.findAvailableTcpPort();
-        factory.setPort(port);
-        runEchoServer(factory, server -> assertThat(server.getPort()).isEqualTo(port));
+        for (int i = 0; i < 3; i++) {
+            final ArmeriaReactiveWebServerFactory factory = factory(new DefaultListableBeanFactory());
+            final int port = SocketUtils.findAvailableTcpPort();
+            factory.setPort(port);
+            try {
+                runEchoServer(factory, server -> assertThat(server.getPort()).isEqualTo(port));
+            } catch (Throwable ex) {
+                if (i < 2) {
+                    continue;
+                }
+            }
+        }
     }
 
     @Test
