@@ -30,6 +30,8 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.MustBeClosed;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
@@ -209,6 +211,7 @@ public interface ServiceRequestContext extends RequestContext {
      * Otherwise, this method will throw an {@link IllegalStateException}.
      */
     @Override
+    @MustBeClosed
     default SafeCloseable push() {
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {

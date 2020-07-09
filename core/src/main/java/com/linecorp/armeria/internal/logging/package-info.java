@@ -15,9 +15,9 @@
  */
 
 /**
- * Helpers for annotations for building a RESTful service.
+ * Various classes used internally. Anything in this package can be changed or removed at any time.
  */
 @NonNullByDefault
-package com.linecorp.armeria.internal.annotation;
+package com.linecorp.armeria.internal.logging;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

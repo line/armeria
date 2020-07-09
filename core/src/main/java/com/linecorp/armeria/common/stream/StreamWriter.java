@@ -19,9 +19,9 @@ package com.linecorp.armeria.common.stream;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-import javax.annotation.CheckReturnValue;
-
 import org.reactivestreams.Subscriber;
+
+import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 

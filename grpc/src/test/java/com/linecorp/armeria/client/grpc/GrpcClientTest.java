@@ -1134,12 +1134,12 @@ class GrpcClientTest {
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(10L));
-        final StreamingOutputCallRequest request =
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(
-                                                  ResponseParameters.newBuilder()
-                                                                    .setIntervalUs(20000))
-                                          .build();
+        final StreamingOutputCallRequest request = StreamingOutputCallRequest
+                .newBuilder()
+                .addResponseParameters(ResponseParameters.newBuilder()
+                                                         .setIntervalUs((int) TimeUnit.SECONDS.toMicros(10)))
+                .build();
+
         final Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) t).getStatus().getCode())
