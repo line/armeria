@@ -63,7 +63,6 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -354,8 +353,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
-        PooledHttpRequest.of(req).aggregateWithPooledObjects(
-                ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
             if (cause != null) {
                 final HttpResponse errorRes;
                 if (ctx.config().verboseResponses()) {

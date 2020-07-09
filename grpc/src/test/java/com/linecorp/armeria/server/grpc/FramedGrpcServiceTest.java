@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingResult;
@@ -49,7 +48,7 @@ class FramedGrpcServiceTest {
     void missingContentType() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall");
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
-        final HttpResponse response = grpcService.doPost(ctx, PooledHttpRequest.of(req));
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -63,7 +62,7 @@ class FramedGrpcServiceTest {
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8));
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
-        final HttpResponse response = grpcService.doPost(ctx, PooledHttpRequest.of(req));
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -82,7 +81,7 @@ class FramedGrpcServiceTest {
         final ServiceRequestContext ctx = ServiceRequestContext.builder(req)
                                                                .routingResult(routingResult)
                                                                .build();
-        final HttpResponse response = grpcService.doPost(ctx, PooledHttpRequest.of(req));
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.BAD_REQUEST,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -101,7 +100,7 @@ class FramedGrpcServiceTest {
         final ServiceRequestContext ctx = ServiceRequestContext.builder(req)
                                                                .routingResult(routingResult)
                                                                .build();
-        final HttpResponse response = grpcService.doPost(ctx, PooledHttpRequest.of(req));
+        final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.builder(HttpStatus.OK)
                                .endOfStream(true)

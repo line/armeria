@@ -125,7 +125,7 @@ public final class RedirectService implements HttpService {
 
     private static final Pattern VALID_DEFAULT_URI_PATTERN = Pattern
             .compile("(?:(?:^https?:/{2}(?:([^:]+:)?[^:@]+@)?[^:]+)(?::[0-9]{1,5})?)?" +
-                    "(?:/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
+                     "(?:/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
     private static final Pattern PATTERN_PARAMS_START = Pattern.compile("/:|/\\{");
 
     private final HttpStatus httpStatus;

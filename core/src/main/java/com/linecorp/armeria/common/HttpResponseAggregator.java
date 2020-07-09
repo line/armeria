@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -26,16 +26,10 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 
-public final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
+final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
 
     @Nullable
     private List<ResponseHeaders> informationals; // needs aggregation as well
@@ -45,8 +39,8 @@ public final class HttpResponseAggregator extends HttpMessageAggregator<Aggregat
 
     private boolean receivedMessageHeaders;
 
-    public HttpResponseAggregator(CompletableFuture<AggregatedHttpResponse> future,
-                                  @Nullable ByteBufAllocator alloc) {
+    HttpResponseAggregator(CompletableFuture<AggregatedHttpResponse> future,
+                           @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         trailers = HttpHeaders.of();
     }

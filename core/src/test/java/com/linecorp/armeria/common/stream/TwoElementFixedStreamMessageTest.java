@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.annotation.Nullable;
@@ -40,7 +39,7 @@ class TwoElementFixedStreamMessageTest {
         final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
         streamMessage.subscribe(new CancelSubscriber(1), EventLoopGroups.directEventLoop(),
-                                WITH_POOLED_OBJECTS);
+                                SubscriptionOption.WITH_POOLED_OBJECTS);
 
         assertThat(obj1.refCnt()).isZero();
         assertThat(obj2.refCnt()).isZero();
@@ -53,7 +52,7 @@ class TwoElementFixedStreamMessageTest {
         final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
         streamMessage.subscribe(new CancelSubscriber(2), EventLoopGroups.directEventLoop(),
-                                WITH_POOLED_OBJECTS);
+                                SubscriptionOption.WITH_POOLED_OBJECTS);
 
         assertThat(obj1.refCnt()).isZero();
         assertThat(obj2.refCnt()).isZero();

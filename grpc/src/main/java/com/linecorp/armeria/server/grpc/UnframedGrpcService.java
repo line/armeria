@@ -46,15 +46,12 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.server.unsafe.PooledHttpService;
-import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
@@ -79,7 +76,7 @@ import io.netty.buffer.ByteBufHolder;
  *     </li>
  * </ul>
  */
-final class UnframedGrpcService extends SimplePooledDecoratingHttpService implements GrpcService {
+final class UnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
 
     private static final char LINE_SEPARATOR = '\n';
 
@@ -117,20 +114,19 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
     }
 
     @Override
-    public HttpResponse serve(
-            PooledHttpService delegate, ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
-            return delegate.serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
                 // Framed request, so just delegate.
-                return delegate.serve(ctx, req);
+                return unwrap().serve(ctx, req);
             }
         }
 
@@ -138,7 +134,7 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
         final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
-            return delegate.serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
 
         if (method.getType() != MethodType.UNARY) {
