@@ -102,6 +102,11 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public ServiceConfigBuilder decorators(Function<? super HttpService, ? extends HttpService>... decorators) {
+        throw new UnsupportedOperationException();
+    }
+
     ServiceConfig build(long defaultRequestTimeoutMillis,
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
