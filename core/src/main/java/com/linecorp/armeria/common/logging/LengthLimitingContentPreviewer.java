@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 import com.google.common.math.IntMath;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -67,23 +67,11 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
             return;
         }
         final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
-        bufferList.add(duplicateData(data, length));
+        bufferList.add(data.byteBuf(0, length, ByteBufAccessMode.RETAINED_DUPLICATE));
 
         aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
         if (aggregatedLength >= inflatedMaxLength || data.isEndOfStream()) {
             produce();
-        }
-    }
-
-    private static ByteBuf duplicateData(HttpData httpData, int length) {
-        if (httpData instanceof ByteBufHolder) {
-            final ByteBuf content = ((ByteBufHolder) httpData).content();
-            if (content.readableBytes() == length) {
-                return content.retainedDuplicate();
-            }
-            return content.retainedSlice(content.readerIndex(), length);
-        } else {
-            return Unpooled.wrappedBuffer(httpData.array(), 0, length);
         }
     }
 

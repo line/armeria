@@ -28,9 +28,9 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -42,7 +42,6 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
@@ -119,13 +118,13 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     @Override
     public final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (!isWritable(id)) {
-            ReferenceCountUtil.safeRelease(data);
+            data.close();
             return newClosedSessionFuture();
         }
 
         final int length = data.length();
         if (length == 0) {
-            ReferenceCountUtil.safeRelease(data);
+            data.close();
             final HttpContent content = endStream ? LastHttpContent.EMPTY_LAST_CONTENT : EMPTY_CONTENT;
             final ChannelFuture future = write(id, content, endStream);
             ch.flush();
@@ -162,7 +161,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             return future;
         } finally {
             if (!handled) {
-                ReferenceCountUtil.safeRelease(buf);
+                data.close();
             }
         }
     }
@@ -175,7 +174,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             for (;;) {
                 // Ensure an HttpContent does not exceed the maximum length of a cleartext TLS record.
                 final int chunkSize = Math.min(MAX_TLS_DATA_LENGTH, remaining);
-                lastFuture = write(id, new DefaultHttpContent(dataChunk(data, offset, chunkSize)), false);
+                lastFuture = write(id, new DefaultHttpContent(toByteBuf(data, offset, chunkSize)), false);
                 remaining -= chunkSize;
                 if (remaining == 0) {
                     break;
@@ -190,16 +189,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             ch.flush();
             return lastFuture;
         } finally {
-            ReferenceCountUtil.safeRelease(data);
-        }
-    }
-
-    private static ByteBuf dataChunk(HttpData data, int offset, int chunkSize) {
-        if (data instanceof ByteBufHolder) {
-            final ByteBuf buf = ((ByteBufHolder) data).content();
-            return buf.retainedSlice(offset, chunkSize);
-        } else {
-            return Unpooled.wrappedBuffer(data.array(), offset, chunkSize);
+            data.close();
         }
     }
 
@@ -207,7 +197,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         if (id < currentId) {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
-            ReferenceCountUtil.safeRelease(obj);
+            PooledObjects.close(obj);
             return newFailedFuture(ClosedStreamException.get());
         }
 

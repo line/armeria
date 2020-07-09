@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -58,8 +57,6 @@ import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 
 /**
  * A {@link SimpleDecoratingHttpService} which allows {@link GrpcService} to serve requests without the framing
@@ -191,21 +188,14 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
             final HttpData content = clientRequest.content();
-            final ByteBuf message;
-            if (content instanceof ByteBufHolder) {
-                message = ((ByteBufHolder) content).content();
-            } else {
-                message = ctx.alloc().buffer(content.length());
-                message.writeBytes(content.array());
-            }
             final HttpData frame;
             boolean success = false;
             try {
-                frame = framer.writePayload(message);
+                frame = framer.writePayload(content.byteBuf());
                 success = true;
             } finally {
                 if (!success) {
-                    message.release();
+                    content.close();
                 }
             }
             grpcRequest = HttpRequest.of(grpcHeaders, frame);
@@ -276,7 +266,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                     @Override
                     public void messageRead(DeframedMessage message) {
                         // We know that we don't support compression, so this is always a ByteBuffer.
-                        final HttpData unframedContent = PooledHttpData.wrap(message.buf()).withEndOfStream();
+                        final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
                         res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
                     }

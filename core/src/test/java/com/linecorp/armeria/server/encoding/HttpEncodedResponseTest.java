@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -39,13 +38,13 @@ class HttpEncodedResponseTest {
 
     @Test
     void testLeak() {
-        final ByteBuf buf = Unpooled.buffer();
+        final ByteBuf buf = Unpooled.directBuffer();
         buf.writeCharSequence("foo", StandardCharsets.UTF_8);
 
         final HttpResponse orig =
                 AggregatedHttpResponse.of(HttpStatus.OK,
                                           MediaType.PLAIN_TEXT_UTF_8,
-                                          PooledHttpData.wrap(buf).withEndOfStream()).toHttpResponse();
+                                          HttpData.wrap(buf).withEndOfStream()).toHttpResponse();
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
                 orig, HttpEncodingType.DEFLATE, mediaType -> true, 1);
 

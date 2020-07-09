@@ -64,7 +64,6 @@ import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -193,7 +192,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
-            try {
+            try (HttpData content = aggregatedRes.content()) {
                 if (closed) {
                     return null;
                 }
@@ -207,7 +206,6 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                                     "requestHeaders: {})", webClient.uri(), status,
                                     aggregatedRes.contentUtf8(), requestHeaders);
                     } else {
-                        final HttpData content = aggregatedRes.content();
                         try {
                             final List<Endpoint> endpoints = responseConverter.apply(content.array());
                             setEndpoints(endpoints);
@@ -219,8 +217,6 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                         }
                     }
                 }
-            } finally {
-                ReferenceCountUtil.release(aggregatedRes.content());
             }
             scheduledFuture = eventLoop.schedule(this::fetchRegistry,
                                                  registryFetchIntervalSeconds, TimeUnit.SECONDS);

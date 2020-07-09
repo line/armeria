@@ -101,7 +101,6 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.util.ReferenceCountUtil;
 
 class ProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
@@ -618,7 +617,7 @@ class ProxyClientIntegrationTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {
-                final ByteBuf backendMessage = ReferenceCountUtil.retain((ByteBuf) msg);
+                final ByteBuf backendMessage = ((ByteBuf) msg).retain();
                 received.add(backendMessage);
                 writeToBackendAndFlush();
             } else {

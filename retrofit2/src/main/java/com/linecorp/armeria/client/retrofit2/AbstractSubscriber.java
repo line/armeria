@@ -32,8 +32,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.netty.util.ReferenceCountUtil;
 import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.Protocol;
@@ -128,7 +128,7 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
                 // Cancel the subscription if any message comes here after the state has been changed to DONE.
                 assert subscription != null;
                 subscription.cancel();
-                ReferenceCountUtil.safeRelease(httpObject);
+                PooledObjects.close(httpObject);
                 break;
         }
     }

@@ -46,15 +46,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -232,7 +232,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private void doPushSignal(Object obj) {
             if (state == State.ABORTED) {
-                ReferenceCountUtil.safeRelease(obj);
+                PooledObjects.close(obj);
                 return;
             }
             if (!(obj instanceof CloseEvent)) {
@@ -769,19 +769,23 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 offset++;
                 @SuppressWarnings("unchecked")
                 T obj = (T) signal;
-                ReferenceCountUtil.touch(obj);
                 try {
-                    if (withPooledObjects) {
-                        if (obj instanceof ByteBufHolder) {
-                            obj = retainedDuplicate((ByteBufHolder) obj);
-                        } else if (obj instanceof ByteBuf) {
-                            obj = retainedDuplicate((ByteBuf) obj);
-                        }
-                    } else {
-                        if (obj instanceof ByteBufHolder) {
-                            obj = copy((ByteBufHolder) obj);
-                        } else if (obj instanceof ByteBuf) {
-                            obj = copy((ByteBuf) obj);
+                    if (obj instanceof HttpData) {
+                        final HttpData data = (HttpData) obj;
+                        if (data.isPooled()) {
+                            if (withPooledObjects) {
+                                final ByteBuf byteBuf = data.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE);
+                                @SuppressWarnings("unchecked")
+                                final T retained = (T) HttpData.wrap(byteBuf)
+                                                               .withEndOfStream(data.isEndOfStream());
+                                obj = retained;
+                            } else {
+                                final ByteBuf byteBuf = data.byteBuf(ByteBufAccessMode.DUPLICATE);
+                                @SuppressWarnings("unchecked")
+                                final T copied = (T) HttpData.copyOf(byteBuf)
+                                                             .withEndOfStream(data.isEndOfStream());
+                                obj = copied;
+                            }
                         }
                     }
                 } catch (Throwable thrown) {
@@ -831,26 +835,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             if (cancelledOrAbortedUpdater.compareAndSet(this, null, cause)) {
                 signal();
             }
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T retainedDuplicate(ByteBufHolder o) {
-            return (T) o.replace(o.content().retainedDuplicate());
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T retainedDuplicate(ByteBuf o) {
-            return (T) o.retainedDuplicate();
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T copy(ByteBufHolder o) {
-            return (T) o.replace(Unpooled.copiedBuffer(o.content()));
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T copy(ByteBuf o) {
-            return (T) Unpooled.copiedBuffer(o);
         }
     }
 
@@ -943,7 +927,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (!(o instanceof CloseEvent)) {
                     removedLength += signalLengthGetter.length(o);
                 }
-                ReferenceCountUtil.safeRelease(o);
+                PooledObjects.close(o);
                 elements[index] = null;
             }
             head = oldHead + numElementsToBeRemoved & bitMask;
@@ -1035,7 +1019,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             elements = null;
             final int t = tail;
             for (int i = head; i < t; i++) {
-                ReferenceCountUtil.safeRelease(oldElements[i]);
+                PooledObjects.close(oldElements[i]);
             }
         }
 

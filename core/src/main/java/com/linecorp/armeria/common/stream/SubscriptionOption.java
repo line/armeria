@@ -19,8 +19,10 @@ package com.linecorp.armeria.common.stream;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
+
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -32,14 +34,17 @@ import io.netty.util.concurrent.EventExecutor;
 public enum SubscriptionOption {
 
     /**
-     * To receive the pooled {@link ByteBuf} and {@link ByteBufHolder} as is, without making a copy.
-     * If you don't know what this means, do not specify this when you subscribe the {@link StreamMessage}.
-     */
-    WITH_POOLED_OBJECTS,
-
-    /**
      * To get notified by {@link Subscriber#onError(Throwable)} even when the {@link StreamMessage} is
      * {@linkplain Subscription#cancel() cancelled}.
      */
-    NOTIFY_CANCELLATION
+    NOTIFY_CANCELLATION,
+
+    /**
+     * (Advanced users only) To receive the pooled {@link HttpData} as is, without making a copy.
+     * If you don't know what this means, do not specify this when you subscribe the {@link StreamMessage}.
+     *
+     * @see PooledObjects
+     */
+    @UnstableApi
+    WITH_POOLED_OBJECTS
 }

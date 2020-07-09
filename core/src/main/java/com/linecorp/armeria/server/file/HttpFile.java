@@ -29,11 +29,13 @@ import java.util.concurrent.Executor;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.file.HttpFileBuilder.ClassPathHttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpFileBuilder.FileSystemHttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpFileBuilder.HttpDataFileBuilder;
 import com.linecorp.armeria.server.file.HttpFileBuilder.NonExistentHttpFileBuilder;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -245,9 +247,9 @@ public interface HttpFile {
     CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor);
 
     /**
-     * Converts this file into an {@link AggregatedHttpFile}. {@link AggregatedHttpFile#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate(Executor)}.
+     * (Advanced users only) Converts this file into an {@link AggregatedHttpFile}.
+     * {@link AggregatedHttpFile#content()} will return a pooled {@link HttpData}, and the caller must
+     * ensure to release it. If you don't know what this means, use {@link #aggregate(Executor)}.
      *
      * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
@@ -255,7 +257,10 @@ public interface HttpFile {
      * @return a {@link CompletableFuture} which will complete when the aggregation process is finished, or
      *         a {@link CompletableFuture} successfully completed with {@code this}, if this file is already
      *         an {@link AggregatedHttpFile}.
+     *
+     * @see PooledObjects
      */
+    @UnstableApi
     CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(Executor fileReadExecutor,
                                                                      ByteBufAllocator alloc);
 

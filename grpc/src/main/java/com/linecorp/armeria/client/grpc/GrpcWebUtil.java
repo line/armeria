@@ -25,13 +25,11 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil;
 
 import io.grpc.ClientInterceptor;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 /**
  * Utilities for working with <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a>.
@@ -77,41 +75,31 @@ public final class GrpcWebUtil {
     @Nullable
     public static HttpHeaders parseTrailers(HttpData response) {
         requireNonNull(response, "response");
-        final ByteBuf buf;
-        if (response instanceof PooledHttpData) {
-            buf = ((PooledHttpData) response).content();
-        } else {
-            buf = Unpooled.wrappedBuffer(response.array());
-        }
-        final int readerIndex = buf.readerIndex();
+        final ByteBuf buf = response.byteBuf();
 
-        try {
-            HttpHeaders trailers = null;
-            while (buf.isReadable(HEADER_LENGTH)) {
-                final short type = buf.readUnsignedByte();
-                if ((type & RESERVED_MASK) != 0) {
-                    // Malformed header
-                    break;
-                }
-
-                final int length = buf.readInt();
-                // 8th (MSB) bit of the 1st gRPC frame byte is:
-                // - '1' for trailers
-                // - '0' for data
-                //
-                // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2
-                if (type >> 7 == 1) {
-                    trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
-                    break;
-                } else {
-                    // Skip a gRPC content
-                    buf.skipBytes(length);
-                }
+        HttpHeaders trailers = null;
+        while (buf.isReadable(HEADER_LENGTH)) {
+            final short type = buf.readUnsignedByte();
+            if ((type & RESERVED_MASK) != 0) {
+                // Malformed header
+                break;
             }
-            return trailers;
-        } finally {
-            buf.readerIndex(readerIndex);
+
+            final int length = buf.readInt();
+            // 8th (MSB) bit of the 1st gRPC frame byte is:
+            // - '1' for trailers
+            // - '0' for data
+            //
+            // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2
+            if (type >> 7 == 1) {
+                trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
+                break;
+            } else {
+                // Skip a gRPC content
+                buf.skipBytes(length);
+            }
         }
+        return trailers;
     }
 
     private GrpcWebUtil() {}

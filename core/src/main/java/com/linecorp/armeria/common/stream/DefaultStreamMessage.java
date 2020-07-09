@@ -32,8 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -289,7 +289,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     final T obj = (T) e;
                     onRemoval(obj);
                 } finally {
-                    ReferenceCountUtil.safeRelease(e);
+                    PooledObjects.close(e);
                 }
             }
         }
@@ -498,7 +498,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 final T obj = (T) e;
                 onRemoval(obj);
             } finally {
-                ReferenceCountUtil.safeRelease(e);
+                PooledObjects.close(e);
             }
         }
     }

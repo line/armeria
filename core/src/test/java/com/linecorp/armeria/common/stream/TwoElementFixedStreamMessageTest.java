@@ -24,11 +24,11 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.ReferenceCountUtil;
 
 class TwoElementFixedStreamMessageTest {
 
@@ -36,8 +36,8 @@ class TwoElementFixedStreamMessageTest {
     void cancelOnFirstElement() {
         final ByteBuf obj1 = newBuffer("obj1");
         final ByteBuf obj2 = newBuffer("obj2");
-        final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
-                new TwoElementFixedStreamMessage<>(obj1, obj2);
+        final TwoElementFixedStreamMessage<HttpData> streamMessage =
+                new TwoElementFixedStreamMessage<>(HttpData.wrap(obj1), HttpData.wrap(obj2));
         streamMessage.subscribe(new CancelSubscriber(1), EventLoopGroups.directEventLoop(),
                                 SubscriptionOption.WITH_POOLED_OBJECTS);
 
@@ -49,8 +49,8 @@ class TwoElementFixedStreamMessageTest {
     void cancelOnSecondElement() {
         final ByteBuf obj1 = newBuffer("obj1");
         final ByteBuf obj2 = newBuffer("obj2");
-        final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
-                new TwoElementFixedStreamMessage<>(obj1, obj2);
+        final TwoElementFixedStreamMessage<HttpData> streamMessage =
+                new TwoElementFixedStreamMessage<>(HttpData.wrap(obj1), HttpData.wrap(obj2));
         streamMessage.subscribe(new CancelSubscriber(2), EventLoopGroups.directEventLoop(),
                                 SubscriptionOption.WITH_POOLED_OBJECTS);
 
@@ -62,7 +62,7 @@ class TwoElementFixedStreamMessageTest {
         return ByteBufAllocator.DEFAULT.buffer().writeBytes(content.getBytes());
     }
 
-    private static class CancelSubscriber implements Subscriber<ByteBuf> {
+    private static class CancelSubscriber implements Subscriber<HttpData> {
         private final int cancelCallingSequence;
         private int currentSequence = 1;
 
@@ -80,8 +80,8 @@ class TwoElementFixedStreamMessageTest {
         }
 
         @Override
-        public void onNext(ByteBuf byteBuf) {
-            ReferenceCountUtil.safeRelease(byteBuf);
+        public void onNext(HttpData data) {
+            data.close();
             if (currentSequence++ == cancelCallingSequence) {
                 subscription.cancel();
             }

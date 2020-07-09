@@ -67,7 +67,6 @@ import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 
@@ -275,12 +274,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         final int dataLength = data.length();
         if (dataLength != 0) {
-            final ByteBuf buf;
-            if (data instanceof ByteBufHolder) {
-                buf = ((ByteBufHolder) data).content();
-            } else {
-                buf = Unpooled.wrappedBuffer(data.array());
-            }
+            final ByteBuf buf = data.byteBuf();
             assert unprocessed != null;
             unprocessed.add(buf);
             unprocessedBytes += dataLength;

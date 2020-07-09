@@ -382,6 +382,7 @@ class HealthCheckServiceTest {
                                    "armeria-lphc", "60, 5"),
                 HttpData.ofUtf8("ok")));
 
+        System.err.println("--------------------------");
         // Send a no-op request.
         final AggregatedHttpResponse res3 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_custom"),
                                                            "NOOP").aggregate().join();

@@ -18,9 +18,6 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-
 /**
  * An {@link HttpRequest} that filters objects as they are published. The filtering
  * will happen from an I/O thread, meaning the order of the filtering will match the
@@ -44,9 +41,8 @@ public abstract class FilteredHttpRequest
      * before passing to a subscriber.
      *
      * @param withPooledObjects if {@code true}, {@link FilteredStreamMessage#filter(Object)} receives the
-     *                          pooled {@link ByteBuf} and {@link ByteBufHolder} as is, without making a copy.
-     *                          If you don't know what this means,
-     *                          use {@link #FilteredHttpRequest(HttpRequest)}.
+     *                          pooled {@link HttpData} as is, without making a copy. If you don't know what
+     *                          this means, use {@link #FilteredHttpRequest(HttpRequest)}.
      */
     protected FilteredHttpRequest(HttpRequest delegate, boolean withPooledObjects) {
         super(delegate, withPooledObjects);

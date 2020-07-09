@@ -50,6 +50,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -60,7 +61,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -275,7 +275,7 @@ final class WebOperationService implements HttpService {
         final long nextRemainingBytes = remainingBytes - readBytes;
         final boolean endOfStream = nextRemainingBytes == 0;
         if (readBytes > 0) {
-            if (!res.tryWrite(PooledHttpData.wrap(buf).withEndOfStream(endOfStream))) {
+            if (!res.tryWrite(HttpData.wrap(buf).withEndOfStream(endOfStream))) {
                 close(in);
                 return;
             }

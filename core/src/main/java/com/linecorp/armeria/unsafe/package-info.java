@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,15 +15,15 @@
  */
 
 /**
- * Utilities for working with {@link io.netty.buffer.ByteBuf} in an unsafe way. These can improve performance
- * when dealing with large buffers but require careful memory management or there will be memory leaks. Only use
- * these methods if you really know what you're doing.
+ * Utilities for working with an {@link com.linecorp.armeria.common.HttpData} backed by a pooled
+ * {@link io.netty.buffer.ByteBuf}. They can improve performance but require careful memory management or
+ * there will be memory leaks. Use them only if you really know what you're doing.
  *
- * @see com.linecorp.armeria.common.unsafe.PooledHttpData
+ * @see com.linecorp.armeria.unsafe.PooledObjects
  */
-@UnstableApi
 @NonNullByDefault
-package com.linecorp.armeria.common.unsafe;
+@UnstableApi
+package com.linecorp.armeria.unsafe;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
 import com.linecorp.armeria.common.util.UnstableApi;

@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.stream.StreamWriter;
 
-import io.netty.util.ReferenceCountUtil;
-
 /**
  * An {@link HttpResponse} that can have {@link HttpObject}s written to it.
  */
@@ -61,8 +59,8 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
             }
         } finally {
             close();
-            if (!transferredContent) {
-                ReferenceCountUtil.release(content);
+            if (!transferredContent && content != null) {
+                content.close();
             }
         }
     }

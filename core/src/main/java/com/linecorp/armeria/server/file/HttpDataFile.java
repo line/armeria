@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
@@ -35,8 +36,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.handler.codec.DateFormatter;
 
 final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile {
@@ -98,9 +99,9 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     @Override
     protected HttpResponse doRead(ResponseHeaders headers, long length,
                                   Executor fileReadExecutor, ByteBufAllocator alloc) {
-        if (content instanceof ByteBufHolder) {
-            final ByteBufHolder holder = (ByteBufHolder) content;
-            return HttpResponse.of(headers, (HttpData) holder.retainedDuplicate());
+        if (content.isPooled()) {
+            final ByteBuf buf = content.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE);
+            return HttpResponse.of(headers, HttpData.wrap(buf));
         } else {
             return HttpResponse.of(headers, content);
         }

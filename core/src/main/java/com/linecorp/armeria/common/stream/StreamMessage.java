@@ -25,12 +25,10 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -58,19 +56,15 @@ import io.netty.util.concurrent.EventExecutor;
  * will complete, which you may find useful because {@link Subscriber} does not notify you when a stream is
  * {@linkplain Subscription#cancel() cancelled}.
  *
- * <h3>Publication and Consumption of {@link ReferenceCounted} objects</h3>
+ * <h3>Publication and Consumption of pooled {@link HttpData} objects</h3>
  *
- * <p>{@link StreamMessage} will reject the publication request of a {@link ReferenceCounted} object except
- * {@link ByteBuf} and {@link ByteBufHolder}.
+ * <p>{@link StreamMessage} will discard the publication request of a pooled {@link HttpData} silently and
+ * release it automatically when the publication is attempted after the stream is closed.
  *
- * <p>{@link StreamMessage} will discard the publication request of a {@link ByteBuf} or a {@link ByteBufHolder}
- * silently and release it automatically when the publication is attempted after the stream is closed.
+ * <p>For pooled {@link HttpData}, {@link StreamMessage} will convert them into its unpooled version that
+ * never leak, so that the {@link Subscriber} does not need to worry about leaks.
  *
- * <p>For {@link ByteBuf} and {@link ByteBufHolder}, {@link StreamMessage} will convert them into their
- * respective unpooled versions that never leak, so that the {@link Subscriber} does not need to worry about
- * leaks.
- *
- * <p>If a {@link Subscriber} does not want a {@link StreamMessage} to make a copy of a {@link ByteBufHolder},
+ * <p>If a {@link Subscriber} does not want a {@link StreamMessage} to make a copy of a pooled {@link HttpData},
  * specify {@link SubscriptionOption#WITH_POOLED_OBJECTS} when you subscribe. Note that the {@link Subscriber}
  * is responsible for releasing the objects given with {@link Subscriber#onNext(Object)}.
  *

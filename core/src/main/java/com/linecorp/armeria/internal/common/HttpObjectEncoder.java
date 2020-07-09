@@ -18,18 +18,17 @@ package com.linecorp.armeria.internal.common;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.util.ReferenceCountUtil;
 
 /**
  * Converts an {@link HttpObject} into a protocol-specific object and writes it into a {@link Channel}.
@@ -68,7 +67,7 @@ public interface HttpObjectEncoder {
         assert eventLoop().inEventLoop();
 
         if (isClosed()) {
-            ReferenceCountUtil.safeRelease(data);
+            data.close();
             return newClosedSessionFuture();
         }
 
@@ -117,11 +116,14 @@ public interface HttpObjectEncoder {
     }
 
     default ByteBuf toByteBuf(HttpData data) {
-        if (data instanceof ByteBufHolder) {
-            return ((ByteBufHolder) data).content();
-        }
-        final ByteBuf buf = channel().alloc().directBuffer(data.length(), data.length());
-        buf.writeBytes(data.array());
+        final ByteBuf buf = data.byteBuf(ByteBufAccessMode.DIRECT);
+        data.close();
+        return buf;
+    }
+
+    default ByteBuf toByteBuf(HttpData data, int offset, int length) {
+        final ByteBuf buf = data.byteBuf(offset, length, ByteBufAccessMode.DIRECT);
+        data.close();
         return buf;
     }
 }
