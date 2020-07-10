@@ -24,7 +24,7 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 /**
  * A {@link DnsQueryLifecycleObserverFactory} factory that helps create DnsQueryLifecycleObserver.
  */
-public class DefaultDnsQueryLifecycleObserverFactory implements DnsQueryLifecycleObserverFactory {
+final class DefaultDnsQueryLifecycleObserverFactory implements DnsQueryLifecycleObserverFactory {
 
     private final MeterRegistry meterRegistry;
 
@@ -32,7 +32,7 @@ public class DefaultDnsQueryLifecycleObserverFactory implements DnsQueryLifecycl
      * Accepts meterRegistry.
      * @param meterRegistry {@link MeterRegistry} MeterRegistry to capture metrics.
      */
-    public DefaultDnsQueryLifecycleObserverFactory(MeterRegistry meterRegistry) {
+    DefaultDnsQueryLifecycleObserverFactory(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
     }
 
