@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.client.thrift;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,7 +44,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -145,10 +143,15 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             ctx.updateRequest(httpReq);
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT);
 
-            final CompletableFuture<AggregatedHttpResponse> future =
-                    unwrap().execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
+            final HttpResponse httpResponse;
+            try {
+                httpResponse = unwrap().execute(ctx, httpReq);
+            } catch (Throwable t) {
+                httpReq.abort();
+                throw t;
+            }
 
-            future.handle((res, cause) -> {
+            httpResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((res, cause) -> {
                 if (cause != null) {
                     handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
                     return null;
