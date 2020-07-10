@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -58,13 +59,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     /**
-     * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
-     * before passing to a subscriber.
+     * (Advanced users only) Creates a new {@link FilteredStreamMessage} that filters objects published by
+     * {@code delegate} before passing to a subscriber.
      *
      * @param withPooledObjects if {@code true}, {@link #filter(Object)} receives the pooled {@link HttpData}
      *                          as is, without making a copy. If you don't know what this means,
      *                          use {@link #FilteredStreamMessage(StreamMessage)}.
+     * @see PooledObjects
      */
+    @UnstableApi
     protected FilteredStreamMessage(StreamMessage<T> delegate, boolean withPooledObjects) {
         this.delegate = requireNonNull(delegate, "delegate");
         filterSupportsPooledObjects = withPooledObjects;

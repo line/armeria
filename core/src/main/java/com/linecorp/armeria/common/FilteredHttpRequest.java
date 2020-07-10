@@ -17,6 +17,8 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * An {@link HttpRequest} that filters objects as they are published. The filtering
@@ -37,13 +39,15 @@ public abstract class FilteredHttpRequest
     }
 
     /**
-     * Creates a new {@link FilteredHttpRequest} that filters objects published by {@code delegate}
-     * before passing to a subscriber.
+     * (Advanced users only) Creates a new {@link FilteredHttpRequest} that filters objects published by
+     * {@code delegate} before passing to a subscriber.
      *
      * @param withPooledObjects if {@code true}, {@link FilteredStreamMessage#filter(Object)} receives the
      *                          pooled {@link HttpData} as is, without making a copy. If you don't know what
      *                          this means, use {@link #FilteredHttpRequest(HttpRequest)}.
+     * @see PooledObjects
      */
+    @UnstableApi
     protected FilteredHttpRequest(HttpRequest delegate, boolean withPooledObjects) {
         super(delegate, withPooledObjects);
         headers = delegate.headers();
