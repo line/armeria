@@ -85,6 +85,9 @@ class ArmeriaReactiveWebServerFactoryTest {
 
     @Test
     void shouldRunOnSpecifiedPort() {
+        // There is a race condition on finding an unused port.
+        // The found port seems to be used by another test before using it because of the parallel test option.
+        // So this test case is tried up to 3 times to avoid flakiness.
         for (int i = 0; i < 3; i++) {
             final ArmeriaReactiveWebServerFactory factory = factory(new DefaultListableBeanFactory());
             final int port = SocketUtils.findAvailableTcpPort();
