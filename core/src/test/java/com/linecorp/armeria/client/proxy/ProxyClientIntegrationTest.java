@@ -40,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -47,8 +48,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -119,6 +124,8 @@ class ProxyClientIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, SessionProtocol.HTTP);
+            sb.port(0, SessionProtocol.HTTPS);
+            sb.tlsSelfSigned();
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };
@@ -331,12 +338,13 @@ class ProxyClientIntegrationTest {
         clientFactory.close();
     }
 
-    @Test
-    void testHttpsProxyBasicCase() throws Exception {
+    @ParameterizedTest
+    @MethodSource("sessionAndEndpointProvider")
+    void testHttpsProxy(SessionProtocol protocol, Endpoint endpoint) throws Exception {
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
                         ProxyConfig.connect(httpsProxyServer.address(), true)).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(protocol, endpoint)
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
@@ -685,5 +693,16 @@ class ProxyClientIntegrationTest {
                 }
             }
         }
+    }
+
+    static Stream<Arguments> sessionAndEndpointProvider() {
+        return Stream.of(
+                Arguments.arguments(SessionProtocol.HTTP, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H2C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.H2, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.HTTPS, backendServer.httpsEndpoint())
+        );
     }
 }
