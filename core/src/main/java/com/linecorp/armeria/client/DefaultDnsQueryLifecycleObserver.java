@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DnsQuestion;
@@ -27,9 +28,12 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserver;
 /**
  * A {@link DnsQueryLifecycleObserver} that helps capture custom dns metrics.
  */
-public class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
+final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
 
-    private final MeterRegistry meterRegistry;
+    private final Counter success;
+    private final Counter failure;
+    private final Counter queryWritten;
+
     private final DnsQuestion dnsQuestion;
 
     /**
@@ -37,14 +41,16 @@ public class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserv
      * @param meterRegistry {@link MeterRegistry} MeterRegistry to capture metrics.
      * @param question {@link DnsQuestion} DnsQuestion.
      */
-    public DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry, DnsQuestion question) {
+    DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry, DnsQuestion question) {
         this.dnsQuestion = question;
-        this.meterRegistry = meterRegistry;
+        success = meterRegistry.counter("dns.query", "result", "success");
+        failure = meterRegistry.counter("dns.query", "result", "failure");
+        queryWritten = meterRegistry.counter("dns.query", question.name(), "written");
     }
 
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
-        meterRegistry.counter("dns.query.count", dnsQuestion.name(), dnsQuestion.type().name()).increment();
+        queryWritten.increment();
     }
 
     @Override
@@ -68,11 +74,11 @@ public class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserv
 
     @Override
     public void queryFailed(Throwable cause) {
-        meterRegistry.counter("dns.query.failed").increment();
+        failure.increment();
     }
 
     @Override
     public void querySucceed() {
-        meterRegistry.counter("dns.query.succeeded").increment();
+        success.increment();
     }
 }
