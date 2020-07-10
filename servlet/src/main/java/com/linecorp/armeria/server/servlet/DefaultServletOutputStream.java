@@ -39,7 +39,7 @@ final class DefaultServletOutputStream extends ServletOutputStream {
 
     @Override
     public void setWriteListener(WriteListener listener) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override

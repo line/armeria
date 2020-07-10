@@ -56,14 +56,17 @@ final class DefaultServletService implements HttpService {
 
     private void process(ServiceRequestContext ctx, AggregatedHttpRequest req,
                          CompletableFuture<HttpResponse> resFuture) {
-        final ServletRequestDispatcher dispatcher = servletContext.getRequestDispatcher(ctx.path());
+        final String contextPath = servletContext.getContextPath();
+        final String rest = ctx.path().substring(contextPath.length());
+        final ServletRequestDispatcher dispatcher = servletContext.getRequestDispatcher(rest);
         if (dispatcher == null) {
             resFuture.complete(HttpResponse.of(HttpStatus.NOT_FOUND));
             return;
         }
         ctx.blockingTaskExecutor().execute(() -> {
             try {
-                dispatcher.dispatch(new DefaultServletHttpRequest(ctx, servletContext, req),
+                dispatcher.dispatch(new DefaultServletHttpRequest(
+                        servletContext, ctx, req, dispatcher.servletPath(), dispatcher.pathInfo()),
                                     new DefaultServletHttpResponse(servletContext, resFuture));
             } catch (Throwable t) {
                 resFuture.complete(HttpResponse.ofFailure(t));

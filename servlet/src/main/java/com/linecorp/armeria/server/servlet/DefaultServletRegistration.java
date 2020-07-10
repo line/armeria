@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.servlet;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -34,6 +33,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletRegistration.Dynamic;
 import javax.servlet.ServletSecurityElement;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -105,9 +105,9 @@ final class DefaultServletRegistration implements Dynamic {
         }
 
         for (String urlPattern : urlPatterns) {
-            urlMapper.addMapping(servletContext.getContextPath() + urlPattern, this);
+            urlMapper.addMapping(urlPattern, this);
         }
-        mappingSet.addAll(Arrays.asList(urlPatterns));
+        mappingSet.addAll(ImmutableList.copyOf(urlPatterns));
 
         return ImmutableSet.of();
     }
@@ -120,7 +120,7 @@ final class DefaultServletRegistration implements Dynamic {
     @Override
     @Nullable
     public String getRunAsRole() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -157,26 +157,26 @@ final class DefaultServletRegistration implements Dynamic {
 
     @Override
     public void setLoadOnStartup(int loadOnStartup) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Set<String> setServletSecurity(ServletSecurityElement constraint) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setMultipartConfig(MultipartConfigElement multipartConfig) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setRunAsRole(String roleName) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setAsyncSupported(boolean isAsyncSupported) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 }

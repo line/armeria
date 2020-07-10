@@ -66,7 +66,7 @@ final class DefaultServletContext implements ServletContext {
     private final String contextPath;
     private final String servletContextName;
 
-    private int sessionTimeout = 30; // unit: minutes
+    private int sessionTimeoutMinutes = 30; // TODO add setters.
     private boolean initialized;
     private Map<String, String> initParamMap = new HashMap<>();
     private Map<String, DefaultServletRegistration> servletRegistrations = new HashMap<>();
@@ -106,31 +106,6 @@ final class DefaultServletContext implements ServletContext {
         mimeMappings = ImmutableMap.copyOf(mimeMappings);
     }
 
-    /**
-     * Decode servlet path:
-     * <a
-     * href="https://download.oracle.com/otn-pub/jcp/servlet-3.0-fr-eval-oth-JSpec/servlet-3_0-final-spec.pdf">
-     * Servlet path</a> page number: 25
-     * ContextPath /catalog
-     * Mapping Pattern: /lawn/*
-     * Mapping Pattern: /garden/*
-     * Mapping Pattern: *.jsp
-     * uri: /catalog/lawn/index.html -> ServletPath: /lawn + PathInfo: /index.html
-     * uri: /catalog/garden/implements/ -> ServletPath: /garden + PathInfo: /implements/
-     * uri: /catalog/help/feedback.jsp -> ServletPath: /help/feedback.jsp + PathInfo: null.
-     */
-    @Nullable
-    String decodeServletPath(String uri) {
-        final Pair<String, DefaultServletRegistration> pair = servletUrlMapper.getMapping(uri);
-        if (pair == null) {
-            return null;
-        } else if (pair.getKey().startsWith("*.")) {
-            return uri.substring(contextPath.length());
-        } else {
-            return pair.getKey().substring(contextPath.length());
-        }
-    }
-
     void mimeMapping(String extension, String mimeType) {
         requireNonNull(extension, "extension");
         requireNonNull(mimeType, "mimeType");
@@ -143,12 +118,12 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public int getSessionTimeout() {
-        return sessionTimeout;
+        return sessionTimeoutMinutes;
     }
 
     @Override
     public void setSessionTimeout(int sessionTimeout) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -158,7 +133,7 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public DefaultServletContext getContext(String uripath) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -200,22 +175,22 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public Set<String> getResourcePaths(String path) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public URL getResource(String path) throws MalformedURLException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public InputStream getResourceAsStream(String path) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getRealPath(String path) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -226,18 +201,32 @@ final class DefaultServletContext implements ServletContext {
         if (pair == null) {
             return null;
         }
-        return new ServletRequestDispatcher(new ServletFilterChain(pair.getValue()), pair.getValue().getName());
+
+        // TODO Integrate this logic into servletUrlMapper.
+        final String pathPattern = pair.getKey();
+        final String servletPath;
+        final String pathInfo;
+        if (pathPattern.endsWith("/*")) {
+            // pathPattern: "/lawn/*"
+            // path: "/lawn/index.html" then,
+            // servletPath: "/lawn"
+            // pathInfo: "/index.html"
+            servletPath = pathPattern.substring(0, pathPattern.length() - 2);
+            pathInfo = path.substring(servletPath.length());
+        } else {
+            // pathPattern starts with "*." or exact path.
+            servletPath = path;
+            pathInfo = null;
+        }
+
+        return new ServletRequestDispatcher(new ServletFilterChain(pair.getValue()), pair.getValue().getName(),
+                                            servletPath, pathInfo);
     }
 
     @Override
     @Nullable
     public ServletRequestDispatcher getNamedDispatcher(String name) {
-        requireNonNull(name, "name");
-        final DefaultServletRegistration servletRegistration = getServletRegistration(name);
-        if (servletRegistration == null) {
-            return null;
-        }
-        return new ServletRequestDispatcher(new ServletFilterChain(servletRegistration), name);
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -433,43 +422,43 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(String filterName, String className) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public FilterRegistration.Dynamic addFilter(String filterName, Class<? extends Filter> filterClass) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Nullable
     @Override
     public FilterRegistration getFilterRegistration(String filterName) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public SessionCookieConfig getSessionCookieConfig() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -484,27 +473,27 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public void addListener(String className) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public <T extends EventListener> void addListener(T listener) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void addListener(Class<? extends EventListener> listenerClass) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public <T extends EventListener> T createListener(Class<T> clazz) throws ServletException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public JspConfigDescriptor getJspConfigDescriptor() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -514,7 +503,7 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public void declareRoles(String... roleNames) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -549,7 +538,7 @@ final class DefaultServletContext implements ServletContext {
 
     @Override
     public Dynamic addJspFile(String jspName, String jspFile) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     private void ensureUninitialized(String name) {

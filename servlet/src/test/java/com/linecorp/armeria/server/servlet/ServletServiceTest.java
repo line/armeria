@@ -47,8 +47,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.junit.ClassRule;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,14 +56,14 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpConstants;
 
-public class ServletServiceTest {
+class ServletServiceTest {
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final ServletBuilder servletBuilder = new ServletBuilder(sb);
@@ -76,13 +76,9 @@ public class ServletServiceTest {
         }
     };
 
-    static {
-        rule.start();
-    }
-
     @Test
     void doGet() throws Exception {
-        final HttpGet req = new HttpGet(rule.httpUri() + "/home?test=1&array=abc&array=a%20bc#code=3");
+        final HttpGet req = new HttpGet(server.httpUri() + "/home?test=1&array=abc&array=a%20bc#code=3");
         req.setHeader(HttpHeaderNames.ACCEPT_LANGUAGE.toString(), "en-US");
         req.setHeader(HttpHeaderNames.COOKIE.toString(), "armeria=session_id_1");
         req.setHeader("start_date", "Tue May 12 12:55:48 2020");
@@ -103,7 +99,7 @@ public class ServletServiceTest {
     @Test
     void doGetNotFound() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/test"))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/test"))) {
                 assertThat(res.getStatusLine().getStatusCode()).isEqualTo(404);
                 EntityUtils.consume(res.getEntity());
             }
@@ -112,7 +108,7 @@ public class ServletServiceTest {
 
     @Test
     void doPost() throws Exception {
-        final HttpPost req = new HttpPost(rule.httpUri() + "/home");
+        final HttpPost req = new HttpPost(server.httpUri() + "/home");
         final List<NameValuePair> params = new ArrayList<>();
         params.add(new BasicNameValuePair("application", "Armeria Servlet"));
         final UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params, HttpConstants.DEFAULT_CHARSET);
@@ -134,7 +130,7 @@ public class ServletServiceTest {
     void doPut() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpPut(rule.httpUri() + "/home"))) {
+                    new HttpPut(server.httpUri() + "/home"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith(MediaType.HTML_UTF_8.toString());
@@ -149,7 +145,7 @@ public class ServletServiceTest {
     void doDelete() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpDelete(rule.httpUri() + "/home?test=1"))) {
+                    new HttpDelete(server.httpUri() + "/home?test=1"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith(MediaType.HTML_UTF_8.toString());
@@ -220,9 +216,6 @@ public class ServletServiceTest {
                 assertThat(request.getServletContext().getMimeType("profile.bmp")).isEqualTo("image/bmp");
                 request.getServletContext().getRequestDispatcher("/app/abc");
                 request.getServletContext().getRequestDispatcher("abc");
-                assertThat(Objects.isNull(
-                        request.getServletContext().getNamedDispatcher("home"))).isEqualTo(false);
-                assertThat(request.getServletContext().getNamedDispatcher("/abc")).isEqualTo(null);
                 assertThat(request.getServletContext().getServlet("/home")).isEqualTo(null);
                 assertThat(request.getServletContext().getServlet("/abc")).isEqualTo(null);
                 assertThat(
@@ -272,7 +265,7 @@ public class ServletServiceTest {
                 final ServletRequestDispatcher dispatcher =
                         (ServletRequestDispatcher) request.getServletContext()
                                                           .getRequestDispatcher(request.getRequestURI());
-                assertThat(dispatcher.getName()).isEqualTo("home");
+                assertThat(dispatcher.name()).isEqualTo("home");
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.addCookie(new Cookie("armeria", "session_id_1"));
                 response.getWriter().write("welcome");

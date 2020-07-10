@@ -40,15 +40,13 @@ class ServletContextPathTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0);
             final ServletBuilder servletBuilder = new ServletBuilder(sb, "/foo");
-            sb = servletBuilder
-                    .servlet("root", new HomeServletTest(), "/")
-                    .servlet("bar", new BarServletTest(), "/bar")
-                    .servlet("end", new EndServletTest(), "/end/")
-                    .servlet("servlet_path",
-                             new PathInfoServletTest(), "/servlet/path/*")
-                    .build();
+            servletBuilder.servlet("root", new HomeServletTest(), "/")
+                          .servlet("bar", new BarServletTest(), "/bar")
+                          .servlet("end", new EndServletTest(), "/end/")
+                          .servlet("servlet_path",
+                                   new PathInfoServletTest(), "/servlet/path/*")
+                          .build();
         }
     };
 
@@ -86,16 +84,13 @@ class ServletContextPathTest {
         assertThat(new String(res.content().array())).isEqualTo("get path info");
     }
 
-    static class HomeServletTest extends HttpServlet {
+    private static class HomeServletTest extends HttpServlet {
+        private static final long serialVersionUID = -4749186642363952824L;
+
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
-                // Context path: "/foo" and servlet path: ""
-                assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getRequestDispatcher("/foo")).getName()).isEqualTo("root");
-                assertThat(((ServletRequestDispatcher) request
-                        .getServletContext().getRequestDispatcher("/foo/")).getName()).isEqualTo("root");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get home");
@@ -107,16 +102,18 @@ class ServletContextPathTest {
         }
     }
 
-    static class BarServletTest extends HttpServlet {
+    private static class BarServletTest extends HttpServlet {
+        private static final long serialVersionUID = 5296682765383130525L;
+
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
                 // Context path: "/foo" and servlet path: "/bar"
                 assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
-                        "/foo/bar")).getName()).isEqualTo("bar");
+                        "/bar")).name()).isEqualTo("bar");
                 assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
-                        "/foo/bar/")).getName()).isEqualTo("bar");
+                        "/bar/")).name()).isEqualTo("bar");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get bar");
@@ -128,16 +125,18 @@ class ServletContextPathTest {
         }
     }
 
-    static class EndServletTest extends HttpServlet {
+    private static class EndServletTest extends HttpServlet {
+        private static final long serialVersionUID = -3895334662700600258L;
+
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
                 // Context path: "/foo" and servlet path: "/end/"
                 assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
-                        "/foo/end")).getName()).isEqualTo("end");
+                        "/end")).name()).isEqualTo("end");
                 assertThat(((ServletRequestDispatcher) request.getServletContext().getRequestDispatcher(
-                        "/foo/end/")).getName()).isEqualTo("end");
+                        "/end/")).name()).isEqualTo("end");
                 response.setStatus(HttpStatus.OK.code());
                 response.setContentType(MediaType.HTML_UTF_8.toString());
                 response.getWriter().write("get end");
@@ -150,6 +149,8 @@ class ServletContextPathTest {
     }
 
     static class PathInfoServletTest extends HttpServlet {
+        private static final long serialVersionUID = 7385832026109110130L;
+
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {

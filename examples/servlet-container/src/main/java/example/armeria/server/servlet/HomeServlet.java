@@ -12,13 +12,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 
-/**
- * Example servlet.
- */
-public class HomeServlet extends HttpServlet {
+public final class HomeServlet extends HttpServlet {
+
     private static final Logger logger = LoggerFactory.getLogger(HomeServlet.class);
     private static final long serialVersionUID = -439001093551151445L;
 
@@ -73,19 +70,5 @@ public class HomeServlet extends HttpServlet {
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
-    }
-
-    @Override
-    protected void doPut(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        logger.info("PUT: {}", request.getRequestURI());
-        response.sendRedirect("/app/home");
-    }
-
-    @Override
-    protected void doDelete(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        logger.info("DELETE: {}", request.getRequestURI());
-        response.sendError(HttpStatus.NOT_FOUND.code(), "Not Found");
     }
 }

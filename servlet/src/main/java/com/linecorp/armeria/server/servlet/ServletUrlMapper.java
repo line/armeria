@@ -32,27 +32,22 @@ final class ServletUrlMapper {
     void addMapping(String urlPattern, DefaultServletRegistration registration) {
         // TODO Optimize router.
         final Pattern pattern;
-        final String contextServletPath;
-        // contextPath = /foo
         if (urlPattern.endsWith("/*")) {
             // urlPattern = /foo/bar/* -> contextServletPath = /foo/bar
-            contextServletPath = urlPattern.substring(0, urlPattern.length() - 2);
-            pattern = Pattern.compile('^' + contextServletPath + ".*?");
+            pattern = Pattern.compile('^' + urlPattern.substring(0, urlPattern.length() - 2) + ".*?");
         } else if (urlPattern.startsWith("*.")) {
             // extension mapping.
             if (urlPattern.length() == 2) {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("missing file extension");
             }
-            // urlPattern = *.html -> contextServletPath = *.html
             pattern = Pattern.compile(".*\\." + urlPattern.substring(2));
-            contextServletPath = urlPattern;
         } else {
             // exact match.
             // urlPattern = /foo/bar -> contextServletPath = /bar
-            contextServletPath = removeTrailingSlash(urlPattern);
-            pattern = Pattern.compile('^' + contextServletPath + '$');
+            urlPattern = removeTrailingSlash(urlPattern);
+            pattern = Pattern.compile('^' + urlPattern + '$');
         }
-        registrations.put(pattern, Pair.of(contextServletPath, registration));
+        registrations.put(pattern, Pair.of(urlPattern, registration));
     }
 
     @Nullable

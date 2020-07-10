@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 
+import javax.annotation.Nullable;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -28,20 +29,26 @@ final class ServletRequestDispatcher implements RequestDispatcher {
 
     private final ServletFilterChain filterChain;
     private final String name;
+    private final String servletPath;
+    @Nullable
+    private final String pathInfo;
 
-    ServletRequestDispatcher(ServletFilterChain filterChain, String name) {
+    ServletRequestDispatcher(ServletFilterChain filterChain, String name,
+                             String servletPath, @Nullable String pathInfo) {
         this.filterChain = filterChain;
         this.name = name;
+        this.servletPath = servletPath;
+        this.pathInfo = pathInfo;
     }
 
     @Override
     public void forward(ServletRequest request, ServletResponse response) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void include(ServletRequest request, ServletResponse response) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     void dispatch(ServletRequest request, ServletResponse response)
@@ -51,7 +58,16 @@ final class ServletRequestDispatcher implements RequestDispatcher {
         filterChain.doFilter(request, response);
     }
 
-    String getName() {
+    String name() {
         return name;
+    }
+
+    String servletPath() {
+        return servletPath;
+    }
+
+    @Nullable
+    String pathInfo() {
+        return pathInfo;
     }
 }

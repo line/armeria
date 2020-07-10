@@ -16,12 +16,12 @@
 package com.linecorp.armeria.server.servlet;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
 import javax.servlet.Servlet;
 import javax.servlet.http.HttpServlet;
 
@@ -82,7 +82,7 @@ public final class ServletBuilder {
     }
 
     /**
-     * Add a servlet.
+     * Adds the specified {@link HttpServlet} with the specified {@code servletName} and {@code urlPatterns}.
      */
     public ServletBuilder servlet(String servletName, HttpServlet httpServlet, String... urlPatterns) {
         checkUrlPatterns(urlPatterns);
@@ -91,7 +91,8 @@ public final class ServletBuilder {
     }
 
     /**
-     * Add a servlet.
+     * Adds the specified servlet {@code className} with the specified {@code servletName}
+     * and {@code urlPatterns}.
      */
     public ServletBuilder servlet(String servletName, String className, String... urlPatterns) {
         checkUrlPatterns(urlPatterns);
@@ -100,7 +101,8 @@ public final class ServletBuilder {
     }
 
     /**
-     * Add a servlet.
+     * Adds the specified {@code servletClass} with the specified {@code servletName}
+     * and {@code urlPatterns}.
      */
     public ServletBuilder servlet(String servletName, Class<? extends Servlet> servletClass,
                                   String... urlPatterns) {
@@ -110,25 +112,27 @@ public final class ServletBuilder {
     }
 
     /**
-     * Set attribute value.
+     * Sets the specified attribute {@code value} with the mapping {@code key}.
      */
-    public ServletBuilder attribute(String key, @Nullable Object value) {
+    public ServletBuilder attribute(String key, Object value) {
         requireNonNull(key, "key");
+        requireNonNull(value, "value");
         servletContext.setAttribute(key, value);
         return this;
     }
 
     /**
-     * Set init parameter.
+     * Sets the initial parameter {@code value} with the mapping {@code key}.
      */
-    public ServletBuilder initParameter(String key, @Nullable String value) {
+    public ServletBuilder initParameter(String key, String value) {
         requireNonNull(key, "key");
+        requireNonNull(value, "value");
         servletContext.setInitParameter(key, value);
         return this;
     }
 
     /**
-     * Adds a mime mapping.
+     * Sets the specified {@code mimyType} with the mapping {@code extension}.
      */
     public ServletBuilder mimeMapping(String extension, String mimeType) {
         servletContext.mimeMapping(extension, mimeType);
@@ -136,7 +140,7 @@ public final class ServletBuilder {
     }
 
     /**
-     * Adds mime mappings.
+     * Sets the specified mime {@code mappings}.
      */
     public ServletBuilder mimeMappings(Map<String, String> mappings) {
         servletContext.mimeMappings(mappings);
@@ -144,27 +148,30 @@ public final class ServletBuilder {
     }
 
     /**
-     * Set request character encoding.
+     * Sets the specified request character encoding.
      */
-    public ServletBuilder requestEncoding(String requestEncoding) {
-        requireNonNull(requestEncoding, "requestEncoding");
-        servletContext.setRequestCharacterEncoding(requestEncoding);
+    public ServletBuilder requestCharacterEncoding(String requestCharacterEncoding) {
+        requireNonNull(requestCharacterEncoding, "requestCharacterEncoding");
+        servletContext.setRequestCharacterEncoding(requestCharacterEncoding);
         return this;
     }
 
     /**
-     * Set response character encoding.
+     * Sets the specified response character encoding.
      */
-    public ServletBuilder responseEncoding(String responseEncoding) {
-        requireNonNull(responseEncoding, "responseEncoding");
-        servletContext.setResponseCharacterEncoding(responseEncoding);
+    public ServletBuilder responseCharacterEncoding(String responseCharacterEncoding) {
+        requireNonNull(responseCharacterEncoding, "responseCharacterEncoding");
+        servletContext.setResponseCharacterEncoding(responseCharacterEncoding);
         return this;
     }
 
     /**
-     * TBD.
+     * Builds the servlet service based on the properties set so far and returns the {@link ServerBuilder}
+     * which is specified when this {@link ServletBuilder} is created.
      */
     public ServerBuilder build() {
+        checkState(!servletContext.getServletRegistrations().isEmpty(),
+                   "must set at least one servlet");
         final String path = contextPath.isEmpty() ? "/" : contextPath;
         final DefaultServletService servletService = new DefaultServletService(servletContext);
         serverBuilder.serviceUnder(path, servletService);

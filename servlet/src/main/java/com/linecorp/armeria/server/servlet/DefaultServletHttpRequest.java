@@ -75,79 +75,47 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
             new SimpleDateFormat("EEE MMMM d HH:mm:ss yyyy", Locale.ENGLISH)
     };
 
+    private final Map<String, Object> attributeMap = new ConcurrentHashMap<>(16);
+    private final SessionTrackingMode sessionIdSource = SessionTrackingMode.COOKIE;
+
     private final ServiceRequestContext serviceRequestContext;
     private final DefaultServletContext servletContext;
     private final AggregatedHttpRequest httpRequest;
-    private final Map<String, Object> attributeMap = new ConcurrentHashMap<>(16);
-    private final SessionTrackingMode sessionIdSource = SessionTrackingMode.COOKIE;
     private final String servletPath;
+    @Nullable
+    private final String pathInfo;
     private final String requestURI;
     private final String characterEncoding;
     private final QueryParams queryParams;
-    private final Map<String, String[]> parameters;
-
     @Nullable
     private final Cookie[] cookies;
-    @Nullable
-    private final String pathInfo;
+    private final Map<String, String[]> parameters;
 
-    DefaultServletHttpRequest(ServiceRequestContext serviceRequestContext,
-                              DefaultServletContext servletContext,
-                              AggregatedHttpRequest httpRequest) throws IOException {
+    DefaultServletHttpRequest(DefaultServletContext servletContext,
+                              ServiceRequestContext serviceRequestContext,
+                              AggregatedHttpRequest httpRequest,
+                              String servletPath,
+                              @Nullable String pathInfo) {
         this.serviceRequestContext = serviceRequestContext;
         this.servletContext = servletContext;
         this.httpRequest = httpRequest;
+        this.servletPath = servletPath;
+        this.pathInfo = pathInfo;
+        requestURI = serviceRequestContext.path();
         final MediaType contentType = httpRequest.headers().contentType();
         if (contentType != null && contentType.charset() != null) {
             characterEncoding = contentType.charset().name();
         } else {
             characterEncoding = servletContext.getRequestCharacterEncoding();
         }
-
-        requestURI = serviceRequestContext.path();
         queryParams = queryParamsOf(serviceRequestContext.query(), contentType, httpRequest);
         cookies = decodeCookie();
-        servletPath = servletContext.decodeServletPath(requestURI);
-        pathInfo = decodePathInfo();
 
         final Builder<String, String[]> builder = ImmutableMap.builder();
         for (String name : queryParams.names()) {
             builder.put(name, queryParams.getAll(name).toArray(new String[0]));
         }
         parameters = builder.build();
-    }
-
-    private static QueryParams queryParamsOf(@Nullable String query,
-                                             @Nullable MediaType contentType,
-                                             @Nullable AggregatedHttpRequest message) {
-        try {
-            final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
-            QueryParams params2 = null;
-            if (message != null && contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
-                // Respect 'charset' attribute of the 'content-type' header if it exists.
-                final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
-                if (!body.isEmpty()) {
-                    params2 = QueryParams.fromQueryString(body);
-                }
-            }
-
-            if (params1 == null || params1.isEmpty()) {
-                return firstNonNull(params2, QueryParams.of());
-            } else if (params2 == null || params2.isEmpty()) {
-                return params1;
-            } else {
-                return QueryParams.builder()
-                                  .sizeHint(params1.size() + params2.size())
-                                  .add(params1)
-                                  .add(params2)
-                                  .build();
-            }
-        } catch (Exception e) {
-            // If we failed to decode the query string, we ignore the exception raised here.
-            // A missing parameter might be checked when invoking the annotated method.
-            logger.debug("Failed to decode query string: {}", query, e);
-            return QueryParams.of();
-        }
     }
 
     @Nullable
@@ -171,12 +139,6 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
         } else {
             return null;
         }
-    }
-
-    @Nullable
-    private String decodePathInfo() {
-        final int index = getContextPath().length() + servletPath.length();
-        return index < requestURI.length() ? requestURI.substring(index) : null;
     }
 
     @Override
@@ -245,17 +207,17 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public HttpSession getSession(boolean create) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public HttpSession getSession() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String changeSessionId() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -308,7 +270,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public String getRequestedSessionId() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -352,7 +314,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -403,7 +365,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public BufferedReader getReader() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -439,12 +401,12 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public Locale getLocale() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Enumeration<Locale> getLocales() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -460,7 +422,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public String getRealPath(String path) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -485,12 +447,12 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public AsyncContext startAsync() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -505,7 +467,7 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public AsyncContext getAsyncContext() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -515,57 +477,91 @@ final class DefaultServletHttpRequest implements HttpServletRequest {
 
     @Override
     public String getPathTranslated() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getAuthType() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getRemoteUser() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean isUserInRole(String role) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Principal getUserPrincipal() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void login(String username, String password) throws ServletException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void logout() throws ServletException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Collection<Part> getParts() throws IOException, ServletException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     @Nullable
     public Part getPart(String name) throws IOException, ServletException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public <T extends HttpUpgradeHandler> T upgrade(Class<T> httpUpgradeHandlerClass) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException();
+    }
+
+    // TODO Integrate this logic with the same method in annotated service.
+    private static QueryParams queryParamsOf(@Nullable String query,
+                                             @Nullable MediaType contentType,
+                                             @Nullable AggregatedHttpRequest message) {
+        try {
+            final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
+            QueryParams params2 = null;
+            if (message != null && contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
+                // Respect 'charset' attribute of the 'content-type' header if it exists.
+                final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
+                if (!body.isEmpty()) {
+                    params2 = QueryParams.fromQueryString(body);
+                }
+            }
+
+            if (params1 == null || params1.isEmpty()) {
+                return firstNonNull(params2, QueryParams.of());
+            } else if (params2 == null || params2.isEmpty()) {
+                return params1;
+            } else {
+                return QueryParams.builder()
+                                  .sizeHint(params1.size() + params2.size())
+                                  .add(params1)
+                                  .add(params2)
+                                  .build();
+            }
+        } catch (Exception e) {
+            // If we failed to decode the query string, we ignore the exception raised here.
+            // A missing parameter might be checked when invoking the annotated method.
+            logger.debug("Failed to decode query string: {}", query, e);
+            return QueryParams.of();
+        }
     }
 }
