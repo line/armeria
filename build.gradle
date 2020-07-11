@@ -98,6 +98,9 @@ configure(projectsWithFlags('java')) {
         // completable-futures
         implementation 'com.spotify:completable-futures'
 
+        // Errorprone
+        compileOnly 'com.google.errorprone:error_prone_annotations'
+
         // FastUtil
         implementation 'it.unimi.dsi:fastutil'
 

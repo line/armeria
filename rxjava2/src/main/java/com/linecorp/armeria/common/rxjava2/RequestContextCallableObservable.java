@@ -25,8 +25,7 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
 
-final class RequestContextCallableObservable<T> extends Observable<T>
-        implements Callable<T> {
+final class RequestContextCallableObservable<T> extends Observable<T> implements Callable<T> {
 
     private final ObservableSource<T> source;
     private final RequestContext assemblyContext;

@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -57,6 +58,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
@@ -131,6 +135,9 @@ class ProxyClientIntegrationTest {
     static ServerExtension backendServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.port(0, SessionProtocol.HTTP);
+            sb.port(0, SessionProtocol.HTTPS);
+            sb.tlsSelfSigned();
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };
@@ -462,26 +469,23 @@ class ProxyClientIntegrationTest {
         }
     }
 
-    @Test
-    void testHttpsProxyBasicCase() throws Exception {
-        try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .tlsNoVerify()
-                             .proxyConfig(ProxyConfig.connect(httpsProxyServer.address(), true))
-                             .useHttp2Preface(true)
-                             .build()) {
-
-            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                                 .factory(clientFactory)
-                                                 .decorator(LoggingClient.newDecorator())
-                                                 .build();
-            final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                    webClient.get(PROXY_PATH).aggregate();
-            final AggregatedHttpResponse response = responseFuture.join();
-            assertThat(response.status()).isEqualTo(OK);
-            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        }
+    @ParameterizedTest
+    @MethodSource("sessionAndEndpointProvider")
+    void testHttpsProxy(SessionProtocol protocol, Endpoint endpoint) throws Exception {
+        final ClientFactory clientFactory =
+                ClientFactory.builder().tlsNoVerify().proxyConfig(
+                        ProxyConfig.connect(httpsProxyServer.address(), true)).build();
+        final WebClient webClient = WebClient.builder(protocol, endpoint)
+                                             .factory(clientFactory)
+                                             .decorator(LoggingClient.newDecorator())
+                                             .build();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                webClient.get(PROXY_PATH).aggregate();
+        final AggregatedHttpResponse response = responseFuture.join();
+        assertThat(response.status()).isEqualTo(OK);
+        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        clientFactory.close();
     }
 
     @Test
@@ -911,6 +915,17 @@ class ProxyClientIntegrationTest {
                 }
             }
         }
+    }
+
+    static Stream<Arguments> sessionAndEndpointProvider() {
+        return Stream.of(
+                Arguments.arguments(SessionProtocol.HTTP, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H2C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.H2, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.HTTPS, backendServer.httpsEndpoint())
+        );
     }
 
     /**

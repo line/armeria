@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.server.WebServerException;
+import org.springframework.http.server.reactive.HttpHandler;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -39,7 +40,10 @@ import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
  * A {@link WebServer} that can be used to control an Armeria server.
  *
  * @see ArmeriaReactiveWebServerFactory to create a {@link WebServer} with the reactive stack
+ *
+ * @deprecated Use {@link ArmeriaReactiveWebServerFactory#getWebServer(HttpHandler)}.
  */
+@Deprecated
 public final class ArmeriaWebServer implements WebServer {
 
     private final Server server;
@@ -60,7 +64,10 @@ public final class ArmeriaWebServer implements WebServer {
      * @param port the primary local port that the server will be bound to
      * @param beanFactory the bean factory that adding {@link ArmeriaBeanPostProcessor} to
      *                    the application context.
+     *
+     * @deprecated Use {@link ArmeriaReactiveWebServerFactory#getWebServer(HttpHandler)}.
      */
+    @Deprecated
     public ArmeriaWebServer(Server server, SessionProtocol protocol, @Nullable InetAddress address, int port,
                             ConfigurableListableBeanFactory beanFactory) {
         this.server = requireNonNull(server, "server");

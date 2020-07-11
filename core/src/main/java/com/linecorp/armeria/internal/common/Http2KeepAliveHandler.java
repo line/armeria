@@ -23,7 +23,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +56,6 @@ import io.netty.handler.codec.http2.Http2PingFrame;
  * @see Flags#defaultServerIdleTimeoutMillis()
  * @see Flags#defaultPingIntervalMillis()
  */
-@NotThreadSafe
 public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);

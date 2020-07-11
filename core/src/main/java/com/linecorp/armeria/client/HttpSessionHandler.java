@@ -19,7 +19,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -41,6 +40,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -203,7 +203,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         final HttpRequestSubscriber reqSubscriber =
                 new HttpRequestSubscriber(channel, requestEncoder, responseDecoder,
                                           req, res, ctx, writeTimeoutMillis);
-        req.subscribe(reqSubscriber, channel.eventLoop(), WITH_POOLED_OBJECTS);
+        req.subscribe(reqSubscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     @Override

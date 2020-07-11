@@ -238,7 +238,7 @@ sb.port(9999, PROXY, HTTP, HTTPS);
 
 ## Virtual hosts
 
-Use `ServerBuilder.virtualHost(...)` to configure [a name-based virtual host]:
+Use <type://ServerBuilder#virtualHost(String)> to configure [a name-based virtual host]:
 
 ```java
 ServerBuilder sb = Server.builder();
@@ -259,7 +259,7 @@ sb.virtualHost("foo.com")
 ## Getting an IP address of a client who initiated a request
 
 You may want to get an IP address of a client who initiated a request in your service. In that case,
-you can use the `clientAddress()` method of the <type://ServiceRequestContext>. But you need to configure
+you can use <type://ServiceRequestContext#clientAddress()>. But you need to configure
 your <type://ServerBuilder> before doing that:
 
 ```java

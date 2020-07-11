@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 
@@ -113,7 +115,9 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
      *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
-    static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
+    @FormatMethod
+    static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType,
+                                     @FormatString String format, Object... args) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(format, "format");

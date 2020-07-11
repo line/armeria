@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.unsafe;
 
 import static java.util.Objects.requireNonNull;
@@ -22,36 +21,28 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import com.google.common.base.MoreObjects;
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.AbstractHttpData;
-import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
 
-/**
- * An {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
- * general use.
- *
- * @deprecated Use {@link PooledHttpData}.
- */
-@Deprecated
-public final class ByteBufHttpData extends AbstractHttpData implements PooledHttpData {
+final class ByteBufHttpData extends AbstractHttpData implements PooledHttpData {
 
     private static final AtomicIntegerFieldUpdater<ByteBufHttpData>
             closedUpdater = AtomicIntegerFieldUpdater.newUpdater(ByteBufHttpData.class, "closed");
 
-    static final ByteBufHttpData EMPTY = new ByteBufHttpData(
-            new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT), false);
+    static final ByteBufHttpData EMPTY = new ByteBufHttpData(false);
+    @VisibleForTesting
+    static final ByteBufHttpData EMPTY_EOS = new ByteBufHttpData(true);
 
     private final ByteBuf buf;
-    private final boolean endOfStream;
+    private final int baseIndex;
     private final int length;
+    private final boolean endOfStream;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `closedUpdater`
     private volatile int closed;
@@ -60,15 +51,29 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
      * Constructs a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
      * {@link ByteBufHttpData}, which must not be mutated anymore.
      */
-    public ByteBufHttpData(ByteBuf buf, boolean endOfStream) {
-        length = requireNonNull(buf, "buf").readableBytes();
-        if (length != 0) {
-            this.buf = buf;
-        } else {
-            buf.release();
-            this.buf = Unpooled.EMPTY_BUFFER;
-        }
+    ByteBufHttpData(ByteBuf buf, boolean endOfStream) {
+        this(buf, buf.readerIndex(), buf.readableBytes(), endOfStream);
+    }
+
+    private ByteBufHttpData(ByteBuf buf, int baseIndex, int length, boolean endOfStream) {
+        assert baseIndex >= 0 && length > 0 && (baseIndex + length) <= buf.capacity()
+                : "baseIndex: " + baseIndex + ", length: " + length + ", buf: " + buf;
+
+        this.baseIndex = baseIndex;
+        this.length = length;
+        this.buf = buf;
         this.endOfStream = endOfStream;
+    }
+
+    /**
+     * Creates an empty data.
+     */
+    private ByteBufHttpData(boolean endOfStream) {
+        buf = Unpooled.EMPTY_BUFFER;
+        baseIndex = 0;
+        length = 0;
+        this.endOfStream = endOfStream;
+        closed = -1; // Never closed
     }
 
     @Override
@@ -78,11 +83,14 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
 
     @Override
     public byte[] array() {
-        if (buf.hasArray() && buf.arrayOffset() == 0 && buf.array().length == length) {
-            return buf.array();
-        } else {
-            return ByteBufUtil.getBytes(buf);
+        if (baseIndex == 0 && buf.hasArray() && buf.arrayOffset() == 0) {
+            final byte[] array = buf.array();
+            if (array.length == length) {
+                return array;
+            }
         }
+
+        return ByteBufUtil.getBytes(buf, baseIndex, length);
     }
 
     @Override
@@ -92,8 +100,7 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
 
     @Override
     public boolean isEmpty() {
-        buf.touch();
-        return super.isEmpty();
+        return length == 0;
     }
 
     @Override
@@ -143,53 +150,70 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
 
     @Override
     public PooledHttpData copy() {
-        return new ByteBufHttpData(buf.copy(), endOfStream);
+        if (isEmpty()) {
+            return this;
+        }
+        return replace0(buf.copy(baseIndex, length));
     }
 
     @Override
     public PooledHttpData duplicate() {
-        return new ByteBufHttpData(buf.duplicate(), endOfStream);
+        if (isEmpty()) {
+            return this;
+        }
+        return replace0(buf.slice(baseIndex, length));
     }
 
     @Override
     public PooledHttpData retainedDuplicate() {
-        return new ByteBufHttpData(buf.retainedDuplicate(), endOfStream);
+        if (isEmpty()) {
+            return this;
+        }
+        return replace0(buf.retainedSlice(baseIndex, length));
     }
 
     @Override
     public PooledHttpData replace(ByteBuf content) {
         requireNonNull(content, "content");
         content.touch();
-        return new ByteBufHttpData(content, endOfStream);
+        return replace0(content);
+    }
+
+    private PooledHttpData replace0(ByteBuf content) {
+        return PooledHttpData.wrap(content).withEndOfStream(endOfStream);
     }
 
     @Override
     protected byte getByte(int index) {
-        return buf.getByte(index);
+        return buf.getByte(baseIndex + index);
     }
 
     @Override
     public String toString(Charset charset) {
-        return buf.toString(charset);
+        return buf.toString(baseIndex, length, charset);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("buf", buf.toString()).toString();
+        return "ByteBufHttpData{" + buf + '}';
     }
 
     @Override
     public InputStream toInputStream() {
-        return new ByteBufInputStream(buf.duplicate(), false);
+        return new ByteBufInputStream(buf.slice(baseIndex, length), false);
     }
 
     @Override
     public PooledHttpData withEndOfStream(boolean endOfStream) {
+        if (isEmpty()) {
+            return endOfStream ? EMPTY_EOS : EMPTY;
+        }
+
         if (endOfStream == this.endOfStream) {
             return this;
         }
-        return new ByteBufHttpData(buf, endOfStream);
+
+        return new ByteBufHttpData(buf.touch(), baseIndex, length, endOfStream);
     }
 
     @Override

@@ -413,7 +413,7 @@ Armeria provides <type://@ExceptionHandler> annotation to transform an exception
 You can write your own exception handler by implementing <type://ExceptionHandlerFunction> interface and
 annotate your service object or method with <type://@ExceptionHandler> annotation. Here is an example of
 an exception handler. If your exception handler is not able to handle a given exception, you can call
-`ExceptionHandlerFunction.fallthrough()` to pass the exception to the next exception handler.
+<type://ExceptionHandlerFunction#fallthrough()> to pass the exception to the next exception handler.
 
 ```java
 public class MyExceptionHandler implements ExceptionHandlerFunction {
@@ -465,7 +465,7 @@ In some cases like receiving a JSON document from a client, it may be useful to 
 a Java object automatically. Armeria provides <type://@RequestConverter> and <type://@RequestObject>
 annotations so that such conversion can be done conveniently.
 You can write your own request converter by implementing <type://RequestConverterFunction> as follows.
-Similar to the exception handler, you can call `RequestConverterFunction.fallthrough()` when your request
+Similar to the exception handler, you can call <type://RequestConverterFunction#fallthrough()> when your request
 converter is not able to convert the request.
 
 ```java
@@ -578,7 +578,6 @@ we should put <type://@Param>, <type://@Header>, <type://@RequestObject> annotat
 - Methods with only one parameter
 - Constructor parameters
 - Method parameters
-
 
 ```java
 public class MyRequestObject {
@@ -988,7 +987,7 @@ sb.annotatedService(new MyAnnotatedService(),
 ```
 
 The first rule is as explained before. However, if your own decorator annotations and <type://@Decorator>
-annotations are specified in a mixed order like below, you need to clearly specify their order using `order()`
+annotations are specified in a mixed order like below, you need to clearly specify their order using <type://@Decorator#order()>
 attribute of the annotation. In the following example, you cannot make sure in what order they decorate
 the service because Java collects repeatable annotations like <type://@Decorator> into a single container
 annotation like <type://@Decorators> so it does not know the specified order between <type://@Decorator>
@@ -1135,7 +1134,7 @@ Accept: application/json
 <Warning>
 
 Note that a `Content-Type` header of a response is not automatically set. You may want to get the
-negotiated <type://@Produces> from `ServiceRequestContext.negotiatedResponseMediaType()` method and
+negotiated <type://@Produces> from <type://ServiceRequestContext#negotiatedResponseMediaType()> method and
 set it as the value of the `Content-Type` header of your response.
     
 </Warning>
@@ -1427,5 +1426,4 @@ for more information about RPC and HTTP service names, and how to use it.
 
 </Tip>
 
-    
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html

@@ -2,9 +2,9 @@
 
 When sending an RPC request, it is sometimes required to send HTTP headers with it, such as an authentication token.
 There are four ways to customize the HTTP headers of your RPC request:
-- Using the `Clients.withHttpHeaders()` method
-- Using the `ClientOption.HTTP_HEADERS` option
-- Using the `ClientBuilder.decorator()` method
+- Using the <type://Clients#withHttpHeaders(Consumer)> method
+- Using the <type://ClientOption#HTTP_HEADERS> option
+- Using the <type://ClientBuilder#decorator(Function)> method
 - Using a derived client
 
 ## Using `Clients.withHttpHeaders()`
@@ -22,7 +22,8 @@ try (SafeCloseable ignored = Clients.withHttpHeaders(
 }
 ```
 
-If you are setting only a single header, you can use `Clients.withHttpHeader()` simply:
+If you are setting only a single header,
+you can use <type://Clients#withHttpHeader(CharSequence,String)> simply:
 
 ```java
 try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, credential)) {
@@ -47,8 +48,8 @@ try (SafeCloseable ignored1 = Clients.withHttpHeader(USER_AGENT, myUserAgent)) {
 
 ## Using `ClientOption.HTTP_HEADERS`
 
-If you have a custom HTTP header whose value does not change often, you can use `ClientOption.HTTP_HEADERS`
-which is more efficient:
+If you have a custom HTTP header whose value does not change often, you can use
+<type://ClientOption#HTTP_HEADERS> which is more efficient:
 
 ```java
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
@@ -82,12 +83,13 @@ HelloService.Iface client = cb.build(HelloService.Iface.class);
 client.hello("authorized personnel");
 ```
 
-Note that this method is as efficient as the `ClientOption.HTTP_HEADERS` option. Choose whichever you prefer.
+Note that this method is as efficient as the <type://ClientOption#HTTP_HEADERS> option.
+Choose whichever you prefer.
 
 ## Using a derived client
 
-Although not as simple as using `withHttpHeaders()`, you can create a derived client to add more custom
-headers to an existing client:
+Although not as simple as using <type://Clients#withHttpHeader(CharSequence,String)>,
+you can create a derived client to add more custom headers to an existing client:
 
 ```java
 HelloService.Iface client = ...;

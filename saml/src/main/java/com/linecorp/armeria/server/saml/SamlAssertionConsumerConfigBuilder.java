@@ -17,6 +17,8 @@ package com.linecorp.armeria.server.saml;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 /**
  * A builder which builds a {@link SamlAssertionConsumerConfig}.
  */
@@ -24,18 +26,12 @@ public final class SamlAssertionConsumerConfigBuilder {
 
     private final SamlServiceProviderBuilder parent;
 
+    @Nullable
     private SamlEndpoint endpoint;
     private boolean isDefault;
 
     SamlAssertionConsumerConfigBuilder(SamlServiceProviderBuilder parent) {
         this.parent = parent;
-    }
-
-    /**
-     * Returns a {@link SamlEndpoint} of this assertion consumer service.
-     */
-    SamlEndpoint endpoint() {
-        return endpoint;
     }
 
     /**

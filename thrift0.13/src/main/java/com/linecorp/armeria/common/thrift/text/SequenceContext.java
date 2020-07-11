@@ -53,7 +53,7 @@ final class SequenceContext extends BaseContext {
      * Create an iterator over the children. May be constructed with a null
      * JsonArray if we only use it for writing.
      */
-    protected SequenceContext(@Nullable JsonNode json) {
+    SequenceContext(@Nullable JsonNode json) {
         children = null != json ? json.elements() : null;
     }
 

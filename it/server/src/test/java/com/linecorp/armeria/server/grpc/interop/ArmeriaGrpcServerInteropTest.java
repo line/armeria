@@ -138,4 +138,19 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                 configuredTimeoutMinutes - transferredTimeoutMinutes >= 0 &&
                 configuredTimeoutMinutes - transferredTimeoutMinutes <= 1);
     }
+
+    @Override
+    public void deadlineExceeded() throws Exception {
+        try {
+            super.deadlineExceeded();
+        } catch (AssertionError e) {
+            // TODO(trustin): Remove once https://github.com/grpc/grpc-java/issues/7189 is resolved.
+            final String message = e.getMessage();
+            if (message != null && message.startsWith("ClientCall started after deadline exceeded")) {
+                return;
+            }
+
+            throw e;
+        }
+    }
 }

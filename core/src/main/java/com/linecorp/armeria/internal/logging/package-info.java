@@ -15,13 +15,9 @@
  */
 
 /**
- * Wrappers for creating services that publish unsafe, pooled buffers.
- *
- * @see com.linecorp.armeria.common.unsafe.PooledHttpData
+ * Various classes used internally. Anything in this package can be changed or removed at any time.
  */
-@UnstableApi
 @NonNullByDefault
-package com.linecorp.armeria.server.unsafe;
+package com.linecorp.armeria.internal.logging;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
-import com.linecorp.armeria.common.util.UnstableApi;

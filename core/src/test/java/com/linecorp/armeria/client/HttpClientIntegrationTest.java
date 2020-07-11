@@ -76,9 +76,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
-import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
@@ -88,8 +87,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.server.unsafe.PooledHttpService;
-import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
@@ -139,18 +136,17 @@ class HttpClientIntegrationTest {
         }
     }
 
-    private static final class PoolAwareDecorator extends SimplePooledDecoratingHttpService {
+    private static final class PoolAwareDecorator extends SimpleDecoratingHttpService {
 
         private PoolAwareDecorator(HttpService delegate) {
             super(delegate);
         }
 
         @Override
-        protected HttpResponse serve(PooledHttpService delegate, ServiceRequestContext ctx,
-                                     PooledHttpRequest req) throws Exception {
-            final PooledHttpResponse res = delegate.serve(ctx, req);
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            final HttpResponse res = unwrap().serve(ctx, req);
             final HttpResponseWriter decorated = HttpResponse.streaming();
-            res.subscribeWithPooledObjects(new Subscriber<HttpObject>() {
+            res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
                     s.request(Long.MAX_VALUE);
@@ -178,7 +174,7 @@ class HttpClientIntegrationTest {
                 public void onComplete() {
                     decorated.close();
                 }
-            });
+            }, SubscriptionOption.WITH_POOLED_OBJECTS);
             return decorated;
         }
     }
