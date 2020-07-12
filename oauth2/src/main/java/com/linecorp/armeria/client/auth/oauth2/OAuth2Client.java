@@ -60,16 +60,14 @@ public class OAuth2Client extends SimpleDecoratingHttpClient {
             // Create a new request with an additional 'Authorization' header
             final HttpRequest newReq =
                 req.withHeaders(req.headers().toBuilder()
-                    .set(HttpHeaderNames.AUTHORIZATION, accessToken.authorization()) // Bearer mF_9.B5f-4.1JqM
-                    .build());
+                                   .set(HttpHeaderNames.AUTHORIZATION, accessToken.authorization())
+                                   .build());
             // Update the ctx.request
             ctx.updateRequest(newReq);
             try {
                 return unwrap().execute(ctx, newReq);
             } catch (Exception e) {
-                Exceptions.throwUnsafely(Exceptions.peel(e));
-                //noinspection ReturnOfNull
-                return null; // will never get here
+                return Exceptions.throwUnsafely(Exceptions.peel(e));
             }
         }));
     }

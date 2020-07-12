@@ -27,7 +27,6 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.UnsupportedMediaTypeException;
 
 /**
  * Implements Resource Owner Password Credentials Grant request
@@ -39,7 +38,7 @@ public class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccess
     private static final String PASSWORD = "password";
     private static final String PASSWORD_GRANT_TYPE = PASSWORD;
 
-    private final Supplier<Map.Entry<String, String>> userCredentialsSupplier;
+    private final Supplier<? extends Map.Entry<String, String>> userCredentialsSupplier;
 
     /**
      * Implements Resource Owner Password Credentials Grant request/response flow,
@@ -57,7 +56,7 @@ public class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccess
     public ResourceOwnerPasswordCredentialsTokenRequest(
             WebClient accessTokenEndpoint, String accessTokenEndpointPath,
             @Nullable ClientAuthorization clientAuthorization,
-            Supplier<Map.Entry<String, String>> userCredentialsSupplier) {
+            Supplier<? extends Map.Entry<String, String>> userCredentialsSupplier) {
         super(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
         this.userCredentialsSupplier = requireNonNull(userCredentialsSupplier, "userCredentialsSupplier");
     }

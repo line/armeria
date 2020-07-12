@@ -123,7 +123,7 @@ public class OAuth2TokenIntrospectionAuthorizerBuilder {
      *                          HTTP Authentication Scheme Registry</a>.
      */
     public OAuth2TokenIntrospectionAuthorizerBuilder clientCredentials(
-            Supplier<Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
+            Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
         clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
         return this;
     }
@@ -136,7 +136,7 @@ public class OAuth2TokenIntrospectionAuthorizerBuilder {
      * @param credentialsSupplier A supplier of client credentials.
      */
     public OAuth2TokenIntrospectionAuthorizerBuilder clientCredentials(
-            Supplier<Map.Entry<String, String>> credentialsSupplier) {
+            Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
         clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier);
         return this;
     }

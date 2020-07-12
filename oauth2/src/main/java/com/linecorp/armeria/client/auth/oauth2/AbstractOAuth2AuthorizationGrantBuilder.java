@@ -31,7 +31,13 @@ import com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.RefreshAccessTokenRequest;
 
-abstract class AbstractOAuth2AuthorizationGrantBuilder {
+@SuppressWarnings("rawtypes")
+abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2AuthorizationGrantBuilder> {
+
+    /**
+     * A period when the token should be refreshed proactively prior to its expiry.
+     */
+    private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(1L); // 1 minute
 
     private final WebClient accessTokenEndpoint;
     private final String accessTokenEndpointPath;
@@ -39,8 +45,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder {
     @Nullable
     private ClientAuthorization clientAuthorization;
 
-    @Nullable
-    private Duration refreshBefore;
+    private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
 
     @Nullable
     private Supplier<AccessTokenCapsule> tokenSupplier;
@@ -72,10 +77,11 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder {
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
      */
-    protected AbstractOAuth2AuthorizationGrantBuilder clientAuthorization(
+    @SuppressWarnings("unchecked")
+    public final T clientAuthorization(
             Supplier<String> authorizationSupplier, String authorizationType) {
         clientAuthorization = ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
-        return this;
+        return (T) this;
     }
 
     /**
@@ -85,10 +91,11 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder {
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
      */
-    protected AbstractOAuth2AuthorizationGrantBuilder clientBasicAuthorization(
+    @SuppressWarnings("unchecked")
+    public final T clientBasicAuthorization(
             Supplier<String> authorizationSupplier) {
         clientAuthorization = ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
-        return this;
+        return (T) this;
     }
 
     /**
@@ -101,10 +108,11 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder {
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
      */
-    protected AbstractOAuth2AuthorizationGrantBuilder clientCredentials(
-            Supplier<Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
+    @SuppressWarnings("unchecked")
+    public final T clientCredentials(
+            Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
         clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
-        return this;
+        return (T) this;
     }
 
     /**
@@ -114,62 +122,65 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder {
      *
      * @param credentialsSupplier A supplier of client credentials.
      */
-    protected AbstractOAuth2AuthorizationGrantBuilder clientCredentials(
-            Supplier<Map.Entry<String, String>> credentialsSupplier) {
+    @SuppressWarnings("unchecked")
+    public final T clientCredentials(
+            Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
         clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier);
-        return this;
+        return (T) this;
     }
 
     /**
      * A period when the token should be refreshed proactively prior to its expiry.
      */
-    protected AbstractOAuth2AuthorizationGrantBuilder refreshBefore(Duration refreshBefore) {
+    @SuppressWarnings("unchecked")
+    public final T refreshBefore(Duration refreshBefore) {
         this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
-        return this;
+        return (T) this;
     }
 
-    @Nullable
-    protected Duration refreshBefore() {
+    public final Duration refreshBefore() {
         return refreshBefore;
     }
 
     @Nullable
-    protected Supplier<AccessTokenCapsule> tokenSupplier() {
+    public final Supplier<AccessTokenCapsule> tokenSupplier() {
         return tokenSupplier;
     }
 
     /**
      * A {@link Supplier} to load Access Token from, to be able to restore the previous session. OPTIONAL.
      */
-    protected AbstractOAuth2AuthorizationGrantBuilder tokenSupplier(
+    @SuppressWarnings("unchecked")
+    public final T tokenSupplier(
             Supplier<AccessTokenCapsule> tokenSupplier) {
         this.tokenSupplier = requireNonNull(tokenSupplier, "tokenSupplier");
-        return this;
+        return (T) this;
     }
 
     @Nullable
-    protected Consumer<AccessTokenCapsule> tokenConsumer() {
+    public final Consumer<AccessTokenCapsule> tokenConsumer() {
         return tokenConsumer;
     }
 
     /**
      * A {@link Consumer} to store Access Token to, to be able restore the previous session. OPTIONAL.
      */
-    protected AbstractOAuth2AuthorizationGrantBuilder tokenConsumer(
+    @SuppressWarnings("unchecked")
+    public final T tokenConsumer(
             Consumer<AccessTokenCapsule> tokenConsumer) {
         this.tokenConsumer = requireNonNull(tokenConsumer, "tokenConsumer");
-        return this;
+        return (T) this;
     }
 
     protected abstract AbstractAccessTokenRequest buildObtainRequest(
             WebClient accessTokenEndpoint, String accessTokenEndpointPath,
             @Nullable ClientAuthorization clientAuthorization);
 
-    protected AbstractAccessTokenRequest buildObtainRequest() {
+    protected final AbstractAccessTokenRequest buildObtainRequest() {
         return buildObtainRequest(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 
-    protected RefreshAccessTokenRequest buildRefreshRequest() {
+    protected final RefreshAccessTokenRequest buildRefreshRequest() {
         return new RefreshAccessTokenRequest(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 }

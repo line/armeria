@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.auth.oauth2;
 
 import javax.annotation.Nullable;
 

@@ -83,7 +83,7 @@ public class AccessTokenCapsule implements Serializable {
     static final String ISSUED_AT = "issued_at";
 
     static final String SCOPE_SEPARATOR = " ";
-    static final String AUTHORIZATION_SEPARATOR = " ";
+    static final char AUTHORIZATION_SEPARATOR = ' ';
 
     static final String DEFAULT_TOKEN_TYPE = "bearer";
 
@@ -319,8 +319,7 @@ public class AccessTokenCapsule implements Serializable {
     public String authorization() {
         if (authorization == null) {
             final String type = (tokenType == null) ? DEFAULT_TOKEN_TYPE : tokenType;
-            authorization = String.join(AUTHORIZATION_SEPARATOR,
-                                        CaseUtil.firstUpperAllLowerCase(type), accessToken);
+            authorization = CaseUtil.firstUpperAllLowerCase(type) + AUTHORIZATION_SEPARATOR + accessToken;
         }
         return authorization;
     }
@@ -333,6 +332,7 @@ public class AccessTokenCapsule implements Serializable {
     public String rawResponse() {
         if (rawResponse == null) {
             // WARNING: do not include {@code issuedAt} to the raw response
+            // as {@code issuedAt} is a derived field and it's not part of the OAuth2 server response
             rawResponse = composeRawResponse(accessToken, tokenType,
                                              null, expiresIn, refreshToken, scope, extras);
         }

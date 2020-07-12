@@ -23,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.UnsupportedMediaTypeException;
 
 /**
  * A common abstraction for the requests implementing various Token operations request/response flows,

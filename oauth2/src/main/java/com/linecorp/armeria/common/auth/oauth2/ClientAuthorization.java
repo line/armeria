@@ -43,8 +43,8 @@ import javax.annotation.Nullable;
 public final class ClientAuthorization {
 
   private static final String DEFAULT_AUTHORIZATION_TYPE = "Basic";
-  private static final String AUTHORIZATION_SEPARATOR = " ";
-  private static final String CREDENTIALS_SEPARATOR = ":";
+  private static final char AUTHORIZATION_SEPARATOR = ' ';
+  private static final char CREDENTIALS_SEPARATOR = ':';
 
   private static final String CLIENT_ID = "client_id";
   private static final String CLIENT_SECRET = "client_secret";
@@ -55,7 +55,7 @@ public final class ClientAuthorization {
   @Nullable
   private final Supplier<String> authorizationSupplier;
   @Nullable
-  private final Supplier<Map.Entry<String, String>> credentialsSupplier;
+  private final Supplier<? extends Map.Entry<String, String>> credentialsSupplier;
 
   /**
    * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
@@ -97,7 +97,7 @@ public final class ClientAuthorization {
    *                          HTTP Authentication Scheme Registry</a>.
    */
   public static ClientAuthorization ofCredentials(
-      Supplier<Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
+      Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
     return new ClientAuthorization(null,
         requireNonNull(credentialsSupplier, "credentialsSupplier"),
         requireNonNull(authorizationType, "authorizationType"));
@@ -111,13 +111,13 @@ public final class ClientAuthorization {
    * @param credentialsSupplier A supplier of client credentials.
    */
   public static ClientAuthorization ofCredentials(
-      Supplier<Map.Entry<String, String>> credentialsSupplier) {
+      Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
     return new ClientAuthorization(null,
         requireNonNull(credentialsSupplier, "credentialsSupplier"), null);
   }
 
   private ClientAuthorization(@Nullable Supplier<String> authorizationSupplier,
-      @Nullable Supplier<Map.Entry<String, String>> credentialsSupplier,
+      @Nullable Supplier<? extends Map.Entry<String, String>> credentialsSupplier,
       @Nullable String authorizationType) {
     if (authorizationSupplier == null && credentialsSupplier == null) {
       throw new NullPointerException("authorizationSupplier && credentialsSupplier");
@@ -153,8 +153,8 @@ public final class ClientAuthorization {
    * @return encoded client {@code Authorization} header value.
    */
   public String authorizationHeaderValue() {
-    return String.join(AUTHORIZATION_SEPARATOR,
-                       CaseUtil.firstUpperAllLowerCase(authorizationType), composeAuthorizationString());
+    return CaseUtil.firstUpperAllLowerCase(authorizationType) +
+           AUTHORIZATION_SEPARATOR + composeAuthorizationString();
   }
 
   /**
@@ -181,7 +181,7 @@ public final class ClientAuthorization {
   private static String encodeClientCredentials(String clientId, String clientSecret) {
       return Base64.getEncoder()
                    .encodeToString(
-                           String.join(CREDENTIALS_SEPARATOR, clientId, clientSecret)
+                           (clientId + CREDENTIALS_SEPARATOR + clientSecret)
                                  .getBytes(StandardCharsets.UTF_8));
   }
 

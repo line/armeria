@@ -21,7 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -29,21 +32,27 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule;
+import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.RefreshAccessTokenRequest;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
+import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * Base implementation of OAuth 2.0 Access Token Grant flow to obtain Access Token.
  * Implements Access Token loading, storing and refreshing.
  */
-abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
+abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant, AutoCloseable {
 
     /**
-     * A period when the token should be refreshed proactively prior to its expiry.
+     * Holds a reference to the access token capsule.
      */
-    private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(1L); // 1 minute
-
     private final AtomicReference<AccessTokenCapsule> tokenRef;
+
+    /**
+     * Executes obtain and refresh token operations serially on a separate thread.
+     */
+    private final ExecutorService serialExecutor;
 
     private final RefreshAccessTokenRequest refreshRequest;
 
@@ -54,116 +63,206 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     @Nullable
     private final Consumer<AccessTokenCapsule> tokenConsumer;
 
-    AbstractOAuth2AuthorizationGrant(RefreshAccessTokenRequest refreshRequest, @Nullable Duration refreshBefore,
+    AbstractOAuth2AuthorizationGrant(RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
                                      @Nullable Supplier<AccessTokenCapsule> tokenSupplier,
                                      @Nullable Consumer<AccessTokenCapsule> tokenConsumer) {
         tokenRef = new AtomicReference<>();
+        serialExecutor = Executors.newSingleThreadExecutor();
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
-        this.refreshBefore = refreshBefore == null ? DEFAULT_REFRESH_BEFORE : refreshBefore;
+        this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
         this.tokenSupplier = tokenSupplier;
         this.tokenConsumer = tokenConsumer;
     }
 
-    protected abstract CompletableFuture<AccessTokenCapsule> obtainAccessToken(
+    /**
+     * Obtains a new access token from the token end-point asynchronously.
+     * @return A {@link CompletableFuture} carrying the requested {@link AccessTokenCapsule} or an exception,
+     *         if the request failed.
+     * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
+     *                               response payload contains the details of the error.
+     * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
+     *                                typically indicates that client authentication failed (e.g.: unknown
+     *                                client, no client authentication included, or unsupported authentication
+     *                                method).
+     * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
+     *                                       (JSON).
+     */
+    protected abstract CompletableFuture<AccessTokenCapsule> obtainAccessTokenAsync(
             @Nullable AccessTokenCapsule token);
 
-    private CompletableFuture<AccessTokenCapsule> obtainAccessTokenExclusively(
-            @Nullable AccessTokenCapsule token) {
-        return obtainAccessToken(token).thenApply(t -> {
-            tokenRef.set(t); // reset the token reference
-            if (tokenConsumer != null) {
-                tokenConsumer.accept(t); // store token to an optional storage (e.g. secret store)
-            }
-            return t;
-        });
+    /**
+     * Obtains a new access token from the token end-point.
+     * Optionally stores access token to registered {@link Consumer} for longer term storage.
+     * @return an {@link AccessTokenCapsule} that contains requested access token.
+     * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
+     *                               response payload contains the details of the error.
+     * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
+     *                                typically indicates that client authentication failed (e.g.: unknown
+     *                                client, no client authentication included, or unsupported authentication
+     *                                method).
+     * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
+     *                                       (JSON).
+     */
+    private AccessTokenCapsule obtainAccessToken() {
+        final AccessTokenCapsule token = obtainAccessTokenAsync(null).join();
+        tokenRef.set(token); // reset the token reference
+        if (tokenConsumer != null) {
+            tokenConsumer.accept(token); // store token to an optional storage (e.g. secret store)
+        }
+        return token;
     }
 
-    private CompletableFuture<AccessTokenCapsule> refreshAccessToken(AccessTokenCapsule token) {
+    /**
+     * Refreshes access token using refresh token provided with the previous access token response
+     * asynchronously, otherwise, if no refresh token available, re-obtains a new access token from the token
+     * end-point.
+     * @return A {@link CompletableFuture} carrying the requested {@link AccessTokenCapsule} or an exception,
+     *         if the request failed.
+     * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
+     *                               response payload contains the details of the error.
+     * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
+     *                                typically indicates that client authentication failed (e.g.: unknown
+     *                                client, no client authentication included, or unsupported authentication
+     *                                method).
+     * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
+     *                                       (JSON).
+     */
+    private CompletableFuture<AccessTokenCapsule> refreshAccessTokenAsync(AccessTokenCapsule token) {
         if (token.refreshToken() != null) {
             // try refreshing token if refresh token was previously provided
-            try {
-                return refreshRequest.make(token);
-            } catch (TokenRequestException e) {
-                // token refresh request failed
-                // try to re-obtain access token
-                return obtainAccessToken(token);
-            }
+            return refreshRequest.make(token);
         }
         // try to re-obtain access token
-        return obtainAccessToken(token);
+        return obtainAccessTokenAsync(token);
     }
 
-    private CompletableFuture<AccessTokenCapsule> getOrRefreshAccessToken(AccessTokenCapsule token,
-                                                                          boolean reset,
-                                                                          boolean lock) {
+    /**
+     * Refreshes access token using refresh token provided with the previous access token response, otherwise,
+     * if no refresh token available, re-obtains a new access token from the token end-point.
+     * If the refresh token request fails with {@link TokenRequestException}, tries to re-obtains a new access
+     * token from the token end-point.
+     * Optionally stores access token to registered {@link Consumer} for longer term storage.
+     * @return an {@link AccessTokenCapsule} that contains requested access token.
+     * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
+     *                               response payload contains the details of the error.
+     * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
+     *                                typically indicates that client authentication failed (e.g.: unknown
+     *                                client, no client authentication included, or unsupported authentication
+     *                                method).
+     * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
+     *                                       (JSON).
+     */
+    private AccessTokenCapsule refreshAccessToken(Instant instant) {
+        // after acquiring the lock, re-check if it's a valid token
+        final AccessTokenCapsule token = tokenRef.get();
+        if (token.isValid(instant)) {
+            // simply return a valid token
+            return token;
+        }
+        // otherwise, refresh it
+        AccessTokenCapsule refreshedToken;
+        try {
+            refreshedToken = refreshAccessTokenAsync(token).join();
+        } catch (CompletionException e) {
+            if (Exceptions.peel(e) instanceof TokenRequestException) {
+                // token refresh failed, try to re-obtain access token instead
+                refreshedToken = obtainAccessToken();
+            } else {
+                throw e;
+            }
+        }
+        tokenRef.set(refreshedToken); // reset the token reference
+        if (tokenConsumer != null) {
+            tokenConsumer.accept(refreshedToken); // store token to an optional storage (e.g. secret store)
+        }
+        return refreshedToken;
+    }
+
+    /**
+     * Validates access token and refreshes it asynchronously if the token has expired or about to expire.
+     * Refreshing of the token facilitated by a dedicated single-thread {@link ExecutorService} which makes sure
+     * all token obtain and refresh requests executed serially.
+     */
+    private CompletableFuture<AccessTokenCapsule> validateOrRefreshAccessTokenAsync(AccessTokenCapsule token,
+                                                                                    boolean reset) {
         // check if it's still valid
         final Instant instant = Instant.now().plus(refreshBefore);
         if (token.isValid(instant)) {
             // simply return a valid token
             if (reset) {
-                return CompletableFuture.completedFuture(token).thenApply(t -> {
-                    tokenRef.set(t); // reset the token reference
-                    return t;
-                });
-            } else {
-                return CompletableFuture.completedFuture(token);
+                tokenRef.set(token); // reset the token reference
             }
+            return CompletableFuture.completedFuture(token);
         } else {
-            if (lock) {
-                synchronized (tokenRef) {
-                    // refresh token exclusively
-                    return refreshAccessTokenExclusively(instant);
-                }
-            } else {
+            // try to refresh token serially using single-thread executor
+            return CompletableFuture.supplyAsync(() -> {
                 // refresh token exclusively
-                return refreshAccessTokenExclusively(instant);
-            }
+                return refreshAccessToken(instant);
+            }, serialExecutor);
         }
     }
 
-    private CompletableFuture<AccessTokenCapsule> refreshAccessTokenExclusively(Instant instant) {
-        // after acquiring the lock, re-check if it's a valid token
-        final AccessTokenCapsule token = tokenRef.get();
+    /**
+     * Validates access token and refreshes it if the token has expired or about to expire.
+     */
+    private AccessTokenCapsule validateOrRefreshAccessToken(AccessTokenCapsule token, boolean reset) {
+        // check if it's still valid
+        final Instant instant = Instant.now().plus(refreshBefore);
         if (token.isValid(instant)) {
             // simply return a valid token
-            return CompletableFuture.completedFuture(token);
-        }
-        // otherwise, refresh it
-        return refreshAccessToken(token).thenApply(t -> {
-            tokenRef.set(t); // reset the token reference
-            if (tokenConsumer != null) {
-                tokenConsumer.accept(t); // store token to an optional storage (e.g. secret store)
+            if (reset) {
+                tokenRef.set(token); // reset the token reference
             }
-            return t;
-        });
+            return token;
+        } else {
+            // refresh token exclusively
+            return refreshAccessToken(instant);
+        }
     }
 
+    /**
+     * Produces valid OAuth 2.0 Access Token.
+     * Returns cached access token if previously obtained from the token end-point.
+     * Optionally loads access token from longer term storage provided by registered {@link Supplier}.
+     * If access token has not previously obtained, obtains is from the OAuth 2.0 token end-point using
+     * dedicated single-thread {@link ExecutorService} which makes sure all token obtain and refresh requests
+     * executed serially.
+     * Validates access token and refreshes it if necessary.
+     */
     @Override
     public CompletionStage<AccessTokenCapsule> getAccessToken() {
-        AccessTokenCapsule token = tokenRef.get();
-        if (token != null) {
+        final AccessTokenCapsule token1 = tokenRef.get();
+        if (token1 != null) {
             // token already present
-            return getOrRefreshAccessToken(token, false, true);
+            return validateOrRefreshAccessTokenAsync(token1, false);
         }
+
         // token is not yet present
-        // lock and obtain token exclusively
-        synchronized (tokenRef) {
+        // try to obtain token serially using single-thread executor
+        return CompletableFuture.supplyAsync(() -> {
             // re-check if the token already present
-            token = tokenRef.get();
-            if (token != null) {
+            AccessTokenCapsule token2 = tokenRef.get();
+            if (token2 != null) {
                 // token already present
-                return getOrRefreshAccessToken(token, false, false);
+                return validateOrRefreshAccessToken(token2, false);
             }
+
             // token not yet present
             // try loading access token
             if (tokenSupplier != null) {
-                token = tokenSupplier.get();
+                token2 = tokenSupplier.get();
             }
-            if (token != null) {
+            if (token2 != null) {
                 // token loaded
-                return getOrRefreshAccessToken(token, true, false);
+                return validateOrRefreshAccessToken(token2, true);
             }
-            return obtainAccessTokenExclusively(null);
-        }
+
+            return obtainAccessToken();
+        }, serialExecutor);
+    }
+
+    @Override
+    public void close() {
+        serialExecutor.shutdown();
     }
 }

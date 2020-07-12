@@ -53,7 +53,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrant extends AbstractOAuth2A
 
     OAuth2ResourceOwnerPasswordCredentialsGrant(ResourceOwnerPasswordCredentialsTokenRequest obtainRequest,
                                                 RefreshAccessTokenRequest refreshRequest,
-                                                @Nullable Duration refreshBefore,
+                                                Duration refreshBefore,
                                                 @Nullable Supplier<AccessTokenCapsule> tokenSupplier,
                                                 @Nullable Consumer<AccessTokenCapsule> tokenConsumer) {
         super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer);
@@ -61,7 +61,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrant extends AbstractOAuth2A
     }
 
     @Override
-    protected CompletableFuture<AccessTokenCapsule> obtainAccessToken(@Nullable AccessTokenCapsule token) {
+    protected CompletableFuture<AccessTokenCapsule> obtainAccessTokenAsync(@Nullable AccessTokenCapsule token) {
         return obtainRequest.make(token == null ? null : token.scope());
     }
 }

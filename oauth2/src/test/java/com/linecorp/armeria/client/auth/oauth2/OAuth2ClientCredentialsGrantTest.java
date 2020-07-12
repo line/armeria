@@ -20,7 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -126,6 +132,59 @@ public class OAuth2ClientCredentialsGrantTest {
             final AggregatedHttpResponse response3 =
                     client.get("/resource-read-write-update/").aggregate().join();
             assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @Test
+    public void testConcurrent() throws Exception {
+        try (Server resourceServer = resourceServerRule.start()) {
+
+            final WebClient authClient = WebClient.of(authServerRule.httpUri());
+            final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+                    .builder(authClient, "/token/client/")
+                    .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+
+            final WebClient client = WebClient.builder(resourceServerRule.httpUri())
+                                              .decorator(OAuth2Client.newDecorator(grant))
+                                              .build();
+
+            final int count = 10;
+            final ForkJoinPool pool = new ForkJoinPool(count);
+
+            final List<HttpResponse> responses1 = makeGetRequests(client,
+                                                                  "/resource-read-write/", count, pool);
+            validateResponses(responses1, HttpStatus.OK);
+
+            final List<HttpResponse> responses2 = makeGetRequests(client,
+                                                                  "/resource-read/", count, pool);
+            validateResponses(responses2, HttpStatus.OK);
+
+            final List<HttpResponse> responses3 = makeGetRequests(client,
+                                                                  "/resource-read-write-update/", count, pool);
+            validateResponses(responses3, HttpStatus.FORBIDDEN);
+        }
+    }
+
+    private static List<HttpResponse> makeGetRequests(WebClient client, String resource, int count,
+                                                      ForkJoinPool pool) {
+        final Callable<HttpResponse> task = () -> client.get(resource);
+        final List<Callable<HttpResponse>> tasks = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            tasks.add(task);
+        }
+        return pool.invokeAll(tasks).parallelStream().map(f -> {
+            try {
+                return f.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
+    }
+
+    private static void validateResponses(List<HttpResponse> responses, HttpStatus status) {
+        for (HttpResponse response : responses) {
+            final AggregatedHttpResponse aggregate = response.aggregate().join();
+            assertThat(aggregate.status()).isEqualTo(status);
         }
     }
 

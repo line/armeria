@@ -25,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.UnsupportedMediaTypeException;
 
 /**
  * Implements Client Credentials Grant request/response flow,

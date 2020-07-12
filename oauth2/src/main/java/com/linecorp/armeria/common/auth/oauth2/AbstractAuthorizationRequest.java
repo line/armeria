@@ -38,8 +38,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.UnsupportedMediaTypeException;
-import com.linecorp.armeria.common.UnsupportedResponseException;
 
 /**
  * A common abstraction for the requests implementing various Authorization request/response flows,

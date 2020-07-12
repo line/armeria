@@ -51,7 +51,7 @@ public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGra
     private final ClientCredentialsTokenRequest obtainRequest;
 
     OAuth2ClientCredentialsGrant(ClientCredentialsTokenRequest obtainRequest,
-                                 RefreshAccessTokenRequest refreshRequest, @Nullable Duration refreshBefore,
+                                 RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
                                  @Nullable Supplier<AccessTokenCapsule> tokenSupplier,
                                  @Nullable Consumer<AccessTokenCapsule> tokenConsumer) {
         super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer);
@@ -59,7 +59,7 @@ public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGra
     }
 
     @Override
-    protected CompletableFuture<AccessTokenCapsule> obtainAccessToken(@Nullable AccessTokenCapsule token) {
+    protected CompletableFuture<AccessTokenCapsule> obtainAccessTokenAsync(@Nullable AccessTokenCapsule token) {
         return obtainRequest.make(token == null ? null : token.scope());
     }
 }

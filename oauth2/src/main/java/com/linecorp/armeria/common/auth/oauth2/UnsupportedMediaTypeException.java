@@ -14,9 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.auth.oauth2;
 
 import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.HttpHeaderNames;
 
 /**
  * A response {@code Content-Type} header does not match the expected type.

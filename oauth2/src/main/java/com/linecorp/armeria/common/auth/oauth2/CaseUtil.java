@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.auth.oauth2;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Ascii;
+
 final class CaseUtil {
 
   @Nullable
@@ -25,7 +27,7 @@ final class CaseUtil {
     if (word == null || word.isEmpty()) {
       return word;
     }
-    return Character.toUpperCase(word.charAt(0)) + word.substring(1);
+    return Ascii.toUpperCase(word.charAt(0)) + word.substring(1);
   }
 
   @Nullable
@@ -33,7 +35,7 @@ final class CaseUtil {
     if (word == null || word.isEmpty()) {
       return word;
     }
-    return Character.toUpperCase(word.charAt(0)) + word.substring(1).toLowerCase();
+    return Ascii.toUpperCase(word.charAt(0)) + Ascii.toLowerCase(word.substring(1));
   }
 
   private CaseUtil() {
