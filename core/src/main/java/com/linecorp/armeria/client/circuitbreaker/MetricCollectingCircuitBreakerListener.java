@@ -54,7 +54,10 @@ import io.micrometer.core.instrument.MeterRegistry;
  * <td>The number of requests rejected by the circuit breaker.</td></tr>
  *
  * </table>
+ *
+ * @deprecated Use {@link CircuitBreakerListener#metricCollecting(MeterRegistry, String)}.
  */
+@Deprecated
 public final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
 
     static final String DEFAULT_METER_NAME = "armeria.client.circuit.breaker";

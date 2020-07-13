@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
@@ -22,7 +23,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RpcRequest;
 
 /**
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its key. {@link KeySelector} is used
@@ -30,11 +33,14 @@ import com.linecorp.armeria.common.Request;
  * created by using the given circuit breaker factory.
  *
  * @param <K> the key type
+ *
+ * @deprecated Use static methods in {@link CircuitBreakerMapping}.
  */
+@Deprecated
 public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping =
-            new KeyedCircuitBreakerMapping<>(KeySelectorUtil.hostSelector, CircuitBreaker::of);
+            new KeyedCircuitBreakerMapping<>(KeySelector.HOST, CircuitBreaker::of);
 
     private final ConcurrentMap<K, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
@@ -48,8 +54,11 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
      *
      * @param keySelector A function that returns the key of the given {@link Request}.
      * @param factory A function that takes a key and creates a new {@link CircuitBreaker} for the key.
+     *
+     * @deprecated Use static methods in {@link CircuitBreakerMapping}.
      */
-    KeyedCircuitBreakerMapping(KeySelector<K> keySelector, Function<K, CircuitBreaker> factory) {
+    @Deprecated
+    public KeyedCircuitBreakerMapping(KeySelector<K> keySelector, Function<K, CircuitBreaker> factory) {
         this.keySelector = requireNonNull(keySelector, "keySelector");
         this.factory = requireNonNull(factory, "factory");
     }
@@ -62,5 +71,62 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
             return circuitBreaker;
         }
         return mapping.computeIfAbsent(key, mapKey -> factory.apply(key));
+    }
+
+    /**
+     * Returns the mapping key of the given {@link Request}.
+     *
+     * @deprecated Use static methods in {@link CircuitBreakerMapping}.
+     */
+    @Deprecated
+    @FunctionalInterface
+    public interface KeySelector<K> {
+
+        /**
+         * A {@link KeySelector} that returns remote method name as a key.
+         *
+         * @deprecated Use {@link CircuitBreakerMapping#perMethod(Function)}.
+         */
+        @Deprecated
+        KeySelector<String> METHOD = (ctx, req) -> {
+            final RpcRequest rpcReq = ctx.rpcRequest();
+            return rpcReq != null ? rpcReq.method() : ctx.method().name();
+        };
+
+        /**
+         * A {@link KeySelector} that returns a key consisted of remote host name, IP address and port number.
+         *
+         * @deprecated Use {@link CircuitBreakerMapping#perHost(Function)}.
+         */
+        @Deprecated
+        KeySelector<String> HOST =
+                (ctx, req) -> {
+                    final Endpoint endpoint = ctx.endpoint();
+                    if (endpoint == null) {
+                        return "UNKNOWN";
+                    } else {
+                        final String ipAddr = endpoint.ipAddr();
+                        if (ipAddr == null || endpoint.isIpAddrOnly()) {
+                            return endpoint.authority();
+                        } else {
+                            return endpoint.authority() + '/' + ipAddr;
+                        }
+                    }
+                };
+
+        /**
+         * A {@link KeySelector} that returns a key consisted of remote host name, IP address, port number
+         * and method name.
+         *
+         * @deprecated Use {@link CircuitBreakerMapping#perHostAndMethod(Function)}.
+         */
+        @Deprecated
+        KeySelector<String> HOST_AND_METHOD =
+                (ctx, req) -> HOST.get(ctx, req) + '#' + METHOD.get(ctx, req);
+
+        /**
+         * Returns the mapping key of the given {@link Request}.
+         */
+        K get(ClientRequestContext ctx, Request req) throws Exception;
     }
 }

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
@@ -30,14 +31,14 @@ class KeyedCircuitBreakerMappingTest {
 
     @Test
     void hostSelector() throws Exception {
-        assertThat(KeySelectorUtil.hostSelector.get(context(Endpoint.of("foo")), req)).isEqualTo("foo");
-        assertThat(KeySelectorUtil.hostSelector.get(context(Endpoint.of("foo", 8080)), req))
+        assertThat(KeySelector.HOST.get(context(Endpoint.of("foo")), req)).isEqualTo("foo");
+        assertThat(KeySelector.HOST.get(context(Endpoint.of("foo", 8080)), req))
                 .isEqualTo("foo:8080");
-        assertThat(KeySelectorUtil.hostSelector.get(context(Endpoint.of("foo").withIpAddr("1.2.3.4")), req))
+        assertThat(KeySelector.HOST.get(context(Endpoint.of("foo").withIpAddr("1.2.3.4")), req))
                 .isEqualTo("foo/1.2.3.4");
-        assertThat(KeySelectorUtil.hostSelector.get(context(Endpoint.of("1.2.3.4", 80)), req))
+        assertThat(KeySelector.HOST.get(context(Endpoint.of("1.2.3.4", 80)), req))
                 .isEqualTo("1.2.3.4:80");
-        assertThat(KeySelectorUtil.hostSelector.get(context(Endpoint.of("::1", 80)), req))
+        assertThat(KeySelector.HOST.get(context(Endpoint.of("::1", 80)), req))
                 .isEqualTo("[::1]:80");
     }
 
