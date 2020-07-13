@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -76,14 +77,14 @@ class CircuitBreakerRpcClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
-        final Function<String, CircuitBreaker> factory = mock(Function.class);
-        when(factory.apply(any())).thenReturn(circuitBreaker);
+        final BiFunction<ClientRequestContext, String, CircuitBreaker> factory = mock(BiFunction.class);
+        when(factory.apply(any(), any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerRpcClient.newPerMethodDecorator(factory, rule()), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
-        verify(factory, times(1)).apply("methodA");
+        verify(factory, times(1)).apply(any(), eq("methodA"));
     }
 
     @Test
@@ -92,14 +93,14 @@ class CircuitBreakerRpcClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
-        final Function<String, CircuitBreaker> factory = mock(Function.class);
-        when(factory.apply(any())).thenReturn(circuitBreaker);
+        final BiFunction<ClientRequestContext, String, CircuitBreaker> factory = mock(BiFunction.class);
+        when(factory.apply(any(), any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerRpcClient.newPerHostDecorator(factory, rule()), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
-        verify(factory, times(1)).apply("dummyhost:8080");
+        verify(factory, times(1)).apply(any(), eq("dummyhost:8080"));
     }
 
     @Test
@@ -108,14 +109,14 @@ class CircuitBreakerRpcClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
-        final Function<String, CircuitBreaker> factory = mock(Function.class);
-        when(factory.apply(any())).thenReturn(circuitBreaker);
+        final BiFunction<ClientRequestContext, String, CircuitBreaker> factory = mock(BiFunction.class);
+        when(factory.apply(any(), any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rule()), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
-        verify(factory, times(1)).apply("dummyhost:8080#methodA");
+        verify(factory, times(1)).apply(any(), eq("dummyhost:8080#methodA"));
     }
 
     @Test
@@ -219,7 +220,8 @@ class CircuitBreakerRpcClientTest {
     @Test
     void testPerMethodScope() throws Exception {
         final AtomicLong ticker = new AtomicLong();
-        final Function<String, CircuitBreaker> factory = method -> buildCircuitBreaker(ticker::get);
+        final BiFunction<ClientRequestContext, String, CircuitBreaker> factory =
+                (ctx, method) -> buildCircuitBreaker(ticker::get);
 
         final RpcClient delegate = mock(RpcClient.class);
         // Always return failed future for methodA

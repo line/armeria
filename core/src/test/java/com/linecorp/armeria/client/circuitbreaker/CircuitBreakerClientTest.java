@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -66,15 +68,15 @@ class CircuitBreakerClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
-        final Function<String, CircuitBreaker> factory = mock(Function.class);
-        when(factory.apply(any())).thenReturn(circuitBreaker);
+        final BiFunction<ClientRequestContext, String, CircuitBreaker> factory = mock(BiFunction.class);
+        when(factory.apply(any(), any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerClient.newPerMethodDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
-        verify(factory, times(1)).apply("GET");
+        verify(factory, times(1)).apply(any(), eq("GET"));
     }
 
     @Test
@@ -83,15 +85,15 @@ class CircuitBreakerClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
-        final Function<String, CircuitBreaker> factory = mock(Function.class);
-        when(factory.apply(any())).thenReturn(circuitBreaker);
+        final BiFunction<ClientRequestContext, String, CircuitBreaker> factory = mock(BiFunction.class);
+        when(factory.apply(any(), any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerClient.newPerHostDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
-        verify(factory, times(1)).apply("dummyhost:8080");
+        verify(factory, times(1)).apply(any(), eq("dummyhost:8080"));
     }
 
     @Test
@@ -100,15 +102,15 @@ class CircuitBreakerClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
-        final Function<String, CircuitBreaker> factory = mock(Function.class);
-        when(factory.apply(any())).thenReturn(circuitBreaker);
+        final BiFunction<ClientRequestContext, String, CircuitBreaker> factory = mock(BiFunction.class);
+        when(factory.apply(any(), any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerClient.newPerHostAndMethodDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
-        verify(factory, times(1)).apply("dummyhost:8080#GET");
+        verify(factory, times(1)).apply(any(), eq("dummyhost:8080#GET"));
     }
 
     @Test

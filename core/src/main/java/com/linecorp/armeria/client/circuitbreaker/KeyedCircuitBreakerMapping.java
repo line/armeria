@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -46,7 +47,7 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
 
     private final KeySelector<K> keySelector;
 
-    private final Function<K, CircuitBreaker> factory;
+    private final BiFunction<ClientRequestContext, K, CircuitBreaker> factory;
 
     /**
      * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link KeySelector} and
@@ -59,6 +60,11 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
      */
     @Deprecated
     public KeyedCircuitBreakerMapping(KeySelector<K> keySelector, Function<K, CircuitBreaker> factory) {
+        this(keySelector, (ctx, k) -> requireNonNull(factory, "factory").apply(k));
+    }
+
+    KeyedCircuitBreakerMapping(KeySelector<K> keySelector,
+                               BiFunction<ClientRequestContext, K, CircuitBreaker> factory) {
         this.keySelector = requireNonNull(keySelector, "keySelector");
         this.factory = requireNonNull(factory, "factory");
     }
@@ -70,7 +76,7 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
         if (circuitBreaker != null) {
             return circuitBreaker;
         }
-        return mapping.computeIfAbsent(key, mapKey -> factory.apply(key));
+        return mapping.computeIfAbsent(key, mapKey -> factory.apply(ctx, key));
     }
 
     /**
@@ -85,7 +91,7 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
         /**
          * A {@link KeySelector} that returns remote method name as a key.
          *
-         * @deprecated Use {@link CircuitBreakerMapping#perMethod(Function)}.
+         * @deprecated Use {@link CircuitBreakerMapping#perMethod(BiFunction)}.
          */
         @Deprecated
         KeySelector<String> METHOD = (ctx, req) -> {
@@ -96,7 +102,7 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
         /**
          * A {@link KeySelector} that returns a key consisted of remote host name, IP address and port number.
          *
-         * @deprecated Use {@link CircuitBreakerMapping#perHost(Function)}.
+         * @deprecated Use {@link CircuitBreakerMapping#perHost(BiFunction)}.
          */
         @Deprecated
         KeySelector<String> HOST =
@@ -118,7 +124,7 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
          * A {@link KeySelector} that returns a key consisted of remote host name, IP address, port number
          * and method name.
          *
-         * @deprecated Use {@link CircuitBreakerMapping#perHostAndMethod(Function)}.
+         * @deprecated Use {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
          */
         @Deprecated
         KeySelector<String> HOST_AND_METHOD =
