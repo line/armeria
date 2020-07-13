@@ -81,7 +81,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
-        final HostAndPort parsed = HostAndPort.fromString(ignoreUserInfo(authority)).withDefaultPort(0);
+        final HostAndPort parsed = HostAndPort.fromString(removeUserInfo(authority)).withDefaultPort(0);
         return create(parsed.getHost(), parsed.getPort());
     }
 
@@ -131,7 +131,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
                             null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
     }
 
-    private static String ignoreUserInfo(String authority) {
+    private static String removeUserInfo(String authority) {
         final int indexOfDelimiter = authority.lastIndexOf("@");
         if (indexOfDelimiter == -1) {
             return authority;
