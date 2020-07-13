@@ -33,7 +33,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
+import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -77,10 +78,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
     private final MeterRegistry meterRegistry;
+    private final SessionProtocol desiredProtocol;
+    private final PoolKey poolKey;
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
-    private final boolean useProxyConnection;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -120,30 +122,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       MeterRegistry meterRegistry, boolean useHttp1Pipelining,
-                       long idleTimeoutMillis, long pingIntervalMillis, ProxyConfig proxyConfig) {
+                       MeterRegistry meterRegistry, SessionProtocol desiredProtocol, PoolKey poolKey,
+                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
         this.meterRegistry = meterRegistry;
+        this.desiredProtocol = desiredProtocol;
+        this.poolKey = poolKey;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
-
-        switch (proxyConfig.proxyType()) {
-            case DIRECT:
-                useProxyConnection = false;
-                break;
-            case SOCKS4:
-            case SOCKS5:
-            case CONNECT:
-                useProxyConnection = true;
-                break;
-            default:
-                throw new Error(); // Should never reach here.
-        }
     }
 
     @Override
@@ -345,7 +336,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (useProxyConnection) {
+            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT) {
                 if (proxyDestinationAddress != null) {
                     // ProxyConnectionEvent was already triggered.
                     tryCompleteSessionPromise(ctx);
@@ -399,9 +390,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, H1C, sessionPromise);
+                channelPool.connect(proxyDestinationAddress, H1C, poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, H1C, sessionPromise);
+                channelPool.connect(remoteAddress, H1C, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.
@@ -427,7 +418,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
-            sessionPromise.tryFailure(UnprocessedRequestException.of(cause));
+            final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
+            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
+            channelPool.invokeProxyConnectFailed(protocol, poolKey, wrapped);
+            sessionPromise.tryFailure(wrapped);
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));
