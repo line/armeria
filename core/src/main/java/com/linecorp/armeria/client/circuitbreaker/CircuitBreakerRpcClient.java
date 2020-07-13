@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -70,29 +69,9 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * unrelated services.
      *
      * @param factory A function that takes an RPC method name and creates a new {@link CircuitBreaker}.
-     *
-     * @deprecated Use {@link #newPerMethodDecorator(BiFunction, CircuitBreakerRuleWithContent)}.
      */
-    @Deprecated
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,
-                          CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        requireNonNull(factory, "factory");
-        return newPerMethodDecorator((ctx, s) -> factory.apply(s), ruleWithContent);
-    }
-
-    /**
-     * Creates a new decorator that binds one {@link CircuitBreaker} per RPC method name with the specified
-     * {@link CircuitBreakerRuleWithContent}.
-     *
-     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
-     * unrelated services.
-     *
-     * @param factory the {@link BiFunction} that takes a {@link ClientRequestContext} with RPC method name
-     *                and creates a new {@link CircuitBreaker}.
-     */
-    public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newPerMethodDecorator(BiFunction<ClientRequestContext, String, CircuitBreaker> factory,
                           CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), ruleWithContent);
     }
@@ -105,29 +84,9 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * unrelated services.
      *
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
-     *
-     * @deprecated Use {@link #newPerHostDecorator(BiFunction, CircuitBreakerRuleWithContent)}.
      */
-    @Deprecated
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
-                        CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        requireNonNull(factory, "factory");
-        return newPerHostDecorator((ctx, s) -> factory.apply(s), ruleWithContent);
-    }
-
-    /**
-     * Creates a new decorator that binds one {@link CircuitBreaker} per host with the specified
-     * {@link CircuitBreakerRuleWithContent}.
-     *
-     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
-     * unrelated services.
-     *
-     * @param factory the {@link BiFunction} that takes a {@link ClientRequestContext} with host name
-     *                and creates a new {@link CircuitBreaker}
-     */
-    public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newPerHostDecorator(BiFunction<ClientRequestContext, String, CircuitBreaker> factory,
                         CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), ruleWithContent);
     }
@@ -143,23 +102,6 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
-                                 CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        requireNonNull(factory, "factory");
-        return newPerHostAndMethodDecorator((ctx, s) -> factory.apply(s), ruleWithContent);
-    }
-
-    /**
-     * Creates a new decorator that binds one {@link CircuitBreaker} per host and RPC method name with
-     * the specified {@link CircuitBreakerRuleWithContent}.
-     *
-     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
-     * unrelated services.
-     *
-     * @param factory the {@link BiFunction} that takes a {@link ClientRequestContext} with host+method
-     *                and creates a new {@link CircuitBreaker}
-     */
-    public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newPerHostAndMethodDecorator(BiFunction<ClientRequestContext, String, CircuitBreaker> factory,
                                  CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
     }

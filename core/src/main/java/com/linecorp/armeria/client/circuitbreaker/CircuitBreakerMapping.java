@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -42,22 +39,8 @@ public interface CircuitBreakerMapping {
      * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with method name.
      *
      * @param factory the function that takes a method name and creates a new {@link CircuitBreaker}
-     *
-     * @deprecated Use {@link #perMethod(BiFunction)}.
      */
-    @Deprecated
     static CircuitBreakerMapping perMethod(Function<String, CircuitBreaker> factory) {
-        requireNonNull(factory, "factory");
-        return perMethod((ctx, s) -> factory.apply(s));
-    }
-
-    /**
-     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with method name.
-     *
-     * @param factory the {@link BiFunction} that takes a {@link ClientRequestContext} with method name and
-     *                creates a new {@link CircuitBreaker}
-     */
-    static CircuitBreakerMapping perMethod(BiFunction<ClientRequestContext, String, CircuitBreaker> factory) {
         return new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory);
     }
 
@@ -71,16 +54,6 @@ public interface CircuitBreakerMapping {
     }
 
     /**
-     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the remote host name.
-     *
-     * @param factory the {@link BiFunction} that takes a {@link ClientRequestContext} with host name and
-     *                creates a new {@link CircuitBreaker}
-     */
-    static CircuitBreakerMapping perHost(BiFunction<ClientRequestContext, String, CircuitBreaker> factory) {
-        return new KeyedCircuitBreakerMapping<>(KeySelector.HOST, factory);
-    }
-
-    /**
      * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the remote host and
      * method name.
      *
@@ -88,18 +61,6 @@ public interface CircuitBreakerMapping {
      *                creates a new {@link CircuitBreaker}
      */
     static CircuitBreakerMapping perHostAndMethod(Function<String, CircuitBreaker> factory) {
-        return new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory);
-    }
-
-    /**
-     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the remote host and
-     * method name.
-     *
-     * @param factory the {@link BiFunction} that takes a {@link ClientRequestContext} with
-     *                the remote host and method name and creates a new {@link CircuitBreaker}
-     */
-    static CircuitBreakerMapping perHostAndMethod(
-            BiFunction<ClientRequestContext, String, CircuitBreaker> factory) {
         return new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory);
     }
 
