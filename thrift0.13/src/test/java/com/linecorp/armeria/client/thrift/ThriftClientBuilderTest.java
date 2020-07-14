@@ -16,13 +16,19 @@
 package com.linecorp.armeria.client.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 class ThriftClientBuilderTest {
@@ -53,5 +59,19 @@ class ThriftClientBuilderTest {
         assertThat(params).isNotNull();
         assertThat(params.uri().toString()).isEqualTo("tbinary+http://127.0.0.1/foo");
         assertThat(params.scheme().serializationFormat()).isSameAs(ThriftSerializationFormats.BINARY);
+    }
+
+    @Test
+    void httpRequestIsAbortedIfDecoratorThrowException() throws Exception {
+        final CompletableFuture<HttpRequest> reqCaptor = new CompletableFuture<>();
+        final HelloService.Iface client = Clients.builder("tbinary+https://google.com/")
+                                                 .decorator((delegate, ctx, req) -> {
+                                                     reqCaptor.complete(req);
+                                                     throw new AnticipatedException();
+                                                 })
+                                                 .build(HelloService.Iface.class);
+        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(AnticipatedException.class);
+        assertThatThrownBy(() -> reqCaptor.join().whenComplete().join())
+                .hasCauseInstanceOf(AbortedStreamException.class);
     }
 }

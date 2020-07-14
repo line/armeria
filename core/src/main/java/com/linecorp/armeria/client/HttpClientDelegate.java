@@ -21,11 +21,15 @@ import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -44,6 +48,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements HttpClient {
+    private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
 
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
@@ -139,7 +144,19 @@ final class HttpClientDelegate implements HttpClient {
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
 
-        final PoolKey key = new PoolKey(host, ipAddr, port);
+        final ProxyConfig proxyConfig;
+        try {
+            final Endpoint endpoint = Endpoint.of(host, port);
+            proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
+            requireNonNull(proxyConfig, "proxyConfig");
+        } catch (Throwable t) {
+            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
+            handleEarlyRequestException(ctx, req, wrapped);
+            res.close(wrapped);
+            return;
+        }
+
+        final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);

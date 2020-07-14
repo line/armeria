@@ -462,11 +462,11 @@ org.jetbrains.kotlinx:
 org.jlleitschuh.gradle:
   ktlint-gradle: { version: '9.2.1' }
 
-org.jsoup:
-  jsoup: { version: '1.13.1' }
-
 org.jooq:
   joor: { version: '0.9.13' }
+
+org.jsoup:
+  jsoup: { version: '1.13.1' }
 
 org.mockito:
   mockito-core: { version: &MOCKITO_VERSION '3.3.3' }

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.proxy;
 
-import com.google.common.base.MoreObjects;
+import java.net.InetSocketAddress;
 
 /**
  * Represents a direct connection without a proxy.
@@ -33,7 +33,12 @@ public final class DirectProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public InetSocketAddress proxyAddress() {
+        return null;
+    }
+
+    @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this).add("proxyType", proxyType()).toString();
+        return "DirectProxyConfig{proxyType=DIRECT}";
     }
 }
