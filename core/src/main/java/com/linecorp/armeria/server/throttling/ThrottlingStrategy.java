@@ -69,7 +69,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * using a given {@link BiFunction} instance.
      */
     public static <T extends Request> ThrottlingStrategy<T> of(
-            BiFunction<ServiceRequestContext, T, CompletionStage<Boolean>> function,
+            BiFunction<? super ServiceRequestContext, T, ? extends CompletionStage<Boolean>> function,
             String strategyName) {
         return new ThrottlingStrategy<T>(strategyName) {
             @Override
@@ -84,7 +84,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * using a given {@link BiFunction} instance.
      */
     public static <T extends Request> ThrottlingStrategy<T> of(
-            BiFunction<ServiceRequestContext, T, CompletionStage<Boolean>> function) {
+            BiFunction<? super ServiceRequestContext, T, ? extends CompletionStage<Boolean>> function) {
         return new ThrottlingStrategy<T>(null) {
             @Override
             public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {

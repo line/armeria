@@ -16,12 +16,14 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
@@ -31,15 +33,38 @@ class KeyedCircuitBreakerMappingTest {
 
     @Test
     void hostSelector() throws Exception {
-        assertThat(KeySelector.HOST.get(context(Endpoint.of("foo")), req)).isEqualTo("foo");
-        assertThat(KeySelector.HOST.get(context(Endpoint.of("foo", 8080)), req))
-                .isEqualTo("foo:8080");
-        assertThat(KeySelector.HOST.get(context(Endpoint.of("foo").withIpAddr("1.2.3.4")), req))
-                .isEqualTo("foo/1.2.3.4");
-        assertThat(KeySelector.HOST.get(context(Endpoint.of("1.2.3.4", 80)), req))
-                .isEqualTo("1.2.3.4:80");
-        assertThat(KeySelector.HOST.get(context(Endpoint.of("::1", 80)), req))
-                .isEqualTo("[::1]:80");
+        final CircuitBreaker a = mock(CircuitBreaker.class);
+        final CircuitBreaker b = mock(CircuitBreaker.class);
+        final CircuitBreaker c = mock(CircuitBreaker.class);
+        final CircuitBreaker d = mock(CircuitBreaker.class);
+        final CircuitBreaker e = mock(CircuitBreaker.class);
+        final Function<String, ? extends CircuitBreaker> factory = host -> {
+            if ("foo".equals(host)) {
+                return a;
+            }
+            if ("foo:8080".equals(host)) {
+                return b;
+            }
+            if ("foo/1.2.3.4".equals(host)) {
+                return c;
+            }
+            if ("1.2.3.4:80".equals(host)) {
+                return d;
+            }
+            if ("[::1]:80".equals(host)) {
+                return e;
+            }
+            return null;
+        };
+
+        final CircuitBreakerMapping breakerMapping = CircuitBreakerMapping.perHost(factory);
+        assertThat(breakerMapping.get(context(Endpoint.of("foo")), req)).isSameAs(a);
+        assertThat(breakerMapping.get(context(Endpoint.of("foo", 8080)), req)).isSameAs(b);
+        assertThat(breakerMapping.get(context(Endpoint.of("foo").withIpAddr("1.2.3.4")), req)).isSameAs(c);
+        assertThat(breakerMapping.get(context(Endpoint.of("1.2.3.4", 80)), req)).isSameAs(d);
+        assertThat(breakerMapping.get(context(Endpoint.of("::1", 80)), req)).isSameAs(e);
+
+        assertThat(breakerMapping.get(context(Endpoint.of("bar")), req)).isNull();
     }
 
     private static ClientRequestContext context(Endpoint endpoint) {

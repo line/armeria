@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
+import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.MappingKey;
 import com.linecorp.armeria.common.Request;
 
 /**
@@ -40,8 +43,9 @@ public interface CircuitBreakerMapping {
      *
      * @param factory the function that takes a method name and creates a new {@link CircuitBreaker}
      */
-    static CircuitBreakerMapping perMethod(Function<String, CircuitBreaker> factory) {
-        return new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory);
+    static CircuitBreakerMapping perMethod(Function<String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return new KeyedCircuitBreakerMapping(MappingKey.METHOD, (host, method) -> factory.apply(method));
     }
 
     /**
@@ -49,8 +53,9 @@ public interface CircuitBreakerMapping {
      *
      * @param factory the function that takes a host name and creates a new {@link CircuitBreaker}
      */
-    static CircuitBreakerMapping perHost(Function<String, CircuitBreaker> factory) {
-        return new KeyedCircuitBreakerMapping<>(KeySelector.HOST, factory);
+    static CircuitBreakerMapping perHost(Function<String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method) -> factory.apply(host));
     }
 
     /**
@@ -60,8 +65,10 @@ public interface CircuitBreakerMapping {
      * @param factory the function that takes the remote host and method name and
      *                creates a new {@link CircuitBreaker}
      */
-    static CircuitBreakerMapping perHostAndMethod(Function<String, CircuitBreaker> factory) {
-        return new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory);
+    static CircuitBreakerMapping perHostAndMethod(
+            BiFunction<String, String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return new KeyedCircuitBreakerMapping(MappingKey.HOST_AND_METHOD, factory);
     }
 
     /**

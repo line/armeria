@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -31,46 +32,55 @@ import com.linecorp.armeria.common.RpcRequest;
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its key. {@link KeySelector} is used
  * to resolve the key from a {@link Request}. If there is no circuit breaker bound to the key, a new one is
  * created by using the given circuit breaker factory.
- *
- * @param <K> the key type
- *
- * @deprecated Use static methods in {@link CircuitBreakerMapping}.
  */
-@Deprecated
-public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
+final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping =
-            new KeyedCircuitBreakerMapping<>(KeySelector.HOST, CircuitBreaker::of);
+            new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method) -> CircuitBreaker.of(host));
 
-    private final ConcurrentMap<K, CircuitBreaker> mapping = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
-    private final KeySelector<K> keySelector;
-
-    private final Function<K, CircuitBreaker> factory;
+    private final MappingKey mappingKey;
+    private final BiFunction<String, String, ? extends CircuitBreaker> factory;
 
     /**
      * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link KeySelector} and
      * {@link CircuitBreaker} factory.
-     *
-     * @param keySelector A function that returns the key of the given {@link Request}.
-     * @param factory A function that takes a key and creates a new {@link CircuitBreaker} for the key.
-     *
-     * @deprecated Use static methods in {@link CircuitBreakerMapping}.
      */
-    @Deprecated
-    public KeyedCircuitBreakerMapping(KeySelector<K> keySelector, Function<K, CircuitBreaker> factory) {
-        this.keySelector = requireNonNull(keySelector, "keySelector");
+    KeyedCircuitBreakerMapping(MappingKey mappingKey,
+                               BiFunction<String, String, ? extends CircuitBreaker> factory) {
+        this.mappingKey = requireNonNull(mappingKey, "mappingKey");
         this.factory = requireNonNull(factory, "factory");
     }
 
     @Override
     public CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception {
-        final K key = keySelector.get(ctx, req);
+        final String key;
+        final String host;
+        final String method;
+        switch (mappingKey) {
+            case HOST:
+                key = host = KeySelector.HOST.get(ctx, req);
+                method = null;
+                break;
+            case METHOD:
+                host = null;
+                key = method = KeySelector.METHOD.get(ctx, req);
+                break;
+            case HOST_AND_METHOD:
+                host = KeySelector.HOST.get(ctx, req);
+                method = KeySelector.METHOD.get(ctx, req);
+                key = host + '#' + method;
+                break;
+            default:
+                // should never reach here.
+                throw new Error();
+        }
         final CircuitBreaker circuitBreaker = mapping.get(key);
         if (circuitBreaker != null) {
             return circuitBreaker;
         }
-        return mapping.computeIfAbsent(key, mapKey -> factory.apply(key));
+        return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method));
     }
 
     /**
@@ -128,5 +138,11 @@ public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMappin
          * Returns the mapping key of the given {@link Request}.
          */
         K get(ClientRequestContext ctx, Request req) throws Exception;
+    }
+
+    enum MappingKey {
+        HOST,
+        METHOD,
+        HOST_AND_METHOD;
     }
 }
