@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,9 +15,7 @@
  */
 
 /**
- * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> integration.
+ * Common annotations.
  */
 @NonNullByDefault
-package com.linecorp.armeria.spring;
-
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+package com.linecorp.armeria.common.annotation;

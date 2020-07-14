@@ -40,7 +40,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A supporting base class for implementing the standard pattern of extracting docstrings

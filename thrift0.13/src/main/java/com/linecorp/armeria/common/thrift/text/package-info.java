@@ -47,4 +47,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.common.thrift.text;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

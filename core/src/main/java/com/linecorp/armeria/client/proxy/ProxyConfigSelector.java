@@ -24,7 +24,7 @@ import java.net.SocketAddress;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Selects the {@link ProxyConfig} to use when connecting to a network

@@ -30,7 +30,7 @@ class MetricCollectingCircuitBreakerListenerTest {
     @Test
     void test() throws Exception {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-        final CircuitBreakerListener l = new MetricCollectingCircuitBreakerListener(registry, "foo");
+        final CircuitBreakerListener l = CircuitBreakerListener.metricCollecting(registry, "foo");
 
         // Note: We only use the name of the circuit breaker.
         final CircuitBreaker cb = CircuitBreaker.builder("bar").build();

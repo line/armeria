@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -71,7 +72,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * @param factory A function that takes an RPC method name and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newPerMethodDecorator(Function<String, CircuitBreaker> factory,
+    newPerMethodDecorator(Function<String, ? extends CircuitBreaker> factory,
                           CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), ruleWithContent);
     }
@@ -86,7 +87,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newPerHostDecorator(Function<String, CircuitBreaker> factory,
+    newPerHostDecorator(Function<String, ? extends CircuitBreaker> factory,
                         CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), ruleWithContent);
     }
@@ -101,7 +102,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
      */
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
+    newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
                                  CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
     }

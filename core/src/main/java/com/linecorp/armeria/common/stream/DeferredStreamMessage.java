@@ -29,8 +29,8 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 

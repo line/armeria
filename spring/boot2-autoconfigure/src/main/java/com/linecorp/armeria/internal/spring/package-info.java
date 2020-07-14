@@ -20,4 +20,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.internal.spring;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

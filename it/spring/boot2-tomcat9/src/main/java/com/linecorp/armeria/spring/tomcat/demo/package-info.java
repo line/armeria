@@ -17,4 +17,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.spring.tomcat.demo;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

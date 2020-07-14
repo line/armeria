@@ -25,8 +25,7 @@ public final class DirectProxyConfig extends ProxyConfig {
 
     static final DirectProxyConfig DIRECT_PROXY_CONFIG = new DirectProxyConfig();
 
-    private DirectProxyConfig() {
-    }
+    private DirectProxyConfig() {}
 
     @Override
     public ProxyType proxyType() {

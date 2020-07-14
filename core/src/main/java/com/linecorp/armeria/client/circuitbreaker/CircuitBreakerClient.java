@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -102,7 +103,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerMethodDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
+    newPerMethodDecorator(Function<String, ? extends CircuitBreaker> factory, CircuitBreakerRule rule) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), rule);
     }
 
@@ -116,7 +117,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerMethodDecorator(Function<String, CircuitBreaker> factory,
+    newPerMethodDecorator(Function<String, ? extends CircuitBreaker> factory,
                           CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), ruleWithContent);
     }
@@ -131,7 +132,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
+    newPerHostDecorator(Function<String, ? extends CircuitBreaker> factory, CircuitBreakerRule rule) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), rule);
     }
 
@@ -145,7 +146,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostDecorator(Function<String, CircuitBreaker> factory,
+    newPerHostDecorator(Function<String, ? extends CircuitBreaker> factory,
                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), ruleWithContent);
     }
@@ -160,7 +161,8 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
+    newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
+                                 CircuitBreakerRule rule) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), rule);
     }
 
@@ -174,7 +176,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
+    newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
                                  CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
     }
