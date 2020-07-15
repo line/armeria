@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -147,6 +148,11 @@ public final class ArmeriaConfigurationUtil {
                     DropwizardSupport.addExposition(settings, server, meterRegistry);
                 }
             }
+
+            server.decorator(MetricCollectingService.newDecorator(
+                    MeterIdPrefixFunction.ofDefault("armeria.server")
+                                         .andThen((registry, log, meterIdPrefix) -> meterIdPrefix.withTags(
+                                                 "service", log.serviceName()))));
         }
 
         if (settings.getSsl() != null) {
