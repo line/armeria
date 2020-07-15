@@ -132,7 +132,7 @@ public final class ServletBuilder {
     }
 
     /**
-     * Sets the specified {@code mimyType} with the mapping {@code extension}.
+     * Sets the specified {@code mimeType} with the mapping {@code extension}.
      */
     public ServletBuilder mimeMapping(String extension, String mimeType) {
         servletContext.mimeMapping(extension, mimeType);

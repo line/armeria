@@ -43,7 +43,6 @@ import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 import javax.servlet.http.HttpServlet;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,12 +106,24 @@ final class DefaultServletContext implements ServletContext {
     }
 
     void mimeMapping(String extension, String mimeType) {
-        requireNonNull(extension, "extension");
-        requireNonNull(mimeType, "mimeType");
+        checkArgument(!isNullOrEmpty(extension),
+                      "extension: %s (expected: not null and empty)", extension);
+        checkArgument(!isNullOrEmpty(mimeType),
+                      "mimeType: %s (expected: not null and empty)", mimeType);
+        checkArgument(mimeType.contains("/"),
+                      "mimeType: %s (expected: must contain '/' character)", mimeType);
         mimeMappings.put(extension, mimeType);
     }
 
     void mimeMappings(Map<String, String> mappings) {
+        for (Map.Entry<String, String> entry : mappings.entrySet()) {
+            checkArgument(!isNullOrEmpty(entry.getKey()),
+                          "extension: %s (expected: not null and empty)", entry.getKey());
+            checkArgument(!isNullOrEmpty(entry.getValue()),
+                          "mimeType: %s (expected: not null and empty)", entry.getValue());
+            checkArgument(entry.getValue().contains("/"),
+                          "mimeType: %s (expected: must contain '/' character)", entry.getValue());
+        }
         mimeMappings.putAll(requireNonNull(mappings, "mappings"));
     }
 
@@ -197,7 +208,7 @@ final class DefaultServletContext implements ServletContext {
     @Nullable
     public ServletRequestDispatcher getRequestDispatcher(String path) {
         requireNonNull(path, "path");
-        final Pair<String, DefaultServletRegistration> pair = servletUrlMapper.getMapping(path);
+        final Map.Entry<String, DefaultServletRegistration> pair = servletUrlMapper.getMapping(path);
         if (pair == null) {
             return null;
         }

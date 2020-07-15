@@ -23,11 +23,12 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import org.apache.commons.lang3.tuple.Pair;
+import com.google.common.collect.Maps;
 
 final class ServletUrlMapper {
 
-    private final Map<Pattern, Pair<String, DefaultServletRegistration>> registrations = new LinkedHashMap<>();
+    private final Map<Pattern, Map.Entry<String, DefaultServletRegistration>>
+            registrations = new LinkedHashMap<>();
 
     void addMapping(String urlPattern, DefaultServletRegistration registration) {
         // TODO Optimize router.
@@ -47,11 +48,11 @@ final class ServletUrlMapper {
             urlPattern = removeTrailingSlash(urlPattern);
             pattern = Pattern.compile('^' + urlPattern + '$');
         }
-        registrations.put(pattern, Pair.of(urlPattern, registration));
+        registrations.put(pattern, Maps.immutableEntry(urlPattern, registration));
     }
 
     @Nullable
-    Pair<String, DefaultServletRegistration> getMapping(String path) {
+    Map.Entry<String, DefaultServletRegistration> getMapping(String path) {
         final String normalizedPath = removeTrailingSlash(path);
         return registrations.entrySet().stream()
                             .filter(entry -> entry.getKey().matcher(normalizedPath).matches())
