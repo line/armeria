@@ -39,6 +39,8 @@ import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 
+import com.google.errorprone.annotations.MustBeClosed;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -449,6 +451,7 @@ public interface RequestContext {
      * thread-local. Please see {@link ServiceRequestContext#push()} and
      * {@link ClientRequestContext#push()} to find out the satisfying conditions.
      */
+    @MustBeClosed
     SafeCloseable push();
 
     /**
@@ -462,6 +465,7 @@ public interface RequestContext {
      * @see ClientRequestContext#push()
      * @see ServiceRequestContext#push()
      */
+    @MustBeClosed
     default SafeCloseable replace() {
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         return () -> RequestContextUtil.pop(this, oldCtx);

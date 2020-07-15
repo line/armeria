@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.ReferenceCountUtil;
 

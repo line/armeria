@@ -37,8 +37,7 @@ public class RateLimitingThrottlingStrategyTest {
 
     @Test
     public void rateLimit() {
-        final RateLimitingThrottlingStrategy<Request> strategy =
-                new RateLimitingThrottlingStrategy<>(rateLimiter);
+        final ThrottlingStrategy<Request> strategy = new RateLimitingThrottlingStrategy<>(rateLimiter);
         when(rateLimiter.tryAcquire()).thenReturn(true)
                                       .thenReturn(false)
                                       .thenReturn(true);

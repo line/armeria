@@ -14,24 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.unsafe;
+/**
+ * Various classes used internally. Anything in this package can be changed or removed at any time.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.internal.logging;
 
-import com.linecorp.armeria.common.FilteredHttpResponse;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpResponse;
-
-final class DefaultPooledHttpResponse extends FilteredHttpResponse implements PooledHttpResponse {
-
-    DefaultPooledHttpResponse(HttpResponse delegate) {
-        super(delegate, true);
-    }
-
-    @Override
-    protected HttpObject filter(HttpObject obj) {
-        if (!(obj instanceof HttpData)) {
-            return obj;
-        }
-        return PooledHttpData.of((HttpData) obj);
-    }
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

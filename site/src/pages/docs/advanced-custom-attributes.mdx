@@ -16,7 +16,7 @@ public final class MyAttributeKeys {
 }
 ```
 
-Then, you can access them via `RequestContext.attr(AttributeKey)`:
+Then, you can access them via <type://RequestContext#attr(AttributeKey)>:
 
 ```java
 // Setting
@@ -29,7 +29,7 @@ Integer i = ctx.attr(INT_ATTR); // i == 42
 MyBean bean = ctx.attr(BEAN_ATTR); // bean == myBean
 ```
 
-You can also iterate over all the attributes in a context using `RequestContext.attrs()`:
+You can also iterate over all the attributes in a context using <type://RequestContext#attrs()>:
 
 ```java
 ctx.attrs().forEachRemaining(e -> {

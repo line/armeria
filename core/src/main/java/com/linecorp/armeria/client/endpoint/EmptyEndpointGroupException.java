@@ -37,7 +37,7 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
                new EmptyEndpointGroupException() : INSTANCE;
     }
 
-    EmptyEndpointGroupException() {}
+    private EmptyEndpointGroupException() {}
 
     private EmptyEndpointGroupException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.collectDecorators;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.create;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.find;
@@ -28,13 +29,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -184,14 +185,20 @@ class AnnotatedServiceFactoryTest {
         final ServiceObjectWithoutPathOnAnnotatedMethod serviceObject =
                 new ServiceObjectWithoutPathOnAnnotatedMethod();
 
-        getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
-            assertThatThrownBy(() -> {
+        final List<Route> routes = Stream.of(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.HEAD, HttpMethod.PUT,
+                                             HttpMethod.OPTIONS, HttpMethod.PATCH, HttpMethod.POST,
+                                             HttpMethod.TRACE)
+                                         .map(m -> Route.builder().path("/").methods(m).build())
+                                         .collect(toImmutableList());
 
-                create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of());
-            }).isInstanceOf(IllegalArgumentException.class)
-              .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
-        });
+        final List<Route> actualRoutes = getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class,
+                                                    HttpResponse.class)
+                .map(method -> create("/", serviceObject, method, ImmutableList.of(),
+                                      ImmutableList.of(), ImmutableList.of()))
+                .flatMap(Collection::stream)
+                .map(AnnotatedServiceElement::route)
+                .collect(toImmutableList());
+        assertThat(actualRoutes).containsAll(routes);
     }
 
     @Test
@@ -255,7 +262,7 @@ class AnnotatedServiceFactoryTest {
     void testDuplicatePathAnnotations() {
         final List<AnnotatedServiceElement> getServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "duplicatePathAnnotations", HttpMethod.GET);
-        Assertions.assertThat(getServiceElements).hasSize(2);
+        assertThat(getServiceElements).hasSize(2);
         final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedServiceElement::route)
                                                        .collect(Collectors.toSet());
         assertThat(getRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.GET).build(),
@@ -263,7 +270,7 @@ class AnnotatedServiceFactoryTest {
 
         final List<AnnotatedServiceElement> postServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "duplicatePathAnnotations", HttpMethod.POST);
-        Assertions.assertThat(getServiceElements).hasSize(2);
+        assertThat(getServiceElements).hasSize(2);
         final Set<Route> postRoutes = postServiceElements.stream().map(AnnotatedServiceElement::route)
                                                          .collect(Collectors.toSet());
         assertThat(postRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.POST).build(),
@@ -537,23 +544,6 @@ class AnnotatedServiceFactoryTest {
     }
 
     static class MultiPathFailingService {
-
-        @Get
-        public HttpResponse noGetMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get
-        @Post
-        public HttpResponse noGetPostMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get("/get")
-        @Post
-        public HttpResponse noPostMappingAndGetMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
 
         @Get("/get")
         @Path("/path")

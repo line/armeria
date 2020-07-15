@@ -20,7 +20,7 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.ReferenceCountUtil;
 

@@ -24,8 +24,7 @@ import io.reactivex.SingleObserver;
 import io.reactivex.SingleSource;
 import io.reactivex.internal.fuseable.ScalarCallable;
 
-final class RequestContextScalarCallableSingle<T> extends Single<T>
-        implements ScalarCallable<T> {
+final class RequestContextScalarCallableSingle<T> extends Single<T> implements ScalarCallable<T> {
     private final SingleSource<T> source;
     private final RequestContext assemblyContext;
 

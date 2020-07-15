@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link FixedStreamMessage} that publishes no objects, just a close event.

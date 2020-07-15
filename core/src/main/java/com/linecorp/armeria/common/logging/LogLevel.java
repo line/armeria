@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
@@ -52,6 +54,7 @@ public enum LogLevel {
      * Returns {@code true} if this level is enabled.
      */
     public boolean isEnabled(Logger logger) {
+        requireNonNull(logger, "logger");
         switch (this) {
             case OFF:
                 return false;
@@ -74,6 +77,8 @@ public enum LogLevel {
      * Logs a message at this level.
      */
     public void log(Logger logger, String message) {
+        requireNonNull(logger, "logger");
+        requireNonNull(message, "message");
         switch (this) {
             case OFF:
                 break;
@@ -101,7 +106,9 @@ public enum LogLevel {
      * Logs a message at this level.
      */
     @SuppressWarnings("MethodParameterNamingConvention")
-    public void log(Logger logger, String format, Object arg1) {
+    public void log(Logger logger, String format, @Nullable Object arg1) {
+        requireNonNull(logger, "logger");
+        requireNonNull(format, "format");
         switch (this) {
             case OFF:
                 break;
@@ -130,6 +137,8 @@ public enum LogLevel {
      */
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format, @Nullable Object arg1, @Nullable Object arg2) {
+        requireNonNull(logger, "logger");
+        requireNonNull(format, "format");
         switch (this) {
             case OFF:
                 break;
@@ -159,6 +168,8 @@ public enum LogLevel {
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format,
                     @Nullable Object arg1, @Nullable Object arg2, @Nullable Object arg3) {
+        requireNonNull(logger, "logger");
+        requireNonNull(format, "format");
         switch (this) {
             case OFF:
                 break;
@@ -186,6 +197,8 @@ public enum LogLevel {
      * Logs a message at this level.
      */
     public void log(Logger logger, String format, Object... args) {
+        requireNonNull(logger, "logger");
+        requireNonNull(format, "format");
         switch (this) {
             case OFF:
                 break;

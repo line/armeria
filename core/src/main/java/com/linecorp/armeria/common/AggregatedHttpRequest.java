@@ -25,6 +25,9 @@ import java.util.Locale;
 
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
+
 /**
  * A complete HTTP request whose content is readily available as a single {@link HttpData}.
  */
@@ -89,8 +92,9 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      * @param format {@linkplain Formatter the format string} of the request content
      * @param args the arguments referenced by the format specifiers in the format string
      */
+    @FormatMethod
     static AggregatedHttpRequest of(HttpMethod method, String path, MediaType mediaType,
-                                    String format, Object... args) {
+                                    @FormatString String format, Object... args) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");

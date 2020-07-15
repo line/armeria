@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.common.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,18 +21,19 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.meta.TypeQualifierDefault;
-
 /**
- * Indicates the return values, parameters and fields are non-nullable by default. Annotate a package with
- * this annotation and annotate nullable return values, parameters and fields with {@link Nullable}.
+ * Indicates the API of the target is not mature enough to guarantee the compatibility between releases.
+ * Its behavior, signature or even existence might change without a prior notice at any point.
  */
-@Nonnull
+@Retention(RetentionPolicy.SOURCE)
+@Target({
+        ElementType.ANNOTATION_TYPE,
+        ElementType.CONSTRUCTOR,
+        ElementType.FIELD,
+        ElementType.METHOD,
+        ElementType.PACKAGE,
+        ElementType.TYPE
+})
 @Documented
-@Target(ElementType.PACKAGE)
-@Retention(RetentionPolicy.RUNTIME)
-@TypeQualifierDefault({ ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD })
-public @interface NonNullByDefault {
+public @interface UnstableApi {
 }

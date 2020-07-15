@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
-import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
 
 import io.grpc.ServiceDescriptor;
 

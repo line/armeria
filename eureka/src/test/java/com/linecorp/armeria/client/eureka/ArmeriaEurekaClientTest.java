@@ -24,7 +24,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -189,7 +188,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
 
             final EurekaEndpointGroupBuilder builder = EurekaEndpointGroup.builder(eurekaUri);
             setRegions(builder, regions);
-            final List<Endpoint> endpoints = endpoints(builder.build());
+            final List<Endpoint> endpoints = builder.build().whenReady().join();
             final Applications applications = eurekaResponse.getEntity();
             assertThat(endpoints).containsExactlyInAnyOrderElementsOf(endpointsFromApplications(applications,
                                                                                                 false));
@@ -210,7 +209,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             final EurekaEndpointGroupBuilder builder = EurekaEndpointGroup.builder(eurekaUri)
                                                                           .vipAddress(vipAddress);
             setRegions(builder, regions);
-            final List<Endpoint> endpoints = endpoints(builder.build());
+            final List<Endpoint> endpoints = builder.build().whenReady().join();
             final Applications applications = eurekaResponse.getEntity();
             assertThat(endpoints).containsExactlyInAnyOrderElementsOf(
                     endpointsFromApplications(applications, false));
@@ -225,7 +224,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             final EurekaEndpointGroupBuilder builder = EurekaEndpointGroup.builder(eurekaUri)
                                                                           .secureVipAddress(secureVipAddress);
             setRegions(builder, regions);
-            final List<Endpoint> endpoints = endpoints(builder.build());
+            final List<Endpoint> endpoints = builder.build().whenReady().join();
             final Applications applications = eurekaResponse.getEntity();
             assertThat(endpoints).containsExactlyInAnyOrderElementsOf(
                     endpointsFromApplications(applications, true));
@@ -240,7 +239,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             final EurekaEndpointGroup endpointGroup = EurekaEndpointGroup.builder(eurekaUri)
                                                                          .appName(appName)
                                                                          .build();
-            final List<Endpoint> endpoints = endpoints(endpointGroup);
+            final List<Endpoint> endpoints = endpointGroup.whenReady().join();
             final Application application = eurekaResponse.getEntity();
             assertThat(endpoints).containsExactlyInAnyOrderElementsOf(
                     endpointsFromApplication(application, false));
@@ -255,7 +254,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             final EurekaEndpointGroup endpointGroup = EurekaEndpointGroup.builder(eurekaUri)
                                                                          .appName(appName)
                                                                          .instanceId(id).build();
-            final List<Endpoint> endpoints = endpoints(endpointGroup);
+            final List<Endpoint> endpoints = endpointGroup.whenReady().join();
             final InstanceInfo instanceInfo = eurekaResponse.getEntity();
             final Endpoint endpoint = endpoint(instanceInfo, false);
             assertThat(endpoints).containsOnly(endpoint);
@@ -269,7 +268,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
 
             final EurekaEndpointGroup endpointGroup = EurekaEndpointGroup.builder(eurekaUri)
                                                                          .instanceId(id).build();
-            final List<Endpoint> endpoints = endpoints(endpointGroup);
+            final List<Endpoint> endpoints = endpointGroup.whenReady().join();
             final InstanceInfo instanceInfo = eurekaResponse.getEntity();
             final Endpoint endpoint = endpoint(instanceInfo, false);
             assertThat(endpoints).containsOnly(endpoint);
@@ -329,12 +328,6 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             if (regions.length > 0) {
                 builder.regions(regions);
             }
-        }
-
-        private static List<Endpoint> endpoints(EurekaEndpointGroup endpointGroup) {
-            final CompletableFuture<List<Endpoint>> future = new CompletableFuture<>();
-            endpointGroup.addListener(future::complete);
-            return future.join();
         }
 
         private static List<Endpoint> endpointsFromApplications(Applications applications, boolean secureVip) {

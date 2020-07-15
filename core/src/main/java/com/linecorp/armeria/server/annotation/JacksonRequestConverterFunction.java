@@ -39,13 +39,18 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
 
 /**
- * A default implementation of a {@link RequestConverterFunction} which converts a JSON body of
- * the {@link AggregatedHttpRequest} to an object by {@link ObjectMapper}.
+ * A {@link RequestConverterFunction} which converts a JSON body of
+ * the {@link AggregatedHttpRequest} to an object using the default {@link ObjectMapper}.
+ * The {@link RequestConverterFunction} is applied only when the {@code content-type} of the
+ * {@link RequestHeaders} is {@link MediaType#JSON} or ends with {@code +json}.
+ * Note that this {@link RequestConverterFunction} is applied to the annotated service by default,
+ * so you don't have to set explicitly unless you want to use your own {@link ObjectMapper}.
  */
 public final class JacksonRequestConverterFunction implements RequestConverterFunction {
 

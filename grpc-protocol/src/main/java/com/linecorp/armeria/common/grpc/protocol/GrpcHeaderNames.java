@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
 

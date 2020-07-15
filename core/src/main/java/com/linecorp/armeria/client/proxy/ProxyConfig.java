@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.proxy.DirectProxyConfig.DIRECT_PROXY_CONFIG;
 import static java.util.Objects.requireNonNull;
 
@@ -36,7 +37,9 @@ public abstract class ProxyConfig {
      * @param proxyAddress the proxy address
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress) {
-        return new Socks4ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), null);
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new Socks4ProxyConfig(proxyAddress, null);
     }
 
     /**
@@ -46,8 +49,9 @@ public abstract class ProxyConfig {
      * @param username the username
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, String username) {
-        return new Socks4ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"),
-                                     requireNonNull(username, "username"));
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new Socks4ProxyConfig(proxyAddress, requireNonNull(username, "username"));
     }
 
     /**
@@ -56,7 +60,9 @@ public abstract class ProxyConfig {
      * @param proxyAddress the proxy address
      */
     public static Socks5ProxyConfig socks5(InetSocketAddress proxyAddress) {
-        return new Socks5ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), null, null);
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new Socks5ProxyConfig(proxyAddress, null, null);
     }
 
     /**
@@ -68,9 +74,10 @@ public abstract class ProxyConfig {
      */
     public static Socks5ProxyConfig socks5(
             InetSocketAddress proxyAddress, String username, String password) {
-        return new Socks5ProxyConfig(
-                requireNonNull(proxyAddress, "proxyAddress"), requireNonNull(username, "username"),
-                requireNonNull(password, "password"));
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new Socks5ProxyConfig(proxyAddress, requireNonNull(username, "username"),
+                                     requireNonNull(password, "password"));
     }
 
     /**
@@ -79,7 +86,9 @@ public abstract class ProxyConfig {
      * @param proxyAddress the proxy address
      */
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress) {
-        return new ConnectProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), null, null, false);
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new ConnectProxyConfig(proxyAddress, null, null, false);
     }
 
     /**
@@ -88,10 +97,10 @@ public abstract class ProxyConfig {
      * @param proxyAddress the proxy address
      * @param useTls whether to use TLS to connect to the proxy
      */
-    public static ConnectProxyConfig connect(
-            InetSocketAddress proxyAddress, boolean useTls) {
-        return new ConnectProxyConfig(
-                requireNonNull(proxyAddress, "proxyAddress"), null, null, useTls);
+    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, boolean useTls) {
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new ConnectProxyConfig(proxyAddress, null, null, useTls);
     }
 
     /**
@@ -104,9 +113,10 @@ public abstract class ProxyConfig {
      */
     public static ConnectProxyConfig connect(
             InetSocketAddress proxyAddress, String username, String password, boolean useTls) {
-        return new ConnectProxyConfig(
-                requireNonNull(proxyAddress, "proxyAddress"), requireNonNull(username, "username"),
-                requireNonNull(password, "password"), useTls);
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new ConnectProxyConfig(proxyAddress, requireNonNull(username, "username"),
+                                      requireNonNull(password, "password"), useTls);
     }
 
     /**
@@ -123,6 +133,12 @@ public abstract class ProxyConfig {
      * Returns the proxy type.
      */
     public abstract ProxyType proxyType();
+
+    /**
+     * Returns the proxy address which is {@code null} only for {@link ProxyType#DIRECT}.
+     */
+    @Nullable
+    public abstract InetSocketAddress proxyAddress();
 
     @Nullable
     static String maskPassword(@Nullable String username, @Nullable String password) {

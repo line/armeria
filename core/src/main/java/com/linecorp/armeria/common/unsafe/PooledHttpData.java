@@ -18,11 +18,20 @@ package com.linecorp.armeria.common.unsafe;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.unsafe.PooledWebClient;
+import java.util.concurrent.Executor;
+
+import org.reactivestreams.Subscriber;
+
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.file.HttpFile;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 
@@ -38,24 +47,30 @@ import io.netty.buffer.Unpooled;
  * you should only use this class in performance-sensitive situations and after being ready to deal with these
  * very hard-to-debug issues.
  *
- * <p>You may interact with {@link PooledHttpData} when using objects that return pooled objects, such as
- * {@link PooledWebClient}. If you don't use such objects, you will never see a {@link PooledHttpData} and don't
- * need to read further.
+ * <p>You may interact with {@link PooledHttpData} when using operations that return pooled objects, such as:
+ * <ul>
+ *   <li>{@link StreamMessage#subscribe(Subscriber, SubscriptionOption...)} with
+ *       {@link SubscriptionOption#WITH_POOLED_OBJECTS}</li>
+ *   <li>{@link HttpRequest#aggregateWithPooledObjects(ByteBufAllocator)}</li>
+ *   <li>{@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}</li>
+ *   <li>{@link HttpFile#aggregateWithPooledObjects(Executor, ByteBufAllocator)}</li>
+ * </ul>
+ * If you don't use such operations, you will never see a {@link PooledHttpData} and don't need to read further.
  *
  * <h3>Impact of pooled buffers</h3>
  *
- * <p>Any time you receive a {@link PooledHttpData} it will have a single reference that must be released -
- * failure to release the reference will result in a memory leak and poor performance. You must make sure to do
- * this by calling {@link PooledHttpData#close()}, usually in a try-with-resources structure to avoid side
- * effects.
+ * <p>Any time you receive a {@link PooledHttpData} it will have a single reference of {@link ByteBuf} that
+ * must be released - failure to release the {@link ByteBuf} will result in a memory leak and poor performance.
+ * You must make sure to do this by calling {@link PooledHttpData#close()}, usually in a try-with-resources
+ * structure to avoid side effects.
  *
  * <p>For example, <pre>{@code
- * PooledHttpResponse res = PooledHttpResponse.of(client.get("/"));
+ * HttpResponse res = client.get("/");
  * res.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
  *    .thenApply(aggResp -> {
  *        // try-with-resources here ensures the content is released
  *        // if it is a ByteBufHttpData, or otherwise is a no-op if it is not.
- *        try (PooledHttpData content = aggResp.content()) {
+ *        try (PooledHttpData content = (PooledHttpData) aggResp.content()) {
  *            if (!aggResp.status().equals(HttpStatus.OK)) {
  *                throw new IllegalStateException("Bad response");
  *            }
@@ -68,8 +83,8 @@ import io.netty.buffer.Unpooled;
  *    });
  * }</pre>
  *
- * <p>In this example, it is the initial {@code try (PooledHttpData content = ...} that ensures the data is
- * released. Calls to methods on {@link HttpData} will all work and can be called any number of times within
+ * <p>In the above example, it is the initial {@code try (PooledHttpData content = ...} that ensures the data
+ * is released. Calls to methods on {@link HttpData} will all work and can be called any number of times within
  * this block. If called after the block, or a manual call to {@link PooledHttpData#close()}, these methods will
  * fail or corrupt data.
  *

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import reactor.test.StepVerifier;
 
@@ -101,17 +102,26 @@ class DefaultHttpResponseTest {
      * The aggregation future must be completed even if the response being aggregated has been aborted.
      */
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void abortedAggregation(boolean executorSpecified) {
+    @ArgumentsSource(ParametersProvider.class)
+    void abortedAggregation(boolean executorSpecified, boolean withPooledObjects) {
         final Thread mainThread = Thread.currentThread();
         final HttpResponseWriter res = HttpResponse.streaming();
         final CompletableFuture<AggregatedHttpResponse> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
-             future = res.aggregate(CommonPools.workerGroup().next());
+            if (withPooledObjects) {
+                future = res.aggregateWithPooledObjects(
+                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
+            } else {
+                future = res.aggregate(CommonPools.workerGroup().next());
+            }
         } else {
-            future = res.aggregate();
+            if (withPooledObjects) {
+                future = res.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+            } else {
+                future = res.aggregate();
+            }
         }
 
         final AtomicReference<Thread> callbackThread = new AtomicReference<>();

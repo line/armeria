@@ -70,6 +70,10 @@ import io.netty.util.concurrent.EventExecutor;
  * respective unpooled versions that never leak, so that the {@link Subscriber} does not need to worry about
  * leaks.
  *
+ * <p>If a {@link Subscriber} does not want a {@link StreamMessage} to make a copy of a {@link ByteBufHolder},
+ * specify {@link SubscriptionOption#WITH_POOLED_OBJECTS} when you subscribe. Note that the {@link Subscriber}
+ * is responsible for releasing the objects given with {@link Subscriber#onNext(Object)}.
+ *
  * <p>{@link Subscriber#onError(Throwable)} is invoked when any exception is raised except the
  * {@link CancelledSubscriptionException} which is caused by {@link Subscription#cancel()}. If you want your
  * {@link Subscriber} get notified by {@link Subscriber#onError(Throwable)} when {@link Subscription#cancel()}

@@ -44,6 +44,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -156,7 +157,7 @@ public class ArmeriaAutoConfigurationTest {
             if (result instanceof String) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.ANY_TEXT_TYPE,
-                                       result.toString(),
+                                       HttpData.ofUtf8(result.toString()),
                                        trailers);
             }
             return ResponseConverterFunction.fallthrough();

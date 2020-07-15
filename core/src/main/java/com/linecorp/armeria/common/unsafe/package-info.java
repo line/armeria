@@ -25,5 +25,5 @@
 @NonNullByDefault
 package com.linecorp.armeria.common.unsafe;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

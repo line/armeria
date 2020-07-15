@@ -25,8 +25,7 @@ import io.reactivex.Completable;
 import io.reactivex.CompletableObserver;
 import io.reactivex.CompletableSource;
 
-final class RequestContextCallableCompletable<T> extends Completable
-        implements Callable<T> {
+final class RequestContextCallableCompletable<T> extends Completable implements Callable<T> {
     private final CompletableSource source;
     private final RequestContext assemblyContext;
 

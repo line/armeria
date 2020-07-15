@@ -26,8 +26,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
 import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
 
-final class RequestContextScalarSupplierFlowable<T> extends Flowable<T>
-        implements ScalarSupplier<T> {
+final class RequestContextScalarSupplierFlowable<T> extends Flowable<T> implements ScalarSupplier<T> {
     private final Publisher<T> source;
     private final RequestContext assemblyContext;
 

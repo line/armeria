@@ -17,15 +17,16 @@ package com.linecorp.armeria.server.annotation.decorator;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
-import com.linecorp.armeria.server.throttling.RateLimitingThrottlingStrategy;
 import com.linecorp.armeria.server.throttling.ThrottlingService;
+import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 
 /**
  * A factory which creates a {@link ThrottlingService} decorator with a
- * {@link RateLimitingThrottlingStrategy}.
+ * {@link ThrottlingStrategy#rateLimiting(double, String)}.
  */
 public final class RateLimitingDecoratorFactoryFunction
         implements DecoratorFactoryFunction<RateLimitingDecorator> {
@@ -34,7 +35,13 @@ public final class RateLimitingDecoratorFactoryFunction
      */
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(RateLimitingDecorator parameter) {
-        return ThrottlingService.newDecorator(new RateLimitingThrottlingStrategy<>(
-                parameter.value(), DefaultValues.isSpecified(parameter.name()) ? parameter.name() : null));
+        final String name = parameter.name();
+        final ThrottlingStrategy<HttpRequest> throttlingStrategy;
+        if (DefaultValues.isSpecified(name)) {
+            throttlingStrategy = ThrottlingStrategy.rateLimiting(parameter.value());
+        } else {
+            throttlingStrategy = ThrottlingStrategy.rateLimiting(parameter.value(), name);
+        }
+        return ThrottlingService.newDecorator(throttlingStrategy);
     }
 }

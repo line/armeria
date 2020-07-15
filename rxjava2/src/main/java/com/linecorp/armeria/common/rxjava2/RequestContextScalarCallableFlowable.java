@@ -26,8 +26,7 @@ import io.reactivex.Flowable;
 import io.reactivex.internal.fuseable.ConditionalSubscriber;
 import io.reactivex.internal.fuseable.ScalarCallable;
 
-final class RequestContextScalarCallableFlowable<T> extends Flowable<T>
-        implements ScalarCallable<T> {
+final class RequestContextScalarCallableFlowable<T> extends Flowable<T> implements ScalarCallable<T> {
     private final Publisher<T> source;
     private final RequestContext assemblyContext;
 

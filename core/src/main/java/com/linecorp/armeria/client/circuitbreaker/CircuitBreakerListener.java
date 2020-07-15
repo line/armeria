@@ -16,10 +16,34 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.linecorp.armeria.client.circuitbreaker.MetricCollectingCircuitBreakerListener.DEFAULT_METER_NAME;
+import static com.linecorp.armeria.client.circuitbreaker.MetricCollectingCircuitBreakerListener.LEGACY_METER_NAME;
+
+import com.linecorp.armeria.common.Flags;
+
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 /**
  * The listener interface for receiving {@link CircuitBreaker} events.
  */
 public interface CircuitBreakerListener {
+
+    /**
+     * Returns a new {@link CircuitBreakerListener} that collects metric with the specified
+     * {@link MeterRegistry}.
+     */
+    static CircuitBreakerListener metricCollecting(MeterRegistry registry) {
+        return metricCollecting(registry, Flags.useLegacyMeterNames() ? LEGACY_METER_NAME : DEFAULT_METER_NAME);
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerListener} that collects metric with the specified
+     * {@link MeterRegistry} and {@link Meter} name.
+     */
+    static CircuitBreakerListener metricCollecting(MeterRegistry registry, String name) {
+        return new MetricCollectingCircuitBreakerListener(registry, name);
+    }
 
     /**
      * Invoked when the circuit breaker is initialized.

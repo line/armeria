@@ -25,6 +25,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZ
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -45,6 +46,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -509,10 +511,32 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * The {@link ProxyConfig} which contains proxy related configuration.
+     * Sets the {@link ProxyConfig} which contains proxy related configuration.
      */
     public ClientFactoryBuilder proxyConfig(ProxyConfig proxyConfig) {
-        option(ClientFactoryOption.PROXY_CONFIG, proxyConfig);
+        requireNonNull(proxyConfig, "proxyConfig");
+        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, ProxyConfigSelector.of(proxyConfig));
+        return this;
+    }
+
+    /**
+     * Sets the {@link ProxySelector} which determines the {@link ProxyConfig} to be used.
+     *
+     * <p>This method makes a best effort to provide compatibility with {@link ProxySelector},
+     * but it has some limitations. See {@link ProxyConfigSelector#of(ProxySelector)} for more information.
+     */
+    public ClientFactoryBuilder proxyConfig(ProxySelector proxySelector) {
+        requireNonNull(proxySelector, "proxySelector");
+        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, ProxyConfigSelector.of(proxySelector));
+        return this;
+    }
+
+    /**
+     * Sets the {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
+     */
+    public ClientFactoryBuilder proxyConfig(ProxyConfigSelector proxyConfigSelector) {
+        requireNonNull(proxyConfigSelector, "proxyConfigSelector");
+        option(ClientFactoryOption.PROXY_CONFIG_SELECTOR, proxyConfigSelector);
         return this;
     }
 

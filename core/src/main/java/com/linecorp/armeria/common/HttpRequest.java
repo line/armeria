@@ -30,15 +30,19 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
+
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
-import com.linecorp.armeria.internal.common.HttpRequestAggregator;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -124,7 +128,9 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param format {@linkplain Formatter the format string} of the request content
      * @param args the arguments referenced by the format specifiers in the format string
      */
-    static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String format, Object... args) {
+    @FormatMethod
+    static HttpRequest of(HttpMethod method, String path, MediaType mediaType,
+                          @FormatString String format, Object... args) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
@@ -396,6 +402,32 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         subscribe(aggregator, executor);
+        return future;
+    }
+
+    /**
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
+     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
+     * use {@link #aggregate()}.
+     */
+    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
+    }
+
+    /**
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
+     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
+     * use {@link #aggregate()}.
+     */
+    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
+            EventExecutor executor, ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
+        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingFuture<>();
+        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
+        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
     }
 

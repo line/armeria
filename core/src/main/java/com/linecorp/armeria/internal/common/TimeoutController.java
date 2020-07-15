@@ -20,8 +20,6 @@ import javax.annotation.Nullable;
 /**
  * A controller that schedules the timeout task with the initial value or reschedule when the timeout
  * setting is changed.
- *
- * <p>Note: This interface is meant for internal use only.
  */
 public interface TimeoutController {
 

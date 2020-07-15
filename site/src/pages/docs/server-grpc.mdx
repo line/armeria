@@ -118,7 +118,7 @@ See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewi
 a small modification to the [gRPC][gRPC] wire format that can be used from a browser.
 To enable it for a <type://GrpcService>, add the web formats from
 <type://GrpcSerializationFormats> to the <type://GrpcServiceBuilder>. It is usually convenient
-to just pass `GrpcSerializationFormats.values()`.
+to just pass <type://GrpcSerializationFormats#values()>.
 
 ```java
 import com.linecorp.armeria.server.grpc.GrpcSerializationFormats;
@@ -203,8 +203,8 @@ for JSON POST body.
 Unlike upstream gRPC-Java, Armeria does not run service logic in a separate thread pool by default. If your
 service implementation requires blocking, either run the individual blocking logic in a thread pool, wrap the
 entire service implementation in `RequestContext.current().blockingTaskExecutor().submit`, or set
-`GrpcServiceBuilder.useBlockingTaskExecutor()` so the above happens automatically for all service methods
-and lifecycle callbacks.
+<type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> so the above happens automatically for
+all service methods and lifecycle callbacks.
 
 ```java
 import com.linecorp.armeria.common.RequestContext;
@@ -252,7 +252,7 @@ sb.service(GrpcService.builder()
                       .build());
 ```
 ## Exception propagation
-It can be very useful to enable `Flags.verboseResponses()` in your server by specifying the
+It can be very useful to enable <type://Flags#verboseResponses()> in your server by specifying the
 `-Dcom.linecorp.armeria.verboseResponses=true` system property, which will automatically return
 information about an exception thrown in the server to gRPC clients. Armeria clients will automatically
 convert it back into an exception for structured logging, etc. This response will include information about

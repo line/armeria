@@ -32,7 +32,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Creates a new {@link EndpointInfo} using the builder pattern.

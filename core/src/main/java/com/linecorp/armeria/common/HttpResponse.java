@@ -32,6 +32,9 @@ import java.util.concurrent.TimeUnit;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
+
 import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
@@ -39,8 +42,8 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
-import com.linecorp.armeria.internal.common.HttpResponseAggregator;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -214,7 +217,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param format {@linkplain Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
      */
-    static HttpResponse of(String format, Object... args) {
+    @FormatMethod
+    static HttpResponse of(@FormatString String format, Object... args) {
         return of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, format, args);
     }
 
@@ -237,7 +241,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param format {@linkplain Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
      */
-    static HttpResponse of(MediaType mediaType, String format, Object... args) {
+    @FormatMethod
+    static HttpResponse of(MediaType mediaType, @FormatString String format, Object... args) {
         return of(HttpStatus.OK, mediaType, format, args);
     }
 
@@ -253,7 +258,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
      *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
-    static HttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
+    @FormatMethod
+    static HttpResponse of(HttpStatus status, MediaType mediaType,
+                           @FormatString String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
         return of(status, mediaType,
                   HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
@@ -410,6 +417,32 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
         subscribe(aggregator, executor);
+        return future;
+    }
+
+    /**
+     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the response are received fully. {@link AggregatedHttpResponse#content()} will
+     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
+     * use {@link #aggregate()}.
+     */
+    default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
+    }
+
+    /**
+     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the request is received fully. {@link AggregatedHttpResponse#content()} will
+     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
+     * use {@link #aggregate()}.
+     */
+    default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
+            EventExecutor executor, ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
+        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
+        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
+        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
     }
 

@@ -95,6 +95,7 @@ public final class Version {
      * with arbitrary {@code unknown} values.
      */
     public static Version get(String artifactId, ClassLoader classLoader) {
+        requireNonNull(artifactId, "artifactId");
         final Version version = getAll(classLoader).get(artifactId);
         if (version != null) {
             return version;

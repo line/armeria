@@ -17,8 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
@@ -128,7 +126,7 @@ class SubscriptionOptionTest {
             public void onComplete() {
                 fail("onComplete() invoked unexpectedly");
             }
-        }, NOTIFY_CANCELLATION);
+        }, SubscriptionOption.NOTIFY_CANCELLATION);
 
         await().untilAsserted(() -> assertThat(completed).isTrue());
         await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompletedExceptionally());
@@ -137,7 +135,7 @@ class SubscriptionOptionTest {
     static SubscriptionOption[] subscriptionOptions(boolean subscribedWithPooledObjects) {
         final ArrayList<SubscriptionOption> options = new ArrayList<>(1);
         if (subscribedWithPooledObjects) {
-            options.add(WITH_POOLED_OBJECTS);
+            options.add(SubscriptionOption.WITH_POOLED_OBJECTS);
         }
         return options.toArray(new SubscriptionOption[0]);
     }

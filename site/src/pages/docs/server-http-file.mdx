@@ -125,7 +125,7 @@ Content-Type: text/html
 <uncompressed content>
 ```
 
-This behavior is enabled by calling `serveCompressedFiles(true)` for <type://FileServiceBuilder>.
+This behavior is enabled by calling <type://FileServiceBuilder#serveCompressedFiles(boolean)> with `true`.
 `.gz` (gzip) and `.br` (Brotli) files are supported currently.
 
 ```java
@@ -216,8 +216,8 @@ HttpFile f = fb.build();
 ```
 
 ## Caching `HttpFile`
-Unlike <type://FileService>, <type://HttpFile> does not cache the file content. Use `HttpFile.ofCached()`
-to enable content caching for an existing <type://HttpFile>:
+Unlike <type://FileService>, <type://HttpFile> does not cache the file content.
+Use <type://HttpFile#ofCached(HttpFile,int)> to enable content caching for an existing <type://HttpFile>:
 
 ```java
 HttpFile uncachedFile = HttpFile.of(Paths.get("/var/lib/www/index.html"));
@@ -230,7 +230,7 @@ will not be cached if the length of the file exceeds 65,536 bytes.
 ## Aggregating `HttpFile`
 An <type://HttpFile> usually does not store its content in memory but reads its content on demand, allowing you
 to stream a potentially very large file. If you want to ensure the content of the file is kept in memory so
-that file I/O does not occur on each retrieval, you can use the `aggregate()` method:
+that file I/O does not occur on each retrieval, you can use the <type://HttpFile#aggregate(Executor)> method:
 
 ```java
 // You need to prepare an Executor which will be used for reading the file,
@@ -247,12 +247,12 @@ HttpData content = aggregated.content();
 
 Note that an aggregated <type://HttpFile> is not linked in any way from the <type://HttpFile> it was aggregated
 from, which means the content and attributes of the aggregated <type://HttpFile> does not change when the original
-<type://HttpFile> changes. Use `HttpFile.ofCached()` instead if such behavior is necessary.
+<type://HttpFile> changes. Use <type://HttpFile#ofCached(HttpFile,int)> instead if such behavior is necessary.
 
 ## Building `AggregatedHttpFile` from `HttpData`
 The content you need to serve is not always from an external resource but sometimes from memory, such as
-`byte[]` or `String`. Use `HttpFile.of(HttpData)` or `HttpFile.builder(HttpData)` to build an
-`AggregatedHttpFile` from an in-memory resource:
+`byte[]` or `String`. Use <type://HttpFile#of(HttpData)> or <type://HttpFile#builder(HttpData)> to build an
+<type://AggregatedHttpFile> from an in-memory resource:
 
 ```java
 // Build from a byte array.

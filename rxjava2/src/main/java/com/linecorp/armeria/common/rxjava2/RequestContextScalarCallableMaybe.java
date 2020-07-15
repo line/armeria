@@ -24,8 +24,7 @@ import io.reactivex.MaybeObserver;
 import io.reactivex.MaybeSource;
 import io.reactivex.internal.fuseable.ScalarCallable;
 
-final class RequestContextScalarCallableMaybe<T> extends Maybe<T>
-        implements ScalarCallable<T> {
+final class RequestContextScalarCallableMaybe<T> extends Maybe<T> implements ScalarCallable<T> {
     private final MaybeSource<T> source;
     private final RequestContext assemblyContext;
 

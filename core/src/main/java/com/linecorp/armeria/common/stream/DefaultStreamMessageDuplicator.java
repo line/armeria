@@ -23,7 +23,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -48,9 +47,9 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -87,7 +86,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
      */
     public DefaultStreamMessageDuplicator(
             StreamMessage<T> upstream, SignalLengthGetter<? super T> signalLengthGetter,
-           EventExecutor executor, long maxSignalLength) {
+            EventExecutor executor, long maxSignalLength) {
         requireNonNull(upstream, "upstream");
         requireNonNull(signalLengthGetter, "signalLengthGetter");
         this.executor = requireNonNull(executor, "executor");
@@ -102,7 +101,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             throw new IllegalStateException("duplicator is closed.");
         }
         unsubscribedUpdater.incrementAndGet(this);
-        return new ChildStreamMessage<T>(this, processor);
+        return new ChildStreamMessage<>(processor);
     }
 
     /**
@@ -175,7 +174,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
             signals = new SignalQueue(this.signalLengthGetter);
             upstream.subscribe(this, executor,
-                               WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
+                               SubscriptionOption.WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
         }
 
         StreamMessage<T> upstream() {
@@ -468,8 +467,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
-        ChildStreamMessage(DefaultStreamMessageDuplicator<T> duplicator,
-                           StreamMessageProcessor<T> processor) {
+        ChildStreamMessage(StreamMessageProcessor<T> processor) {
             this.processor = processor;
         }
 

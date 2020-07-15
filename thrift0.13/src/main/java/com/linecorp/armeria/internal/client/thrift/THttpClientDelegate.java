@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.client.thrift;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,7 +44,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.unsafe.PooledHttpClient;
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -61,12 +59,9 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
-import com.linecorp.armeria.common.unsafe.PooledAggregatedHttpResponse;
 import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
 import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
@@ -75,6 +70,7 @@ import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.util.ReferenceCountUtil;
 
 final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpResponse, RpcRequest, RpcResponse>
         implements RpcClient {
@@ -88,7 +84,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
 
     THttpClientDelegate(HttpClient httpClient,
                         SerializationFormat serializationFormat) {
-        super(PooledHttpClient.of(httpClient));
+        super(httpClient);
         this.serializationFormat = serializationFormat;
         protocolFactory = ThriftProtocolFactories.get(serializationFormat);
         mediaType = serializationFormat.mediaType();
@@ -147,19 +143,21 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             ctx.updateRequest(httpReq);
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT);
 
-            assert unwrap() instanceof PooledHttpClient;
-            final PooledHttpClient client = (PooledHttpClient) unwrap();
-            final CompletableFuture<PooledAggregatedHttpResponse> future =
-                    client.execute(ctx, PooledHttpRequest.of(httpReq))
-                          .aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
+            final HttpResponse httpResponse;
+            try {
+                httpResponse = unwrap().execute(ctx, httpReq);
+            } catch (Throwable t) {
+                httpReq.abort();
+                throw t;
+            }
 
-            future.handle((res, cause) -> {
+            httpResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((res, cause) -> {
                 if (cause != null) {
                     handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
                     return null;
                 }
 
-                try (SafeCloseable unused = res) {
+                try {
                     final HttpStatus status = res.status();
                     if (status.code() != HttpStatus.OK.code()) {
                         handlePreDecodeException(
@@ -173,6 +171,8 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                     } catch (Throwable t) {
                         handlePreDecodeException(ctx, reply, func, t);
                     }
+                } finally {
+                    ReferenceCountUtil.safeRelease(res.content());
                 }
 
                 return null;

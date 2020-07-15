@@ -23,6 +23,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.MustBeClosed;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -389,6 +391,7 @@ public final class Clients {
      *
      * @see #withHttpHeaders(Consumer)
      */
+    @MustBeClosed
     public static SafeCloseable withHttpHeader(CharSequence name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
@@ -427,6 +430,7 @@ public final class Clients {
      *
      * @see #withHttpHeaders(Consumer)
      */
+    @MustBeClosed
     public static SafeCloseable withHttpHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
@@ -480,6 +484,7 @@ public final class Clients {
      * @deprecated Use {@link #withHttpHeaders(Consumer)}.
      */
     @Deprecated
+    @MustBeClosed
     public static SafeCloseable withHttpHeaders(
             Function<? super HttpHeaders, ? extends HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
@@ -526,6 +531,7 @@ public final class Clients {
      *
      * @see #withHttpHeader(CharSequence, String)
      */
+    @MustBeClosed
     public static SafeCloseable withHttpHeaders(Consumer<HttpHeadersBuilder> headerMutator) {
         requireNonNull(headerMutator, "headerMutator");
         return withContextCustomizer(ctx -> {
@@ -567,6 +573,7 @@ public final class Clients {
      *
      * @see #withHttpHeaders(Consumer)
      */
+    @MustBeClosed
     public static SafeCloseable withContextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         requireNonNull(contextCustomizer, "contextCustomizer");

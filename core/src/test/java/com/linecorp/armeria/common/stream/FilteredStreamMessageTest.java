@@ -52,8 +52,7 @@ class FilteredStreamMessageTest {
         stream.close();
 
         final FilteredStreamMessage<PooledHttpData, PooledHttpData> filtered =
-                new FilteredStreamMessage<PooledHttpData, PooledHttpData>(stream,
-                                                                            filterSupportsPooledObjects) {
+                new FilteredStreamMessage<PooledHttpData, PooledHttpData>(stream, filterSupportsPooledObjects) {
                     @Override
                     protected PooledHttpData filter(PooledHttpData obj) {
                         assertThat(data.refCnt()).isEqualTo(expectedRefCntInFilter);

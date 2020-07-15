@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -57,7 +58,6 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -324,10 +324,15 @@ public final class DefaultClientRequestContext
         final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
         if (headers.scheme() == null || !authority.equals(headers.authority())) {
             final RequestHeadersBuilder headersBuilder =
-                    headers.toBuilder()
-                           .removeAndThen(HttpHeaderNames.HOST)
-                           .authority(authority)
-                           .scheme(sessionProtocol());
+                    headers.toBuilder();
+            if (headers.scheme() == null) {
+                headersBuilder.scheme(sessionProtocol());
+            }
+            if (headersBuilder.get(HttpHeaderNames.HOST) != null) {
+                headersBuilder.set(HttpHeaderNames.HOST, authority);
+            } else {
+                headersBuilder.set(HttpHeaderNames.AUTHORITY, authority);
+            }
             unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
     }

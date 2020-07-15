@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.file;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Date;
+import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 
@@ -28,7 +29,7 @@ import io.netty.handler.codec.DateFormatter;
 /**
  * The attributes of an {@link HttpFile}.
  *
- * @see HttpFile#readAttributes()
+ * @see HttpFile#readAttributes(Executor)
  */
 public final class HttpFileAttributes {
 
