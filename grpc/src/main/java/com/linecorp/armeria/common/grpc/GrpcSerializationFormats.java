@@ -49,8 +49,13 @@ public final class GrpcSerializationFormats {
      */
     public static final SerializationFormat JSON_WEB = SerializationFormat.of("gjson-web");
 
+    /**
+     * gRPC-web-text protobuf serialization format.
+     */
+    public static final SerializationFormat PROTO_WEB_TEXT = SerializationFormat.of("gproto-web-text");
+
     private static final Set<SerializationFormat> GRPC_FORMATS = ImmutableSet.of(
-            PROTO, JSON, PROTO_WEB, JSON_WEB);
+            PROTO, JSON, PROTO_WEB, JSON_WEB, PROTO_WEB_TEXT);
 
     /**
      * Returns the set of all known gRPC serialization formats.
@@ -71,7 +76,7 @@ public final class GrpcSerializationFormats {
      */
     public static boolean isProto(SerializationFormat format) {
         requireNonNull(format, "format");
-        return format == PROTO || format == PROTO_WEB;
+        return format == PROTO || format == PROTO_WEB || format == PROTO_WEB_TEXT;
     }
 
     /**
@@ -88,7 +93,16 @@ public final class GrpcSerializationFormats {
      */
     public static boolean isGrpcWeb(SerializationFormat format) {
         requireNonNull(format, "format");
-        return format == PROTO_WEB || format == JSON_WEB;
+        return format == PROTO_WEB || format == JSON_WEB || format == PROTO_WEB_TEXT;
+    }
+
+    /**
+     * Returns whether the specified {@link SerializationFormat} is gRPC-web-text which encodes messages
+     * using base64.
+     */
+    public static boolean isGrpcWebText(SerializationFormat format) {
+        requireNonNull(format, "format");
+        return format == PROTO_WEB_TEXT;
     }
 
     private GrpcSerializationFormats() {}

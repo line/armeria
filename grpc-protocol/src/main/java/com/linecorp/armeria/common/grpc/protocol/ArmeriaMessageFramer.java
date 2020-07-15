@@ -52,6 +52,8 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.Base64;
 
 import javax.annotation.Nullable;
 
@@ -66,6 +68,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * A framer of messages for transport with the gRPC wire protocol. See
@@ -91,6 +94,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
 
     private final ByteBufAllocator alloc;
     private final int maxOutboundMessageSize;
+    private final boolean encodeBase64;
 
     private boolean messageCompression = true;
 
@@ -101,9 +105,10 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     /**
      * Constructs an {@link ArmeriaMessageFramer} to write messages to a gRPC request or response.
      */
-    public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize) {
+    public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize, boolean encodeBase64) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.maxOutboundMessageSize = maxOutboundMessageSize;
+        this.encodeBase64 = encodeBase64;
     }
 
     /**
@@ -137,10 +142,23 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             } else {
                 buf = writeUncompressed(message, webTrailers);
             }
-            if (webTrailers) {
-                return HttpData.wrap(buf).withEndOfStream();
+
+            final ByteBuf maybeEncodedBuf;
+            if (encodeBase64) {
+                final ByteBuffer base64Encoded = Base64.getEncoder().encode(buf.nioBuffer());
+                buf.release();
+                if (maxOutboundMessageSize >= 0 && base64Encoded.remaining() > maxOutboundMessageSize) {
+                    throw newMessageTooLargeException(base64Encoded.remaining());
+                }
+                maybeEncodedBuf = Unpooled.wrappedBuffer(base64Encoded);
+            } else {
+                maybeEncodedBuf = buf;
             }
-            return HttpData.wrap(buf);
+
+            if (webTrailers) {
+                return HttpData.wrap(maybeEncodedBuf).withEndOfStream();
+            }
+            return HttpData.wrap(maybeEncodedBuf);
         } catch (IOException | RuntimeException e) {
             // IOException will not be thrown, since sink#deliverFrame doesn't throw.
             throw new ArmeriaStatusException(
@@ -188,10 +206,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         final int messageLength = message.readableBytes();
         if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
             message.release();
-            throw new ArmeriaStatusException(
-                    StatusCodes.RESOURCE_EXHAUSTED,
-                    String.format("message too large %d > %d", messageLength,
-                                  maxOutboundMessageSize));
+            throw newMessageTooLargeException(messageLength);
         }
 
         final byte flag;
@@ -222,6 +237,13 @@ public class ArmeriaMessageFramer implements AutoCloseable {
                                          .writeByte(flag)
                                          .writeInt(messageLength),
                                     message);
+    }
+
+    private ArmeriaStatusException newMessageTooLargeException(int messageLength) {
+        return new ArmeriaStatusException(
+                StatusCodes.RESOURCE_EXHAUSTED,
+                String.format("message too large %d > %d", messageLength,
+                              maxOutboundMessageSize));
     }
 
     private void verifyNotClosed() {

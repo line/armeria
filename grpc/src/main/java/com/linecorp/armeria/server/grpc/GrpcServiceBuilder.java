@@ -65,7 +65,9 @@ import io.grpc.protobuf.services.ProtoReflectionService;
 public final class GrpcServiceBuilder {
 
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
-            ImmutableSet.of(GrpcSerializationFormats.PROTO, GrpcSerializationFormats.PROTO_WEB);
+            ImmutableSet.of(GrpcSerializationFormats.PROTO,
+                            GrpcSerializationFormats.PROTO_WEB,
+                            GrpcSerializationFormats.PROTO_WEB_TEXT);
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 

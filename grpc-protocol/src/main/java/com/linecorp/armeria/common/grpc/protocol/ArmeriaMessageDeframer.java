@@ -54,6 +54,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayDeque;
+import java.util.Base64;
 import java.util.Objects;
 import java.util.Queue;
 
@@ -199,6 +200,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private final Listener listener;
     private final int maxMessageSizeBytes;
     private final ByteBufAllocator alloc;
+    private final boolean decodeBase64;
 
     private int currentType = UNINITIALIED_TYPE;
 
@@ -222,10 +224,11 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     public ArmeriaMessageDeframer(Listener listener,
                                   int maxMessageSizeBytes,
-                                  ByteBufAllocator alloc) {
+                                  ByteBufAllocator alloc, boolean decodeBase64) {
         this.listener = requireNonNull(listener, "listener");
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
         this.alloc = requireNonNull(alloc, "alloc");
+        this.decodeBase64 = decodeBase64;
 
         unprocessed = new ArrayDeque<>();
     }
@@ -276,8 +279,15 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         if (dataLength != 0) {
             final ByteBuf buf = data.byteBuf();
             assert unprocessed != null;
-            unprocessed.add(buf);
-            unprocessedBytes += dataLength;
+            if (decodeBase64) {
+                final ByteBuf decoded = Unpooled.wrappedBuffer(Base64.getDecoder().decode(buf.nioBuffer()));
+                buf.release();
+                unprocessed.add(decoded);
+                unprocessedBytes += decoded.readableBytes();
+            } else {
+                unprocessed.add(buf);
+                unprocessedBytes += dataLength;
+            }
         }
 
         // Indicate that all of the data for this stream has been received.
@@ -632,8 +642,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 throw new ArmeriaStatusException(
                         StatusCodes.RESOURCE_EXHAUSTED,
                         String.format(
-                        "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
-                        debugString, maxMessageSize, count));
+                                "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
+                                debugString, maxMessageSize, count));
             }
         }
     }

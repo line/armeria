@@ -152,15 +152,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
-                new ArmeriaMessageDeframer(
-                        this,
-                        maxInboundMessageSizeBytes,
-                        ctx.alloc())
+                new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc(), grpcWebText)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry)),
                 this);
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
+        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding =
@@ -375,8 +373,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
         }
 
+        final boolean webText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+
         try {
-            request = marshaller.deserializeRequest(message);
+            request = marshaller.deserializeRequest(message, webText);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -385,7 +385,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
         }
 
-        if (unsafeWrapRequestBuffers && buf != null) {
+        if (unsafeWrapRequestBuffers && buf != null && !webText) {
             GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
         }
 

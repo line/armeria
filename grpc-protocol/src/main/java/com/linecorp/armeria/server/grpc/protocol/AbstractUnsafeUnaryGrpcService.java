@@ -74,7 +74,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                    .thenCompose(this::handleMessage)
                    .thenApply(responseMessage -> {
                        final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                               ctx.alloc(), Integer.MAX_VALUE);
+                               ctx.alloc(), Integer.MAX_VALUE, false);
                        final HttpData framed = framer.writePayload(responseMessage);
                        return HttpResponse.of(
                                RESPONSE_HEADERS,
@@ -116,7 +116,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                     }
                 },
                 Integer.MAX_VALUE,
-                alloc)) {
+                alloc, false)) {
             deframer.request(1);
             deframer.deframe(framed, true);
         }
