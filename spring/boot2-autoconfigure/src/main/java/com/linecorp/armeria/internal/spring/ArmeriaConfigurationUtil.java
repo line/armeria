@@ -150,9 +150,7 @@ public final class ArmeriaConfigurationUtil {
             }
 
             server.decorator(MetricCollectingService.newDecorator(
-                    MeterIdPrefixFunction.ofDefault("armeria.server")
-                                         .andThen((registry, log, meterIdPrefix) -> meterIdPrefix.withTags(
-                                                 "service", log.serviceName()))));
+                    MeterIdPrefixFunction.ofDefault("armeria.server")));
         }
 
         if (settings.getSsl() != null) {
