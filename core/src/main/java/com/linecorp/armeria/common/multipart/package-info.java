@@ -15,9 +15,10 @@
  */
 
 /**
- * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html>Multiple part messages</a> support.
+ * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">Multiple part messages</a> support.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.multipart;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+

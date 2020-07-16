@@ -52,7 +52,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 /**
  * A reactive {@link MultiPart} that represents
- * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html>multiple part messages</a>.
+ * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">multiple part messages</a>.
  */
 public interface MultiPart extends Publisher<HttpData> {
 
