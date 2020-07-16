@@ -251,8 +251,8 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
         fail(ctx, new ProtocolViolationException(
                 "unexpected message type: " + msg.getClass().getName() +
-                " (expected: " + expected.getName() + "). remoteAddress: " + ctx.channel().remoteAddress() +
-                ", resId: " + resId + ", lastPingReqId: " + lastPingReqId));
+                " (expected: " + expected.getName() + ", channel: " + ctx.channel() +
+                ", resId: " + resId + ", lastPingReqId: " + lastPingReqId + ')'));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
