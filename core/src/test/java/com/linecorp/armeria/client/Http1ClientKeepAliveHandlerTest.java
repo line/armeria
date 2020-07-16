@@ -36,15 +36,14 @@ class Http1ClientKeepAliveHandlerTest {
     @CsvSource({ "20000", "0" })
     @ParameterizedTest
     void shouldCloseConnectionWhenNoPingAck(long idleTimeoutMillis) throws Exception {
-        try (ServerSocket ss = new ServerSocket(0)) {
-            final int port = ss.getLocalPort();
+        try (ServerSocket ss = new ServerSocket(0);
+             ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
+                                                  .pingIntervalMillis(10000)
+                                                  .useHttp1Pipelining(true)
+                                                  .build()) {
 
-            final ClientFactory factory = ClientFactory.builder()
-                                                       .idleTimeoutMillis(idleTimeoutMillis)
-                                                       .pingIntervalMillis(10000)
-                                                       .useHttp1Pipelining(true)
-                                                       .build();
-            final WebClient client = WebClient.builder("h1c://127.0.0.1:" + port)
+            final WebClient client = WebClient.builder("h1c://127.0.0.1:" + ss.getLocalPort())
                                               .factory(factory)
                                               .decorator(MetricCollectingClient.newDecorator(
                                                       MeterIdPrefixFunction.ofDefault("client")))

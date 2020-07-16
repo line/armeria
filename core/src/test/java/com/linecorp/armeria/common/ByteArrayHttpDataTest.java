@@ -111,11 +111,13 @@ class ByteArrayHttpDataTest {
         assertThat(buf.isDirect()).isTrue();
         assertThat(buf.readableBytes()).isEqualTo(4);
         assertThat(buf.readInt()).isEqualTo(0x01020304);
+        buf.release();
 
         final ByteBuf slicedBuf = data.byteBuf(1, 2, ByteBufAccessMode.DIRECT);
         assertThat(slicedBuf.isDirect()).isTrue();
         assertThat(slicedBuf.readableBytes()).isEqualTo(2);
         assertThat(slicedBuf.readUnsignedShort()).isEqualTo(0x0203);
+        slicedBuf.release();
     }
 
     @Test

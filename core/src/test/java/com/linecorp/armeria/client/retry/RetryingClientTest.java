@@ -437,20 +437,22 @@ class RetryingClientTest {
                               .maxTotalAttempts(5)
                               .newDecorator();
 
-        final WebClient client = WebClient.builder("http://127.0.0.1:1")
-                                          .factory(ClientFactory.builder()
-                                                                .options(clientFactory.options())
-                                                                .connectTimeoutMillis(Long.MAX_VALUE)
-                                                                .build())
-                                          .responseTimeoutMillis(0)
-                                          .decorator(LoggingClient.newDecorator())
-                                          .decorator(retryingDecorator)
-                                          .build();
-        final Stopwatch stopwatch = Stopwatch.createStarted();
-        assertThatThrownBy(() -> client.get("/unprocessed-exception").aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(UnprocessedRequestException.class);
-        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(7), Duration.ofSeconds(20));
+        try (ClientFactory clientFactory = ClientFactory.builder()
+                                                        .options(RetryingClientTest.clientFactory.options())
+                                                        .connectTimeoutMillis(Long.MAX_VALUE)
+                                                        .build()) {
+            final WebClient client = WebClient.builder("http://127.0.0.1:1")
+                                              .factory(clientFactory)
+                                              .responseTimeoutMillis(0)
+                                              .decorator(LoggingClient.newDecorator())
+                                              .decorator(retryingDecorator)
+                                              .build();
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            assertThatThrownBy(() -> client.get("/unprocessed-exception").aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(UnprocessedRequestException.class);
+            assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(7), Duration.ofSeconds(20));
+        }
     }
 
     @ArgumentsSource(RetryStrategiesProvider.class)

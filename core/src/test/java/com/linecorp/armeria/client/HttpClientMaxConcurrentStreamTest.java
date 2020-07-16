@@ -284,28 +284,30 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Test
     void exceededMaxStreamsForMultipleEventLoops() {
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .connectionPoolListener(connectionPoolListenerWrapper)
-                             .maxNumEventLoopsPerEndpoint(2)
-                             .build();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
-                                          .factory(clientFactory)
-                                          .build();
-        final AtomicInteger opens = new AtomicInteger();
-        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .connectionPoolListener(connectionPoolListenerWrapper)
+                                  .maxNumEventLoopsPerEndpoint(2)
+                                  .build()) {
+            final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                              .factory(clientFactory)
+                                              .build();
+            final AtomicInteger opens = new AtomicInteger();
+            connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {
+            });
 
-        final int numExpectedConnections = MAX_NUM_CONNECTIONS;
-        final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
+            final int numExpectedConnections = MAX_NUM_CONNECTIONS;
+            final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
-        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
-            for (int i = 0; i < numRequests; i++) {
-                client.get(PATH).aggregate();
-            }
-        });
+            runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+                for (int i = 0; i < numRequests; i++) {
+                    client.get(PATH).aggregate();
+                }
+            });
 
-        await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
-        assertThat(opens).hasValue(numExpectedConnections);
+            await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+            assertThat(opens).hasValue(numExpectedConnections);
+        }
     }
 
     @Test

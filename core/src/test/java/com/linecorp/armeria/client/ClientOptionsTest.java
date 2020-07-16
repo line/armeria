@@ -17,7 +17,6 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientOption.DECORATION;
 import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
-import static com.linecorp.armeria.client.ClientOption.FACTORY;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
 import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
 import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
@@ -109,9 +108,6 @@ class ClientOptionsTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             final Supplier<RequestId> requestIdGenerator = () -> () -> "1";
             return Stream.of(
-                    arguments(FACTORY,
-                              ClientFactory.builder().option(ClientFactoryOption.IDLE_TIMEOUT_MILLIS, 100L)
-                                           .build()),
                     arguments(WRITE_TIMEOUT_MILLIS, 10),
                     arguments(RESPONSE_TIMEOUT_MILLIS, 20),
                     arguments(MAX_RESPONSE_LENGTH, 123),
