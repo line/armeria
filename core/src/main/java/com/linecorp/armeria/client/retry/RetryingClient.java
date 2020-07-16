@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallbac
 import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -271,38 +272,48 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                                         : RequestLogProperty.RESPONSE_HEADERS;
 
         derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
-            try {
-                final Throwable responseCause =
-                        log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-                if (needsContentInRule && responseCause == null) {
-                    try (HttpResponseDuplicator duplicator =
-                                 response.toDuplicator(derivedCtx.eventLoop().withoutContext(),
-                                                       derivedCtx.maxResponseLength())) {
-                        final TruncatingHttpResponse truncatingHttpResponse =
-                                new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
-                        final HttpResponse duplicated = duplicator.duplicate();
-                        retryRuleWithContent().shouldRetry(derivedCtx, truncatingHttpResponse, null)
-                                              .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                                    originalReq, returnedRes, future,
-                                                                    duplicated, duplicator::abort));
-                    }
-                } else {
+            final Throwable responseCause =
+                    log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+            if (needsContentInRule && responseCause == null) {
+                final HttpResponseDuplicator duplicator =
+                        response.toDuplicator(derivedCtx.eventLoop().withoutContext(),
+                                              derivedCtx.maxResponseLength());
+                try {
+                    final TruncatingHttpResponse truncatingHttpResponse =
+                            new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
+                    final HttpResponse duplicated = duplicator.duplicate();
+                    retryRuleWithContent().shouldRetry(derivedCtx, truncatingHttpResponse, null)
+                                          .whenComplete((a, b) -> truncatingHttpResponse.abort())
+                                          .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                                originalReq, returnedRes, future,
+                                                                duplicated, duplicator::abort));
+                    duplicator.close();
+                } catch (Throwable cause) {
+                    duplicator.abort(cause);
+                    handleException(ctx, rootReqDuplicator, future, cause, false);
+                }
+            } else {
+                try {
                     final RetryRule retryRule;
                     if (needsContentInRule) {
                         retryRule = fromRetryRuleWithContent();
                     } else {
                         retryRule = retryRule();
                     }
+
+                    final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
+
                     final Runnable originalResClosingTask =
-                            responseCause == null ? response::abort : () -> response.abort(responseCause);
-                    retryRule.shouldRetry(derivedCtx, responseCause)
-                             .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                   originalReq, returnedRes, future, response,
-                                                   originalResClosingTask));
+                            responseCause == null ? response::abort
+                                                  : () -> response.abort(responseCause);
+
+                    f.handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                           originalReq, returnedRes, future, response,
+                                           originalResClosingTask));
+                } catch (Throwable cause) {
+                    response.abort(cause);
+                    handleException(ctx, rootReqDuplicator, future, cause, false);
                 }
-            } catch (Throwable t) {
-                response.abort(t);
-                handleException(ctx, rootReqDuplicator, future, t, false);
             }
         });
     }

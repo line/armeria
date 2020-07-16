@@ -318,6 +318,16 @@ class RetryingClientTest {
     }
 
     @Test
+    void retryWhenStatusMatchedWithContent() {
+        final WebClient client = client(RetryRuleWithContent.<HttpResponse>builder()
+                                                .onServerErrorStatus()
+                                                .onException()
+                                                .thenBackoff(), 10000, 0, 100);
+        final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
     void retryWhenTrailerMatched() {
         final WebClient client =
                 client(RetryRule.builder()
@@ -667,7 +677,7 @@ class RetryingClientTest {
 
     @Test
     void exceptionInRuleWithContent() {
-        final IllegalStateException exception = new IllegalStateException("foo");
+        final IllegalStateException exception = new IllegalStateException("bar");
         final RetryRuleWithContent<HttpResponse> rule = (ctx, res, cause) -> {
             throw exception;
         };
