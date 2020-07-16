@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.HttpStatus.OK;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
@@ -118,6 +119,7 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.util.ReferenceCountUtil;
 
 class ProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
@@ -134,8 +136,8 @@ class ProxyClientIntegrationTest {
     static ServerExtension backendServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.port(0, SessionProtocol.HTTP);
-            sb.port(0, SessionProtocol.HTTPS);
+            sb.port(0, HTTP);
+            sb.port(0, HTTPS);
             sb.tlsSelfSigned();
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
@@ -205,10 +207,10 @@ class ProxyClientIntegrationTest {
     @Test
     void testDisabledProxyBasicCase() throws Exception {
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.direct())
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.direct())
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -226,10 +228,10 @@ class ProxyClientIntegrationTest {
     @Test
     void testSocks4BasicCase() throws Exception {
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -248,10 +250,10 @@ class ProxyClientIntegrationTest {
     @Test
     void testSocks5BasicCase() throws Exception {
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.socks5(socksProxyServer.address()))
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks5(socksProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -269,10 +271,10 @@ class ProxyClientIntegrationTest {
     @Test
     void testH1CProxyBasicCase() throws Exception {
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -300,10 +302,10 @@ class ProxyClientIntegrationTest {
             }
         };
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(proxySelector)
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(proxySelector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -336,10 +338,10 @@ class ProxyClientIntegrationTest {
             }
         });
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(selector)
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -370,10 +372,10 @@ class ProxyClientIntegrationTest {
             }
         });
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(selector)
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -391,9 +393,6 @@ class ProxyClientIntegrationTest {
     @Test
     void testHttpProxyUpgradeRequestFailure() throws Exception {
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
-            if (!(msg instanceof FullHttpRequest)) {
-                ctx.close();
-            }
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
             if ("h2c".equals(request.headers().get(HttpHeaderNames.UPGRADE))) {
@@ -405,15 +404,17 @@ class ProxyClientIntegrationTest {
                 response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
                                                        copiedBuffer(request.method().name(), US_ASCII));
             }
+
+            ReferenceCountUtil.release(msg);
             ctx.writeAndFlush(response);
             ctx.close();
         });
 
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
-                             .useHttp2Preface(false)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                                  .useHttp2Preface(false)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(HTTP, http1Server.endpoint())
                                                  .factory(clientFactory)
@@ -431,9 +432,6 @@ class ProxyClientIntegrationTest {
     @Test
     void testHttpProxyPrefaceFailure() throws Exception {
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
-            if (!(msg instanceof FullHttpRequest)) {
-                ctx.close();
-            }
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
             if (HttpMethod.valueOf("PRI").equals(request.method())) {
@@ -445,15 +443,17 @@ class ProxyClientIntegrationTest {
                 response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
                                                        copiedBuffer(request.method().name(), US_ASCII));
             }
+
+            ReferenceCountUtil.release(msg);
             ctx.writeAndFlush(response);
             ctx.close();
         });
 
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(HTTP, http1Server.endpoint())
                                                  .factory(clientFactory)
@@ -491,10 +491,10 @@ class ProxyClientIntegrationTest {
     void testProxyWithH2C() throws Exception {
         final int numRequests = 5;
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H2C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -522,10 +522,10 @@ class ProxyClientIntegrationTest {
             ctx.fireChannelRead(msg);
         });
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address(), username))
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks4(socksProxyServer.address(), username))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -569,10 +569,10 @@ class ProxyClientIntegrationTest {
             }
         });
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(selector)
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -624,11 +624,11 @@ class ProxyClientIntegrationTest {
         });
 
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(selector)
-                             .connectTimeoutMillis(1)
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .connectTimeoutMillis(1)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -647,6 +647,7 @@ class ProxyClientIntegrationTest {
     @Test
     void testProxy_serverImmediateClose_throwsException() throws Exception {
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+            ReferenceCountUtil.release(msg);
             ctx.close();
         });
         final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
@@ -668,10 +669,10 @@ class ProxyClientIntegrationTest {
         });
 
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(selector)
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -689,6 +690,7 @@ class ProxyClientIntegrationTest {
     @Test
     void testProxy_responseFailure_throwsException() throws Exception {
         DYNAMIC_HANDLER.setWriteCustomizer((ctx, msg, promise) -> {
+            ReferenceCountUtil.release(msg);
             ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
         });
 
@@ -715,10 +717,10 @@ class ProxyClientIntegrationTest {
         });
 
         try (ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(selector)
-                             .useHttp2Preface(true)
-                             .build()) {
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
             final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
@@ -847,7 +849,7 @@ class ProxyClientIntegrationTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {
-                final ByteBuf backendMessage = ((ByteBuf) msg).retain();
+                final ByteBuf backendMessage = (ByteBuf) msg;
                 received.add(backendMessage);
                 writeToBackendAndFlush();
             } else {
@@ -918,12 +920,12 @@ class ProxyClientIntegrationTest {
 
     static Stream<Arguments> sessionAndEndpointProvider() {
         return Stream.of(
-                Arguments.arguments(SessionProtocol.HTTP, backendServer.httpEndpoint()),
-                Arguments.arguments(SessionProtocol.H1C, backendServer.httpEndpoint()),
-                Arguments.arguments(SessionProtocol.H2C, backendServer.httpEndpoint()),
+                Arguments.arguments(HTTP, backendServer.httpEndpoint()),
+                Arguments.arguments(H1C, backendServer.httpEndpoint()),
+                Arguments.arguments(H2C, backendServer.httpEndpoint()),
                 Arguments.arguments(SessionProtocol.H1, backendServer.httpsEndpoint()),
                 Arguments.arguments(SessionProtocol.H2, backendServer.httpsEndpoint()),
-                Arguments.arguments(SessionProtocol.HTTPS, backendServer.httpsEndpoint())
+                Arguments.arguments(HTTPS, backendServer.httpsEndpoint())
         );
     }
 

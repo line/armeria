@@ -183,7 +183,7 @@ class CircuitBreakerClientTest {
         final HttpClient client = mock(HttpClient.class);
         final HttpClient decorated = decorator.apply(client);
 
-        decorated.execute(ctx, req);
+        decorated.execute(ctx, req).aggregate();
     }
 
     /**

@@ -511,10 +511,10 @@ class HttpClientIntegrationTest {
 
             // Send a request. Note that we do not wait for a response anywhere because we are only interested
             // in testing what client sends.
-            WebClient.builder("none+h1c://127.0.0.1:" + port)
-                     .factory(clientFactory)
-                     .build()
-                     .get(path);
+            final HttpResponse res = WebClient.builder("none+h1c://127.0.0.1:" + port)
+                                              .factory(clientFactory)
+                                              .build()
+                                              .get(path);
             ss.setSoTimeout(10000);
             s = ss.accept();
 
@@ -531,6 +531,8 @@ class HttpClientIntegrationTest {
             // Should not send anything more.
             s.setSoTimeout(1000);
             assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
+
+            res.abort();
         } finally {
             Closeables.close(s, true);
         }

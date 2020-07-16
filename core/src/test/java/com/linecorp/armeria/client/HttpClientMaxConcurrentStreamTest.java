@@ -177,7 +177,7 @@ public class HttpClientMaxConcurrentStreamTest {
         await().until(() -> receivedResponses.stream().anyMatch(CompletableFuture::isDone));
 
         // Send a new request, which must not create a new connection but use an existing connection.
-        client.get(PATH);
+        client.get(PATH).aggregate();
 
         // Wait for a while to make sure no new connection is created.
         for (int i = 0; i < 3; i++) {

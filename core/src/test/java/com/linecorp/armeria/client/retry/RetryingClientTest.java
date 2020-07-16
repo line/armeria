@@ -617,7 +617,7 @@ class RetryingClientTest {
             } else {
                 req.abort(abortCause);
             }
-            client.execute(req);
+            client.execute(req).aggregate();
 
             TimeUnit.SECONDS.sleep(1);
             // No request is made.
