@@ -283,10 +283,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                             new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
                     final HttpResponse duplicated = duplicator.duplicate();
                     retryRuleWithContent().shouldRetry(derivedCtx, truncatingHttpResponse, null)
-                                          .whenComplete((a, b) -> truncatingHttpResponse.abort())
-                                          .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                                originalReq, returnedRes, future,
-                                                                duplicated, duplicator::abort));
+                                          .handle((decision, cause) -> {
+                                              truncatingHttpResponse.abort();
+                                              return handleBackoff(
+                                                      ctx, derivedCtx, rootReqDuplicator,
+                                                      originalReq, returnedRes, future,
+                                                      duplicated, duplicator::abort).apply(decision, cause);
+                                          });
                     duplicator.close();
                 } catch (Throwable cause) {
                     duplicator.abort(cause);
