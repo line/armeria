@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -91,13 +91,14 @@ final class ByteArrayHttpData implements HttpData {
 
     @Override
     public ByteArrayHttpData withEndOfStream(boolean endOfStream) {
+        if (isEndOfStream() == endOfStream) {
+            return this;
+        }
+
         if (isEmpty()) {
             return endOfStream ? EMPTY_EOS : EMPTY;
         }
 
-        if (isEndOfStream() == endOfStream) {
-            return this;
-        }
         return new ByteArrayHttpData(array, endOfStream);
     }
 
@@ -108,6 +109,7 @@ final class ByteArrayHttpData implements HttpData {
 
     @Override
     public ByteBuf byteBuf(ByteBufAccessMode mode) {
+        requireNonNull(mode, "mode");
         if (isEmpty()) {
             return Unpooled.EMPTY_BUFFER;
         }
@@ -123,6 +125,7 @@ final class ByteArrayHttpData implements HttpData {
 
     @Override
     public ByteBuf byteBuf(int offset, int length, ByteBufAccessMode mode) {
+        requireNonNull(mode, "mode");
         if (length == 0) {
             return Unpooled.EMPTY_BUFFER;
         }

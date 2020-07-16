@@ -161,7 +161,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             return future;
         } finally {
             if (!handled) {
-                data.close();
+                buf.release();
             }
         }
     }

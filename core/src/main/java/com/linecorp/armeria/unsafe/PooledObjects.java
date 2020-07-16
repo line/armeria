@@ -22,9 +22,9 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.file.HttpFile;
 
 import io.netty.buffer.ByteBuf;
@@ -64,7 +64,7 @@ import io.netty.buffer.ByteBufAllocator;
  * res.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
  *    .thenApply(aggResp -> {
  *        // try-with-resources here ensures the content is released
- *        // if it is a pooled HttpData, or otherwise is a no-op if it is not.
+ *        // if it is a pooled HttpData, or otherwise it's no-op.
  *        try (HttpData content = aggResp.content()) {
  *            if (!aggResp.status().equals(HttpStatus.OK)) {
  *                throw new IllegalStateException("Bad response");

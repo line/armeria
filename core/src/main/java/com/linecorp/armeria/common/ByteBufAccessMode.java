@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -29,7 +29,7 @@ public enum ByteBufAccessMode {
      * Gets the duplicate (or slice) of the underlying {@link ByteBuf}. This mode is useful when you access
      * the {@link ByteBuf} within the life cycle of the {@link HttpData}:
      * <pre>{@code
-     * try (HttpContent content = ...) {
+     * try (HttpData content = ...) {
      *     ByteBuf buf = content.byteBuf(ByteBufAccessMode.DUPLICATE);
      *     // Read something from 'buf' here.
      * }

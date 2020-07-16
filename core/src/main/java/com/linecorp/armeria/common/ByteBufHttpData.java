@@ -144,7 +144,7 @@ final class ByteBufHttpData implements HttpData {
 
     @Override
     public ByteBuf byteBuf(ByteBufAccessMode mode) {
-        switch (mode) {
+        switch (requireNonNull(mode, "mode")) {
             case DUPLICATE:
                 return buf.duplicate();
             case RETAINED_DUPLICATE:
@@ -165,7 +165,7 @@ final class ByteBufHttpData implements HttpData {
     @Override
     public ByteBuf byteBuf(int offset, int length, ByteBufAccessMode mode) {
         final int startIndex = buf.readerIndex() + offset;
-        switch (mode) {
+        switch (requireNonNull(mode, "mode")) {
             case DUPLICATE:
                 return buf.slice(startIndex, length);
             case RETAINED_DUPLICATE:
