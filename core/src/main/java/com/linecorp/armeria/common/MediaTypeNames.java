@@ -71,7 +71,7 @@ public final class MediaTypeNames {
     /**
      * {@value #PLAIN_TEXT}.
      */
-    public static final String PLAIN_TEXT= "text/plain";
+    public static final String PLAIN_TEXT = "text/plain";
     /**
      * {@value #PLAIN_TEXT_UTF_8}.
      */
@@ -473,9 +473,9 @@ public final class MediaTypeNames {
     public static final String ZIP = "application/zip";
 
     /* multipart types */
-    
+
     /**
-     * {@value MULTIPART_FORM_DATA}
+     * {@value MULTIPART_FORM_DATA}.
      */
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
