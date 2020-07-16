@@ -62,7 +62,9 @@ final class ByteBufHttpData implements HttpData {
 
         final int length = buf.readableBytes();
         if (isPooled()) {
-            buf.touch();
+            buf.touch(this);
+            // We don't use the pooled buffer's underlying array here,
+            // because it will be in use by others when 'buf' is released.
         } else if (buf.hasArray() && buf.arrayOffset() == 0 && buf.readerIndex() == 0) {
             final byte[] bufArray = buf.array();
             if (bufArray.length == length) {

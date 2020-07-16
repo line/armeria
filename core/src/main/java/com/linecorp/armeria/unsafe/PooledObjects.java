@@ -17,6 +17,8 @@ package com.linecorp.armeria.unsafe;
 
 import java.util.concurrent.Executor;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.HttpData;
@@ -100,10 +102,18 @@ public final class PooledObjects {
      * Does nothing if it's not a pooled {@link HttpData}.
      */
     public static void touch(Object obj) {
+        touch(obj, obj);
+    }
+
+    /**
+     * Calls {@link ByteBuf#touch()} of the specified {@link HttpData}'s underlying {@link ByteBuf}.
+     * Does nothing if it's not a pooled {@link HttpData}.
+     */
+    public static void touch(Object obj, @Nullable Object hint) {
         if (obj instanceof HttpData) {
             final HttpData data = (HttpData) obj;
             if (data.isPooled()) {
-                data.byteBuf().touch();
+                data.byteBuf().touch(hint);
             }
         }
     }

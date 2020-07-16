@@ -265,7 +265,9 @@ abstract class HttpResponseDecoder {
                 if (ctx != null) {
                     ctx.logBuilder().increaseResponseLength((HttpData) o);
                 }
+                PooledObjects.touch(o, ctx);
             }
+
             return delegate.tryWrite(o);
         }
 

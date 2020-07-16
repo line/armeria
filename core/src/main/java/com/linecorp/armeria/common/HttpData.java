@@ -117,7 +117,9 @@ public interface HttpData extends HttpObject, SafeCloseable {
             return ByteArrayHttpData.EMPTY;
         }
 
-        return new ByteBufHttpData(buf.touch(), true);
+        final ByteBufHttpData data = new ByteBufHttpData(buf, true);
+        buf.touch(data);
+        return data;
     }
 
     /**
@@ -164,7 +166,7 @@ public interface HttpData extends HttpObject, SafeCloseable {
     static HttpData copyOf(ByteBuf data) {
         requireNonNull(data, "data");
 
-        data.touch();
+        data.touch(data);
 
         if (!data.isReadable()) {
             return empty();
