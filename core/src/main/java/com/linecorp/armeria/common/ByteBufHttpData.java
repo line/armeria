@@ -194,6 +194,13 @@ final class ByteBufHttpData implements HttpData {
     }
 
     @Override
+    public void touch(@Nullable Object hint) {
+        if (isPooled()) {
+            buf.touch(hint);
+        }
+    }
+
+    @Override
     public void close() {
         // This is not thread safe, but an attempt to close one instance from multiple threads would fail
         // with an IllegalReferenceCountException anyway.

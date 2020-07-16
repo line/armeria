@@ -113,7 +113,7 @@ public final class PooledObjects {
         if (obj instanceof HttpData) {
             final HttpData data = (HttpData) obj;
             if (data.isPooled()) {
-                data.byteBuf().touch(hint);
+                data.touch(hint);
             }
         }
     }

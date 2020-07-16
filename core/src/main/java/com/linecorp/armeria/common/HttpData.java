@@ -29,6 +29,8 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.Executor;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 
 import com.google.errorprone.annotations.FormatMethod;
@@ -45,6 +47,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ResourceLeakDetector;
 
 /**
  * HTTP/2 data that contains a chunk of bytes.
@@ -459,6 +462,14 @@ public interface HttpData extends HttpObject, SafeCloseable {
      */
     @UnstableApi
     ByteBuf byteBuf(int offset, int length, ByteBufAccessMode mode);
+
+    /**
+     * (Advanced users only) Records the current access location of this data for debugging purposes.
+     * If this data is determined to be leaked, the information recorded by this operation will be provided to
+     * you via {@link ResourceLeakDetector}.
+     */
+    @UnstableApi
+    default void touch(@Nullable Object hint) {}
 
     /**
      * Releases the underlying {@link ByteBuf} if this data was created via {@link #wrap(ByteBuf)}.
