@@ -107,19 +107,20 @@ class WebClientBuilderTest {
 
     @Test
     void keepLastFactory_by_options() {
-        try (ClientFactory optionClientFactory =
+        try (ClientFactory factory1 =
                      ClientFactory.builder()
                                   .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
+                                  .build();
+             ClientFactory factory2 =
+                     ClientFactory.builder()
+                                  .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
                                   .build()) {
-            final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
-                                                           ClientOption.FACTORY.newValue(optionClientFactory));
 
-            final ClientFactory factory = ClientFactory.builder()
-                                                       .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
-                                                       .build();
+            final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
+                                                           ClientOption.FACTORY.newValue(factory1));
 
             final WebClient webClient = WebClient.builder("http://foo")
-                                                 .factory(factory)
+                                                 .factory(factory2)
                                                  .options(options)
                                                  .build();
 
