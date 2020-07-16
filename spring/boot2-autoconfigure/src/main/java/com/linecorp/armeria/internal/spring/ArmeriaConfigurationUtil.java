@@ -197,7 +197,6 @@ public final class ArmeriaConfigurationUtil {
             for (Function<? super HttpService, ? extends HttpService> decorator : bean.getDecorators()) {
                 service = service.decorate(decorator);
             }
-            service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
             server.service(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
             ThriftServiceUtils.serviceNames(bean.getService())
@@ -232,7 +231,6 @@ public final class ArmeriaConfigurationUtil {
             for (Function<? super HttpService, ? extends HttpService> decorator : bean.getDecorators()) {
                 service = service.decorate(decorator);
             }
-            service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
             server.service(bean.getRoute(), service);
         });
     }
@@ -262,9 +260,7 @@ public final class ArmeriaConfigurationUtil {
                                 : bean.getDecorators()) {
                             service = service.decorate(decorator);
                         }
-                        server.service(route,
-                                       setupMetricCollectingService(service, bean,
-                                                                    meterIdPrefixFunctionFactory));
+                        server.service(route, service);
                     }
             );
         });
@@ -338,18 +334,6 @@ public final class ArmeriaConfigurationUtil {
                                         exampleHeaders.getHeaders());
             }
         }
-    }
-
-    private static HttpService setupMetricCollectingService(
-            HttpService service, AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
-        requireNonNull(service, "service");
-        requireNonNull(bean, "bean");
-
-        if (meterIdPrefixFunctionFactory == null) {
-            return service;
-        }
-        return service.decorate(metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory));
     }
 
     private static Function<? super HttpService, MetricCollectingService> metricCollectingServiceDecorator(
