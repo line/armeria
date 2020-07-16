@@ -47,6 +47,16 @@ class EndpointTest {
         assertThat(bar.hasIpAddr()).isFalse();
         assertThat(bar.hasPort()).isTrue();
         assertThat(bar.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
+
+        final Endpoint barWithUserInfo = Endpoint.parse("foo@bar:80");
+        assertThat(barWithUserInfo).isEqualTo(Endpoint.of("bar", 80));
+        assertThat(barWithUserInfo.port()).isEqualTo(80);
+        assertThat(barWithUserInfo.weight()).isEqualTo(1000);
+        assertThat(barWithUserInfo.ipAddr()).isNull();
+        assertThat(barWithUserInfo.ipFamily()).isNull();
+        assertThat(barWithUserInfo.hasIpAddr()).isFalse();
+        assertThat(barWithUserInfo.hasPort()).isTrue();
+        assertThat(barWithUserInfo.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
     }
 
     @Test
