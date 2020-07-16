@@ -138,6 +138,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     }
 
     T prepareObjectForNotification(SubscriptionImpl subscription, T o) {
+        PooledObjects.touch(o);
         onRemoval(o);
         if (!subscription.withPooledObjects()) {
             o = PooledObjects.copyAndClose(o);
