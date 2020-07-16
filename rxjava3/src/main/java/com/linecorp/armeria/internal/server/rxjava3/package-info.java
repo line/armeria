@@ -17,4 +17,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.internal.server.rxjava3;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

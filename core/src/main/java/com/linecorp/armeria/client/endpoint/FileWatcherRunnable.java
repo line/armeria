@@ -35,7 +35,7 @@ import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileSystemWatchC
 /**
  * A runnable which watches files.
  */
-class FileWatcherRunnable implements Runnable {
+final class FileWatcherRunnable implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(FileWatcherRunnable.class);
 
     private final WatchService watchService;

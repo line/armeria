@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Metadata about an enum value.

@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.grpc.protocol;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link Exception} that contains enough information to convert it to a gRPC status.

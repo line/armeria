@@ -31,8 +31,15 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A response converter implementation which creates an {@link HttpResponse} with
- * {@code content-type: application/binary} or {@code content-type: application/octet-stream}.
+ * A {@link ResponseConverterFunction} which creates an {@link HttpResponse} when:
+ * <ul>
+ *   <li>the {@code result} is an instance of {@link HttpData} or {@code byte[]}</li>
+ *   <li>the {@code result} is an instance of {@link Publisher} or {@link Stream} while the
+ *       {@code "content-type"} of the {@link ResponseHeaders} is {@code "application/binary"} or
+ *       {@code "application/octet-stream"}</li>
+ * </ul>
+ * Note that this {@link ResponseConverterFunction} is applied to the annotated service by default,
+ * so you don't have to set explicitly.
  */
 public final class ByteArrayResponseConverterFunction implements ResponseConverterFunction {
 

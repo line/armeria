@@ -49,9 +49,9 @@ import com.spotify.futures.CompletableFutures;
 import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;

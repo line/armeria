@@ -64,4 +64,3 @@ public @interface LoggingDecorator {
      */
     int order() default 0;
 }
-

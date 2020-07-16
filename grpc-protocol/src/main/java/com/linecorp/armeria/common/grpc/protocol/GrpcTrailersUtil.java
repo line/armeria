@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Utility for creating response trailers for a gRPC status. Trailers are only returned from a server.

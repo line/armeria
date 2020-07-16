@@ -94,8 +94,8 @@ class ClientFactoryBuilderTest {
     @Test
     void shouldPreserveChannelOptionInClientFactory() {
         final ClientFactory factory = ClientFactory.builder()
-                .options(ClientFactoryOptions.of())
-                .build();
+                                                   .options(ClientFactoryOptions.of())
+                                                   .build();
         final Map<ChannelOption<?>, Object> channelOptions =
                 factory.options().get(ClientFactoryOption.CHANNEL_OPTIONS);
         final int connectTimeoutMillis = (int) channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS);

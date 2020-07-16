@@ -24,8 +24,8 @@ import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil;
 
 import io.grpc.ClientInterceptor;

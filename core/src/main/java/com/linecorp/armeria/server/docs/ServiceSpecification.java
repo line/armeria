@@ -32,7 +32,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Service;
 
 /**

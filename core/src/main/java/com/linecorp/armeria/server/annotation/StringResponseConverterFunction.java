@@ -33,8 +33,13 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A response converter implementation which creates an {@link HttpResponse} with
- * {@code content-type: text/plain}.
+ * A {@link ResponseConverterFunction} which creates an {@link HttpResponse} when:
+ * <ul>
+ *   <li>the {@code result} is instance of {@link CharSequence}</li>
+ *   <li>the {@code "content-type"} of the {@link ResponseHeaders} is {@link MediaType#ANY_TEXT_TYPE}</li>
+ * </ul>
+ * Note that this {@link ResponseConverterFunction} is applied to the annotated service by default,
+ * so you don't have to set explicitly.
  */
 public final class StringResponseConverterFunction implements ResponseConverterFunction {
 

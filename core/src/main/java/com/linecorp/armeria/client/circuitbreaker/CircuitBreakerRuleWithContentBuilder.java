@@ -39,7 +39,7 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  * A builder for creating a new {@link CircuitBreakerRuleWithContent}.
  * @param <T> the response type
  */
-public class CircuitBreakerRuleWithContentBuilder<T extends Response>
+public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         extends AbstractRuleWithContentBuilder<T> {
 
     CircuitBreakerRuleWithContentBuilder(

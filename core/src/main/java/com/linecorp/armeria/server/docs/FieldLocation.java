@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * The location of a field.

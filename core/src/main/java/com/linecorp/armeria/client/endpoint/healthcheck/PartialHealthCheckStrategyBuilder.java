@@ -24,7 +24,7 @@ import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrate
 /**
  * A builder for creating a new {@link PartialHealthCheckStrategy}.
  */
-class PartialHealthCheckStrategyBuilder {
+final class PartialHealthCheckStrategyBuilder {
 
     @Nullable
     private Integer maxEndpointCount;
