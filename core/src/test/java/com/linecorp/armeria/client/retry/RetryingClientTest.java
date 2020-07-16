@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -85,12 +86,21 @@ import io.netty.channel.EventLoop;
 
 class RetryingClientTest {
 
-    // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
-    private static final ClientFactory clientFactory =
-            ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
-
     private static final RetryRule retryAlways =
             (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
+
+    private static ClientFactory clientFactory;
+
+    @BeforeAll
+    static void beforeAll() {
+        // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
+        clientFactory = ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        clientFactory.close();
+    }
 
     private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
 
@@ -99,16 +109,6 @@ class RetryingClientTest {
     private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
     private AtomicInteger reqCount;
-
-    @BeforeEach
-    void setUp() {
-        reqCount = new AtomicInteger();
-    }
-
-    @AfterAll
-    static void destroy() {
-        clientFactory.close();
-    }
 
     @RegisterExtension
     final ServerExtension server = new ServerExtension() {
@@ -290,6 +290,11 @@ class RetryingClientTest {
         }
     };
 
+    @BeforeEach
+    void setUp() {
+        reqCount = new AtomicInteger();
+    }
+
     @Test
     void retryWhenContentMatched() {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
@@ -439,6 +444,7 @@ class RetryingClientTest {
 
         try (ClientFactory clientFactory = ClientFactory.builder()
                                                         .options(RetryingClientTest.clientFactory.options())
+                                                        .workerGroup(EventLoopGroups.newEventLoopGroup(2), true)
                                                         .connectTimeoutMillis(Long.MAX_VALUE)
                                                         .build()) {
             final WebClient client = WebClient.builder("http://127.0.0.1:1")
