@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
-import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
