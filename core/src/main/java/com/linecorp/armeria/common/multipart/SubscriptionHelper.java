@@ -210,7 +210,7 @@ enum SubscriptionHelper implements Subscription {
      *                               more than once
      */
     static void validate(Subscription current, Subscription incoming) {
-        requireNonNull(incoming);
+        requireNonNull(incoming, "incoming");
         if (current != null) {
             incoming.cancel();
             throw new IllegalStateException("Subscription already set.");

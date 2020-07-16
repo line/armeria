@@ -76,7 +76,7 @@ class BodyPartHeadersTest {
     void testDefaultContentType() {
         final BodyPartHeaders headers = BodyPartHeaders.builder().build();
         assertThat(headers.contentType()).isNotNull();
-        assertThat(headers.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(headers.contentType()).isEqualTo(MediaType.PLAIN_TEXT);
     }
 
     @Test

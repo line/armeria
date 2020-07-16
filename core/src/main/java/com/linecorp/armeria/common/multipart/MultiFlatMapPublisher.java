@@ -130,7 +130,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            requireNonNull(subscription);
+            requireNonNull(subscription, "subscription");
             if (upstream != null) {
                 subscription.cancel();
                 throw new IllegalStateException("Subscription already set");

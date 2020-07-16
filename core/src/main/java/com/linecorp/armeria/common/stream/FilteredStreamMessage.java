@@ -25,6 +25,8 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Processor;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -48,15 +50,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private static final SubscriptionOption[] EMPTY_OPTIONS = new SubscriptionOption[0];
 
-    private final StreamMessage<T> delegate;
+    private final StreamMessage<T> upstream;
     private final boolean filterSupportsPooledObjects;
 
     /**
      * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
      * before passing to a subscriber.
      */
-    protected FilteredStreamMessage(StreamMessage<T> delegate) {
-        this(delegate, false);
+    protected FilteredStreamMessage(StreamMessage<T> upstream) {
+        this(upstream, false);
     }
 
     /**
@@ -67,8 +69,8 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      *                          and {@link ByteBufHolder} as is, without making a copy. If you don't know what
      *                          this means, use {@link #FilteredStreamMessage(StreamMessage)}.
      */
-    protected FilteredStreamMessage(StreamMessage<T> delegate, boolean withPooledObjects) {
-        this.delegate = requireNonNull(delegate, "delegate");
+    protected FilteredStreamMessage(StreamMessage<T> upstream, boolean withPooledObjects) {
+        this.upstream = requireNonNull(upstream, "upstream");
         filterSupportsPooledObjects = withPooledObjects;
     }
 
@@ -104,17 +106,17 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public boolean isOpen() {
-        return delegate.isOpen();
+        return upstream.isOpen();
     }
 
     @Override
     public boolean isEmpty() {
-        return delegate.isEmpty();
+        return upstream.isEmpty();
     }
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
+        return upstream.whenComplete();
     }
 
     @Override
@@ -135,7 +137,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor, boolean withPooledObjects,
                            boolean notifyCancellation) {
-        delegate.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
+        upstream.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
                            executor, filteringSubscriptionOptions(notifyCancellation));
     }
 
@@ -152,17 +154,17 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public EventExecutor defaultSubscriberExecutor() {
-        return delegate.defaultSubscriberExecutor();
+        return upstream.defaultSubscriberExecutor();
     }
 
     @Override
     public void abort() {
-        delegate.abort();
+        upstream.abort();
     }
 
     @Override
     public void abort(Throwable cause) {
-        delegate.abort(requireNonNull(cause, "cause"));
+        upstream.abort(requireNonNull(cause, "cause"));
     }
 
     private final class FilteringSubscriber implements Subscriber<T> {

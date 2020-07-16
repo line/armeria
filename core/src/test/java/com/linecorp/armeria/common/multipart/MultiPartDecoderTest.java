@@ -395,7 +395,7 @@ public class MultiPartDecoderTest {
         chunksPublisher("foo".getBytes()).subscribe(decoder);
         assertThatThrownBy(() -> chunksPublisher("bar".getBytes()).subscribe(decoder))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining(".Subscription already set.");
+                .hasMessageContaining("Subscription already set.");
     }
 
     /**

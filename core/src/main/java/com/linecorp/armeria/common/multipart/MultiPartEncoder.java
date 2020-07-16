@@ -34,6 +34,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -54,15 +55,27 @@ class MultiPartEncoder implements Processor<BodyPart, HttpData> {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/main/java/io/helidon/media/multipart/MultiPartEncoder.java
 
+    private static final AtomicReferenceFieldUpdater<MultiPartEncoder, Subscription> upstreamUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    MultiPartEncoder.class, Subscription.class, "upstream");
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<MultiPartEncoder, Subscriber> downstreamUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    MultiPartEncoder.class, Subscriber.class, "downstream");
+
     private final String boundary;
     private final CompletableFuture<BufferedEmittingPublisher<Publisher<HttpData>>> initFuture;
 
     @Nullable
     private BufferedEmittingPublisher<Publisher<HttpData>> emitter;
+
+    // Updated only via upstreamUpdater
     @Nullable
-    private Subscriber<? super HttpData> downstream;
+    private volatile Subscription upstream;
+    // Updated only via downstreamUpdater
     @Nullable
-    private Subscription upstream;
+    private volatile Subscriber<? super HttpData> downstream;
 
     /**
      * Creates a multipart encoder.
@@ -77,24 +90,28 @@ class MultiPartEncoder implements Processor<BodyPart, HttpData> {
 
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber) {
-        requireNonNull(subscriber);
-        if (emitter != null || downstream != null) {
+        requireNonNull(subscriber, "subscriber");
+        if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
             subscriber.onSubscribe(SubscriptionHelper.CANCELED);
             subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
             return;
         }
-        downstream = subscriber;
         deferredInit();
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        SubscriptionHelper.validate(upstream, subscription);
-        upstream = subscription;
+        requireNonNull(subscription, "subscription");
+        if (!upstreamUpdater.compareAndSet(this, null, subscription)) {
+            subscription.cancel();
+            throw new IllegalStateException("Subscription already set.");
+        }
         deferredInit();
     }
 
     private void deferredInit() {
+        final Subscription upstream = this.upstream;
+        final Subscriber<? super HttpData> downstream = this.downstream;
         if (upstream != null && downstream != null) {
             emitter = new BufferedEmittingPublisher();
             // relay request to upstream, already reduced by flatmap
@@ -104,7 +121,7 @@ class MultiPartEncoder implements Processor<BodyPart, HttpData> {
                  .onCompleteResume(HttpData.ofUtf8("--" + boundary + "--"))
                  .subscribe(downstream);
             initFuture.complete(emitter);
-            downstream = null;
+            downstreamUpdater.set(this, null);
         }
     }
 

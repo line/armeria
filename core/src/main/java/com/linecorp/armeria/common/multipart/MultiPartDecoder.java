@@ -34,6 +34,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -55,15 +56,20 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
 
     // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media/multipart/src/main/java/io/helidon/media/multipart/MultiPartDecoder.java
 
+    private static final AtomicReferenceFieldUpdater<MultiPartDecoder, Subscription> upstreamUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    MultiPartDecoder.class, Subscription.class, "upstream");
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<MultiPartDecoder, Subscriber> downstreamUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    MultiPartDecoder.class, Subscriber.class, "downstream");
+
     private final CompletableFuture<BufferedEmittingPublisher<BodyPart>> initFuture;
     private final LinkedList<BodyPart> bodyParts;
     private final MimeParser parser;
     private final ParserEventProcessor parserEventProcessor;
 
-    @Nullable
-    private Subscription upstream;
-    @Nullable
-    private Subscriber<? super BodyPart> downstream;
     @Nullable
     private BufferedEmittingPublisher<BodyPart> emitter;
     @Nullable
@@ -72,6 +78,14 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
     private BodyPartHeadersBuilder bodyPartHeaderBuilder;
     @Nullable
     private BufferedEmittingPublisher<HttpData> bodyPartPublisher;
+
+    // Updated only via upstreamUpdater
+    @Nullable
+    private volatile Subscription upstream;
+    // Updated only via downstreamUpdater
+    @Nullable
+    private volatile Subscriber<? super BodyPart> downstream;
+
 
     /**
      * Create a new multipart decoder.
@@ -89,19 +103,21 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
     @Override
     public void subscribe(Subscriber<? super BodyPart> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        if (emitter != null || downstream != null) {
+        if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
             subscriber.onSubscribe(SubscriptionHelper.CANCELED);
             subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
             return;
         }
-        downstream = subscriber;
         deferredInit();
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        SubscriptionHelper.validate(upstream, subscription);
-        upstream = subscription;
+        requireNonNull(subscription, "subscription");
+        if (!upstreamUpdater.compareAndSet(this, null, subscription)) {
+            subscription.cancel();
+            throw new IllegalStateException("Subscription already set.");
+        }
         deferredInit();
     }
 
@@ -150,7 +166,7 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
 
     @Override
     public void onError(Throwable throwable) {
-        requireNonNull(throwable);
+        requireNonNull(throwable, "throwable");
         initFuture.whenComplete((e, t) -> e.fail(throwable));
     }
 
@@ -169,13 +185,14 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
     }
 
     private void deferredInit() {
+        final Subscriber<? super BodyPart> downstream = this.downstream;
         if (upstream != null && downstream != null) {
             emitter = new BufferedEmittingPublisher();
             emitter.onRequest(this::onPartRequest);
             emitter.onEmit(this::drainPart);
             emitter.subscribe(downstream);
             initFuture.complete(emitter);
-            downstream = null;
+            downstreamUpdater.set(this, null);
         }
     }
 
