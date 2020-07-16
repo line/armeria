@@ -233,8 +233,9 @@ class ServerMaxConnectionAgeTest {
                     try {
                         response.aggregate().join();
                     } catch (Exception e) {
-                        cause = e;
-                        break;
+                        if (cause == null) {
+                            cause = e;
+                        }
                     }
                 }
 
