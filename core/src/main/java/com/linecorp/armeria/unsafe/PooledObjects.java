@@ -111,10 +111,7 @@ public final class PooledObjects {
      */
     public static void touch(Object obj, @Nullable Object hint) {
         if (obj instanceof HttpData) {
-            final HttpData data = (HttpData) obj;
-            if (data.isPooled()) {
-                data.touch(hint);
-            }
+            ((HttpData) obj).touch(hint);
         }
     }
 
