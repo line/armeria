@@ -20,7 +20,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.io.IOException;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +46,11 @@ class ServiceBindingTest {
 
     private static CountDownLatch accessLogWriterCheckLatch;
     private static CountDownLatch propertyCheckLatch;
+    private static final Queue<Integer> decoratorLog = new ArrayBlockingQueue<>(100);
+
+    private static final LoggingDecorator decorator1 = new LoggingDecorator(1);
+    private static final LoggingDecorator decorator2 = new LoggingDecorator(2);
+    private static final LoggingDecorator decorator3 = new LoggingDecorator(3);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension(true) {
@@ -64,6 +73,9 @@ class ServiceBindingTest {
                   });
                   return delegate.serve(ctx, req);
               })
+              .decorator(decorator1)
+              .decorator(decorator2)
+              .decorator(decorator3)
               .build((ctx, req) -> {
                   if (req.method() == HttpMethod.GET) {
                       return HttpResponse.of(ctx.pathParam("name"));
@@ -80,6 +92,7 @@ class ServiceBindingTest {
               .methods(HttpMethod.POST)
               .consumes(MediaType.JSON, MediaType.PLAIN_TEXT_UTF_8)
               .produces(MediaType.JSON, MediaType.PLAIN_TEXT_UTF_8)
+              .decorators(decorator1, decorator2, decorator3)
               .build((ctx, req) -> HttpResponse.from(
                       req.aggregate().thenApply(request -> {
                           final String resContent;
@@ -98,6 +111,7 @@ class ServiceBindingTest {
     void setUp() {
         accessLogWriterCheckLatch = new CountDownLatch(1);
         propertyCheckLatch = new CountDownLatch(1);
+        decoratorLog.clear();
     }
 
     @Test
@@ -107,6 +121,7 @@ class ServiceBindingTest {
         propertyCheckLatch.await();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
+        assertThat(decoratorLog.stream().collect(Collectors.toList())).containsExactly(3, 2, 1);
 
         res = client.post("/greet", "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -126,6 +141,7 @@ class ServiceBindingTest {
                                            .aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
+        assertThat(decoratorLog.stream().collect(Collectors.toList())).containsExactly(3, 2, 1);
 
         res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),
@@ -165,5 +181,21 @@ class ServiceBindingTest {
 
         client.get("/greet/armeria");
         accessLogWriterCheckLatch.await();
+    }
+
+    private static final class LoggingDecorator implements Function<HttpService, HttpService> {
+        private final Integer index;
+
+        private LoggingDecorator(Integer index) {
+            this.index = index;
+        }
+
+        @Override
+        public HttpService apply(HttpService delegate) {
+            return (ctx, req) -> {
+                ctx.log().whenComplete().thenAccept(log -> decoratorLog.add(index));
+                return delegate.serve(ctx, req);
+            };
+        }
     }
 }

@@ -228,6 +228,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.decorator(decorator);
     }
 
+    @Override
+    public ServiceBindingBuilder decorators(
+            Function<? super HttpService, ? extends HttpService>... decorators) {
+        return (ServiceBindingBuilder) super.decorators(decorators);
+    }
+
     /**
      * Sets the {@link HttpService} and returns the {@link ServerBuilder} that this
      * {@link ServiceBindingBuilder} was created from.
