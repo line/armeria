@@ -301,6 +301,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                    originalResClosingTask));
                 }
             } catch (Throwable t) {
+                response.abort(t);
                 handleException(ctx, rootReqDuplicator, future, t, false);
             }
         });

@@ -653,13 +653,26 @@ class RetryingClientTest {
     }
 
     @Test
-    void exceptionInStrategy() {
+    void exceptionInRule() {
         final IllegalStateException exception = new IllegalStateException("foo");
-        final RetryRule strategy = (ctx, cause) -> {
+        final RetryRule rule = (ctx, cause) -> {
             throw exception;
         };
 
-        final WebClient client = client(strategy);
+        final WebClient client = client(rule);
+        assertThatThrownBy(client.get("/").aggregate()::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseReference(exception);
+    }
+
+    @Test
+    void exceptionInRuleWithContent() {
+        final IllegalStateException exception = new IllegalStateException("foo");
+        final RetryRuleWithContent<HttpResponse> rule = (ctx, res, cause) -> {
+            throw exception;
+        };
+
+        final WebClient client = client(rule, 10000, 0, 100);
         assertThatThrownBy(client.get("/").aggregate()::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseReference(exception);
