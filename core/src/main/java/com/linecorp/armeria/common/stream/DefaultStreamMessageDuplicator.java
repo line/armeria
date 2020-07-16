@@ -560,7 +560,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         private void abort0(Throwable cause) {
-            final DownstreamSubscription<T> currentSubscription = subscription;
+            DownstreamSubscription<T> currentSubscription = subscription;
             if (currentSubscription != null) {
                 currentSubscription.abort(cause);
                 return;
@@ -569,11 +569,15 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
                     this, AbortingSubscriber.get(cause), processor, ImmediateEventExecutor.INSTANCE,
                     false, false);
-            if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
+
+            if (subscribe0(newSubscription)) {
                 newSubscription.whenComplete().completeExceptionally(cause);
-            } else {
-                subscription.abort(cause);
+                return;
             }
+
+            currentSubscription = subscription;
+            assert currentSubscription != null;
+            currentSubscription.abort(cause);
         }
     }
 
@@ -780,7 +784,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                                                                .withEndOfStream(data.isEndOfStream());
                                 obj = retained;
                             } else {
-                                final ByteBuf byteBuf = data.byteBuf(ByteBufAccessMode.DUPLICATE);
+                                final ByteBuf byteBuf = data.byteBuf();
                                 @SuppressWarnings("unchecked")
                                 final T copied = (T) HttpData.copyOf(byteBuf)
                                                              .withEndOfStream(data.isEndOfStream());

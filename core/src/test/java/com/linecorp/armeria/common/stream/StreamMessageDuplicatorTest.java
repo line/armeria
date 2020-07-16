@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.StreamM
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -273,6 +274,22 @@ class StreamMessageDuplicatorTest {
             }
             duplicator.abort();
         }
+    }
+
+    @Test
+    void abortedChildStreamShouldNotLeakPublisherElements() {
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final ByteBuf buf = Unpooled.directBuffer().writeByte(0);
+        publisher.write(HttpData.wrap(buf));
+
+        try (StreamMessageDuplicator<HttpData> duplicator =
+                     publisher.toDuplicator(ImmediateEventExecutor.INSTANCE)) {
+
+            final StreamMessage<HttpData> child = duplicator.duplicate();
+            child.abort();
+        }
+
+        assertThat(buf.refCnt()).isZero();
     }
 
     @Test
