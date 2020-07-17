@@ -125,13 +125,8 @@ final class ByteBufHttpData implements HttpData {
         if (array == null) {
             try {
                 if (buf.hasArray() && buf.arrayOffset() == 0 && buf.readerIndex() == 0) {
-                    final byte[] bufArray = buf.array();
-                    if (bufArray.length >= previewLength) {
-                        array = bufArray;
-                    }
-                }
-
-                if (array == null) {
+                    array = buf.array();
+                } else {
                     array = ByteBufUtil.getBytes(buf, buf.readerIndex(), previewLength);
                     if (previewLength == length) {
                         this.array = array;
