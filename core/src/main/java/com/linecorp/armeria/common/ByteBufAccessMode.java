@@ -58,5 +58,5 @@ public enum ByteBufAccessMode {
      * direct {@link ByteBuf} is allocated and the content of the underlying {@link ByteBuf} is copied into it.
      * This access mode is useful when you perform direct I/O or send data to a Netty {@link Channel}.
      */
-    DIRECT
+    FOR_IO
 }

@@ -177,7 +177,7 @@ final class ByteBufHttpData implements HttpData {
                 return buf.duplicate();
             case RETAINED_DUPLICATE:
                 return buf.retainedDuplicate();
-            case DIRECT:
+            case FOR_IO:
                 if (buf.isDirect()) {
                     return buf.retainedDuplicate();
                 }
@@ -198,7 +198,7 @@ final class ByteBufHttpData implements HttpData {
                 return buf.slice(startIndex, length);
             case RETAINED_DUPLICATE:
                 return buf.retainedSlice(startIndex, length);
-            case DIRECT:
+            case FOR_IO:
                 if (buf.isDirect()) {
                     return buf.retainedSlice(startIndex, length);
                 }

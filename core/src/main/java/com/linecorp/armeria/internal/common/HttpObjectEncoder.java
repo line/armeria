@@ -116,13 +116,13 @@ public interface HttpObjectEncoder {
     }
 
     default ByteBuf toByteBuf(HttpData data) {
-        final ByteBuf buf = data.byteBuf(ByteBufAccessMode.DIRECT);
+        final ByteBuf buf = data.byteBuf(ByteBufAccessMode.FOR_IO);
         data.close();
         return buf;
     }
 
     default ByteBuf toByteBuf(HttpData data, int offset, int length) {
-        final ByteBuf buf = data.byteBuf(offset, length, ByteBufAccessMode.DIRECT);
+        final ByteBuf buf = data.byteBuf(offset, length, ByteBufAccessMode.FOR_IO);
         data.close();
         return buf;
     }

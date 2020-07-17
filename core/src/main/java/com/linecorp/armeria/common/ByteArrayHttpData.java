@@ -21,8 +21,6 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
@@ -143,7 +141,7 @@ final class ByteArrayHttpData implements HttpData {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        if (mode != ByteBufAccessMode.DIRECT) {
+        if (mode != ByteBufAccessMode.FOR_IO) {
             return Unpooled.wrappedBuffer(array);
         } else {
             final ByteBuf copy = newDirectByteBuf();
@@ -159,7 +157,7 @@ final class ByteArrayHttpData implements HttpData {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        if (mode != ByteBufAccessMode.DIRECT) {
+        if (mode != ByteBufAccessMode.FOR_IO) {
             return Unpooled.wrappedBuffer(array, offset, length);
         } else {
             final ByteBuf copy = newDirectByteBuf(length);

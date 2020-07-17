@@ -81,7 +81,7 @@ class ByteBufHttpDataTest {
         assertThat(retained.readInt()).isEqualTo(0x01020304);
 
         // Test DIRECT mode.
-        final ByteBuf copied = data.byteBuf(ByteBufAccessMode.DIRECT);
+        final ByteBuf copied = data.byteBuf(ByteBufAccessMode.FOR_IO);
         assertThat(copied.isDirect()).isTrue();
         assertThat(copied.refCnt()).isOne();
         assertThat(copied.readInt()).isEqualTo(0x01020304);
@@ -117,7 +117,7 @@ class ByteBufHttpDataTest {
         assertThat(retained.readUnsignedShort()).isEqualTo(0x0203);
 
         // Test DIRECT mode.
-        final ByteBuf copied = data.byteBuf(1, 2, ByteBufAccessMode.DIRECT);
+        final ByteBuf copied = data.byteBuf(1, 2, ByteBufAccessMode.FOR_IO);
         assertThat(copied.isDirect()).isTrue();
         assertThat(copied.refCnt()).isOne();
         assertThat(copied.readUnsignedShort()).isEqualTo(0x0203);
@@ -139,8 +139,8 @@ class ByteBufHttpDataTest {
         final ByteBuf buf = Unpooled.directBuffer(4).writeInt(0x01020304);
         final ByteBufHttpData data = new ByteBufHttpData(buf, true);
 
-        final ByteBuf duplicate = data.byteBuf(ByteBufAccessMode.DIRECT);
-        final ByteBuf slice = data.byteBuf(1, 2, ByteBufAccessMode.DIRECT);
+        final ByteBuf duplicate = data.byteBuf(ByteBufAccessMode.FOR_IO);
+        final ByteBuf slice = data.byteBuf(1, 2, ByteBufAccessMode.FOR_IO);
         assertThat(duplicate.memoryAddress()).isEqualTo(buf.memoryAddress());
         assertThat(slice.memoryAddress()).isEqualTo(buf.memoryAddress() + 1);
 

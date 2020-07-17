@@ -107,13 +107,13 @@ class ByteArrayHttpDataTest {
     @Test
     void directCopy() {
         final ByteArrayHttpData data = new ByteArrayHttpData(new byte[] { 1, 2, 3, 4 });
-        final ByteBuf buf = data.byteBuf(ByteBufAccessMode.DIRECT);
+        final ByteBuf buf = data.byteBuf(ByteBufAccessMode.FOR_IO);
         assertThat(buf.isDirect()).isTrue();
         assertThat(buf.readableBytes()).isEqualTo(4);
         assertThat(buf.readInt()).isEqualTo(0x01020304);
         buf.release();
 
-        final ByteBuf slicedBuf = data.byteBuf(1, 2, ByteBufAccessMode.DIRECT);
+        final ByteBuf slicedBuf = data.byteBuf(1, 2, ByteBufAccessMode.FOR_IO);
         assertThat(slicedBuf.isDirect()).isTrue();
         assertThat(slicedBuf.readableBytes()).isEqualTo(2);
         assertThat(slicedBuf.readUnsignedShort()).isEqualTo(0x0203);
