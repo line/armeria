@@ -570,14 +570,11 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     this, AbortingSubscriber.get(cause), processor, ImmediateEventExecutor.INSTANCE,
                     false, false);
 
-            if (subscribe0(newSubscription)) {
-                newSubscription.whenComplete().completeExceptionally(cause);
-                return;
+            if (!subscribe0(newSubscription)) {
+                currentSubscription = subscription;
+                assert currentSubscription != null;
+                currentSubscription.abort(cause);
             }
-
-            currentSubscription = subscription;
-            assert currentSubscription != null;
-            currentSubscription.abort(cause);
         }
     }
 
@@ -640,7 +637,9 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         void clearSubscriber() {
             // Replace the subscriber with a placeholder so that it can be garbage-collected and
             // we conform to the Reactive Streams specification rule 3.13.
-            subscriber = NeverInvokedSubscriber.get();
+            if (!(subscriber instanceof AbortingSubscriber)) {
+                subscriber = NeverInvokedSubscriber.get();
+            }
         }
 
         // Called from processor.processorExecutor
@@ -830,9 +829,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         @Override
         public void cancel() {
-            if (cancelledOrAbortedUpdater.compareAndSet(this, null, CancelledSubscriptionException.get())) {
-                signal();
-            }
+            abort(subscriber instanceof AbortingSubscriber ? ((AbortingSubscriber<?>) subscriber).cause()
+                                                           : CancelledSubscriptionException.get());
         }
 
         void abort(Throwable cause) {
