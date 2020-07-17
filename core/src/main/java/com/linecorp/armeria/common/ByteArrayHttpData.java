@@ -52,8 +52,6 @@ final class ByteArrayHttpData implements HttpData {
 
     private final byte[] array;
     private final boolean endOfStream;
-    @Nullable
-    private String strVal;
 
     ByteArrayHttpData(byte[] array) {
         this(array, false);
@@ -82,12 +80,8 @@ final class ByteArrayHttpData implements HttpData {
 
     @Override
     public String toString() {
-        if (strVal != null) {
-            return strVal;
-        }
-
         if (array.length == 0) {
-            return strVal = isEndOfStream() ? "{0B, EOS}" : "{0B}";
+            return isEndOfStream() ? "{0B, EOS}" : "{0B}";
         }
 
         final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
@@ -99,7 +93,7 @@ final class ByteArrayHttpData implements HttpData {
             buf.append("B, ");
         }
 
-        return strVal = appendPreviews(buf, array, Math.min(16, array.length)).append('}').toString();
+        return appendPreviews(buf, array, Math.min(16, array.length)).append('}').toString();
     }
 
     static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int previewLength) {

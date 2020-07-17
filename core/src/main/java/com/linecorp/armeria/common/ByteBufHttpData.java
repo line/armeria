@@ -45,8 +45,6 @@ final class ByteBufHttpData implements HttpData {
     @Nullable
     private byte[] array;
     private int flags;
-    @Nullable
-    private String strVal;
 
     ByteBufHttpData(ByteBuf buf, boolean pooled) {
         this(buf, pooled ? FLAG_POOLED : 0, null);
@@ -96,10 +94,6 @@ final class ByteBufHttpData implements HttpData {
 
     @Override
     public String toString() {
-        if (strVal != null) {
-            return strVal;
-        }
-
         final int length = buf.readableBytes();
 
         final StringBuilder strBuf = TemporaryThreadLocals.get().stringBuilder();
@@ -113,7 +107,7 @@ final class ByteBufHttpData implements HttpData {
         }
         if ((flags & FLAG_CLOSED) != 0) {
             if (buf.refCnt() == 0) {
-                return strVal = strBuf.append("closed}").toString();
+                return strBuf.append("closed}").toString();
             } else {
                 strBuf.append("closed, ");
             }
@@ -139,8 +133,8 @@ final class ByteBufHttpData implements HttpData {
             }
         }
 
-        return strVal = ByteArrayHttpData.appendPreviews(strBuf, array, previewLength)
-                                         .append('}').toString();
+        return ByteArrayHttpData.appendPreviews(strBuf, array, previewLength)
+                                .append('}').toString();
     }
 
     @Override
@@ -238,7 +232,6 @@ final class ByteBufHttpData implements HttpData {
         // with an IllegalReferenceCountException anyway.
         if ((flags & (FLAG_POOLED | FLAG_CLOSED)) == FLAG_POOLED) {
             flags |= FLAG_CLOSED;
-            strVal = null;
             buf.release();
         }
     }
