@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.resolver.dns.DnsQueryLifecycleObserver;
@@ -27,17 +29,15 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 final class DefaultDnsQueryLifecycleObserverFactory implements DnsQueryLifecycleObserverFactory {
 
     private final MeterRegistry meterRegistry;
+    private final MeterIdPrefix meterIdPrefix;
 
-    /**
-     * Accepts meterRegistry.
-     * @param meterRegistry {@link MeterRegistry} MeterRegistry to capture metrics.
-     */
-    DefaultDnsQueryLifecycleObserverFactory(MeterRegistry meterRegistry) {
+    DefaultDnsQueryLifecycleObserverFactory(MeterRegistry meterRegistry, MeterIdPrefix prefix) {
         this.meterRegistry = meterRegistry;
+        this.meterIdPrefix = prefix;
     }
 
     @Override
     public DnsQueryLifecycleObserver newDnsQueryLifecycleObserver(DnsQuestion question) {
-        return new DefaultDnsQueryLifecycleObserver(meterRegistry, question);
+        return new DefaultDnsQueryLifecycleObserver(meterRegistry, question, meterIdPrefix);
     }
 }

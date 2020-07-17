@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -93,6 +94,8 @@ public final class DnsResolverGroupBuilder {
     private Boolean decodeIdn;
     @Nullable
     private MeterRegistry meterRegistry;
+    @Nullable
+    private MeterIdPrefix meterIdPrefix;
 
     DnsResolverGroupBuilder() {}
 
@@ -305,6 +308,16 @@ public final class DnsResolverGroupBuilder {
         return this;
     }
 
+    /**
+     * Sets MeterIdPrefix.
+     * @param prefix {@link MeterIdPrefix}.
+     * @return DnsResolverGroupBuilder.
+     */
+    public DnsResolverGroupBuilder meterIdPrefix(MeterIdPrefix prefix) {
+        this.meterIdPrefix = prefix;
+        return this;
+    }
+
     RefreshingAddressResolverGroup build(EventLoopGroup eventLoopGroup) {
         final Consumer<DnsNameResolverBuilder> resolverConfigurator = builder -> {
             builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
@@ -357,6 +370,6 @@ public final class DnsResolverGroupBuilder {
         };
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
                                                   queryTimeoutMillis, refreshBackoff,
-                                                  resolvedAddressTypes, meterRegistry);
+                                                  resolvedAddressTypes, meterRegistry, meterIdPrefix);
     }
 }

@@ -18,10 +18,13 @@ package com.linecorp.armeria.client;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.dns.DnsQueryLifecycleObserver;
 
@@ -32,8 +35,10 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     private final Counter success;
     private final Counter failure;
+    private final Counter protocolType;
+    private final Counter dnsErrorCode;
     private final Counter queryWritten;
-
+    private final Counter queryType;
     private final DnsQuestion dnsQuestion;
 
     /**
@@ -41,11 +46,24 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
      * @param meterRegistry {@link MeterRegistry} MeterRegistry to capture metrics.
      * @param question {@link DnsQuestion} DnsQuestion.
      */
-    DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry, DnsQuestion question) {
+    DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry, DnsQuestion question, MeterIdPrefix prefix) {
         this.dnsQuestion = question;
-        success = meterRegistry.counter("dns.query", "result", "success");
-        failure = meterRegistry.counter("dns.query", "result", "failure");
-        queryWritten = meterRegistry.counter("dns.query", question.name(), "written");
+        success = meterRegistry.counter(prefix.name(), "result", "success", "question", question.name());
+        failure = meterRegistry.counter(prefix.name(), "result", "failure", "question", question.name());
+        dnsErrorCode = meterRegistry.counter(prefix.name(), "dns", "errorcodes", "question", question.name());
+        queryWritten = meterRegistry.counter(prefix.name(), question.name(), "written");
+        queryType = meterRegistry.counter(prefix.name(), question.type().name(), question.name());
+        protocolType = meterRegistry.counter(prefix.name(), "protocol", getProtocolType(question.type()),
+                                            "question", question.name());
+    }
+
+    private static String getProtocolType(DnsRecordType type) {
+        if (DnsRecordType.OPT.equals(type) ||
+                DnsRecordType.IXFR.equals(type) ||
+                DnsRecordType.AXFR.equals(type)) {
+            return "tcp";
+        }
+        return "udp";
     }
 
     @Override
@@ -69,7 +87,8 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        return null;
+        dnsErrorCode.increment();
+        return this;
     }
 
     @Override
