@@ -110,6 +110,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
             close();
         } else {
             final HttpData httpData = (HttpData) obj;
+            httpData.touch(ctx);
             published = super.tryWrite(httpData);
             if (published) {
                 inboundTrafficController.inc(httpData.length());

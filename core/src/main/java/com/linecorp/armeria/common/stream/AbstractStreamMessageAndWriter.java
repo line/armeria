@@ -57,20 +57,9 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
     public boolean tryWrite(T obj) {
         requireNonNull(obj, "obj");
 
-        if (!(obj instanceof HttpData) || !((HttpData) obj).isPooled()) {
-            // obj is not a pooled HttpData.
-            if (!isOpen()) {
-                return false;
-            }
-        } else {
-            // obj is a pooled HttpData.
-            final HttpData data = (HttpData) obj;
-            if (!isOpen()) {
-                data.close();
-                return false;
-            }
-
-            PooledObjects.touch(data);
+        if (!isOpen()) {
+            PooledObjects.close(obj);
+            return false;
         }
 
         addObject(obj);
