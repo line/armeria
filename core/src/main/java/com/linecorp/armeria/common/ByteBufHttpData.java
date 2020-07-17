@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
@@ -22,12 +23,13 @@ import java.nio.charset.Charset;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.IllegalReferenceCountException;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
@@ -43,6 +45,8 @@ final class ByteBufHttpData implements HttpData {
     @Nullable
     private byte[] array;
     private int flags;
+    @Nullable
+    private String strVal;
 
     ByteBufHttpData(ByteBuf buf, boolean pooled) {
         this(buf, pooled ? FLAG_POOLED : 0, null);
@@ -92,23 +96,56 @@ final class ByteBufHttpData implements HttpData {
 
     @Override
     public String toString() {
-        final MoreObjects.ToStringHelper helper =
-                MoreObjects.toStringHelper(this)
-                           .omitNullValues()
-                           .addValue(buf.readableBytes() + "B");
+        if (strVal != null) {
+            return strVal;
+        }
+
+        final int length = buf.readableBytes();
+
+        final StringBuilder strBuf = TemporaryThreadLocals.get().stringBuilder();
+        strBuf.append('{').append(length).append("B, ");
 
         if (isEndOfStream()) {
-            helper.addValue("endOfStream");
+            strBuf.append("EOS, ");
         }
         if (isPooled()) {
-            helper.addValue("pooled");
+            strBuf.append("pooled, ");
         }
         if ((flags & FLAG_CLOSED) != 0) {
-            helper.addValue("closed");
+            if (buf.refCnt() == 0) {
+                return strVal = strBuf.append("closed}").toString();
+            } else {
+                strBuf.append("closed, ");
+            }
         }
 
-        return helper.add("byteBuf", buf)
-                     .toString();
+        // Generate the preview array.
+        final int previewLength = Math.min(16, length);
+        byte[] array = this.array;
+        if (array == null) {
+            try {
+                if (buf.hasArray() && buf.arrayOffset() == 0 && buf.readerIndex() == 0) {
+                    final byte[] bufArray = buf.array();
+                    if (bufArray.length >= previewLength) {
+                        array = bufArray;
+                    }
+                }
+
+                if (array == null) {
+                    array = ByteBufUtil.getBytes(buf, buf.readerIndex(), previewLength);
+                    if (previewLength == length) {
+                        this.array = array;
+                    }
+                }
+            } catch (IllegalReferenceCountException e) {
+                // Shouldn't really happen when used ByteBuf correctly,
+                // but we just don't make toString() fail because of this.
+                return strBuf.append("badRefCnt}").toString();
+            }
+        }
+
+        return strVal = ByteArrayHttpData.appendPreviews(strBuf, array, previewLength)
+                                         .append('}').toString();
     }
 
     @Override
@@ -196,7 +233,7 @@ final class ByteBufHttpData implements HttpData {
     @Override
     public void touch(@Nullable Object hint) {
         if (isPooled()) {
-            buf.touch(hint);
+            buf.touch(firstNonNull(hint, this));
         }
     }
 
@@ -206,6 +243,7 @@ final class ByteBufHttpData implements HttpData {
         // with an IllegalReferenceCountException anyway.
         if ((flags & (FLAG_POOLED | FLAG_CLOSED)) == FLAG_POOLED) {
             flags |= FLAG_CLOSED;
+            strVal = null;
             buf.release();
         }
     }

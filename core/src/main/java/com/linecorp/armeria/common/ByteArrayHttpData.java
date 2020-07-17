@@ -21,9 +21,12 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-import com.google.common.base.MoreObjects;
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
@@ -37,8 +40,20 @@ final class ByteArrayHttpData implements HttpData {
     static final ByteArrayHttpData EMPTY = new ByteArrayHttpData(EmptyArrays.EMPTY_BYTES, false);
     static final ByteArrayHttpData EMPTY_EOS = new ByteArrayHttpData(EmptyArrays.EMPTY_BYTES, true);
 
+    private static final byte[] SAFE_OCTETS = new byte[256];
+
+    static {
+        final String safeOctetStr = "`~!@#$%^&*()-_=+\t[{]}\\|;:'\",<.>/?" +
+                                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        for (int i = 0; i < safeOctetStr.length(); i++) {
+            SAFE_OCTETS[safeOctetStr.charAt(i)] = -1;
+        }
+    }
+
     private final byte[] array;
     private final boolean endOfStream;
+    @Nullable
+    private String strVal;
 
     ByteArrayHttpData(byte[] array) {
         this(array, false);
@@ -67,16 +82,36 @@ final class ByteArrayHttpData implements HttpData {
 
     @Override
     public String toString() {
-        final MoreObjects.ToStringHelper helper =
-                MoreObjects.toStringHelper(this)
-                           .omitNullValues()
-                           .addValue(length() + "B");
+        if (strVal != null) {
+            return strVal;
+        }
+
+        if (array.length == 0) {
+            return strVal = isEndOfStream() ? "{0B, EOS}" : "{0B}";
+        }
+
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append('{').append(array.length);
 
         if (isEndOfStream()) {
-            helper.addValue("endOfStream");
+            buf.append("B, EOS, ");
+        } else {
+            buf.append("B, ");
         }
-        return helper.add("array", array)
-                     .toString();
+
+        return strVal = appendPreviews(buf, array, Math.min(16, array.length)).append('}').toString();
+    }
+
+    static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int previewLength) {
+        // Append the hex preview if contains non-ASCII chars.
+        for (byte b : array) {
+            if (SAFE_OCTETS[b & 0xFF] == 0) {
+                return buf.append("hex=").append(ByteBufUtil.hexDump(array, 0, previewLength));
+            }
+        }
+
+        // Append the text preview otherwise.
+        return buf.append("text=").append(new String(array, 0, 0, previewLength));
     }
 
     @Override

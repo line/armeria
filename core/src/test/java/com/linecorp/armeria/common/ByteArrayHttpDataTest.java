@@ -149,4 +149,25 @@ class ByteArrayHttpDataTest {
 
         bufData.close();
     }
+
+    @Test
+    void testToString() {
+        assertThat(ByteArrayHttpData.EMPTY).hasToString("{0B}");
+        assertThat(new ByteArrayHttpData(new byte[] { 'f', 'o', 'o' })).hasToString("{3B, text=foo}");
+        assertThat(new ByteArrayHttpData(new byte[] { 1, 2, 3 })).hasToString("{3B, hex=010203}");
+
+        // endOfStream
+        assertThat(ByteArrayHttpData.EMPTY_EOS).hasToString("{0B, EOS}");
+        assertThat(new ByteArrayHttpData(new byte[] { 'f', 'o', 'o' })
+                           .withEndOfStream()).hasToString("{3B, EOS, text=foo}");
+        assertThat(new ByteArrayHttpData(new byte[] { 1, 2, 3 })
+                           .withEndOfStream()).hasToString("{3B, EOS, hex=010203}");
+    }
+
+    @Test
+    void testToStringCache() {
+        final ByteArrayHttpData data = new ByteArrayHttpData(new byte[] { 'b', 'a', 'r' });
+        final String str = data.toString();
+        assertThat(data.toString()).isSameAs(str);
+    }
 }

@@ -90,6 +90,8 @@ public final class PooledObjects {
 
     /**
      * Closes the given pooled {@link HttpData}. Does nothing if it's not a pooled {@link HttpData}.
+     *
+     * @param obj maybe an {@link HttpData} to close
      */
     public static void close(Object obj) {
         if (obj instanceof HttpData) {
@@ -98,16 +100,21 @@ public final class PooledObjects {
     }
 
     /**
-     * Calls {@link ByteBuf#touch()} of the specified {@link HttpData}'s underlying {@link ByteBuf}.
-     * Does nothing if it's not a pooled {@link HttpData}.
+     * Calls {@link ByteBuf#touch(Object)} on the specified {@link HttpData}'s underlying {@link ByteBuf}.
+     * Uses the specified {@link HttpData} as a hint. Does nothing if it's not a pooled {@link HttpData}.
+     *
+     * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
      */
     public static void touch(Object obj) {
         touch(obj, obj);
     }
 
     /**
-     * Calls {@link ByteBuf#touch()} of the specified {@link HttpData}'s underlying {@link ByteBuf}.
+     * Calls {@link ByteBuf#touch(Object)} on the specified {@link HttpData}'s underlying {@link ByteBuf}.
      * Does nothing if it's not a pooled {@link HttpData}.
+     *
+     * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
+     * @param hint the hint to specify when calling {@link ByteBuf#touch(Object)}
      */
     public static void touch(Object obj, @Nullable Object hint) {
         if (obj instanceof HttpData) {
@@ -120,6 +127,8 @@ public final class PooledObjects {
      * Returns the given object as is if it's not a pooled {@link HttpData}. This method is useful when
      * you need to pass your pooled {@link HttpData} instances to the third party who is not capable of
      * handling pooled {@link HttpData}.
+     *
+     * @param obj maybe an {@link HttpData} to copy
      */
     public static <T> T copyAndClose(T obj) {
         if (obj instanceof HttpData) {

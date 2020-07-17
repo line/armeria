@@ -249,7 +249,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         try {
-            res.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
+            final HttpData wrapped = HttpData.wrap(data.retain()).withEndOfStream(endOfStream);
+            wrapped.touch(null);
+            res.write(wrapped);
         } catch (Throwable t) {
             res.close(t);
             throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");

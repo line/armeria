@@ -17,6 +17,8 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.Test;
 
 import io.netty.buffer.ByteBuf;
@@ -196,5 +198,52 @@ class ByteBufHttpDataTest {
         b.close();
         c.close();
         d.close();
+    }
+
+    @Test
+    void testToString() {
+        assertThat(new ByteBufHttpData(Unpooled.copiedBuffer("foo", StandardCharsets.US_ASCII), false))
+                .hasToString("{3B, text=foo}");
+        assertThat(new ByteBufHttpData(Unpooled.copiedBuffer("\u0001\u0002", StandardCharsets.US_ASCII), false))
+                .hasToString("{2B, hex=0102}");
+
+        // endOfStream
+        assertThat(new ByteBufHttpData(Unpooled.copiedBuffer("foo", StandardCharsets.US_ASCII), false)
+                           .withEndOfStream()).hasToString("{3B, EOS, text=foo}");
+        assertThat(new ByteBufHttpData(Unpooled.copiedBuffer("\u0001\u0002", StandardCharsets.US_ASCII), false)
+                           .withEndOfStream()).hasToString("{2B, EOS, hex=0102}");
+
+        // pooled
+        assertThat(new ByteBufHttpData(Unpooled.copiedBuffer("foo", StandardCharsets.US_ASCII), true))
+                .hasToString("{3B, pooled, text=foo}");
+        assertThat(new ByteBufHttpData(Unpooled.copiedBuffer("\u0001\u0002", StandardCharsets.US_ASCII), true))
+                .hasToString("{2B, pooled, hex=0102}");
+
+        // closed and freed
+        final ByteBufHttpData data1 =
+                new ByteBufHttpData(Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII), true);
+        data1.close();
+        assertThat(data1).hasToString("{3B, pooled, closed}");
+
+        // closed but not freed
+        final ByteBufHttpData data2 =
+                new ByteBufHttpData(Unpooled.unreleasableBuffer(
+                        Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII)), true);
+        data2.close();
+        assertThat(data2).hasToString("{3B, pooled, closed, text=bar}");
+    }
+
+    @Test
+    void testToStringCache() {
+        final ByteBufHttpData data =
+                new ByteBufHttpData(Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII), true);
+
+        final String str = data.toString();
+        assertThat(data.toString()).isSameAs(str);
+
+        // The cached string should be invalidated when closed.
+        data.close();
+        assertThat(data.toString()).isNotSameAs(str)
+                                   .isSameAs(data.toString());
     }
 }
