@@ -60,7 +60,6 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 
 /**
  * An {@link HttpService} that serves static files from a file system.
@@ -153,9 +152,9 @@ public final class FileService extends AbstractHttpService {
         b.recordStats()
          .removalListener((RemovalListener<PathAndEncoding, AggregatedHttpFile>) (key, value, cause) -> {
              if (value != null) {
-                 final HttpData content = value.content();
-                 if (content instanceof ByteBufHolder) {
-                     ((ByteBufHolder) content).release();
+                 final HttpData data = value.content();
+                 if (data != null) {
+                     data.close();
                  }
              }
          });

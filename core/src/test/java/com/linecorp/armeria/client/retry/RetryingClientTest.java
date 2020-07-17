@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -85,12 +86,21 @@ import io.netty.channel.EventLoop;
 
 class RetryingClientTest {
 
-    // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
-    private static final ClientFactory clientFactory =
-            ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
-
     private static final RetryRule retryAlways =
             (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
+
+    private static ClientFactory clientFactory;
+
+    @BeforeAll
+    static void beforeAll() {
+        // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
+        clientFactory = ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        clientFactory.close();
+    }
 
     private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
 
@@ -99,16 +109,6 @@ class RetryingClientTest {
     private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
     private AtomicInteger reqCount;
-
-    @BeforeEach
-    void setUp() {
-        reqCount = new AtomicInteger();
-    }
-
-    @AfterAll
-    static void destroy() {
-        clientFactory.close();
-    }
 
     @RegisterExtension
     final ServerExtension server = new ServerExtension() {
@@ -290,6 +290,11 @@ class RetryingClientTest {
         }
     };
 
+    @BeforeEach
+    void setUp() {
+        reqCount = new AtomicInteger();
+    }
+
     @Test
     void retryWhenContentMatched() {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
@@ -308,6 +313,16 @@ class RetryingClientTest {
     @Test
     void retryWhenStatusMatched() {
         final WebClient client = client(RetryRule.builder().onServerErrorStatus().onException().thenBackoff());
+        final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
+    void retryWhenStatusMatchedWithContent() {
+        final WebClient client = client(RetryRuleWithContent.<HttpResponse>builder()
+                                                .onServerErrorStatus()
+                                                .onException()
+                                                .thenBackoff(), 10000, 0, 100);
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
@@ -437,20 +452,23 @@ class RetryingClientTest {
                               .maxTotalAttempts(5)
                               .newDecorator();
 
-        final WebClient client = WebClient.builder("http://127.0.0.1:1")
-                                          .factory(ClientFactory.builder()
-                                                                .options(clientFactory.options())
-                                                                .connectTimeoutMillis(Long.MAX_VALUE)
-                                                                .build())
-                                          .responseTimeoutMillis(0)
-                                          .decorator(LoggingClient.newDecorator())
-                                          .decorator(retryingDecorator)
-                                          .build();
-        final Stopwatch stopwatch = Stopwatch.createStarted();
-        assertThatThrownBy(() -> client.get("/unprocessed-exception").aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(UnprocessedRequestException.class);
-        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(7), Duration.ofSeconds(20));
+        try (ClientFactory clientFactory = ClientFactory.builder()
+                                                        .options(RetryingClientTest.clientFactory.options())
+                                                        .workerGroup(EventLoopGroups.newEventLoopGroup(2), true)
+                                                        .connectTimeoutMillis(Long.MAX_VALUE)
+                                                        .build()) {
+            final WebClient client = WebClient.builder("http://127.0.0.1:1")
+                                              .factory(clientFactory)
+                                              .responseTimeoutMillis(0)
+                                              .decorator(LoggingClient.newDecorator())
+                                              .decorator(retryingDecorator)
+                                              .build();
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            assertThatThrownBy(() -> client.get("/unprocessed-exception").aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(UnprocessedRequestException.class);
+            assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(7), Duration.ofSeconds(20));
+        }
     }
 
     @ArgumentsSource(RetryStrategiesProvider.class)
@@ -609,7 +627,7 @@ class RetryingClientTest {
             } else {
                 req.abort(abortCause);
             }
-            client.execute(req);
+            client.execute(req).aggregate();
 
             TimeUnit.SECONDS.sleep(1);
             // No request is made.
@@ -645,13 +663,26 @@ class RetryingClientTest {
     }
 
     @Test
-    void exceptionInStrategy() {
+    void exceptionInRule() {
         final IllegalStateException exception = new IllegalStateException("foo");
-        final RetryRule strategy = (ctx, cause) -> {
+        final RetryRule rule = (ctx, cause) -> {
             throw exception;
         };
 
-        final WebClient client = client(strategy);
+        final WebClient client = client(rule);
+        assertThatThrownBy(client.get("/").aggregate()::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseReference(exception);
+    }
+
+    @Test
+    void exceptionInRuleWithContent() {
+        final IllegalStateException exception = new IllegalStateException("bar");
+        final RetryRuleWithContent<HttpResponse> rule = (ctx, res, cause) -> {
+            throw exception;
+        };
+
+        final WebClient client = client(rule, 10000, 0, 100);
         assertThatThrownBy(client.get("/").aggregate()::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseReference(exception);

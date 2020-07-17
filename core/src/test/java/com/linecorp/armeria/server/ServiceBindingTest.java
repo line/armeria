@@ -179,7 +179,7 @@ class ServiceBindingTest {
 
         assertThat(accessLogWriterCheckLatch.getCount()).isOne();
 
-        client.get("/greet/armeria");
+        client.get("/greet/armeria").aggregate();
         accessLogWriterCheckLatch.await();
     }
 

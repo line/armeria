@@ -77,7 +77,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
@@ -90,9 +89,7 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.util.AsciiString;
-import io.netty.util.ReferenceCountUtil;
 
 class HttpClientIntegrationTest {
 
@@ -154,11 +151,9 @@ class HttpClientIntegrationTest {
 
                 @Override
                 public void onNext(HttpObject httpObject) {
-                    if (httpObject instanceof ByteBufHolder) {
-                        try {
-                            decorated.write(HttpData.copyOf(((ByteBufHolder) httpObject).content()));
-                        } finally {
-                            ReferenceCountUtil.safeRelease(httpObject);
+                    if (httpObject instanceof HttpData) {
+                        try (HttpData data = (HttpData) httpObject) {
+                            decorated.write(HttpData.copyOf(data.byteBuf()));
                         }
                     } else {
                         decorated.write(httpObject);
@@ -187,7 +182,7 @@ class HttpClientIntegrationTest {
             final ByteBuf buf = ctx.alloc().buffer();
             buf.writeCharSequence("pooled content", StandardCharsets.UTF_8);
             releasedByteBuf.set(buf);
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, PooledHttpData.wrap(buf));
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.wrap(buf));
         }
     }
 
@@ -516,10 +511,10 @@ class HttpClientIntegrationTest {
 
             // Send a request. Note that we do not wait for a response anywhere because we are only interested
             // in testing what client sends.
-            WebClient.builder("none+h1c://127.0.0.1:" + port)
-                     .factory(clientFactory)
-                     .build()
-                     .get(path);
+            final HttpResponse res = WebClient.builder("none+h1c://127.0.0.1:" + port)
+                                              .factory(clientFactory)
+                                              .build()
+                                              .get(path);
             ss.setSoTimeout(10000);
             s = ss.accept();
 
@@ -536,6 +531,8 @@ class HttpClientIntegrationTest {
             // Should not send anything more.
             s.setSoTimeout(1000);
             assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
+
+            res.abort();
         } finally {
             Closeables.close(s, true);
         }

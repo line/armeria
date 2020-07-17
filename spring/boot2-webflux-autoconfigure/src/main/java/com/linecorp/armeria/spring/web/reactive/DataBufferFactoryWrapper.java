@@ -28,9 +28,7 @@ import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.core.io.buffer.PooledDataBuffer;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
@@ -44,7 +42,7 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
             new DataBufferFactoryWrapper<>(new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT));
 
     private final T delegate;
-    private final Function<PooledHttpData, DataBuffer> converter;
+    private final Function<HttpData, DataBuffer> converter;
 
     DataBufferFactoryWrapper(T delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
@@ -64,12 +62,12 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
      */
     HttpData toHttpData(DataBuffer dataBuffer) {
         if (dataBuffer instanceof NettyDataBuffer) {
-            return PooledHttpData.wrap((((NettyDataBuffer) dataBuffer).getNativeBuffer()));
+            return HttpData.wrap(((NettyDataBuffer) dataBuffer).getNativeBuffer());
         }
         final ByteBuffer buf =
                 dataBuffer instanceof DefaultDataBuffer ? ((DefaultDataBuffer) dataBuffer).getNativeBuffer()
                                                         : dataBuffer.asByteBuffer();
-        return PooledHttpData.wrap(Unpooled.wrappedBuffer(buf));
+        return HttpData.wrap(Unpooled.wrappedBuffer(buf));
     }
 
     /**
@@ -77,10 +75,10 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
      */
     DataBuffer toDataBuffer(HttpData httpData) {
         requireNonNull(httpData, "httpData");
-        if (!(httpData instanceof PooledHttpData)) {
+        if (!httpData.isPooled()) {
             return delegate.wrap(ByteBuffer.wrap(httpData.array()));
         }
-        return converter.apply((PooledHttpData) httpData);
+        return converter.apply(httpData);
     }
 
     /**
@@ -88,16 +86,16 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
      * Currently, the {@link NettyDataBuffer} is only one implementation of the {@link PooledDataBuffer}
      * which is exposed to the public API.
      */
-    private PooledDataBuffer withNettyDataBufferFactory(PooledHttpData data) {
-        return ((NettyDataBufferFactory) delegate).wrap(data.content());
+    private PooledDataBuffer withNettyDataBufferFactory(HttpData data) {
+        return ((NettyDataBufferFactory) delegate).wrap(data.byteBuf());
     }
 
     /**
      * Returns a memory-based {@link DataBuffer} which will be garbage-collected.
      */
-    private DataBuffer withDataBufferFactory(PooledHttpData data) {
-        final byte[] dataArray = ByteBufUtil.getBytes(data.content());
-        data.release();
+    private DataBuffer withDataBufferFactory(HttpData data) {
+        final byte[] dataArray = data.array();
+        data.close();
         return delegate.wrap(dataArray);
     }
 }

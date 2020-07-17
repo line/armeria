@@ -38,10 +38,10 @@ import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.DefaultTimeoutController;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
@@ -211,7 +211,7 @@ abstract class HttpResponseDecoder {
                     wrote = handleWaitDataOrTrailers(o);
                     break;
                 case DONE:
-                    ReferenceCountUtil.safeRelease(o);
+                    PooledObjects.close(o);
                     break;
             }
 
@@ -262,10 +262,13 @@ abstract class HttpResponseDecoder {
                     }
                 }
             } else {
+                final HttpData data = (HttpData) o;
+                data.touch(ctx);
                 if (ctx != null) {
-                    ctx.logBuilder().increaseResponseLength((HttpData) o);
+                    ctx.logBuilder().increaseResponseLength(data);
                 }
             }
+
             return delegate.tryWrite(o);
         }
 

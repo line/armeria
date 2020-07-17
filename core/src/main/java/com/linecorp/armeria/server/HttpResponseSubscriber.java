@@ -45,12 +45,12 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.DefaultTimeoutController;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.util.ReferenceCountUtil;
 
 final class HttpResponseSubscriber extends DefaultTimeoutController implements Subscriber<HttpObject> {
 
@@ -130,12 +130,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             failAndRespond(new IllegalArgumentException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
                     " (service: " + service() + ')'));
-            ReferenceCountUtil.safeRelease(o);
             return;
         }
 
         if (failIfStreamOrSessionClosed()) {
-            ReferenceCountUtil.safeRelease(o);
+            PooledObjects.close(o);
             return;
         }
 
@@ -190,7 +189,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 }
                 if (o instanceof HttpData) {
                     // We silently ignore the data and call subscription.request(1).
-                    ReferenceCountUtil.safeRelease(o);
+                    ((HttpData) o).close();
                     assert subscription != null;
                     subscription.request(1);
                     return;
@@ -234,7 +233,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 break;
             }
             case DONE:
-                ReferenceCountUtil.safeRelease(o);
+                PooledObjects.close(o);
                 return;
         }
 

@@ -35,6 +35,7 @@ allprojects {
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
             systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
+            systemProperties 'io.netty.leakDetection.targetRecords': '256'
         }
     }
 

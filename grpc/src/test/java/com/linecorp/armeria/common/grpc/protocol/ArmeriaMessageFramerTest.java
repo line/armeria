@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
@@ -55,7 +55,7 @@ class ArmeriaMessageFramerTest {
     @Test
     void writeUncompressed() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        try (PooledHttpData framed = framer.writePayload(buf)) {
+        try (HttpData framed = framer.writePayload(buf)) {
             assertThat(framed.array()).isEqualTo(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
             assertThat(buf.refCnt()).isEqualTo(0);
         }
@@ -66,7 +66,7 @@ class ArmeriaMessageFramerTest {
         framer.setCompressor(ForwardingCompressor.forGrpc(new Gzip()));
         framer.setMessageCompression(true);
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        try (PooledHttpData framed = framer.writePayload(buf)) {
+        try (HttpData framed = framer.writePayload(buf)) {
             assertThat(framed.array()).isEqualTo(GrpcTestUtil.compressedFrame(GrpcTestUtil.requestByteBuf()));
             assertThat(buf.refCnt()).isEqualTo(0);
         }
@@ -78,7 +78,7 @@ class ArmeriaMessageFramerTest {
         framer.setMessageCompression(true);
         final ByteBuf buf = GrpcTestUtil.protoByteBuf(SimpleRequest.getDefaultInstance());
         assertThat(buf.readableBytes()).isEqualTo(0);
-        try (PooledHttpData framed = framer.writePayload(buf)) {
+        try (HttpData framed = framer.writePayload(buf)) {
             assertThat(framed.array()).isEqualTo(GrpcTestUtil.uncompressedFrame(
                     GrpcTestUtil.protoByteBuf(SimpleRequest.getDefaultInstance())));
             assertThat(buf.refCnt()).isEqualTo(0);
@@ -107,7 +107,7 @@ class ArmeriaMessageFramerTest {
                                                 .setBody(ByteString.copyFromUtf8(
                                                         Strings.repeat("a", 1024))))
                              .build();
-        try (PooledHttpData framed = framer.writePayload(GrpcTestUtil.protoByteBuf(request))) {
+        try (HttpData framed = framer.writePayload(GrpcTestUtil.protoByteBuf(request))) {
             assertThat(framed.array()).isEqualTo(
                     GrpcTestUtil.compressedFrame(GrpcTestUtil.protoByteBuf(request)));
         }

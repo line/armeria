@@ -62,7 +62,6 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -78,7 +77,6 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 
 /**
  * An {@link HttpService} that handles a Thrift call.
@@ -419,23 +417,15 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private void decodeAndInvoke(
             ServiceRequestContext ctx, AggregatedHttpRequest req,
             SerializationFormat serializationFormat, CompletableFuture<HttpResponse> httpRes) {
-        final HttpData content = req.content();
-        final ByteBuf buf;
-        if (content instanceof ByteBufHolder) {
-            buf = ((ByteBufHolder) content).content();
-        } else {
-            buf = ctx.alloc().buffer(content.length());
-            buf.writeBytes(content.array());
-        }
-
-        final TByteBufTransport inTransport = new TByteBufTransport(buf);
-        final TProtocol inProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(inTransport);
 
         final int seqId;
         final ThriftFunction f;
         final RpcRequest decodedReq;
 
-        try {
+        try (HttpData content = req.content()) {
+            final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
+            final TProtocol inProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(inTransport);
+
             final TMessage header;
             final TBase<?, ?> args;
 
@@ -513,7 +503,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 return;
             }
         } finally {
-            buf.release();
             ctx.logBuilder().requestContent(null, null);
         }
 
@@ -671,7 +660,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
 
-            final HttpData encoded = PooledHttpData.wrap(buf);
+            final HttpData encoded = HttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {
@@ -718,7 +707,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
 
-            final HttpData encoded = PooledHttpData.wrap(buf);
+            final HttpData encoded = HttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {

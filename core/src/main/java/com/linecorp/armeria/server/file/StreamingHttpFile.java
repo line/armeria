@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -129,7 +128,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
         final long nextOffset = offset + readBytes;
         final boolean endOfStream = nextOffset == end;
         if (readBytes > 0) {
-            if (!res.tryWrite(PooledHttpData.wrap(buf).withEndOfStream(endOfStream))) {
+            if (!res.tryWrite(HttpData.wrap(buf).withEndOfStream(endOfStream))) {
                 close(in);
                 return;
             }
@@ -219,11 +218,10 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                             }
                         }
 
+                        final HttpData data = (array != null ? HttpData.wrap(array)
+                                                             : HttpData.wrap(buf)).withEndOfStream();
                         final AggregatedHttpFileBuilder builder =
-                                AggregatedHttpFile.builder(array != null ? HttpData.wrap(array)
-                                                                         : PooledHttpData.wrap(buf)
-                                                                                         .withEndOfStream(),
-                                                           attrs.lastModifiedMillis())
+                                AggregatedHttpFile.builder(data, attrs.lastModifiedMillis())
                                                   .date(isDateEnabled())
                                                   .lastModified(isLastModifiedEnabled());
 

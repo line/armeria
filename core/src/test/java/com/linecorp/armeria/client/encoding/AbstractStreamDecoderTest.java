@@ -25,11 +25,9 @@ import java.util.zip.DeflaterOutputStream;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 
 abstract class AbstractStreamDecoderTest {
 
@@ -52,28 +50,28 @@ abstract class AbstractStreamDecoderTest {
         final StreamDecoder decoder = newDecoder();
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
         buf.writeBytes(PAYLOAD);
-        final HttpData data = decoder.decode(PooledHttpData.wrap(buf));
+        final HttpData data = decoder.decode(HttpData.wrap(buf));
         assertThat(buf.refCnt()).isZero();
-        assertThat(data).isInstanceOfSatisfying(ByteBufHolder.class, d -> assertThat(d.refCnt()).isEqualTo(1));
-        ((ByteBufHolder) data).release();
+        assertThat(data.byteBuf().refCnt()).isOne();
+        data.close();
     }
 
     @Test
     public void empty_unpooled() {
         final StreamDecoder decoder = newDecoder();
         final HttpData data = decoder.decode(HttpData.empty());
-        assertThat(data).isNotInstanceOf(ByteBufHolder.class);
+        assertThat(data.isPooled()).isFalse();
     }
 
     @Test
     public void empty_pooled() {
         final StreamDecoder decoder = newDecoder();
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
-        final HttpData data = decoder.decode(PooledHttpData.wrap(buf));
+        final HttpData data = decoder.decode(HttpData.wrap(buf));
         assertThat(buf.refCnt()).isZero();
 
         // Even for a pooled empty input, the result is unpooled since there's no point in pooling empty
         // buffers.
-        assertThat(data).isNotInstanceOf(ByteBufHolder.class);
+        assertThat(data.isPooled()).isFalse();
     }
 }

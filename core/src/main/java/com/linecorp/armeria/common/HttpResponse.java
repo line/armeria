@@ -38,13 +38,14 @@ import com.google.errorprone.annotations.FormatString;
 import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -353,7 +354,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
         final boolean contentIsEmpty = content.isEmpty();
         if (contentIsEmpty) {
-            ReferenceCountUtil.safeRelease(content);
+            content.close();
             if (trailers.isEmpty()) {
                 return new OneElementFixedHttpResponse(newHeaders);
             } else {
@@ -421,11 +422,14 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully. {@link AggregatedHttpResponse#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate()}.
+     * (Advanced users only) Aggregates this response. The returned {@link CompletableFuture} will be notified
+     * when the content and the trailers of the response are received fully.
+     * {@link AggregatedHttpResponse#content()} will return a pooled object, and the caller must ensure
+     * to release it. If you don't know what this means, use {@link #aggregate()}.
+     *
+     * @see PooledObjects
      */
+    @UnstableApi
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
     }

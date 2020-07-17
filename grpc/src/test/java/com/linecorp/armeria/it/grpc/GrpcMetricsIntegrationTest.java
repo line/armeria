@@ -234,7 +234,8 @@ public class GrpcMetricsIntegrationTest {
                                                 .setBody(ByteString.copyFromUtf8(name)))
                              .build();
         try {
-            client.post("/armeria.grpc.testing.TestService/UnaryCall2", request.toByteArray());
+            client.post("/armeria.grpc.testing.TestService/UnaryCall2", request.toByteArray())
+                  .aggregate();
         } catch (Throwable t) {
             // Ignore, we will count these up
         }

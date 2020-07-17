@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 import com.google.common.math.IntMath;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -49,7 +49,12 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
 
     LengthLimitingContentPreviewer(int maxLength, @Nullable Charset charset) {
         this.maxLength = maxLength;
-        inflatedMaxLength = inflateMaxLength(maxLength, charset);
+        if (maxLength > 0) {
+            inflatedMaxLength = inflateMaxLength(maxLength, charset);
+        } else {
+            inflatedMaxLength = 0;
+            produced = "";
+        }
     }
 
     private static int inflateMaxLength(int maxLength, @Nullable Charset charset) {
@@ -63,41 +68,25 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
     @Override
     public void onData(HttpData data) {
         requireNonNull(data, "data");
-        if (maxLength == 0 || data.isEmpty()) {
+        if (produced != null) {
             return;
         }
 
-        final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
+        if (!data.isEmpty()) {
+            final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
+            if (length > 0) {
+                bufferList.add(data.byteBuf(0, length, ByteBufAccessMode.RETAINED_DUPLICATE));
+                aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
 
-        if (length > 0) {
-            // Duplicate data only when `length` is greater than 0.
-            //
-            // If `length` is equal to 0:
-            // - `content.retainedSlice(content.readerIndex(), length)` will return an empty `ByteBuf`.
-            // - The empty `ByteBuf` is not readable. The unreadable `ByteBuf` be released unexpectedly
-            //   when wrapped by `Unpooled.wrappedBuffer(emptyBuf)`.
-            //   https://github.com/netty/netty/blob/5a08dc0d9aeafe3b4e242e3b7722bfbd38acbbb2/buffer/src/main/java/io/netty/buffer/Unpooled.java#L317
-            //
-            // This will cause an `IllegalReferenceCountException` when the released `ByteBuf` is consumed by
-            // HttpResponseDecoder.
-
-            bufferList.add(duplicateData(data, length));
-            aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
-        }
-        if (aggregatedLength >= inflatedMaxLength || data.isEndOfStream()) {
-            produce();
-        }
-    }
-
-    private static ByteBuf duplicateData(HttpData httpData, int length) {
-        if (httpData instanceof ByteBufHolder) {
-            final ByteBuf content = ((ByteBufHolder) httpData).content();
-            if (content.readableBytes() == length) {
-                return content.retainedDuplicate();
+                if (aggregatedLength >= inflatedMaxLength) {
+                    produce();
+                    return;
+                }
             }
-            return content.retainedSlice(content.readerIndex(), length);
-        } else {
-            return Unpooled.wrappedBuffer(httpData.array(), 0, length);
+        }
+
+        if (data.isEndOfStream()) {
+            produce();
         }
     }
 

@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.fail;
 
 import java.util.function.Consumer;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -57,11 +59,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     static final String POST_BODY = "Hello, world!";
 
     private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-    private final ClientFactory clientFactory =
-            ClientFactory.builder()
-                         .tlsNoVerify()
-                         .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                         .build();
+    private static ClientFactory clientFactory;
 
     private static ArmeriaReactiveWebServerFactory factory(ConfigurableListableBeanFactory beanFactory) {
         return new ArmeriaReactiveWebServerFactory(beanFactory);
@@ -71,13 +69,27 @@ class ArmeriaReactiveWebServerFactoryTest {
         return factory(beanFactory);
     }
 
-    private WebClient httpsClient(WebServer server) {
+    @BeforeAll
+    static void beforeAll() {
+        clientFactory =
+                ClientFactory.builder()
+                             .tlsNoVerify()
+                             .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                             .build();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        clientFactory.closeAsync();
+    }
+
+    private static WebClient httpsClient(WebServer server) {
         return WebClient.builder("https://example.com:" + server.getPort())
                         .factory(clientFactory)
                         .build();
     }
 
-    private WebClient httpClient(WebServer server) {
+    private static WebClient httpClient(WebServer server) {
         return WebClient.builder("http://example.com:" + server.getPort())
                         .factory(clientFactory)
                         .build();

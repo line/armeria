@@ -144,37 +144,41 @@ class HttpServerKeepAliveHandlerTest {
     @CsvSource({ "H1C, false", "H2C, false", "H2C, true" })
     void closeByClientIdleTimeout(SessionProtocol protocol, boolean useHttp2Preface) {
         final long clientIdleTimeout = 2000;
-        final WebClient client = newWebClient(clientIdleTimeout, useHttp2Preface, server.uri(protocol));
-        final MeterRegistry meterRegistry = client.options().factory().meterRegistry();
+        try (ClientFactory factory = newClientFactory(clientIdleTimeout, useHttp2Preface)) {
+            final WebClient client = newWebClient(factory, server.uri(protocol));
+            final MeterRegistry meterRegistry = client.options().factory().meterRegistry();
 
-        final Stopwatch stopwatch = Stopwatch.createStarted();
-        client.get("/").aggregate().join();
-        assertThat(counter).hasValue(1);
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            client.get("/").aggregate().join();
+            assertThat(counter).hasValue(1);
 
-        // The HTTP/2 PING frames sent by the server should not prevent to close an idle connection.
-        await().untilAtomic(counter, Matchers.is(0));
-        final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
-        assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
-        assertThat(MoreMeters.measureAll(meterRegistry))
-                .hasEntrySatisfying(
-                        "armeria.client.connections.lifespan#total{protocol=" + protocol.uriText() + '}',
-                        value -> assertThat(value * 1000).isCloseTo(elapsed, withinPercentage(25)));
+            // The HTTP/2 PING frames sent by the server should not prevent to close an idle connection.
+            await().untilAtomic(counter, Matchers.is(0));
+            final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+            assertThat(elapsed).isBetween(clientIdleTimeout, serverIdleTimeout - 1000);
+            assertThat(MoreMeters.measureAll(meterRegistry))
+                    .hasEntrySatisfying(
+                            "armeria.client.connections.lifespan#total{protocol=" + protocol.uriText() + '}',
+                            value -> assertThat(value * 1000).isCloseTo(elapsed, withinPercentage(25)));
+        }
     }
 
     @Test
     void http1CloseByServerIdleTimeout() {
         // longer than the idle timeout of the server.
         final long clientIdleTimeout = serverIdleTimeout + 5000;
-        final WebClient client = newWebClient(clientIdleTimeout, false, server.uri(SessionProtocol.H1C));
+        try (ClientFactory factory = newClientFactory(clientIdleTimeout, false)) {
+            final WebClient client = newWebClient(factory, server.uri(SessionProtocol.H1C));
 
-        final Stopwatch stopwatch = Stopwatch.createStarted();
-        client.get("/").aggregate().join();
-        assertThat(counter).hasValue(1);
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            client.get("/").aggregate().join();
+            assertThat(counter).hasValue(1);
 
-        // The connection should be closed by server
-        await().timeout(Duration.ofMillis(clientIdleTimeout + 5000)).untilAtomic(counter, Matchers.is(0));
-        final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
-        assertThat(elapsed).isBetween(serverIdleTimeout, clientIdleTimeout - 1000);
+            // The connection should be closed by server
+            await().timeout(Duration.ofMillis(clientIdleTimeout + 5000)).untilAtomic(counter, Matchers.is(0));
+            final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+            assertThat(elapsed).isBetween(serverIdleTimeout, clientIdleTimeout - 1000);
+        }
     }
 
     @ParameterizedTest
@@ -182,19 +186,20 @@ class HttpServerKeepAliveHandlerTest {
     void shouldCloseConnectionWheNoActiveRequests(SessionProtocol protocol, boolean useHttp2Preface) {
         final long clientIdleTimeout = 10000;
         final long tolerance = 3000;
-        final WebClient client = newWebClient(clientIdleTimeout, 0, 0, useHttp2Preface,
-                                              serverWithNoKeepAlive.uri(protocol));
+        try (ClientFactory factory = newClientFactory(clientIdleTimeout, 0, useHttp2Preface)) {
+            final WebClient client = newWebClient(factory, 0, serverWithNoKeepAlive.uri(protocol));
 
-        final Stopwatch stopwatch = Stopwatch.createStarted();
-        client.get("/streaming").aggregate().join();
-        assertThat(counter).hasValue(1);
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            client.get("/streaming").aggregate().join();
+            assertThat(counter).hasValue(1);
 
-        // After the request is closed by server side RequestTimeoutException,
-        // if no requests is in progress, the connection should be closed by client idle timeout scheduler
-        await().timeout(Duration.ofMillis(clientIdleTimeout + tolerance))
-               .untilAtomic(counter, Matchers.is(0));
-        final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
-        assertThat(elapsed).isBetween(clientIdleTimeout - tolerance, clientIdleTimeout * 2 + tolerance);
+            // After the request is closed by server side RequestTimeoutException,
+            // if no requests is in progress, the connection should be closed by client idle timeout scheduler
+            await().timeout(Duration.ofMillis(clientIdleTimeout + tolerance))
+                   .untilAtomic(counter, Matchers.is(0));
+            final long elapsed = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+            assertThat(elapsed).isBetween(clientIdleTimeout - tolerance, clientIdleTimeout * 2 + tolerance);
+        }
     }
 
     @ParameterizedTest
@@ -203,15 +208,13 @@ class HttpServerKeepAliveHandlerTest {
         final long clientIdleTimeout = 0;
         final long clientPingInterval = 0;
         final long responseTimeout = 0;
-        final WebClient client = newWebClient(clientIdleTimeout,
-                                              clientPingInterval,
-                                              responseTimeout,
-                                              useHttp2Preface,
-                                              serverWithNoIdleTimeout.uri(SessionProtocol.H2C));
-
-        client.get("/").aggregate().join();
-        assertThat(counter).hasValue(1);
-        await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
+        try (ClientFactory factory = newClientFactory(clientIdleTimeout, clientPingInterval, useHttp2Preface)) {
+            final WebClient client = newWebClient(factory, responseTimeout,
+                                                  serverWithNoIdleTimeout.uri(SessionProtocol.H2C));
+            client.get("/").aggregate().join();
+            assertThat(counter).hasValue(1);
+            await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
+        }
     }
 
     @CsvSource({ "H1C, false", "H2C, false", "H2C, true" })
@@ -220,34 +223,38 @@ class HttpServerKeepAliveHandlerTest {
         final long clientIdleTimeout = 0;
         final long clientPingInterval = 10000;
         final long responseTimeout = 0;
-        final WebClient client = newWebClient(clientIdleTimeout, clientPingInterval, responseTimeout,
-                                              useHttp2Preface, serverWithNoKeepAlive.uri(protocol));
-
-        client.get("/").aggregate().join();
-        await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
+        try (ClientFactory factory = newClientFactory(clientIdleTimeout, clientPingInterval, useHttp2Preface)) {
+            final WebClient client = newWebClient(factory, responseTimeout,
+                                                  serverWithNoKeepAlive.uri(protocol));
+            client.get("/").aggregate().join();
+            await().timeout(Duration.ofMinutes(1)).untilAsserted(this::assertPing);
+        }
     }
 
-    private WebClient newWebClient(long clientIdleTimeout, long pingIntervalMillis, long responseTimeout,
-                                   boolean useHttp2Preface, URI uri) {
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .meterRegistry(new SimpleMeterRegistry())
-                                                   .idleTimeoutMillis(clientIdleTimeout)
-                                                   .pingIntervalMillis(pingIntervalMillis)
-                                                   .connectionPoolListener(listener)
-                                                   .useHttp2Preface(useHttp2Preface)
-                                                   .build();
+    private ClientFactory newClientFactory(long clientIdleTimeout, boolean useHttp2Preface) {
+        return newClientFactory(clientIdleTimeout,  Flags.defaultPingIntervalMillis(), useHttp2Preface);
+    }
+
+    private ClientFactory newClientFactory(long clientIdleTimeout, long pingIntervalMillis,
+                                           boolean useHttp2Preface) {
+        return ClientFactory.builder()
+                            .meterRegistry(new SimpleMeterRegistry())
+                            .idleTimeoutMillis(clientIdleTimeout)
+                            .pingIntervalMillis(pingIntervalMillis)
+                            .connectionPoolListener(listener)
+                            .useHttp2Preface(useHttp2Preface)
+                            .build();
+    }
+
+    private static WebClient newWebClient(ClientFactory factory, URI uri) {
+        return newWebClient(factory, Flags.defaultResponseTimeoutMillis(), uri);
+    }
+
+    private static WebClient newWebClient(ClientFactory factory, long responseTimeout, URI uri) {
         return WebClient.builder(uri)
                         .factory(factory)
                         .responseTimeoutMillis(responseTimeout)
                         .build();
-    }
-
-    private WebClient newWebClient(long clientIdleTimeout, boolean useHttp2Preface, URI uri) {
-        return newWebClient(clientIdleTimeout,
-                            Flags.defaultPingIntervalMillis(),
-                            Flags.defaultResponseTimeoutMillis(),
-                            useHttp2Preface,
-                            uri);
     }
 
     private void assertPing() {

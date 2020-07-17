@@ -21,8 +21,7 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-
-import io.netty.util.ReferenceCountUtil;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * A {@link FixedStreamMessage} that only publishes one object.
@@ -43,7 +42,7 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             try {
                 onRemoval(obj);
             } finally {
-                ReferenceCountUtil.safeRelease(obj);
+                PooledObjects.close(obj);
             }
             obj = null;
         }

@@ -89,66 +89,71 @@ class WebClientBuilderTest {
 
     @Test
     void keepCustomFactory() {
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
-                                                   .build();
-        final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L));
-        final WebClient webClient = WebClient.builder("http://foo")
-                                             .factory(factory)
-                                             .options(options)
-                                             .build();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
+                                                  .build()) {
+            final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L));
+            final WebClient webClient = WebClient.builder("http://foo")
+                                                 .factory(factory)
+                                                 .options(options)
+                                                 .build();
 
-        final ClientOptions clientOptions = webClient.options();
-        assertThat(clientOptions.get(ClientOption.RESPONSE_TIMEOUT_MILLIS)).isEqualTo(200);
-        final ClientFactory clientFactory = clientOptions.factory();
-        assertThat(clientFactory.options().get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(100);
+            final ClientOptions clientOptions = webClient.options();
+            assertThat(clientOptions.get(ClientOption.RESPONSE_TIMEOUT_MILLIS)).isEqualTo(200);
+            final ClientFactory clientFactory = clientOptions.factory();
+            assertThat(clientFactory.options().get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(100);
+        }
     }
 
     @Test
     void keepLastFactory_by_options() {
-        final ClientFactory optionClientFactory =
-                ClientFactory.builder()
-                             .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
-                             .build();
-        final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
-                                                       ClientOption.FACTORY.newValue(optionClientFactory));
+        try (ClientFactory factory1 =
+                     ClientFactory.builder()
+                                  .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
+                                  .build();
+             ClientFactory factory2 =
+                     ClientFactory.builder()
+                                  .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
+                                  .build()) {
 
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
-                                                   .build();
+            final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
+                                                           ClientOption.FACTORY.newValue(factory1));
 
-        final WebClient webClient = WebClient.builder("http://foo")
-                                             .factory(factory)
-                                             .options(options)
-                                             .build();
+            final WebClient webClient = WebClient.builder("http://foo")
+                                                 .factory(factory2)
+                                                 .options(options)
+                                                 .build();
 
-        final ClientOptions clientOptions = webClient.options();
-        assertThat(clientOptions.get(ClientOption.RESPONSE_TIMEOUT_MILLIS)).isEqualTo(200);
-        final ClientFactory clientFactory = clientOptions.factory();
-        assertThat(clientFactory.options().get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(200);
+            final ClientOptions clientOptions = webClient.options();
+            assertThat(clientOptions.get(ClientOption.RESPONSE_TIMEOUT_MILLIS)).isEqualTo(200);
+            final ClientFactory clientFactory = clientOptions.factory();
+            assertThat(clientFactory.options().get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(200);
+        }
     }
 
     @Test
     void keepLastFactory_by_factory() {
-        final ClientFactory optionClientFactory =
-                ClientFactory.builder()
-                             .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
-                             .build();
-        final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
-                                                       ClientOption.FACTORY.newValue(optionClientFactory));
+        try (ClientFactory factory1 =
+                     ClientFactory.builder()
+                                  .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
+                                  .build();
+             ClientFactory factory2 =
+                     ClientFactory.builder()
+                                  .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
+                                  .build()) {
 
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
-                                                   .build();
+            final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
+                                                           ClientOption.FACTORY.newValue(factory1));
 
-        final WebClient webClient = WebClient.builder("http://foo")
-                                             .options(options)
-                                             .factory(factory)
-                                             .build();
+            final WebClient webClient = WebClient.builder("http://foo")
+                                                 .options(options)
+                                                 .factory(factory2)
+                                                 .build();
 
-        final ClientOptions clientOptions = webClient.options();
-        assertThat(clientOptions.get(ClientOption.RESPONSE_TIMEOUT_MILLIS)).isEqualTo(200);
-        final ClientFactory clientFactory = clientOptions.factory();
-        assertThat(clientFactory.options().get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(100);
+            final ClientOptions clientOptions = webClient.options();
+            assertThat(clientOptions.get(ClientOption.RESPONSE_TIMEOUT_MILLIS)).isEqualTo(200);
+            final ClientFactory clientFactory = clientOptions.factory();
+            assertThat(clientFactory.options().get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(100);
+        }
     }
 }

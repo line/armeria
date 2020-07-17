@@ -43,13 +43,13 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
-import io.netty.util.ReferenceCountUtil;
 
 final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
 
@@ -238,7 +238,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             case DONE:
                 // Cancel the subscription if any message comes here after the state has been changed to DONE.
                 cancelSubscription();
-                ReferenceCountUtil.safeRelease(o);
+                PooledObjects.close(o);
                 break;
         }
     }
@@ -266,7 +266,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void write(HttpObject o, boolean endOfStream) {
         if (!ch.isActive()) {
-            ReferenceCountUtil.safeRelease(o);
+            PooledObjects.close(o);
             fail(ClosedSessionException.get());
             return;
         }

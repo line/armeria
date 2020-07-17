@@ -49,9 +49,9 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.AsciiString;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 final class HttpHealthChecker implements AsyncCloseable {
@@ -183,7 +183,7 @@ final class HttpHealthChecker implements AsyncCloseable {
 
             try {
                 if (!(obj instanceof ResponseHeaders)) {
-                    ReferenceCountUtil.release(obj);
+                    PooledObjects.close(obj);
                     return;
                 }
 
