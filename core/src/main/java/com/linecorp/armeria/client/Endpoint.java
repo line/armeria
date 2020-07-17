@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.NetUtil;
 
@@ -596,13 +597,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public String toString() {
-        final ToStringHelper helper = MoreObjects.toStringHelper(this);
-        helper.addValue(authority());
+        final String authority = authority();
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("Endpoint{").append(authority);
         if (hostType == HostType.HOSTNAME_AND_IPv4 ||
             hostType == HostType.HOSTNAME_AND_IPv6) {
-            helper.add("ipAddr", ipAddr);
+            buf.append(", ipAddr=").append(ipAddr);
         }
-        helper.add("weight", weight);
-        return helper.toString();
+        return buf.append(", weight").append(weight)
+                  .append('}').toString();
     }
 }
