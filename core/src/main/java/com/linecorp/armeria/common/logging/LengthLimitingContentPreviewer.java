@@ -63,13 +63,27 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
     @Override
     public void onData(HttpData data) {
         requireNonNull(data, "data");
-        if (data.isEmpty()) {
+        if (maxLength == 0 || data.isEmpty()) {
             return;
         }
-        final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
-        bufferList.add(duplicateData(data, length));
 
-        aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
+        final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
+
+        if (length > 0) {
+            // Duplicate data only when `length` is greater than 0.
+            //
+            // If `length` is equal to 0:
+            // - `content.retainedSlice(content.readerIndex(), length)` will return an empty `ByteBuf`.
+            // - The empty `ByteBuf` is not readable. The unreadable `ByteBuf` be released unexpectedly
+            //   when wrapped by `Unpooled.wrappedBuffer(emptyBuf)`.
+            //   https://github.com/netty/netty/blob/5a08dc0d9aeafe3b4e242e3b7722bfbd38acbbb2/buffer/src/main/java/io/netty/buffer/Unpooled.java#L317
+            //
+            // This will cause an `IllegalReferenceCountException` when the released `ByteBuf` is consumed by
+            // HttpResponseDecoder.
+
+            bufferList.add(duplicateData(data, length));
+            aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
+        }
         if (aggregatedLength >= inflatedMaxLength || data.isEndOfStream()) {
             produce();
         }
