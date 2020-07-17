@@ -604,7 +604,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             hostType == HostType.HOSTNAME_AND_IPv6) {
             buf.append(", ipAddr=").append(ipAddr);
         }
-        return buf.append(", weight").append(weight)
+        return buf.append(", weight=").append(weight)
                   .append('}').toString();
     }
 }
