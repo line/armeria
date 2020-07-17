@@ -162,6 +162,6 @@ class MultiPartEncoder implements Processor<BodyPart, HttpData> {
                                          // Part body
                                          bodyPart.content()),
                             // Part postfix
-                            Multi.singleton(HttpData.ofUtf8("\n")));
+                            Multi.singleton(HttpData.ofUtf8("\r\n")));
     }
 }

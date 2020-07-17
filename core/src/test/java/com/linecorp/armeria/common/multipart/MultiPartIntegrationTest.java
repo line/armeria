@@ -40,8 +40,6 @@ import reactor.core.publisher.Flux;
 
 class MultiPartIntegrationTest {
 
-    // TODO(ikhoon): Add integration tests for Spring
-
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override

@@ -15,7 +15,12 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
@@ -44,6 +49,37 @@ public final class AggregatedMultiPart {
      */
     public List<AggregatedBodyPart> bodyParts() {
         return bodyParts;
+    }
+
+    /**
+     * Returns the first body part identified by the given control name. The control
+     * name is the {@code name} parameter of the {@code Content-Disposition}
+     * header for a body part with disposition type {@code form-data}.
+     *
+     * @param name control name
+     * @return the {@link BodyPart} of the control name, or {@code null} if not present.
+     */
+    @Nullable
+    public AggregatedBodyPart field(String name) {
+        requireNonNull(name, "name");
+        return bodyParts().stream()
+                          .filter(part -> name.equals(part.name()))
+                          .findFirst()
+                          .orElse(null);
+    }
+
+    /**
+     * Returns the body parts identified by the given control name. The control
+     * name is the {@code name} parameter of the {@code Content-Disposition}
+     * header for a body part with disposition type {@code form-data}.
+     *
+     * @param name control name
+     */
+    public List<AggregatedBodyPart> fields(String name) {
+        requireNonNull(name, "name");
+        return bodyParts().stream()
+                          .filter(part -> name.equals(part.name()))
+                          .collect(toImmutableList());
     }
 
     @Override

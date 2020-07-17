@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpData;
@@ -46,11 +48,49 @@ public final class AggregatedBodyPart {
         return content;
     }
 
+    /**
+     * Returns the content string of the {@link AggregatedBodyPart} using UTF-8 encoding.
+     */
+    public String contentUtf8() {
+        return content.toStringUtf8();
+    }
+
+    /**
+     * Returns the content string of the {@link AggregatedBodyPart} using US-ASCII encoding.
+     */
+    public String contentAscii() {
+        return content.toStringAscii();
+    }
+
+    /**
+     * Retuns the control name.
+     *
+     * @return the {@code name} parameter of the {@code Content-Disposition}
+     *         header, or {@code null} if not present.
+     */
+    @Nullable
+    public String name() {
+        return headers().contentDisposition().name();
+    }
+
+    /**
+     * Return the file name.
+     *
+     * @return the {@code filename} parameter of the {@code Content-Disposition}
+     *         header, or {@code null} if not present.
+     */
+    @Nullable
+    public String filename() {
+        return headers().contentDisposition().filename();
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("headers", headers)
-                .add("content", content)
-                .toString();
+                          .add("name", name())
+                          .add("filename", filename())
+                          .add("headers", headers)
+                          .add("content", content)
+                          .toString();
     }
 }
