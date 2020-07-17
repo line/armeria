@@ -237,18 +237,4 @@ class ByteBufHttpDataTest {
                                                              StandardCharsets.US_ASCII), false))
                 .hasToString("{17B, text=0123456789abcdef}");
     }
-
-    @Test
-    void testToStringCache() {
-        final ByteBufHttpData data =
-                new ByteBufHttpData(Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII), true);
-
-        final String str = data.toString();
-        assertThat(data.toString()).isSameAs(str);
-
-        // The cached string should be invalidated when closed.
-        data.close();
-        assertThat(data.toString()).isNotSameAs(str)
-                                   .isSameAs(data.toString());
-    }
 }

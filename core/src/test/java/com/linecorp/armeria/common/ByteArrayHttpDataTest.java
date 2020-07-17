@@ -168,11 +168,4 @@ class ByteArrayHttpDataTest {
                 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', -1
         })).hasToString("{17B, text=0123456789abcdef}");
     }
-
-    @Test
-    void testToStringCache() {
-        final ByteArrayHttpData data = new ByteArrayHttpData(new byte[] { 'b', 'a', 'r' });
-        final String str = data.toString();
-        assertThat(data.toString()).isSameAs(str);
-    }
 }
