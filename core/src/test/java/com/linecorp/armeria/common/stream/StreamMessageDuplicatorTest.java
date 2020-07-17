@@ -287,8 +287,13 @@ class StreamMessageDuplicatorTest {
 
             final StreamMessage<HttpData> child = duplicator.duplicate();
             child.abort();
+
+            // Ensure the child did not consume the element.
+            assertThat(buf.refCnt()).isOne();
         }
 
+        // The duplicator should clean up the published elements after duplicator.close()
+        // since a child can't be created anymore.
         assertThat(buf.refCnt()).isZero();
     }
 
