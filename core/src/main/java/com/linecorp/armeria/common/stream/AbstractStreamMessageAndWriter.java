@@ -23,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T>
