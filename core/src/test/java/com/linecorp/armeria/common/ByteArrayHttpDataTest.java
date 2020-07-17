@@ -162,6 +162,11 @@ class ByteArrayHttpDataTest {
                            .withEndOfStream()).hasToString("{3B, EOS, text=foo}");
         assertThat(new ByteArrayHttpData(new byte[] { 1, 2, 3 })
                            .withEndOfStream()).hasToString("{3B, EOS, hex=010203}");
+
+        // Longer than 16 bytes
+        assertThat(new ByteArrayHttpData(new byte[] {
+                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', -1
+        })).hasToString("{17B, text=0123456789abcdef}");
     }
 
     @Test

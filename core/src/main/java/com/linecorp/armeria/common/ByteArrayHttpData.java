@@ -104,8 +104,8 @@ final class ByteArrayHttpData implements HttpData {
 
     static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int previewLength) {
         // Append the hex preview if contains non-ASCII chars.
-        for (byte b : array) {
-            if (SAFE_OCTETS[b & 0xFF] == 0) {
+        for (int i = 0; i < previewLength; i++) {
+            if (SAFE_OCTETS[array[i] & 0xFF] == 0) {
                 return buf.append("hex=").append(ByteBufUtil.hexDump(array, 0, previewLength));
             }
         }

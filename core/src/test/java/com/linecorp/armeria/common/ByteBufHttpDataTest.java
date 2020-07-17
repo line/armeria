@@ -231,6 +231,11 @@ class ByteBufHttpDataTest {
                         Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII)), true);
         data2.close();
         assertThat(data2).hasToString("{3B, pooled, closed, text=bar}");
+
+        // Longer than 16 bytes
+        assertThat(new ByteBufHttpData(Unpooled.copiedBuffer("0123456789abcdef\u0001",
+                                                             StandardCharsets.US_ASCII), false))
+                .hasToString("{17B, text=0123456789abcdef}");
     }
 
     @Test
