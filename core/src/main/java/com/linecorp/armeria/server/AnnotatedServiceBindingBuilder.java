@@ -148,6 +148,13 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     @Override
+    public AnnotatedServiceBindingBuilder decorators(
+            Function<? super HttpService, ? extends HttpService>... decorators) {
+        defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
     public AnnotatedServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         defaultServiceConfigSetters.requestTimeout(requestTimeout);
         return this;

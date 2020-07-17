@@ -49,7 +49,12 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
 
     LengthLimitingContentPreviewer(int maxLength, @Nullable Charset charset) {
         this.maxLength = maxLength;
-        inflatedMaxLength = inflateMaxLength(maxLength, charset);
+        if (maxLength > 0) {
+            inflatedMaxLength = inflateMaxLength(maxLength, charset);
+        } else {
+            inflatedMaxLength = 0;
+            produced = "";
+        }
     }
 
     private static int inflateMaxLength(int maxLength, @Nullable Charset charset) {
@@ -63,14 +68,24 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
     @Override
     public void onData(HttpData data) {
         requireNonNull(data, "data");
-        if (data.isEmpty()) {
+        if (produced != null) {
             return;
         }
-        final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
-        bufferList.add(data.byteBuf(0, length, ByteBufAccessMode.RETAINED_DUPLICATE));
 
-        aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
-        if (aggregatedLength >= inflatedMaxLength || data.isEndOfStream()) {
+        if (!data.isEmpty()) {
+            final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
+            if (length > 0) {
+                bufferList.add(data.byteBuf(0, length, ByteBufAccessMode.RETAINED_DUPLICATE));
+                aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
+
+                if (aggregatedLength >= inflatedMaxLength) {
+                    produce();
+                    return;
+                }
+            }
+        }
+
+        if (data.isEndOfStream()) {
             produce();
         }
     }
