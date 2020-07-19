@@ -20,6 +20,8 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -60,6 +62,7 @@ public interface ResponseConverterFunction {
      *                 {@link ServiceRequestContext#mutateAdditionalResponseTrailers(Consumer)}
      *                 and {@link AdditionalTrailer} are not included in this trailers.
      */
+    @CheckReturnValue
     HttpResponse convertResponse(ServiceRequestContext ctx,
                                  ResponseHeaders headers,
                                  @Nullable Object result,

@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.stream.StreamMessageDuplicator;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
@@ -54,6 +56,7 @@ public interface HttpRequestDuplicator extends StreamMessageDuplicator<HttpObjec
      * {@linkplain HttpHeaders trailers} as the {@link HttpRequest} that this duplicator is created from.
      */
     @Override
+    @CheckReturnValue
     HttpRequest duplicate();
 
     /**
@@ -61,5 +64,6 @@ public interface HttpRequestDuplicator extends StreamMessageDuplicator<HttpObjec
      * {@link HttpData}s and {@linkplain HttpHeaders trailers} as the {@link HttpRequest} that
      * this duplicator is created from.
      */
+    @CheckReturnValue
     HttpRequest duplicate(RequestHeaders newHeaders);
 }

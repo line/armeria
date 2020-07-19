@@ -24,6 +24,8 @@ import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.opensaml.saml.saml2.core.Response;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -62,6 +64,7 @@ public interface SamlSingleSignOnHandler {
      * @param relayState the string which is sent with the {@link AuthnRequest} message and is returned
      *                   with the {@link Response} message. {@code null} if it is omitted.
      */
+    @CheckReturnValue
     HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                 MessageContext<Response> message,
                                 @Nullable String sessionIndex,
@@ -79,6 +82,7 @@ public interface SamlSingleSignOnHandler {
      *                {@link Response} message.
      * @param cause the reason of the failure
      */
+    @CheckReturnValue
     HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                              @Nullable MessageContext<Response> message,
                              Throwable cause);
