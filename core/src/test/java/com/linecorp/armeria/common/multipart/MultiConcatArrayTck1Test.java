@@ -14,7 +14,7 @@
  * under the License.
  */
 /*
- * Copyright (c) 2020 Oracle and/or its affiliates.
+ * Copyright (c)  2020 Oracle and/or its affiliates. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,58 +27,38 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 package com.linecorp.armeria.common.multipart;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
+import org.reactivestreams.tck.PublisherVerification;
+import org.reactivestreams.tck.TestEnvironment;
+import org.testng.annotations.Test;
 
-import com.linecorp.armeria.common.HttpData;
+import reactor.core.publisher.Flux;
 
-/**
- * A body part entity.
- */
-public interface BodyPart {
+@Test
+public class MultiConcatArrayTck1Test extends PublisherVerification<Integer> {
 
-    // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/main/java/io/helidon/media/multipart/BodyPart.java
+    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common/reactive/src/test/java/io/helidon/common/reactive/MultiConcatArrayTck1Test.java
 
-    /**
-     * Returns a new {@link BodyPartBuilder}.
-     */
-    static BodyPartBuilder builder() {
-        return new BodyPartBuilder();
+    public MultiConcatArrayTck1Test() {
+        super(new TestEnvironment(200));
     }
 
-    /**
-     * Returns the reactive representation of the part content.
-     */
-    Publisher<HttpData> content();
-
-    /**
-     * Returns HTTP part headers.
-     */
-    BodyPartHeaders headers();
-
-    /**
-     * Returns the control name.
-     *
-     * @return the {@code name} parameter of the {@code Content-Disposition}
-     *         header, or {@code null} if not present.
-     */
-    @Nullable
-    default String name() {
-        return headers().contentDisposition().name();
+    @Override
+    public Publisher<Integer> createPublisher(long l) {
+        return Multi.concatArray(Flux.range(0, (int) l / 2), Flux.range((int)l / 2, (int) (l - l / 2)));
     }
 
-    /**
-     * Returns the file name.
-     *
-     * @return the {@code filename} parameter of the {@code Content-Disposition}
-     *         header, or {@code null} if not present.
-     */
-    @Nullable
-    default String filename() {
-        return headers().contentDisposition().filename();
+    @Override
+    public Publisher<Integer> createFailedPublisher() {
+        return null;
+    }
+
+    @Override
+    public long maxElementsFromPublisher() {
+        return 10;
     }
 }

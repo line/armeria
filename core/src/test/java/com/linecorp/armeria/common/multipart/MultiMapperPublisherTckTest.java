@@ -14,7 +14,7 @@
  * under the License.
  */
 /*
- * Copyright (c) 2020 Oracle and/or its affiliates.
+ * Copyright (c) 2020 Oracle and/or its affiliates. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,55 +30,33 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import javax.annotation.Nullable;
+import java.util.stream.IntStream;
 
 import org.reactivestreams.Publisher;
+import org.reactivestreams.tck.PublisherVerification;
+import org.reactivestreams.tck.TestEnvironment;
 
-import com.linecorp.armeria.common.HttpData;
+public class MultiMapperPublisherTckTest extends PublisherVerification<Integer> {
 
-/**
- * A body part entity.
- */
-public interface BodyPart {
+    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/common/reactive/src/test/java/io/helidon/common/reactive/MultiMapperPublisherTckTest.java
 
-    // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/main/java/io/helidon/media/multipart/BodyPart.java
-
-    /**
-     * Returns a new {@link BodyPartBuilder}.
-     */
-    static BodyPartBuilder builder() {
-        return new BodyPartBuilder();
+    public MultiMapperPublisherTckTest() {
+        super(new TestEnvironment(200));
     }
 
-    /**
-     * Returns the reactive representation of the part content.
-     */
-    Publisher<HttpData> content();
-
-    /**
-     * Returns HTTP part headers.
-     */
-    BodyPartHeaders headers();
-
-    /**
-     * Returns the control name.
-     *
-     * @return the {@code name} parameter of the {@code Content-Disposition}
-     *         header, or {@code null} if not present.
-     */
-    @Nullable
-    default String name() {
-        return headers().contentDisposition().name();
+    @Override
+    public Publisher<Integer> createPublisher(long n) {
+        return Multi.from(() -> IntStream.range(0, (int) n).boxed().iterator())
+                .map(v -> v + 1);
     }
 
-    /**
-     * Returns the file name.
-     *
-     * @return the {@code filename} parameter of the {@code Content-Disposition}
-     *         header, or {@code null} if not present.
-     */
-    @Nullable
-    default String filename() {
-        return headers().contentDisposition().filename();
+    @Override
+    public Publisher<Integer> createFailedPublisher() {
+        return null;
+    }
+
+    @Override
+    public long maxElementsFromPublisher() {
+        return 10;
     }
 }

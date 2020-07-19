@@ -58,11 +58,11 @@ class MimeParserTest {
                                "\r\n" +
                                "Content-Id: part1\n" +
                                '\n' +
-                               "1\n" +
+                               "1\r\n" +
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse("boundary", chunk1).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
 
         final MimePart part1 = parts.get(0);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
@@ -80,7 +80,7 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse("boundary", chunk1).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
 
         final MimePart part1 = parts.get(0);
         assertThat(part1.headers.get('-' + boundary + "Content-Id")).containsExactly("part1");
@@ -120,7 +120,7 @@ class MimeParserTest {
                                "--" + boundary + "--   ").getBytes();
 
         final List<MimePart> parts = parse("boundary", chunk1).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
@@ -152,7 +152,7 @@ class MimeParserTest {
                                      ("\n--" + boundary + "--").getBytes());
 
         final List<MimePart> parts = parse(boundary, chunk1).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
         assertThat(part1.headers.get("Content-Type")).containsExactly("text/xml; charset=UTF-8");
@@ -186,7 +186,7 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, chunk1).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
         assertThat(part1.headers.get("Content-Type")).containsExactly("text/xml; charset=utf-8");
@@ -213,15 +213,15 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, chunk1).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(0);
+        assertThat(part1.headers).hasSize(0);
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("<foo>bar</foo>");
 
         final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.size()).isEqualTo(0);
+        assertThat(part2.headers).hasSize(0);
         assertThat(part2.content).isNotNull();
         assertThat(new String(part2.content)).isEqualTo("<bar>foo</bar>");
     }
@@ -260,7 +260,7 @@ class MimeParserTest {
                                "--" + boundary + "--   ").getBytes();
 
         final List<MimePart> parts = parse("boundary", chunk1).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
@@ -288,16 +288,16 @@ class MimeParserTest {
                                "--" + boundary + "--         ").getBytes();
 
         final List<MimePart> parts = parse(boundary, chunk1).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("1 --" + boundary + " in body");
 
         final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.size()).isEqualTo(1);
+        assertThat(part2.headers).hasSize(1);
         assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
         assertThat(part2.content).isNotNull();
         assertThat(new String(part2.content)).isEqualTo("2 --" + boundary + " in body\n--" +
@@ -339,16 +339,16 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("body 1");
 
         final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.size()).isEqualTo(1);
+        assertThat(part2.headers).hasSize(1);
         assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
         assertThat(part2.content).isNotNull();
         assertThat(new String(part2.content)).isEqualTo("body 2");
@@ -365,10 +365,10 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
 
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("this-is-the-1st-slice-of-the-body\n" +
@@ -409,16 +409,16 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(2);
+        assertThat(parts).hasSize(2);
 
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("this-is-the-body-of-part1");
 
         final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.size()).isEqualTo(0);
+        assertThat(part2.headers).hasSize(0);
         assertThat(part2.content).isNotNull();
         assertThat(new String(part2.content)).isEqualTo("this-is-the-body-of-part2");
     }
@@ -434,10 +434,10 @@ class MimeParserTest {
         final byte[] chunk2 = (boundary.substring(3) + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
 
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("this-is-the-body-of-part1");
@@ -454,9 +454,9 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, chunk1).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("part1");
@@ -486,9 +486,9 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("part1");
@@ -506,9 +506,9 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
 
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("part1");
@@ -563,9 +563,9 @@ class MimeParserTest {
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(2);
+        assertThat(part1.headers).hasSize(2);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.headers.get("Content-Type")).containsExactly("text/plain");
         assertThat(part1.content).isNotNull();
@@ -582,9 +582,9 @@ class MimeParserTest {
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
         final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(2);
+        assertThat(part1.headers).hasSize(2);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.headers.get("Content-Type")).containsExactly("text/plain");
         assertThat(part1.content).isNotNull();
@@ -601,9 +601,9 @@ class MimeParserTest {
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
         final List<MimePart> parts = parse(boundary, chunk1).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(2);
+        assertThat(part1.headers).hasSize(2);
         assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
         assertThat(part1.headers.get("Content-Type")).containsExactly("text/plain");
         assertThat(part1.content).isNotNull();
@@ -619,9 +619,9 @@ class MimeParserTest {
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
         final List<MimePart> parts = parse(boundary, chunk1).parts;
-        assertThat(parts.size()).isEqualTo(1);
+        assertThat(parts).hasSize(1);
         final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.size()).isEqualTo(1);
+        assertThat(part1.headers).hasSize(1);
         assertThat(part1.headers.get("Content-Type")).containsExactly("");
         assertThat(part1.content).isNotNull();
         assertThat(new String(part1.content)).isEqualTo("part1");

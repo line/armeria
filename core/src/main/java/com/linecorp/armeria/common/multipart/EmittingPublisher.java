@@ -212,7 +212,7 @@ final class EmittingPublisher<T> implements Publisher<T> {
      * @return true if so
      */
     boolean hasRequests() {
-        return this.requested.get() > 0;
+        return requested.get() > 0;
     }
 
     /**
