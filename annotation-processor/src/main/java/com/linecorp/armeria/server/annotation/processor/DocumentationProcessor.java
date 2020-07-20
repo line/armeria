@@ -64,7 +64,7 @@ import com.linecorp.armeria.server.annotation.Description;
         "com.linecorp.armeria.server.annotation.Patch",
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
-public class DocumentationProcessor extends AbstractProcessor {
+public final class DocumentationProcessor extends AbstractProcessor {
     private static final Splitter LINEBREAK_SPLITTER = Splitter.on(Pattern.compile("\\R"))
                                                                .trimResults()
                                                                .omitEmptyStrings();

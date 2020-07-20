@@ -40,7 +40,7 @@ import io.grpc.StatusRuntimeException;
 class GrpcClientRequestContextInitFailureTest {
     @Test
     void endpointSelectionFailure() {
-        assertFailure(EndpointGroup.empty(), actualCause -> {
+        assertFailure(EndpointGroup.of(), actualCause -> {
             assertThat(actualCause).isInstanceOf(EmptyEndpointGroupException.class);
         });
     }

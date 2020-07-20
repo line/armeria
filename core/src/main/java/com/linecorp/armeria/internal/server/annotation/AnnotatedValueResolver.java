@@ -560,7 +560,7 @@ final class AnnotatedValueResolver {
                     .resolver((unused, ctx) -> {
                         final String value = ctx.request().headers().get(HttpHeaderNames.COOKIE);
                         if (value == null) {
-                            return Cookies.empty();
+                            return Cookies.of();
                         }
                         return Cookie.fromCookieHeader(value);
                     })

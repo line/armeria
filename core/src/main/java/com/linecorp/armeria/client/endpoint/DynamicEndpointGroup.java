@@ -88,9 +88,9 @@ public class DynamicEndpointGroup
     }
 
     @Override
-    public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
-                                              ScheduledExecutorService executor,
-                                              long timeoutMillis) {
+    public final CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                                    ScheduledExecutorService executor,
+                                                    long timeoutMillis) {
         return maybeCreateSelector().select(ctx, executor, timeoutMillis);
     }
 
@@ -116,7 +116,7 @@ public class DynamicEndpointGroup
      * Returns the {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
      */
     @Override
-    public CompletableFuture<List<Endpoint>> whenReady() {
+    public final CompletableFuture<List<Endpoint>> whenReady() {
         return initialEndpointsFuture;
     }
 

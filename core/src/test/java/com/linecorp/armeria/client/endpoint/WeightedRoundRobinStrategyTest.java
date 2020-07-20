@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 
 class WeightedRoundRobinStrategyTest {
 
-    private static final EndpointGroup emptyGroup = EndpointGroup.empty();
+    private static final EndpointGroup emptyGroup = EndpointGroup.of();
 
     private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 

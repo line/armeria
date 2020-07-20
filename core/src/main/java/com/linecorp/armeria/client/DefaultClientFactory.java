@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -172,6 +174,31 @@ final class DefaultClientFactory implements ClientFactory {
             final T p = factory.unwrap(client, type);
             if (p != null) {
                 return p;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public ClientFactory unwrap() {
+        return httpClientFactory;
+    }
+
+    @Nullable
+    @Override
+    public <T> T as(Class<T> type) {
+        requireNonNull(type, "type");
+
+        T result = ClientFactory.super.as(type);
+        if (result != null) {
+            return result;
+        }
+
+        for (ClientFactory f : clientFactories.values()) {
+            result = f.as(type);
+            if (result != null) {
+                return result;
             }
         }
 

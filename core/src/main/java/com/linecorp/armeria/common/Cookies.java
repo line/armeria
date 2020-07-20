@@ -28,8 +28,18 @@ public interface Cookies extends Set<Cookie> {
 
     /**
      * Returns an immutable empty {@link Set} of {@link Cookie}s.
+     *
+     * @deprecated Use {@link #of()}.
      */
+    @Deprecated
     static Cookies empty() {
+        return of();
+    }
+
+    /**
+     * Returns an immutable empty {@link Set} of {@link Cookie}s.
+     */
+    static Cookies of() {
         return DefaultCookies.EMPTY;
     }
 
@@ -37,7 +47,12 @@ public interface Cookies extends Set<Cookie> {
      * Creates an instance with a copy of the specified set of {@link Cookie}s.
      */
     static Cookies of(Cookie... cookies) {
-        return of(ImmutableSet.copyOf(requireNonNull(cookies, "cookies")));
+        requireNonNull(cookies, "cookies");
+        if (cookies.length == 0) {
+            return of();
+        } else {
+            return new DefaultCookies(ImmutableSet.copyOf(cookies));
+        }
     }
 
     /**
@@ -46,7 +61,7 @@ public interface Cookies extends Set<Cookie> {
     static Cookies of(Iterable<? extends Cookie> cookies) {
         final ImmutableSet<Cookie> cookiesCopy = ImmutableSet.copyOf(requireNonNull(cookies, "cookies"));
         if (cookiesCopy.isEmpty()) {
-            return empty();
+            return of();
         } else {
             return new DefaultCookies(cookiesCopy);
         }

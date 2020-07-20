@@ -37,7 +37,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 class ThriftClientRequestContextInitFailureTest {
     @Test
     void endpointSelectionFailure() {
-        assertFailure(EndpointGroup.empty(), actualCause -> {
+        assertFailure(EndpointGroup.of(), actualCause -> {
             assertThat(actualCause).isInstanceOf(EmptyEndpointGroupException.class);
         });
     }

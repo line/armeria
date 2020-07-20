@@ -38,7 +38,7 @@ import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
  */
-public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpRequest, HttpResponse>
+public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpRequest, HttpResponse>
         implements HttpClient {
 
     /**
