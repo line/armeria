@@ -72,6 +72,7 @@ public class MultipartEncoderTest {
         final String message = encodeParts(boundary,
                                            BodyPart.builder().content("part1").build());
         assertThat(message).isEqualTo("--" + boundary + "\r\n" +
+                                      "content-type:text/plain\r\n" +
                                       "\r\n" +
                                       "part1\r\n" +
                                       "--" + boundary + "--");
@@ -105,9 +106,11 @@ public class MultipartEncoderTest {
                                                    .content("part2")
                                                    .build());
         assertThat(message).isEqualTo("--" + boundary + "\r\n" +
+                                      "content-type:text/plain\r\n" +
                                       "\r\n" +
                                       "part1\r\n" +
                                       "--" + boundary + "\r\n" +
+                                      "content-type:text/plain\r\n" +
                                       "\r\n" +
                                       "part2\r\n" +
                                       "--" + boundary + "--");
