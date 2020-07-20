@@ -66,10 +66,9 @@ class AnnotatedServiceBlockingTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/myEvenLoop", new MyEventLoopAnnotatedService(),
-                                LoggingService.newDecorator());
-            sb.annotatedService("/myBlocking", new MyBlockingAnnotatedService(),
-                                LoggingService.newDecorator());
+            sb.annotatedService("/myEvenLoop", new MyEventLoopAnnotatedService());
+            sb.annotatedService("/myBlocking", new MyBlockingAnnotatedService());
+            sb.annotatedService("/blockingService", new BlockingClassAnnotatedService());
             sb.blockingTaskExecutor(executor, true);
         }
     };
@@ -77,22 +76,22 @@ class AnnotatedServiceBlockingTest {
     static class MyEventLoopAnnotatedService {
 
         @Get("/httpResponse")
-        public HttpResponse httpResponse(RequestContext ctx) {
+        public HttpResponse httpResponse() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/aggregatedHttpResponse")
-        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
+        public AggregatedHttpResponse aggregatedHttpResponse() {
             return AggregatedHttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/jsonNode")
-        public JsonNode jsonNode(RequestContext ctx) {
+        public JsonNode jsonNode() {
             return TextNode.valueOf("Armeria");
         }
 
         @Get("/completionStage")
-        public CompletionStage<String> completionStage(RequestContext ctx) {
+        public CompletionStage<String> completionStage() {
             return CompletableFuture.supplyAsync(() -> "Armeria");
         }
     }
@@ -101,26 +100,42 @@ class AnnotatedServiceBlockingTest {
 
         @Get("/httpResponse")
         @Blocking
-        public HttpResponse httpResponse(RequestContext ctx) {
+        public HttpResponse httpResponse() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/aggregatedHttpResponse")
         @Blocking
-        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
+        public AggregatedHttpResponse aggregatedHttpResponse() {
             return AggregatedHttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/jsonNode")
         @Blocking
-        public JsonNode jsonNode(RequestContext ctx) {
+        public JsonNode jsonNode() {
             return TextNode.valueOf("Armeria");
         }
 
         @Get("/completionStage")
         @Blocking
-        public CompletionStage<String> completionStage(RequestContext ctx) {
+        public CompletionStage<String> completionStage() {
             return CompletableFuture.supplyAsync(() -> "Armeria");
+        }
+    }
+
+    @Blocking
+    static class BlockingClassAnnotatedService {
+        @Get("/block")
+        public HttpResponse block() {
+            assertThat(Thread.currentThread().getName()).startsWith("blocking-test");
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Blocking
+        @Get("/duplicated")
+        public String duplicated() {
+            assertThat(Thread.currentThread().getName()).startsWith("blocking-test");
+            return "Hello";
         }
     }
 
@@ -145,7 +160,9 @@ class AnnotatedServiceBlockingTest {
             "/myBlocking/httpResponse, 1",
             "/myBlocking/aggregatedHttpResponse, 1",
             "/myBlocking/jsonNode, 1",
-            "/myBlocking/completionStage, 1"
+            "/myBlocking/completionStage, 1",
+            "/blockingService/block, 1",
+            "/blockingService/duplicated, 1"
     })
     void testOnlyBlockingWithBlockingAnnotation(String path, Integer count) throws Exception {
         final WebClient client = WebClient.of(server.httpUri());

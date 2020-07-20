@@ -228,8 +228,9 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.decorator(decorator);
     }
 
+    @SafeVarargs
     @Override
-    public ServiceBindingBuilder decorators(
+    public final ServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return (ServiceBindingBuilder) super.decorators(decorators);
     }
