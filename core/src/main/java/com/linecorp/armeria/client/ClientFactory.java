@@ -68,7 +68,7 @@ import reactor.core.scheduler.NonBlocking;
  * {@link ClientFactory}, use {@link #closeDefault()}.
  * </p>
  */
-public interface ClientFactory extends ListenableAsyncCloseable {
+public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
 
     /**
      * Returns the default {@link ClientFactory} implementation.
@@ -255,6 +255,11 @@ public interface ClientFactory extends ListenableAsyncCloseable {
         }
 
         return null;
+    }
+
+    @Override
+    default ClientFactory unwrap() {
+        return this;
     }
 
     /**

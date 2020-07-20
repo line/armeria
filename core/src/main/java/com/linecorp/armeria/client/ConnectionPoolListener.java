@@ -20,13 +20,14 @@ import java.net.InetSocketAddress;
 import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.netty.util.AttributeMap;
 
 /**
  * Listens to the client connection pool events.
  */
-public interface ConnectionPoolListener {
+public interface ConnectionPoolListener extends Unwrappable {
 
     /**
      * Returns an instance that does nothing.
@@ -65,4 +66,9 @@ public interface ConnectionPoolListener {
                           InetSocketAddress remoteAddr,
                           InetSocketAddress localAddr,
                           AttributeMap attrs) throws Exception;
+
+    @Override
+    default ConnectionPoolListener unwrap() {
+        return this;
+    }
 }

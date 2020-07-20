@@ -22,9 +22,12 @@ import java.time.Duration;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Builds a {@link TokenBucket} instance.
  */
+@UnstableApi
 public final class TokenBucketBuilder {
     private static final BandwidthLimit[] NO_BANDWIDTH_LIMITS = {};
 

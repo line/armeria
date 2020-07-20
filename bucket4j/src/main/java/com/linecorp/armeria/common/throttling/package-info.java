@@ -17,7 +17,9 @@
 /**
  * Common throttling artifacts used by throttling implementation.
  */
+@UnstableApi
 @NonNullByDefault
 package com.linecorp.armeria.common.throttling;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

@@ -94,7 +94,7 @@ public interface Cookie extends Comparable<Cookie> {
     static Cookies fromCookieHeader(boolean strict, String cookieHeader) {
         requireNonNull(cookieHeader, "cookieHeader");
         if (cookieHeader.isEmpty()) {
-            return Cookies.empty();
+            return Cookies.of();
         }
         return ServerCookieDecoder.decode(strict, cookieHeader);
     }
@@ -259,7 +259,7 @@ public interface Cookie extends Comparable<Cookie> {
     static Cookies fromSetCookieHeaders(boolean strict, String... setCookieHeaders) {
         requireNonNull(setCookieHeaders, "setCookieHeaders");
         if (setCookieHeaders.length == 0) {
-            return Cookies.empty();
+            return Cookies.of();
         }
 
         final ImmutableSet.Builder<Cookie> builder =
@@ -290,7 +290,7 @@ public interface Cookie extends Comparable<Cookie> {
         requireNonNull(setCookieHeaders, "setCookieHeaders");
         final Iterator<String> it = setCookieHeaders.iterator();
         if (!it.hasNext()) {
-            return Cookies.empty();
+            return Cookies.of();
         }
 
         return CookieUtil.fromSetCookieHeaders(ImmutableSet.builder(), strict, it);
@@ -306,7 +306,7 @@ public interface Cookie extends Comparable<Cookie> {
     static Cookies fromSetCookieHeaders(boolean strict, Collection<String> setCookieHeaders) {
         requireNonNull(setCookieHeaders, "setCookieHeaders");
         if (setCookieHeaders.isEmpty()) {
-            return Cookies.empty();
+            return Cookies.of();
         }
 
         return CookieUtil.fromSetCookieHeaders(ImmutableSet.builderWithExpectedSize(setCookieHeaders.size()),

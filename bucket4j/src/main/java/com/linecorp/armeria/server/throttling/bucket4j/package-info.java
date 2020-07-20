@@ -18,9 +18,10 @@
  * Rate-limiting throttling implementation based on
  * <a href="https://en.wikipedia.org/wiki/Token_bucket">Token-Bucket</a> algorithm
  * and <a href="https://github.com/vladimir-bukhtoyarov/bucket4j">Bucket4j</a> library.
- *
  */
+@UnstableApi
 @NonNullByDefault
 package com.linecorp.armeria.server.throttling.bucket4j;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;
