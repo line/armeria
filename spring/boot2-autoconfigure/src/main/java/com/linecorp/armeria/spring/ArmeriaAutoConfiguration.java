@@ -76,7 +76,6 @@ public class ArmeriaAutoConfiguration {
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
-            Optional<MeterIdPrefixFunctionFactory> meterIdPrefixFunctionFactory,
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
@@ -97,12 +96,8 @@ public class ArmeriaAutoConfiguration {
             return null;
         }
 
-        final MeterIdPrefixFunctionFactory meterIdPrefixFuncFactory;
         if (armeriaSettings.isEnableMetrics()) {
-            meterIdPrefixFuncFactory = meterIdPrefixFunctionFactory.orElse(
-                    MeterIdPrefixFunctionFactory.ofDefault());
         } else {
-            meterIdPrefixFuncFactory = null;
         }
 
         final ServerBuilder serverBuilder = Server.builder();
@@ -123,20 +118,17 @@ public class ArmeriaAutoConfiguration {
         configureThriftServices(serverBuilder,
                                 docServiceBuilder,
                                 thriftServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                meterIdPrefixFuncFactory,
                                 docsPath);
         configureGrpcServices(serverBuilder,
                               docServiceBuilder,
                               grpcServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                              meterIdPrefixFuncFactory,
                               docsPath);
         configureHttpServices(serverBuilder,
-                              httpServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                              meterIdPrefixFuncFactory);
+                              httpServiceRegistrationBeans.orElseGet(Collections::emptyList)
+        );
         configureAnnotatedServices(serverBuilder,
                                    docServiceBuilder,
                                    annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                   meterIdPrefixFuncFactory,
                                    docsPath);
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
                                            meterRegistry.orElse(Metrics.globalRegistry),

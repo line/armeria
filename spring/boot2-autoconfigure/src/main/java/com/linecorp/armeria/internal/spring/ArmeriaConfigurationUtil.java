@@ -184,7 +184,6 @@ public final class ArmeriaConfigurationUtil {
     public static void configureThriftServices(
             ServerBuilder server, DocServiceBuilder docServiceBuilder,
             List<ThriftServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
             @Nullable String docsPath) {
         requireNonNull(server, "server");
         requireNonNull(docServiceBuilder, "docServiceBuilder");
@@ -221,8 +220,7 @@ public final class ArmeriaConfigurationUtil {
      * Adds HTTP services to the specified {@link ServerBuilder}.
      */
     public static void configureHttpServices(
-            ServerBuilder server, List<HttpServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
+            ServerBuilder server, List<HttpServiceRegistrationBean> beans) {
         requireNonNull(server, "server");
         requireNonNull(beans, "beans");
 
@@ -241,7 +239,6 @@ public final class ArmeriaConfigurationUtil {
     public static void configureGrpcServices(
             ServerBuilder server, DocServiceBuilder docServiceBuilder,
             List<GrpcServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
             @Nullable String docsPath) {
         requireNonNull(server, "server");
         requireNonNull(docServiceBuilder, "docServiceBuilder");
@@ -285,7 +282,6 @@ public final class ArmeriaConfigurationUtil {
     public static void configureAnnotatedServices(
             ServerBuilder server, DocServiceBuilder docServiceBuilder,
             List<AnnotatedServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
             @Nullable String docsPath) {
         requireNonNull(server, "server");
         requireNonNull(docServiceBuilder, "docServiceBuilder");
@@ -297,10 +293,6 @@ public final class ArmeriaConfigurationUtil {
             Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
             for (Function<? super HttpService, ? extends HttpService> d : bean.getDecorators()) {
                 decorator = decorator.andThen(d);
-            }
-            if (meterIdPrefixFunctionFactory != null) {
-                decorator = decorator.andThen(
-                        metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory));
             }
             final ImmutableList<Object> exceptionHandlersAndConverters =
                     ImmutableList.builder()
