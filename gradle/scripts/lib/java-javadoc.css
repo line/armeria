@@ -102,7 +102,6 @@ dt {
 }
 
 dd {
-  display: inline;
   margin: 0;
 }
 
@@ -124,21 +123,11 @@ p, pre {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-family-heading);
   font-weight: 700;
-  margin: 2rem 0 1rem;
-}
-
-a[id] + h1,
-a[id] + h2,
-a[id] + h3,
-a[id] + h4,
-a[id] + h5,
-a[id] + h6 {
-  margin-top: 0.75rem;
+  margin: var(--line-height) 0 1rem;
 }
 
 h1 {
   font-size: 1.563rem;
-  margin-top: 0.8rem;
 }
 
 h2 {
@@ -151,6 +140,25 @@ h3, h2 + div > h2 {
 
 h4, h5, h6 {
   font-size: 1rem;
+}
+
+/* Reduce the top margin of the headings that follow an anchor. */
+a[id] + h1,
+a[id] + h2,
+a[id] + h3,
+a[id] + h4,
+a[id] + h5,
+a[id] + h6 {
+  margin-top: calc(var(--line-height) - 1.1rem);
+}
+
+/* Reduce the top margin of the first-level headings when appearing at the top. */
+main > div.header > h1:first-child {
+  margin-top: 1rem;
+}
+main > div.header > p:first-child + h1,
+main > div.header > div.subTitle:first-child + h1 {
+  margin-top: -0.5rem;
 }
 
 td, th {
@@ -188,6 +196,10 @@ body > main {
   margin: 0 auto;
   background-color: var(--bg-color);
   padding: var(--size-md) var(--size-xl);
+}
+
+main > div.header > div.subTitle:first-child {
+  margin: 1rem 0;
 }
 
 /* Navbars */
@@ -514,6 +526,22 @@ section > ul.blockList:last-child {
   background-color: var(--table-cell-color);
 }
 
+/* User table styles */
+.block table,
+.block th,
+.block td {
+  border: var(--border);
+}
+
+.block table {
+  border-collapse: collapse;
+}
+
+.block table > caption {
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
 /* Drop some background to code. */
 .block code, .block kbd, .block samp, .block tt, .block var,
 dd code, dd kbd, dd samp, dd tt, dd var {
@@ -618,7 +646,7 @@ div.memberSignature span.typeParameters {
   padding: 0 30px 0 0;
 }
 
-h1.hidden {
+.hidden {
   visibility: hidden;
   overflow: hidden;
 }
@@ -644,6 +672,7 @@ h1.hidden {
 
 .deprecationBlock {
   border: var(--border);
+  border-radius: var(--border-radius);
   padding: var(--size-md);
   margin: var(--size-md) 0;
   display: inline-block;
@@ -724,7 +753,11 @@ code.hljs {
   padding: 0;
 }
 
-td.hljs-ln-numbers {
+code.hljs table, code.hljs th, code.hljs td {
+  border: none;
+}
+
+code.hljs td.hljs-ln-numbers {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -737,9 +770,10 @@ td.hljs-ln-numbers {
   border-right: var(--border);
   vertical-align: top;
   padding-right: var(--size-sm) !important;
+  white-space: nowrap;
 }
 
-td.hljs-ln-code {
+code.hljs td.hljs-ln-code {
   padding-left: var(--size-sm) !important;
 }
 
