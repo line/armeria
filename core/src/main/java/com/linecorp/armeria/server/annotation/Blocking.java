@@ -29,6 +29,6 @@ import com.linecorp.armeria.server.ServerConfig;
  * instead of an event loop thread.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Blocking {
 }
