@@ -26,8 +26,6 @@ import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.ContentDisposition;
-
 /**
  * Unit tests for {@link ContentDisposition}.
  * @author Sebastien Deleuze
@@ -117,7 +115,6 @@ class ContentDispositionTest {
 
     // gh-23077
     @Test
-    @SuppressWarnings("deprecation")
     void parseWithEscapedQuote() {
         final BiConsumer<String, String> tester = (description, filename) ->
                 assertThat(parse("form-data; name=\"file\"; filename=\"" + filename + "\"; size=123"))

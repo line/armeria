@@ -20,7 +20,7 @@ import org.reactivestreams.Subscription;
 
 final class NoopSubscription implements Subscription {
 
-    public static final NoopSubscription INSTANCE = new NoopSubscription();
+    static final NoopSubscription INSTANCE = new NoopSubscription();
 
     private NoopSubscription() {}
 

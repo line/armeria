@@ -104,7 +104,7 @@ class BodyPartTest {
     void testBuildingPartWithNoContent() {
         assertThatThrownBy(() -> BodyPart.builder().build())
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Should set at lease one content");
+                .hasMessageContaining("Should set at least one content");
     }
 
     @Test

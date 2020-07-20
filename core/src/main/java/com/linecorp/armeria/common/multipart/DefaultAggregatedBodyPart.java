@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpData;

@@ -15,12 +15,7 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.Objects.requireNonNull;
-
 import java.util.List;
-
-import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 

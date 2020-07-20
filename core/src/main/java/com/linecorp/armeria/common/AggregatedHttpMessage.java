@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import java.nio.charset.Charset;
-
-import javax.annotation.Nullable;
-
 /**
  * A complete HTTP message whose content is readily available as a single {@link HttpData}. It can be an
  * HTTP request or an HTTP response depending on what header values it contains. For example, having a
