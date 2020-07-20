@@ -55,8 +55,8 @@ import java.io.OutputStream;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -105,9 +105,9 @@ public class ArmeriaMessageFramer implements AutoCloseable {
      *
      * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
      *
-     * @return a {@link PooledHttpData} with the framed payload. Ownership is passed to caller.
+     * @return an {@link HttpData} with the framed payload. Ownership is passed to caller.
      */
-    public PooledHttpData writePayload(ByteBuf message) {
+    public HttpData writePayload(ByteBuf message) {
         verifyNotClosed();
         final boolean compressed = messageCompression && compressor != null;
         final int messageLength = message.readableBytes();
@@ -118,7 +118,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             } else {
                 buf = writeUncompressed(message);
             }
-            return PooledHttpData.wrap(buf);
+            return HttpData.wrap(buf);
         } catch (IOException | RuntimeException e) {
             // IOException will not be thrown, since sink#deliverFrame doesn't throw.
             throw new ArmeriaStatusException(

@@ -298,12 +298,15 @@ class RefreshingAddressResolverTest {
             final DnsResolverGroupBuilder builder = builder(server1, server2, server3, server4, server5)
                     .negativeTtl(60)
                     .queryTimeoutMillis(1000);
-            final ClientFactory factory =
-                    ClientFactory.builder().addressResolverGroupFactory(builder::build).build();
-            final WebClient client = WebClient.builder("http://foo.com").factory(factory).build();
-            assertThatThrownBy(() -> client.get("/").aggregate().join())
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
+
+            try (ClientFactory factory = ClientFactory.builder()
+                                                      .addressResolverGroupFactory(builder::build)
+                                                      .build()) {
+                final WebClient client = WebClient.builder("http://foo.com").factory(factory).build();
+                assertThatThrownBy(() -> client.get("/").aggregate().join())
+                        .hasCauseInstanceOf(UnprocessedRequestException.class)
+                        .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
+            }
         }
     }
 

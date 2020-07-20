@@ -23,10 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T>
         implements StreamMessageAndWriter<T> {
@@ -58,16 +55,9 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
     @Override
     public boolean tryWrite(T obj) {
         requireNonNull(obj, "obj");
-        if (obj instanceof ReferenceCounted) {
-            ((ReferenceCounted) obj).touch();
-            if (!(obj instanceof ByteBufHolder) && !(obj instanceof ByteBuf)) {
-                throw new IllegalArgumentException(
-                        "can't publish a ReferenceCounted that's not a ByteBuf or a ByteBufHolder: " + obj);
-            }
-        }
 
         if (!isOpen()) {
-            ReferenceCountUtil.release(obj);
+            PooledObjects.close(obj);
             return false;
         }
 

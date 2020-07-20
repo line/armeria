@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.ReferenceCountUtil;
 
 final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
 
@@ -60,7 +59,7 @@ final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpR
     @Override
     protected void onData(HttpData data) {
         if (!trailers.isEmpty()) {
-            ReferenceCountUtil.safeRelease(data);
+            data.close();
             // Data can't come after trailers.
             // See https://tools.ietf.org/html/rfc7540#section-8.1
             return;

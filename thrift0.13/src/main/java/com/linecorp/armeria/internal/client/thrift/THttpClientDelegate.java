@@ -32,7 +32,6 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
@@ -59,7 +58,6 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
@@ -69,8 +67,6 @@ import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.util.ReferenceCountUtil;
 
 final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpResponse, RpcRequest, RpcResponse>
         implements RpcClient {
@@ -138,7 +134,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                                   .authority(endpoint != null ? endpoint.authority() : "UNKNOWN")
                                   .contentType(mediaType)
                                   .build(),
-                    PooledHttpData.wrap(buf).withEndOfStream());
+                    HttpData.wrap(buf).withEndOfStream());
 
             ctx.updateRequest(httpReq);
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT);
@@ -157,7 +153,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                     return null;
                 }
 
-                try {
+                try (HttpData content = res.content()) {
                     final HttpStatus status = res.status();
                     if (status.code() != HttpStatus.OK.code()) {
                         handlePreDecodeException(
@@ -167,12 +163,10 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                     }
 
                     try {
-                        handle(ctx, seqId, reply, func, res.content());
+                        handle(ctx, seqId, reply, func, content);
                     } catch (Throwable t) {
                         handlePreDecodeException(ctx, reply, func, t);
                     }
-                } finally {
-                    ReferenceCountUtil.safeRelease(res.content());
                 }
 
                 return null;
@@ -214,13 +208,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             throw new TApplicationException(TApplicationException.MISSING_RESULT);
         }
 
-        final TTransport inputTransport;
-        if (content instanceof ByteBufHolder) {
-            inputTransport = new TByteBufTransport(((ByteBufHolder) content).content());
-        } else {
-            inputTransport = new TMemoryInputTransport(content.array());
-        }
-
+        final TTransport inputTransport = new TByteBufTransport(content.byteBuf());
         final TProtocol inputProtocol = protocolFactory.getProtocol(inputTransport);
 
         final TMessage header = inputProtocol.readMessageBegin();

@@ -29,11 +29,12 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 class CircuitBreakerClientIntegrationTest {
@@ -55,9 +56,8 @@ class CircuitBreakerClientIntegrationTest {
 
         for (int i = 0; i < 3; i++) {
             final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "h2c://127.0.0.1:1");
-            final PooledHttpData data = PooledHttpData.wrap(Unpooled.wrappedBuffer(new byte[] { 0 }))
-                                                      .withEndOfStream();
-            req.write(data);
+            final ByteBuf buf = Unpooled.directBuffer().writeZero(1);
+            req.write(HttpData.wrap(buf).withEndOfStream());
 
             switch (i) {
                 case 0:
@@ -85,7 +85,7 @@ class CircuitBreakerClientIntegrationTest {
                     });
             }
 
-            assertThat(data.refCnt()).isZero();
+            assertThat(buf.refCnt()).isZero();
 
             tickerValue.addAndGet(TimeUnit.SECONDS.toNanos(1));
         }

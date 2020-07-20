@@ -43,12 +43,9 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
@@ -139,12 +136,7 @@ public final class UnaryGrpcClient {
                     req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                        .thenCompose(
                                msg -> {
-                                   final ByteBuf buf;
-                                   if (msg.content() instanceof ByteBufHolder) {
-                                       buf = ((ByteBufHolder) msg.content()).content();
-                                   } else {
-                                       buf = Unpooled.wrappedBuffer(msg.content().array());
-                                   }
+                                   final ByteBuf buf = msg.content().byteBuf();
                                    final HttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                                            ctx.alloc(), Integer.MAX_VALUE)) {
@@ -175,7 +167,7 @@ public final class UnaryGrpcClient {
                                    assert buf != null;
                                    responseFuture.complete(HttpResponse.of(
                                            msg.headers(),
-                                           PooledHttpData.wrap(buf).withEndOfStream(),
+                                           HttpData.wrap(buf).withEndOfStream(),
                                            msg.trailers()));
                                }
 

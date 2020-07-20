@@ -209,21 +209,23 @@ class RouteDecoratingTest {
             "bar.com, /bar/1, , 200"
     })
     void virtualHost(String host, String path, @Nullable String authorization, int status) {
-        final ClientFactory factory =
-                ClientFactory.builder()
-                             .addressResolverGroupFactory(eventLoop -> MockAddressResolverGroup.localhost())
-                             .build();
-        final WebClient client = WebClient.builder("http://" + host + ':' + virtualHostServer.httpPort())
-                                          .factory(factory)
-                                          .build();
-        final RequestHeaders headers;
-        if (authorization != null) {
-            headers = RequestHeaders.of(HttpMethod.GET, path, HttpHeaderNames.AUTHORIZATION, authorization);
-        } else {
-            headers = RequestHeaders.of(HttpMethod.GET, path);
+        try (ClientFactory factory =
+                     ClientFactory.builder()
+                                  .addressResolverGroupFactory(
+                                          eventLoop -> MockAddressResolverGroup.localhost())
+                                  .build()) {
+            final WebClient client = WebClient.builder("http://" + host + ':' + virtualHostServer.httpPort())
+                                              .factory(factory)
+                                              .build();
+            final RequestHeaders headers;
+            if (authorization != null) {
+                headers = RequestHeaders.of(HttpMethod.GET, path, HttpHeaderNames.AUTHORIZATION, authorization);
+            } else {
+                headers = RequestHeaders.of(HttpMethod.GET, path);
+            }
+            final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+            assertThat(res.status().code()).isEqualTo(status);
         }
-        final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
-        assertThat(res.status().code()).isEqualTo(status);
     }
 
     @Test

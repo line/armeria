@@ -28,7 +28,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
-import io.netty.util.ReferenceCountUtil;
 
 public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     private final ChannelHandlerContext ctx;
@@ -58,13 +57,13 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
 
         if (encoder.connection().local().mayHaveCreatedStream(streamId)) {
             // Can't write to an outdated (closed) stream.
-            ReferenceCountUtil.safeRelease(data);
+            data.close();
             return data.isEmpty() ? ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
                                   : newFailedFuture(ClosedStreamException.get());
         }
 
         // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.
-        ReferenceCountUtil.safeRelease(data);
+        data.close();
         return newFailedFuture(new IllegalStateException(
                 "Trying to write data to the closed stream " + streamId +
                 " or start a new stream with a DATA frame"));

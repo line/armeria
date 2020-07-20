@@ -73,7 +73,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
      * <ul>
-     *   <li>{@code "<host>:<port>"} for a host endpoint</li>
+     *   <li>{@code "<host>:<port>"} for a host endpoint (The userinfo part will be ignored.)</li>
      *   <li>{@code "<host>"} for a host endpoint with no port number specified</li>
      * </ul>
      * An IPv4 or IPv6 address can be specified in lieu of a host name, e.g. {@code "127.0.0.1:8080"} and
@@ -81,7 +81,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
-        final HostAndPort parsed = HostAndPort.fromString(authority).withDefaultPort(0);
+        final HostAndPort parsed = HostAndPort.fromString(removeUserInfo(authority)).withDefaultPort(0);
         return create(parsed.getHost(), parsed.getPort());
     }
 
@@ -129,6 +129,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         return new Endpoint(InternetDomainName.from(host).toString(),
                             null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
+    }
+
+    private static String removeUserInfo(String authority) {
+        final int indexOfDelimiter = authority.lastIndexOf("@");
+        if (indexOfDelimiter == -1) {
+            return authority;
+        }
+        return authority.substring(indexOfDelimiter + 1);
     }
 
     private enum HostType {

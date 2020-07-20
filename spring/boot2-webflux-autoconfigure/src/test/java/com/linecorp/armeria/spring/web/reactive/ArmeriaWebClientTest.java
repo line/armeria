@@ -21,6 +21,8 @@ import java.time.Duration;
 
 import javax.annotation.Nullable;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -98,12 +100,24 @@ public class ArmeriaWebClientTest {
     @LocalServerPort
     int port;
 
-    static WebClient webClient = WebClient.builder().clientConnector(
-            new ArmeriaClientHttpConnector(builder -> builder.factory(
-                    ClientFactory.builder()
-                                 .tlsNoVerify()
-                                 .addressResolverGroupFactory(unused -> MockAddressResolverGroup.localhost())
-                                 .build()))).build();
+    static ClientFactory clientFactory;
+    static WebClient webClient;
+
+    @BeforeClass
+    public static void beforeAll() {
+        clientFactory =
+                ClientFactory.builder()
+                             .tlsNoVerify()
+                             .addressResolverGroupFactory(unused -> MockAddressResolverGroup.localhost())
+                             .build();
+        webClient = WebClient.builder().clientConnector(
+                new ArmeriaClientHttpConnector(builder -> builder.factory(clientFactory))).build();
+    }
+
+    @AfterClass
+    public static void afterAll() {
+        clientFactory.closeAsync();
+    }
 
     private String uri(String path) {
         return "https://example.com:" + port + path;

@@ -25,12 +25,8 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.util.ReferenceCountUtil;
 
 abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements Subscriber<HttpObject> {
 
@@ -73,19 +69,12 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
             if (alloc != null) {
                 final ByteBuf merged = alloc.buffer(contentLength);
                 for (int i = 0; i < contentList.size(); i++) {
-                    final HttpData data = contentList.set(i, null);
-                    if (data instanceof ByteBufHolder) {
-                        final ByteBufHolder byteBufData = (ByteBufHolder) data;
-                        try {
-                            merged.writeBytes(byteBufData.content());
-                        } finally {
-                            byteBufData.release();
-                        }
-                    } else {
-                        merged.writeBytes(data.array());
+                    try (HttpData data = contentList.set(i, null)) {
+                        final ByteBuf buf = data.byteBuf();
+                        merged.writeBytes(buf, buf.readerIndex(), data.length());
                     }
                 }
-                content = PooledHttpData.wrap(merged);
+                content = HttpData.wrap(merged);
             } else {
                 final byte[] merged = new byte[contentLength];
                 for (int i = 0, offset = 0; i < contentList.size(); i++) {
@@ -139,13 +128,13 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
             }
         } finally {
             if (!added) {
-                ReferenceCountUtil.safeRelease(data);
+                data.close();
             }
         }
     }
 
     private void fail(Throwable cause) {
-        contentList.forEach(ReferenceCountUtil::safeRelease);
+        contentList.forEach(HttpData::close);
         contentList.clear();
         onFailure();
         future.completeExceptionally(cause);

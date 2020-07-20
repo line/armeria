@@ -23,9 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -209,7 +209,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
-                            } else if (!res.tryWrite(PooledHttpData.wrap(data.retain()))) {
+                            } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
                                 fail(ctx, ClosedStreamException.get());
                                 return;
                             }

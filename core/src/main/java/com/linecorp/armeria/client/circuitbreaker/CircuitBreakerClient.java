@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 /**
@@ -258,21 +260,35 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
                    .whenAvailable(rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
                                                                   : RequestLogProperty.RESPONSE_HEADERS)
                    .thenApply(log -> {
-                       final Throwable cause =
+                       final Throwable resCause =
                                log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
 
-                       if (needsContentInRule && cause == null) {
-                           try (HttpResponseDuplicator duplicator =
-                                        response.toDuplicator(
-                                                ctx.eventLoop().withoutContext(), ctx.maxResponseLength())) {
+                       if (needsContentInRule && resCause == null) {
+                           final HttpResponseDuplicator duplicator =
+                                   response.toDuplicator(ctx.eventLoop().withoutContext(),
+                                                         ctx.maxResponseLength());
+                           try {
                                final TruncatingHttpResponse truncatingHttpResponse =
                                        new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
-                               reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
-                                       ctx, truncatingHttpResponse, null));
-                               return duplicator.duplicate();
+
+                               final CompletionStage<CircuitBreakerDecision> f =
+                                       ruleWithContent().shouldReportAsSuccess(
+                                               ctx, truncatingHttpResponse, null);
+                               f.handle((unused1, unused2) -> {
+                                   truncatingHttpResponse.abort();
+                                   return null;
+                               });
+                               reportSuccessOrFailure(circuitBreaker, f);
+
+                               final HttpResponse duplicate = duplicator.duplicate();
+                               duplicator.close();
+                               return duplicate;
+                           } catch (Throwable cause) {
+                               duplicator.abort(cause);
+                               return Exceptions.throwUnsafely(cause);
                            }
                        } else {
-                           reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
+                           reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, resCause));
                            return response;
                        }
                    });

@@ -24,6 +24,8 @@ import org.apache.tomcat.util.net.ApplicationBufferHandler;
 
 import com.linecorp.armeria.common.HttpData;
 
+import io.netty.buffer.ByteBuf;
+
 public final class Tomcat90InputBuffer implements InputBuffer {
     private final HttpData content;
     private boolean read;
@@ -41,10 +43,10 @@ public final class Tomcat90InputBuffer implements InputBuffer {
 
         read = true;
 
-        final int readableBytes = content.length();
-        chunk.setBytes(content.array(), 0, readableBytes);
+        final byte[] array = content.array();
+        chunk.setBytes(array, 0, array.length);
 
-        return readableBytes;
+        return array.length;
     }
 
     @Override
@@ -55,9 +57,16 @@ public final class Tomcat90InputBuffer implements InputBuffer {
         }
         read = true;
 
-        final int readableBytes = content.length();
-        handler.setByteBuffer(ByteBuffer.wrap(content.array(), 0, readableBytes));
-        return readableBytes;
+        final ByteBuf buf = content.byteBuf();
+        final ByteBuffer nioBuf;
+        if (buf.nioBufferCount() == 1) {
+            nioBuf = buf.nioBuffer();
+        } else {
+            nioBuf = ByteBuffer.wrap(content.array());
+        }
+
+        handler.setByteBuffer(nioBuf);
+        return nioBuf.remaining();
     }
 
     private boolean isNeedToRead() {

@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.ByteBuffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
@@ -27,35 +27,34 @@ import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
-public class DataBufferFactoryWrapperTest {
+class DataBufferFactoryWrapperTest {
 
     @Test
-    public void usingNettyDataBufferFactory_PooledHttpData() {
+    void usingNettyDataBufferFactory_PooledHttpData() {
         final DataBufferFactoryWrapper<?> wrapper =
                 new DataBufferFactoryWrapper<>(new NettyDataBufferFactory(UnpooledByteBufAllocator.DEFAULT));
 
-        final PooledHttpData httpData1 =
-                PooledHttpData.wrap(Unpooled.wrappedBuffer("abc".getBytes()));
+        final HttpData httpData1 =
+                HttpData.wrap(Unpooled.wrappedBuffer("abc".getBytes()));
 
         final DataBuffer buffer = wrapper.toDataBuffer(httpData1);
         assertThat(buffer).isInstanceOf(NettyDataBuffer.class);
         assertThat(((NettyDataBuffer) buffer).getNativeBuffer().refCnt()).isOne();
 
         final HttpData httpData2 = wrapper.toHttpData(buffer);
-        assertThat(httpData2).isInstanceOf(PooledHttpData.class);
-        assertThat(((PooledHttpData) httpData2).content())
-                .isEqualTo(((NettyDataBuffer) buffer).getNativeBuffer());
-        assertThat(((PooledHttpData) httpData2).refCnt()).isOne();
+        assertThat(httpData2).isInstanceOf(HttpData.class);
+        assertThat(httpData2.byteBuf().array()).isSameAs(((NettyDataBuffer) buffer).getNativeBuffer().array());
+        assertThat(httpData2.byteBuf().refCnt()).isOne();
     }
 
     @Test
-    public void usingNettyDataBufferFactory_HttpData() {
+    void usingNettyDataBufferFactory_HttpData() {
         final DataBufferFactoryWrapper<?> wrapper =
                 new DataBufferFactoryWrapper<>(new NettyDataBufferFactory(UnpooledByteBufAllocator.DEFAULT));
 
@@ -66,10 +65,9 @@ public class DataBufferFactoryWrapperTest {
         assertThat(((NettyDataBuffer) buffer).getNativeBuffer().refCnt()).isOne();
 
         final HttpData httpData2 = wrapper.toHttpData(buffer);
-        assertThat(httpData2).isInstanceOf(PooledHttpData.class);
-        assertThat(((PooledHttpData) httpData2).content())
-                .isEqualTo(((NettyDataBuffer) buffer).getNativeBuffer());
-        assertThat(((PooledHttpData) httpData2).refCnt()).isOne();
+        assertThat(httpData2).isInstanceOf(HttpData.class);
+        assertThat(httpData2.byteBuf().array()).isSameAs(((NettyDataBuffer) buffer).getNativeBuffer().array());
+        assertThat(httpData2.byteBuf().refCnt()).isOne();
     }
 
     @Test
@@ -77,22 +75,22 @@ public class DataBufferFactoryWrapperTest {
         final DataBufferFactoryWrapper<?> wrapper =
                 new DataBufferFactoryWrapper<>(new DefaultDataBufferFactory());
 
-        final PooledHttpData httpData1 =
-                PooledHttpData.wrap(Unpooled.wrappedBuffer("abc".getBytes()));
+        final ByteBuf byteBuf = Unpooled.wrappedBuffer("abc".getBytes());
+        final HttpData httpData1 = HttpData.wrap(byteBuf);
 
         final DataBuffer buffer = wrapper.toDataBuffer(httpData1);
         assertThat(buffer).isInstanceOf(DefaultDataBuffer.class);
-        assertThat(httpData1.refCnt()).isZero();
+        assertThat(byteBuf.refCnt()).isZero();
         assertThat(buffer.asByteBuffer()).isEqualTo(ByteBuffer.wrap("abc".getBytes()));
 
         final HttpData httpData2 = wrapper.toHttpData(buffer);
-        assertThat(httpData2).isInstanceOf(PooledHttpData.class);
-        assertThat(((PooledHttpData) httpData2).refCnt()).isOne();
-        assertThat(ByteBufUtil.getBytes(((PooledHttpData) httpData2).content())).isEqualTo("abc".getBytes());
+        assertThat(httpData2).isInstanceOf(HttpData.class);
+        assertThat(httpData2.byteBuf().refCnt()).isOne();
+        assertThat(ByteBufUtil.getBytes(httpData2.byteBuf())).isEqualTo("abc".getBytes());
     }
 
     @Test
-    public void usingDefaultDataBufferFactory_HttpData() {
+    void usingDefaultDataBufferFactory_HttpData() {
         final DataBufferFactoryWrapper<?> wrapper =
                 new DataBufferFactoryWrapper<>(new DefaultDataBufferFactory());
 
@@ -103,8 +101,8 @@ public class DataBufferFactoryWrapperTest {
         assertThat(buffer.asByteBuffer()).isEqualTo(ByteBuffer.wrap("abc".getBytes()));
 
         final HttpData httpData2 = wrapper.toHttpData(buffer);
-        assertThat(httpData2).isInstanceOf(PooledHttpData.class);
-        assertThat(((PooledHttpData) httpData2).refCnt()).isOne();
-        assertThat(ByteBufUtil.getBytes(((PooledHttpData) httpData2).content())).isEqualTo("abc".getBytes());
+        assertThat(httpData2).isInstanceOf(HttpData.class);
+        assertThat(httpData2.byteBuf().refCnt()).isOne();
+        assertThat(ByteBufUtil.getBytes(httpData2.byteBuf())).isEqualTo("abc".getBytes());
     }
 }
