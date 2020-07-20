@@ -38,9 +38,9 @@ final class DefaultMultiPart implements MultiPart {
 
     private final String boundary;
     private final MultiPartEncoder encoder;
-    private final Publisher<BodyPart> parts;
+    private final Publisher<? extends BodyPart> parts;
 
-    DefaultMultiPart(String boundary, Publisher<BodyPart> parts) {
+    DefaultMultiPart(String boundary, Publisher<? extends BodyPart> parts) {
         this.boundary = boundary;
         encoder = new MultiPartEncoder(boundary);
         this.parts = parts;
@@ -57,9 +57,10 @@ final class DefaultMultiPart implements MultiPart {
         return boundary;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Publisher<BodyPart> bodyParts() {
-        return parts;
+        return (Publisher<BodyPart>) parts;
     }
 
     @Override

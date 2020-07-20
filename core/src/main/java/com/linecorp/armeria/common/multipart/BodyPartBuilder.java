@@ -55,7 +55,7 @@ public final class BodyPartBuilder {
      * Adds a new body part backed by the specified {@link Publisher}.
      * @param publisher publisher for the part content
      */
-    public BodyPartBuilder content(Publisher<HttpData> publisher) {
+    public BodyPartBuilder content(Publisher<? extends HttpData> publisher) {
         requireNonNull(publisher, "publisher");
         if (content == EMPTY) {
             content = Multi.from(publisher);

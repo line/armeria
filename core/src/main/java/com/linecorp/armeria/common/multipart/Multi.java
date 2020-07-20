@@ -53,8 +53,6 @@ interface Multi<T> extends Publisher<T> {
     // - Replaced Flow.* with reactivestreams.*
     // - Removed unnecessary operators
 
-    // TODO(ikhoon): Fork test cases for Multi and its subclasses
-
     // --------------------------------------------------------------------------------------------------------
     // Factory (source-like) methods
     // --------------------------------------------------------------------------------------------------------
@@ -67,7 +65,7 @@ interface Multi<T> extends Publisher<T> {
      * @param <T>         item type
      * @return Multi
      */
-    static <T> Multi<T> concat(Publisher<T> firstMulti, Publisher<T> secondMulti) {
+    static <T> Multi<T> concat(Publisher<? extends  T> firstMulti, Publisher<? extends T> secondMulti) {
         return ConcatPublisher.create(firstMulti, secondMulti);
     }
 
@@ -80,7 +78,7 @@ interface Multi<T> extends Publisher<T> {
      */
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <T> Multi<T> concatArray(Publisher<T>... publishers) {
+    static <T> Multi<T> concatArray(Publisher<? extends T>... publishers) {
         if (publishers.length == 0) {
             return empty();
         } else if (publishers.length == 1) {
@@ -121,7 +119,7 @@ interface Multi<T> extends Publisher<T> {
      * @return Multi
      * @throws NullPointerException if source is {@code null}
      */
-    static <T> Multi<T> from(Publisher<T> source) {
+    static <T> Multi<T> from(Publisher<? extends T> source) {
         if (source instanceof Multi) {
             return (Multi<T>) source;
         }
@@ -136,7 +134,7 @@ interface Multi<T> extends Publisher<T> {
      * @return Multi
      * @throws NullPointerException if source is {@code null}
      */
-    static <T> Multi<T> from(StreamMessage<T> source, SubscriptionOption... options) {
+    static <T> Multi<T> from(StreamMessage<? extends T> source, SubscriptionOption... options) {
         return new MultiFromStreamMessage<>(source, options);
     }
 

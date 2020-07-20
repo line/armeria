@@ -102,9 +102,7 @@ public interface MultiPart extends Publisher<HttpData> {
      */
     static MultiPart of(String boundary, Publisher<? extends BodyPart> parts) {
         requireNonNull(parts, "parts");
-        @SuppressWarnings("unchecked")
-        final Publisher<BodyPart> cast = (Publisher<BodyPart>) parts;
-        return new DefaultMultiPart(boundary, cast);
+        return new DefaultMultiPart(boundary, parts);
     }
 
     /**

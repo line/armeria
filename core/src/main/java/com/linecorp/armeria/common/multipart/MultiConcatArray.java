@@ -44,9 +44,9 @@ final class MultiConcatArray<T> implements Multi<T> {
 
     // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common/reactive/src/main/java/io/helidon/common/reactive/MultiConcatArray.java
 
-    private final Publisher<T>[] sources;
+    private final Publisher<? extends T>[] sources;
 
-    MultiConcatArray(Publisher<T>[] sources) {
+    MultiConcatArray(Publisher<? extends T>[] sources) {
         this.sources = sources;
     }
 
@@ -61,7 +61,7 @@ final class MultiConcatArray<T> implements Multi<T> {
 
         private final Subscriber<? super T> downstream;
 
-        private final Publisher<T>[] sources;
+        private final Publisher<? extends T>[] sources;
 
         private final AtomicInteger wip;
 
@@ -69,7 +69,7 @@ final class MultiConcatArray<T> implements Multi<T> {
 
         private long produced;
 
-        ConcatArraySubscriber(Subscriber<? super T> downstream, Publisher<T>[] sources) {
+        ConcatArraySubscriber(Subscriber<? super T> downstream, Publisher<? extends T>[] sources) {
             this.downstream = downstream;
             this.sources = sources;
             wip = new AtomicInteger();

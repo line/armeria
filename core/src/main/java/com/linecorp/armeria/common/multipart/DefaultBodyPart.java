@@ -23,17 +23,18 @@ import com.linecorp.armeria.common.HttpData;
 
 final class DefaultBodyPart implements BodyPart {
 
-    private final Publisher<HttpData> content;
+    private final Publisher<? extends HttpData> content;
     private final BodyPartHeaders headers;
 
-    DefaultBodyPart(Publisher<HttpData> content, BodyPartHeaders headers) {
+    DefaultBodyPart(Publisher<? extends HttpData> content, BodyPartHeaders headers) {
         this.content = content;
         this.headers = headers;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Publisher<HttpData> content() {
-        return content;
+        return (Publisher<HttpData>) content;
     }
 
     @Override

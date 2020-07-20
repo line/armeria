@@ -296,7 +296,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
             }
 
             @Override
-            <T> void drain(final BufferedEmittingPublisher<T> publisher) {
+            <T> void drain(BufferedEmittingPublisher<T> publisher) {
                 publisher.drainBuffer();
             }
         },
@@ -307,7 +307,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
             }
 
             @Override
-            <T> void drain(final BufferedEmittingPublisher<T> publisher) {
+            <T> void drain(BufferedEmittingPublisher<T> publisher) {
                 //noop
             }
         },
@@ -318,7 +318,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
             }
 
             @Override
-            <T> void drain(final BufferedEmittingPublisher<T> publisher) {
+            <T> void drain(BufferedEmittingPublisher<T> publisher) {
                 //Can't happen twice, internal emitter keeps the state too
                 publisher.emitter.fail(publisher.error.get());
             }
@@ -330,7 +330,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
             }
 
             @Override
-            <T> void drain(final BufferedEmittingPublisher<T> publisher) {
+            <T> void drain(BufferedEmittingPublisher<T> publisher) {
                 READY_TO_EMIT.drain(publisher);
             }
         },
@@ -341,7 +341,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
             }
 
             @Override
-            <T> void drain(final BufferedEmittingPublisher<T> publisher) {
+            <T> void drain(BufferedEmittingPublisher<T> publisher) {
                 //Can't happen twice, internal emitter keeps the state too
                 publisher.emitter.complete();
             }

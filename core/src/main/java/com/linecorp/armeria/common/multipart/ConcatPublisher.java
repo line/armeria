@@ -53,10 +53,10 @@ final class ConcatPublisher<T> implements Multi<T> {
 
     // Forked from https://github.com/oracle/helidon/blob/000d470d3dd716828d67830d43c2a0c6adcbb3c4/common/reactive/src/main/java/io/helidon/common/reactive/ConcatPublisher.java
 
-    private final Publisher<T> firstPublisher;
-    private final Publisher<T> secondPublisher;
+    private final Publisher<? extends T> firstPublisher;
+    private final Publisher<? extends T> secondPublisher;
 
-    private ConcatPublisher(Publisher<T> firstPublisher, Publisher<T> secondPublisher) {
+    private ConcatPublisher(Publisher<? extends T> firstPublisher, Publisher<? extends T> secondPublisher) {
         this.firstPublisher = firstPublisher;
         this.secondPublisher = secondPublisher;
     }
@@ -69,7 +69,7 @@ final class ConcatPublisher<T> implements Multi<T> {
      * @param <T>             item type
      * @return {@code ConcatPublisher}
      */
-    public static <T> ConcatPublisher<T> create(Publisher<T> firstPublisher, Publisher<T> secondPublisher) {
+    public static <T> ConcatPublisher<T> create(Publisher<? extends T> firstPublisher, Publisher<? extends T> secondPublisher) {
         return new ConcatPublisher<>(firstPublisher, secondPublisher);
     }
 
@@ -92,14 +92,14 @@ final class ConcatPublisher<T> implements Multi<T> {
 
         private final AtomicBoolean canceled;
 
-        private Publisher<T> source1;
+        private Publisher<? extends T> source1;
 
-        private Publisher<T> source2;
+        private Publisher<? extends T> source2;
 
         private int index;
 
         ConcatCancelingSubscription(Subscriber<? super T> subscriber,
-                                    Publisher<T> source1, Publisher<T> source2) {
+                                    Publisher<? extends T> source1, Publisher<? extends T> source2) {
             inner1 = new InnerSubscriber<>(subscriber, this);
             inner2 = new InnerSubscriber<>(subscriber, this);
             canceled = new AtomicBoolean();
@@ -132,12 +132,12 @@ final class ConcatPublisher<T> implements Multi<T> {
 
                 if (index == 0) {
                     index = 1;
-                    final Publisher<T> source = source1;
+                    final Publisher<? extends T> source = source1;
                     source1 = null;
                     source.subscribe(inner1);
                 } else if (index == 1) {
                     index = 2;
-                    final Publisher<T> source = source2;
+                    final Publisher<? extends T> source = source2;
                     source2 = null;
                     if (inner1.produced != 0L) {
                         SubscriptionHelper.produced(inner2.requested, inner1.produced);
