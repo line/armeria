@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 
 /**
  * A body part entity.
@@ -51,14 +52,14 @@ public interface BodyPart {
     }
 
     /**
+     * Returns HTTP part headers.
+     */
+    HttpHeaders headers();
+
+    /**
      * Returns the reactive representation of the part content.
      */
     Publisher<HttpData> content();
-
-    /**
-     * Returns HTTP part headers.
-     */
-    BodyPartHeaders headers();
 
     /**
      * Returns the control name.

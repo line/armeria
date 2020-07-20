@@ -29,7 +29,7 @@
  * limitations under the License.
  */
 
-package com.linecorp.armeria.common.multipart;
+package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -315,8 +315,8 @@ public final class ContentDisposition {
                 throw new IllegalArgumentException("Invalid content disposition format");
             }
         }
-        return new ContentDisposition(type, name, filename, charset, size, creationDate, modificationDate,
-                                      readDate);
+        return new ContentDisposition(type, name, filename, charset, size,
+                                      creationDate, modificationDate, readDate);
     }
 
     private static List<String> tokenize(String headerValue) {

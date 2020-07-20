@@ -39,7 +39,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 
 import reactor.core.publisher.Flux;
 
@@ -51,6 +54,31 @@ class BodyPartTest {
     // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/test/java/io/helidon/media/multipart/BodyPartTest.java
 
     static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+
+    @Test
+    void testDefaultContentType() {
+        final BodyPart bodyPart = BodyPart.builder()
+                                          .headers(HttpHeaders.of())
+                                          .content("Hello")
+                                          .build();
+        final HttpHeaders headers = bodyPart.headers();
+        assertThat(headers.contentType()).isNotNull();
+        assertThat(headers.contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+    }
+
+    @Test
+    void testDefaultContentTypeForFile() {
+        final BodyPart bodyPart =
+                BodyPart.builder()
+                        .headers(HttpHeaders.builder()
+                                            .set("Content-Disposition", "form-data; filename=foo")
+                                            .build())
+                        .content("Hello")
+                        .build();
+        final HttpHeaders headers = bodyPart.headers();
+        assertThat(headers.contentType()).isNotNull();
+        assertThat(headers.contentType()).isEqualTo(MediaType.OCTET_STREAM);
+    }
 
     @Test
     void testContentFromPublisher() {
@@ -81,12 +109,11 @@ class BodyPartTest {
 
     @Test
     void testName() {
-        final BodyPartHeaders headers =
-                BodyPartHeaders.builder()
-                               .contentDisposition(ContentDisposition.builder("form-data")
-                                                                     .name("foo")
-                                                                     .build())
-                               .build();
+        final HttpHeaders headers = HttpHeaders.builder()
+                                               .contentDisposition(ContentDisposition.builder("form-data")
+                                                                                     .name("foo")
+                                                                                     .build())
+                                               .build();
         final BodyPart bodyPart = BodyPart.builder()
                                           .headers(headers)
                                           .content("abc")
@@ -99,13 +126,12 @@ class BodyPartTest {
 
     @Test
     void testFilename() {
-        final BodyPartHeaders headers =
-                BodyPartHeaders.builder()
-                               .contentDisposition(ContentDisposition
-                                                           .builder("attachment")
-                                                           .filename("foo.txt")
-                                                           .build())
-                               .build();
+        final HttpHeaders headers = HttpHeaders.builder()
+                                               .contentDisposition(ContentDisposition
+                                                                           .builder("attachment")
+                                                                           .filename("foo.txt")
+                                                                           .build())
+                                               .build();
         final BodyPart bodyPart = BodyPart.builder()
                                           .headers(headers)
                                           .content("abc")

@@ -16,16 +16,16 @@
 package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
+import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
-import com.google.common.collect.Streams;
-
+import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 
 /**
  * A builder class for creating {@link BodyPart} instances.
@@ -34,7 +34,7 @@ public final class BodyPartBuilder {
 
     private static final Multi<HttpData> EMPTY = Multi.empty();
 
-    private BodyPartHeaders headers = BodyPartHeaders.of();
+    private HttpHeaders headers = HttpHeaders.of();
     private Multi<HttpData> content = EMPTY;
 
     BodyPartBuilder() {}
@@ -43,13 +43,13 @@ public final class BodyPartBuilder {
      * Sets the specified headers for this part.
      * @param headers headers
      */
-    public BodyPartBuilder headers(BodyPartHeaders headers) {
+    public BodyPartBuilder headers(HttpHeaders headers) {
         requireNonNull(headers, "headers");
         this.headers = headers;
         return this;
     }
 
-    // TODO(ikhoon): Add builder methods for content that take `File` and `Path`
+    // TODO(ikhoon): Add builder methods for `File` and `Path` contents
 
     /**
      * Adds a new body part backed by the specified {@link Publisher}.
@@ -66,26 +66,23 @@ public final class BodyPartBuilder {
     }
 
     /**
-     * Adds the specified a new body part content.
+     * Adds the specified {@link CharSequence} as a body part content.
      */
-    public BodyPartBuilder content(String content) {
+    public BodyPartBuilder content(CharSequence content) {
         requireNonNull(content, "content");
         return content(HttpData.ofUtf8(content));
     }
 
     /**
-     * Adds the specified new body part contents.
+     * Adds the specified {@code bytes} as a body part content.
      */
-    public BodyPartBuilder content(Iterable<? extends CharSequence> contents) {
+    public BodyPartBuilder content(byte[] contents) {
         requireNonNull(contents, "contents");
-        final List<HttpData> wrapped = Streams.stream(contents)
-                                              .map(HttpData::ofUtf8)
-                                              .collect(toImmutableList());
-        return content(Multi.from(wrapped));
+        return content(HttpData.copyOf(contents));
     }
 
     /**
-     * Adds the specified {@link HttpData} as a part content.
+     * Adds the specified {@link HttpData} as a body part content.
      */
     public BodyPartBuilder content(HttpData content) {
         requireNonNull(content, "content");
@@ -93,10 +90,32 @@ public final class BodyPartBuilder {
     }
 
     /**
+     * Returns the default {@code "content-type"} header value:
+     * {@link MediaType#OCTET_STREAM} if the {@code "content-disposition"} header is present with
+     * a non empty value, otherwise {@link MediaType#PLAIN_TEXT}.
+     *
+     * @see <a href="https://tools.ietf.org/html/rfc7578#section-4.4">RFC-7578</a>
+     */
+    private static MediaType defaultContentType(@Nullable ContentDisposition contentDisposition) {
+        if (contentDisposition != null && contentDisposition.filename() != null) {
+            return MediaType.OCTET_STREAM;
+        } else {
+            return MediaType.PLAIN_TEXT;
+        }
+    }
+
+    /**
      * Returns a newly-created {@link BodyPart}.
      */
     public BodyPart build() {
-        checkState(content != EMPTY, "Should set at lease one content");
-        return new DefaultBodyPart(content, headers);
+        checkState(content != EMPTY, "Should set at least one content");
+        final HttpHeaders headers;
+        if (this.headers.contentType() == null) {
+            final MediaType defaultContentType = defaultContentType(this.headers.contentDisposition());
+            headers = this.headers.withMutations(builder -> builder.contentType(defaultContentType));
+        } else {
+            headers = this.headers;
+        }
+        return new DefaultBodyPart(headers, content);
     }
 }

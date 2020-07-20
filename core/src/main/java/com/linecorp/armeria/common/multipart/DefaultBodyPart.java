@@ -20,26 +20,27 @@ import org.reactivestreams.Publisher;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 
 final class DefaultBodyPart implements BodyPart {
 
     private final Publisher<? extends HttpData> content;
-    private final BodyPartHeaders headers;
+    private final HttpHeaders headers;
 
-    DefaultBodyPart(Publisher<? extends HttpData> content, BodyPartHeaders headers) {
+    DefaultBodyPart(HttpHeaders headers, Publisher<? extends HttpData> content) {
         this.content = content;
         this.headers = headers;
+    }
+
+    @Override
+    public HttpHeaders headers() {
+        return headers;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Publisher<HttpData> content() {
         return (Publisher<HttpData>) content;
-    }
-
-    @Override
-    public BodyPartHeaders headers() {
-        return headers;
     }
 
     @Override

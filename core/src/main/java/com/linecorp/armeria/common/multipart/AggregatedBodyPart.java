@@ -20,16 +20,17 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 
 /**
  * A complete body part whose headers and content are readily available.
  */
 public final class AggregatedBodyPart {
 
-    private final BodyPartHeaders headers;
+    private final HttpHeaders headers;
     private final HttpData content;
 
-    AggregatedBodyPart(BodyPartHeaders headers, HttpData content) {
+    AggregatedBodyPart(HttpHeaders headers, HttpData content) {
         this.headers = headers;
         this.content = content;
     }
@@ -37,7 +38,7 @@ public final class AggregatedBodyPart {
     /**
      * Returns HTTP part headers.
      */
-    public BodyPartHeaders headers() {
+    public HttpHeaders headers() {
         return headers;
     }
 

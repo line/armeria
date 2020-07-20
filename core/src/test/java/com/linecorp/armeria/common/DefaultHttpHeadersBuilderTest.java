@@ -180,4 +180,14 @@ class DefaultHttpHeadersBuilderTest {
         assertThat(builder.build()).isEqualTo(HttpHeaders.of("foo", "bar"));
         assertThat(builder.build()).isEqualTo(HttpHeaders.of("foo", "bar"));
     }
+
+    @Test
+    void testContentDisposition() {
+        final HttpHeaders headers = HttpHeaders.builder()
+                                               .set("Content-Disposition", "form-data; name=foo")
+                                               .build();
+        final ContentDisposition cd = headers.contentDisposition();
+        assertThat(cd.type()).isEqualTo("form-data");
+        assertThat(cd.name()).isEqualTo("foo");
+    }
 }

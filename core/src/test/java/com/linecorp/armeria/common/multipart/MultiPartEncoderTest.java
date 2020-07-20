@@ -53,6 +53,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 
 import reactor.core.publisher.Flux;
@@ -62,7 +63,8 @@ import reactor.core.publisher.Flux;
  */
 public class MultiPartEncoderTest {
 
-    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderTest.java
+    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media
+    // /multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderTest.java
 
     @Test
     public void testEncodeOnePart() throws Exception {
@@ -79,9 +81,9 @@ public class MultiPartEncoderTest {
     public void testEncodeOnePartWithHeaders() throws Exception {
         final String boundary = "boundary";
         final BodyPart part1 = BodyPart.builder()
-                                       .headers(BodyPartHeaders.builder()
-                                                               .contentType(MediaType.PLAIN_TEXT)
-                                                               .build())
+                                       .headers(HttpHeaders.builder()
+                                                           .contentType(MediaType.PLAIN_TEXT)
+                                                           .build())
                                        .content("part1")
                                        .build();
         final String message = encodeParts(boundary, part1);

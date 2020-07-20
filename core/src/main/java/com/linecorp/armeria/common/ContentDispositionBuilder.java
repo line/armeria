@@ -29,7 +29,7 @@
  * limitations under the License.
  */
 
-package com.linecorp.armeria.common.multipart;
+package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;

@@ -43,6 +43,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -75,7 +77,7 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
     @Nullable
     private BodyPartBuilder bodyPartBuilder;
     @Nullable
-    private BodyPartHeadersBuilder bodyPartHeaderBuilder;
+    private HttpHeadersBuilder bodyPartHeaderBuilder;
     @Nullable
     private BufferedEmittingPublisher<HttpData> bodyPartPublisher;
 
@@ -149,7 +151,7 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
             emitter.complete();
             // parts are delivered sequentially
             // we potentially drop the last part if not requested
-            emitter.clearBuffer(this::drainPart);
+            emitter.clearBuffer(MultiPartDecoder::drainPart);
         }
 
         // request more data to detect the next part
@@ -186,9 +188,9 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
     private void deferredInit() {
         final Subscriber<? super BodyPart> downstream = this.downstream;
         if (upstream != null && downstream != null) {
-            emitter = new BufferedEmittingPublisher();
+            emitter = new BufferedEmittingPublisher<>();
             emitter.onRequest(this::onPartRequest);
-            emitter.onEmit(this::drainPart);
+            emitter.onEmit(MultiPartDecoder::drainPart);
             emitter.subscribe(downstream);
             initFuture.complete(emitter);
             downstreamUpdater.set(this, null);
@@ -203,7 +205,7 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
         }
     }
 
-    private void drainPart(BodyPart part) {
+    private static void drainPart(BodyPart part) {
         part.content().subscribe(new Subscriber<HttpData>() {
             @Override
             public void onSubscribe(Subscription subscription) {
@@ -224,7 +226,7 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
     }
 
     private BodyPart createPart() {
-        final BodyPartHeaders headers = bodyPartHeaderBuilder.build();
+        final HttpHeaders headers = bodyPartHeaderBuilder.build();
 
         return bodyPartBuilder
                 .headers(headers)
@@ -234,6 +236,7 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
 
     private final class ParserEventProcessor implements MimeParser.EventProcessor {
 
+        @Nullable
         private MimeParser.ParserEvent lastEvent;
 
         @Override
@@ -241,8 +244,8 @@ public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
             final MimeParser.EventType eventType = event.type();
             switch (eventType) {
                 case START_PART:
-                    bodyPartPublisher = new BufferedEmittingPublisher();
-                    bodyPartHeaderBuilder = BodyPartHeaders.builder();
+                    bodyPartPublisher = new BufferedEmittingPublisher<>();
+                    bodyPartHeaderBuilder = HttpHeaders.builder();
                     bodyPartBuilder = BodyPart.builder();
                     break;
                 case HEADER:

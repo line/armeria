@@ -27,7 +27,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -131,10 +133,10 @@ class MultiPartIntegrationTest {
         final ContentDisposition dispositionA = ContentDisposition.builder("form-data")
                                                                   .name("fieldA")
                                                                   .build();
-        final BodyPartHeaders headerA = BodyPartHeaders.builder()
-                                                       .contentDisposition(dispositionA)
-                                                       .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                                       .build();
+        final HttpHeaders headerA = HttpHeaders.builder()
+                                               .contentDisposition(dispositionA)
+                                               .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                               .build();
         final BodyPart partA = BodyPart.builder()
                                        .headers(headerA)
                                        .content("contentA")
@@ -143,10 +145,10 @@ class MultiPartIntegrationTest {
         final ContentDisposition dispositionB = ContentDisposition.builder("form-data")
                                                                   .name("fieldB")
                                                                   .build();
-        final BodyPartHeaders headerB = BodyPartHeaders.builder()
-                                                       .contentDisposition(dispositionB)
-                                                       .contentType(MediaType.JSON)
-                                                       .build();
+        final HttpHeaders headerB = HttpHeaders.builder()
+                                               .contentDisposition(dispositionB)
+                                               .contentType(MediaType.JSON)
+                                               .build();
         final BodyPart partB = BodyPart.builder()
                                        .headers(headerB)
                                        .content("{\"foo\":\"bar\"}")
@@ -161,7 +163,7 @@ class MultiPartIntegrationTest {
     @Test
     void simple() {
         final WebClient client = WebClient.of(server.httpUri());
-        final BodyPartHeaders headers = BodyPartHeaders.builder().build();
+        final HttpHeaders headers = HttpHeaders.builder().build();
         final BodyPart bodyPart = BodyPart.builder()
                                           .headers(headers)
                                           .content("hello")
