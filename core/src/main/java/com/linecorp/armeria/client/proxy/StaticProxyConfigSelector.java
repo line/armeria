@@ -18,8 +18,6 @@ package com.linecorp.armeria.client.proxy;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -43,11 +41,5 @@ final class StaticProxyConfigSelector implements ProxyConfigSelector {
     @Override
     public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
         return proxyConfig;
-    }
-
-    @Override
-    public void connectFailed(SessionProtocol sessionProtocol, Endpoint endpoint,
-                              SocketAddress sa, Throwable throwable) {
-        // do nothing
     }
 }
