@@ -303,11 +303,9 @@ public final class AnnotatedServiceFactory {
         final ResponseHeaders responseHeaders = defaultHeaders.build();
         final HttpHeaders responseTrailers = defaultTrailers.build();
 
-        boolean tempUseBlockingTaskExecutor = AnnotationUtil.findFirst(method, Blocking.class) != null;
-        if (!tempUseBlockingTaskExecutor) {
-            tempUseBlockingTaskExecutor = AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
-        }
-        final boolean useBlockingTaskExecutor = tempUseBlockingTaskExecutor;
+        final boolean useBlockingTaskExecutor =
+                AnnotationUtil.findFirst(method, Blocking.class) != null ||
+                AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
 
         return routes.stream().map(route -> {
             final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
