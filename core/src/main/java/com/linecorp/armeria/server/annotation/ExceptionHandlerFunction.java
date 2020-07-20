@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -32,6 +34,7 @@ public interface ExceptionHandlerFunction {
      * Calls {@link ExceptionHandlerFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this handler cannot handle the {@code cause}.
      */
+    @CheckReturnValue
     HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause);
 
     /**

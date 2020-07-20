@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -224,16 +226,19 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends the specified HTTP request.
      */
+    @CheckReturnValue
     HttpResponse execute(HttpRequest req);
 
     /**
      * Sends the specified HTTP request.
      */
+    @CheckReturnValue
     HttpResponse execute(AggregatedHttpRequest aggregatedReq);
 
     /**
      * Sends an empty HTTP request with the specified headers.
      */
+    @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers) {
         return execute(HttpRequest.of(headers));
     }
@@ -241,6 +246,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, HttpData content) {
         return execute(HttpRequest.of(headers, content));
     }
@@ -248,6 +254,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, byte[] content) {
         return execute(HttpRequest.of(headers, HttpData.wrap(content)));
     }
@@ -255,6 +262,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, String content) {
         return execute(HttpRequest.of(headers, HttpData.ofUtf8(content)));
     }
@@ -262,6 +270,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP request with the specified headers and content.
      */
+    @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, String content, Charset charset) {
         return execute(HttpRequest.of(headers, HttpData.of(charset, content)));
     }
@@ -269,6 +278,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP OPTIONS request.
      */
+    @CheckReturnValue
     default HttpResponse options(String path) {
         return execute(RequestHeaders.of(HttpMethod.OPTIONS, path));
     }
@@ -276,6 +286,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP GET request.
      */
+    @CheckReturnValue
     default HttpResponse get(String path) {
         return execute(RequestHeaders.of(HttpMethod.GET, path));
     }
@@ -283,6 +294,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP HEAD request.
      */
+    @CheckReturnValue
     default HttpResponse head(String path) {
         return execute(RequestHeaders.of(HttpMethod.HEAD, path));
     }
@@ -290,6 +302,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse post(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), content);
     }
@@ -297,6 +310,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse post(String path, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), content);
     }
@@ -304,6 +318,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse post(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), HttpData.ofUtf8(content));
     }
@@ -311,6 +326,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP POST request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse post(String path, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), content, charset);
     }
@@ -318,6 +334,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse put(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), content);
     }
@@ -325,6 +342,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse put(String path, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), content);
     }
@@ -332,6 +350,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse put(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), HttpData.ofUtf8(content));
     }
@@ -339,6 +358,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PUT request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse put(String path, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), content, charset);
     }
@@ -346,6 +366,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse patch(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), content);
     }
@@ -353,6 +374,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse patch(String path, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), content);
     }
@@ -360,6 +382,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse patch(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), HttpData.ofUtf8(content));
     }
@@ -367,6 +390,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PATCH request with the specified content.
      */
+    @CheckReturnValue
     default HttpResponse patch(String path, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), content, charset);
     }
@@ -374,6 +398,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP DELETE request.
      */
+    @CheckReturnValue
     default HttpResponse delete(String path) {
         return execute(RequestHeaders.of(HttpMethod.DELETE, path));
     }
@@ -381,6 +406,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP TRACE request.
      */
+    @CheckReturnValue
     default HttpResponse trace(String path) {
         return execute(RequestHeaders.of(HttpMethod.TRACE, path));
     }

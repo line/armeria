@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.saml;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -35,6 +37,7 @@ interface SamlServiceFunction {
      *                        hostname
      * @param portConfig the port number and its {@link SessionProtocol} which the server is bound to
      */
+    @CheckReturnValue
     HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                        String defaultHostname, SamlPortConfig portConfig);
 }
