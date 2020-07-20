@@ -243,27 +243,25 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
         }
     }
 
-    private int emitOrBuffer(T item) {
-        synchronized (this) {
-            try {
-                if (buffer.isEmpty() && emitter.emit(item)) {
-                    // Buffer drained, emit successful
-                    // saved time by skipping buffer
-                    if (onEmitCallback != null) {
-                        onEmitCallback.accept(item);
-                    }
-                    return 0;
-                } else {
-                    // safe slower path thru buffer
-                    buffer.add(item);
-                    state.get().drain(this);
-                    return buffer.size();
+    private synchronized int emitOrBuffer(T item) {
+        try {
+            if (buffer.isEmpty() && emitter.emit(item)) {
+                // Buffer drained, emit successful
+                // saved time by skipping buffer
+                if (onEmitCallback != null) {
+                    onEmitCallback.accept(item);
                 }
-            } finally {
-                // If unbounded, check only once if buffer is empty
-                if (!safeToSkipBuffer && isUnbounded() && buffer.isEmpty()) {
-                    safeToSkipBuffer = true;
-                }
+                return 0;
+            } else {
+                // safe slower path thru buffer
+                buffer.add(item);
+                state.get().drain(this);
+                return buffer.size();
+            }
+        } finally {
+            // If unbounded, check only once if buffer is empty
+            if (!safeToSkipBuffer && isUnbounded() && buffer.isEmpty()) {
+                safeToSkipBuffer = true;
             }
         }
     }

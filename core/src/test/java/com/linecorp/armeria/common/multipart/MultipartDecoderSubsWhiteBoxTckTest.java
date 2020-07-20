@@ -28,44 +28,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.linecorp.armeria.common.multipart;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.SubscriberWhiteboxVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
+import com.linecorp.armeria.common.HttpData;
+
 import reactor.core.publisher.Flux;
 
-public class MultiPartEncoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerification<BodyPart> {
+public class MultipartDecoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerification<HttpData> {
 
-    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderSubsWhiteBoxTckTest.java
+    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartDecoderSubsWhiteBoxTckTest.java
 
-    protected MultiPartEncoderSubsWhiteBoxTckTest() {
+    protected MultipartDecoderSubsWhiteBoxTckTest() {
         super(new TestEnvironment(200));
     }
 
     @Override
-    public BodyPart createElement(final int element) {
-        return BodyPart.builder()
-                       .content("part" + element)
-                       .build();
+    public Publisher<HttpData> createHelperPublisher(long l) {
+        return MultipartDecoderTckTest.upstream(l);
     }
 
     @Override
-    public Subscriber<BodyPart> createSubscriber(WhiteboxSubscriberProbe<BodyPart> probe) {
+    public HttpData createElement(final int element) {
+        return null;
+    }
+
+    @Override
+    public Subscriber<HttpData> createSubscriber(final WhiteboxSubscriberProbe<HttpData> probe) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final MultiPartEncoder encoder = new MultiPartEncoder("boundary") {
+        final MultiPartDecoder decoder = new MultiPartDecoder("boundary") {
             @Override
-            public void onSubscribe(Subscription subscription) {
+            public void onSubscribe(final Subscription subscription) {
                 super.onSubscribe(subscription);
                 future.complete(null);
-                probe.registerOnSubscribe(new SubscriberWhiteboxVerification.SubscriberPuppet() {
+                probe.registerOnSubscribe(new SubscriberPuppet() {
                     @Override
-                    public void triggerRequest(final long elements) {
+                    public void triggerRequest(long elements) {
                         subscription.request(elements);
                     }
 
@@ -77,13 +84,13 @@ public class MultiPartEncoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerif
             }
 
             @Override
-            public void onNext(final BodyPart bodyPart) {
-                super.onNext(bodyPart);
-                probe.registerOnNext(bodyPart);
+            public void onNext(HttpData chunk) {
+                super.onNext(chunk);
+                probe.registerOnNext(chunk);
             }
 
             @Override
-            public void onError(final Throwable throwable) {
+            public void onError(Throwable throwable) {
                 super.onError(throwable);
                 probe.registerOnError(throwable);
             }
@@ -95,8 +102,8 @@ public class MultiPartEncoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerif
             }
         };
 
-        Flux.from(encoder).subscribe(ch -> {});
-        return encoder;
+        Flux.from(decoder).subscribe(part -> {});
+        return decoder;
     }
 
     @Test(enabled = false)

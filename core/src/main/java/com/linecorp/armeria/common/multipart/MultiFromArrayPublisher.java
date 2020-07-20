@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.reactivestreams.Subscriber;
@@ -51,10 +53,13 @@ final class MultiFromArrayPublisher<T> implements Multi<T> {
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         subscriber.onSubscribe(new ArraySubscription<>(subscriber, items));
     }
 
     private static final class ArraySubscription<T> extends AtomicLong implements Subscription {
+
+        private static final long serialVersionUID = 6780020322333114084L;
 
         private final Subscriber<? super T> downstream;
 

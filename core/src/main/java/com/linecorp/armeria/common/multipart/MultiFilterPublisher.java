@@ -35,6 +35,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -47,12 +49,13 @@ final class MultiFilterPublisher<T> implements Multi<T> {
     private final Predicate<? super T> predicate;
 
     MultiFilterPublisher(Multi<T> source, Predicate<? super T> predicate) {
-        this.source = source;
-        this.predicate = predicate;
+        this.source = requireNonNull(source, "source");
+        this.predicate = requireNonNull(predicate, "predicate");
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         source.subscribe(new FilterSubscriber<>(subscriber, predicate));
     }
 
@@ -62,6 +65,7 @@ final class MultiFilterPublisher<T> implements Multi<T> {
 
         private final Predicate<? super T> predicate;
 
+        @Nullable
         private Subscription upstream;
 
         FilterSubscriber(Subscriber<? super T> downstream, Predicate<? super T> predicate) {

@@ -34,6 +34,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -52,12 +54,13 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
     private final Function<? super T, ? extends R> mapper;
 
     MultiMapperPublisher(Publisher<T> source, Function<? super T, ? extends R> mapper) {
-        this.source = source;
-        this.mapper = mapper;
+        this.source = requireNonNull(source, "source");
+        this.mapper = requireNonNull(mapper, "mapper");
     }
 
     @Override
     public void subscribe(Subscriber<? super R> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         source.subscribe(new MapperSubscriber<>(subscriber, mapper));
     }
 
@@ -67,6 +70,7 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
 
         private final Function<? super T, ? extends R> mapper;
 
+        @Nullable
         private Subscription upstream;
 
         MapperSubscriber(Subscriber<? super R> downstream, Function<? super T, ? extends R> mapper) {

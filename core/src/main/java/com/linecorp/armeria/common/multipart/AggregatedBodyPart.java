@@ -15,83 +15,58 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-
+import com.linecorp.armeria.common.AggregatedHttpContent;
+import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 
 /**
  * A complete body part whose headers and content are readily available.
  */
-public final class AggregatedBodyPart {
-
-    private final HttpHeaders headers;
-    private final HttpData content;
-
-    AggregatedBodyPart(HttpHeaders headers, HttpData content) {
-        this.headers = headers;
-        this.content = content;
-    }
+public interface AggregatedBodyPart extends AggregatedHttpContent {
 
     /**
-     * Returns HTTP part headers.
+     * Returns a new {@link AggregatedBodyPart}.
      */
-    public HttpHeaders headers() {
-        return headers;
+    static AggregatedBodyPart of(HttpHeaders headers, HttpData content) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+        return new DefaultAggregatedBodyPart(headers, content);
     }
 
     /**
-     * Returns the content of the {@link AggregatedBodyPart}.
-     */
-    public HttpData content() {
-        return content;
-    }
-
-    /**
-     * Returns the content string of the {@link AggregatedBodyPart} using UTF-8 encoding.
-     */
-    public String contentUtf8() {
-        return content.toStringUtf8();
-    }
-
-    /**
-     * Returns the content string of the {@link AggregatedBodyPart} using US-ASCII encoding.
-     */
-    public String contentAscii() {
-        return content.toStringAscii();
-    }
-
-    /**
-     * Retuns the control name.
+     * Returns the control name.
      *
      * @return the {@code name} parameter of the {@code Content-Disposition}
      *         header, or {@code null} if not present.
      */
     @Nullable
-    public String name() {
-        return headers().contentDisposition().name();
+    default String name() {
+        final ContentDisposition contentDisposition = headers().contentDisposition();
+        if (contentDisposition != null) {
+            return contentDisposition.name();
+        } else {
+            return null;
+        }
     }
 
     /**
-     * Return the file name.
+     * Returns the file name.
      *
      * @return the {@code filename} parameter of the {@code Content-Disposition}
      *         header, or {@code null} if not present.
      */
     @Nullable
-    public String filename() {
-        return headers().contentDisposition().filename();
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("name", name())
-                          .add("filename", filename())
-                          .add("headers", headers)
-                          .add("content", content)
-                          .toString();
+    default String filename() {
+        final ContentDisposition contentDisposition = headers().contentDisposition();
+        if (contentDisposition != null) {
+            return contentDisposition.filename();
+        } else {
+            return null;
+        }
     }
 }

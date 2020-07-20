@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscription;
 
 /**
@@ -55,6 +57,8 @@ import org.reactivestreams.Subscription;
  */
 class SubscriptionArbiter extends AtomicInteger implements Subscription {
 
+    private static final long serialVersionUID = 1163246596979976791L;
+
     // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
 
     // TODO(ikhoon): Remove AtomicInteger from superclass
@@ -63,6 +67,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
     private long requested;
 
     /** The current subscription to relay requests for. */
+    @Nullable
     private Subscription subscription;
 
     /** The new subscription to use. */

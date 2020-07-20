@@ -113,7 +113,7 @@ class MultiPartEncoder implements Processor<BodyPart, HttpData> {
         final Subscription upstream = this.upstream;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (upstream != null && downstream != null) {
-            emitter = new BufferedEmittingPublisher();
+            emitter = new BufferedEmittingPublisher<>();
             // relay request to upstream, already reduced by flatmap
             emitter.onRequest((r, t) -> upstream.request(r));
             Multi.from(emitter)

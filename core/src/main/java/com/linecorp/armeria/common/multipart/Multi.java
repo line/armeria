@@ -63,22 +63,21 @@ interface Multi<T> extends Publisher<T> {
      * @param firstMulti  first stream
      * @param secondMulti second stream
      * @param <T>         item type
-     * @return Multi
      */
     static <T> Multi<T> concat(Publisher<? extends  T> firstMulti, Publisher<? extends T> secondMulti) {
-        return ConcatPublisher.create(firstMulti, secondMulti);
+        return new ConcatPublisher<>(firstMulti, secondMulti);
     }
 
     /**
      * Concatenates an array of source {@link Publisher}s by relaying items
      * in order, non-overlappingly, one after the other finishes.
-     * @param publishers  more publishers to concat
-     * @param <T>         item type
-     * @return Multi
+     * @param publishers more publishers to concat
+     * @param <T> item type
      */
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <T> Multi<T> concatArray(Publisher<? extends T>... publishers) {
+        requireNonNull(publishers, "publishers");
         if (publishers.length == 0) {
             return empty();
         } else if (publishers.length == 1) {
@@ -88,10 +87,9 @@ interface Multi<T> extends Publisher<T> {
     }
 
     /**
-     * Get a {@link Multi} instance that completes immediately.
+     * Returns a {@link Multi} instance that completes immediately.
      *
      * @param <T> item type
-     * @return Multi
      */
     static <T> Multi<T> empty() {
         return MultiEmpty.instance();
@@ -104,21 +102,18 @@ interface Multi<T> extends Publisher<T> {
      *
      * @param <T>   item type
      * @param error exception to hold
-     * @return Multi
-     * @throws NullPointerException if error is {@code null}
      */
     static <T> Multi<T> error(Throwable error) {
-        return MultiError.create(error);
+        return new MultiError<>(error);
     }
 
     /**
      * Creates a {@link Multi} instance wrapped around the given {@link Publisher}.
      *
-     * @param <T>    item type
+     * @param <T> item type
      * @param source source publisher
-     * @return Multi
-     * @throws NullPointerException if source is {@code null}
      */
+    @SuppressWarnings("unchecked")
     static <T> Multi<T> from(Publisher<? extends T> source) {
         if (source instanceof Multi) {
             return (Multi<T>) source;
@@ -127,39 +122,34 @@ interface Multi<T> extends Publisher<T> {
     }
 
     /**
-     * Creates a {@link Multi} instance wrapped around the given {@link StreamMessage}.
+     * Returns a {@link Multi} instance wrapped around the given {@link StreamMessage}.
      *
-     * @param <T>    item type
+     * @param <T> item type
      * @param source source publisher
-     * @return Multi
-     * @throws NullPointerException if source is {@code null}
      */
     static <T> Multi<T> from(StreamMessage<? extends T> source, SubscriptionOption... options) {
         return new MultiFromStreamMessage<>(source, options);
     }
 
     /**
-     * Creates a {@link Multi} instance that publishes the given {@link Iterable}.
+     * Returns a {@link Multi} instance that publishes the given {@link Iterable}.
      *
-     * @param <T>      item type
+     * @param <T> item type
      * @param iterable iterable to publish
-     * @return Multi
-     * @throws NullPointerException if iterable is {@code null}
      */
     static <T> Multi<T> from(Iterable<T> iterable) {
         return new MultiFromIterable<>(iterable);
     }
 
     /**
-     * Creates a {@link Multi} instance that publishes the given items to a single subscriber.
+     * Returns a {@link Multi} instance that publishes the given items to a single subscriber.
      *
      * @param <T>   item type
      * @param items items to publish
-     * @return Multi
-     * @throws NullPointerException if {@code items} is {@code null}
      */
     @SafeVarargs
     static <T> Multi<T> just(T... items) {
+        requireNonNull(items, "items");
         if (items.length == 0) {
             return empty();
         }
@@ -170,38 +160,33 @@ interface Multi<T> extends Publisher<T> {
     }
 
     /**
-     * Creates a {@link Multi} that emits a pre-existing item and then completes.
+     * Returns a {@link Multi} that emits a pre-existing item and then completes.
+     *
      * @param item the item to emit.
      * @param <T> the type of the item
-     * @return Multi
-     * @throws NullPointerException if {@code item} is {@code null}
      */
     static <T> Multi<T> singleton(T item) {
-        requireNonNull(item, "item");
         return new MultiJustPublisher<>(item);
     }
 
     /**
      * Transforms item with supplied function and flatten resulting {@link Publisher} to downstream.
      *
-     * @param publisherMapper {@link Function} receiving item as parameter and returning {@link Publisher}
-     * @param <U>             output item type
-     * @return Multi
+     * @param mapper {@link Function} receiving item as parameter and returning {@link Publisher}
+     * @param <U> output item type
      */
-    default <U> Multi<U> flatMap(Function<? super T, ? extends Publisher<? extends U>> publisherMapper) {
-        return new MultiFlatMapPublisher<>(this, publisherMapper, 32, 32, false);
+    default <U> Multi<U> flatMap(Function<? super T, ? extends Publisher<? extends U>> mapper) {
+        return new MultiFlatMapPublisher<>(this, mapper, 32, 32, false);
     }
 
     /**
-     * Maps this {@link Multi} instance to a new {@link Multi} of another type using the given {@link Function}.
+     * Transforms this {@link Multi} instance to a new {@link Multi} of another type using
+     * the given {@link Function}.
      *
-     * @param <U>    mapped item type
+     * @param <U> mapped item type
      * @param mapper mapper
-     * @return Multi
-     * @throws NullPointerException if mapper is {@code null}
      */
     default <U> Multi<U> map(Function<? super T, ? extends U> mapper) {
-        requireNonNull(mapper, "mapper");
         return new MultiMapperPublisher<>(this, mapper);
     }
 
@@ -209,7 +194,6 @@ interface Multi<T> extends Publisher<T> {
      * Filters stream items with provided predicate.
      *
      * @param predicate predicate to filter stream with
-     * @return Multi
      */
     default Multi<T> filter(Predicate<? super T> predicate) {
         return new MultiFilterPublisher<>(this, predicate);
@@ -220,10 +204,8 @@ interface Multi<T> extends Publisher<T> {
      * to the stream.
      *
      * @param item one item to resume stream with
-     * @return Multi
      */
     default Multi<T> onCompleteResume(T item) {
-        requireNonNull(item, "item");
         return onCompleteResumeWith(singleton(item));
     }
 
@@ -231,10 +213,8 @@ interface Multi<T> extends Publisher<T> {
      * Resumes stream from supplied publisher if onComplete signal is intercepted.
      *
      * @param publisher new stream publisher
-     * @return Multi
      */
     default Multi<T> onCompleteResumeWith(Publisher<? extends T> publisher) {
-        requireNonNull(publisher, "publisher");
         return new MultiOnCompleteResumeWith<>(this, publisher);
     }
 }

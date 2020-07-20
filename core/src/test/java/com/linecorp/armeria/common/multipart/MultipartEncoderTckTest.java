@@ -43,11 +43,11 @@ import com.linecorp.armeria.common.HttpData;
 
 import reactor.core.publisher.Flux;
 
-public class MultiPartEncoderTckTest extends PublisherVerification<HttpData> {
+public class MultipartEncoderTckTest extends PublisherVerification<HttpData> {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderTckTest.java
 
-    public MultiPartEncoderTckTest() {
+    public MultipartEncoderTckTest() {
         super(new TestEnvironment(200));
     }
 

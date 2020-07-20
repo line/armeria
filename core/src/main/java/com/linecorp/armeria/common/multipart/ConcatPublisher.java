@@ -32,6 +32,8 @@
 
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -56,21 +58,17 @@ final class ConcatPublisher<T> implements Multi<T> {
     private final Publisher<? extends T> firstPublisher;
     private final Publisher<? extends T> secondPublisher;
 
-    private ConcatPublisher(Publisher<? extends T> firstPublisher, Publisher<? extends T> secondPublisher) {
-        this.firstPublisher = firstPublisher;
-        this.secondPublisher = secondPublisher;
-    }
-
     /**
      * Creates new {@code ConcatPublisher}.
      *
      * @param firstPublisher  first stream
      * @param secondPublisher second stream
-     * @param <T>             item type
-     * @return {@code ConcatPublisher}
      */
-    public static <T> ConcatPublisher<T> create(Publisher<? extends T> firstPublisher, Publisher<? extends T> secondPublisher) {
-        return new ConcatPublisher<>(firstPublisher, secondPublisher);
+    ConcatPublisher(Publisher<? extends T> firstPublisher, Publisher<? extends T> secondPublisher) {
+        requireNonNull(firstPublisher, "firstPublisher");
+        requireNonNull(secondPublisher, "secondPublisher");
+        this.firstPublisher = firstPublisher;
+        this.secondPublisher = secondPublisher;
     }
 
     @Override

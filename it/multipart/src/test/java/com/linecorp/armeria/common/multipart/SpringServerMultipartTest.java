@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -86,7 +85,7 @@ class SpringServerMultipartTest {
                                      .headers(orgHeaders)
                                      .content("LINE")
                                      .build();
-        final MultiPart multiPart = MultiPart.of(user, org);
+        final Multipart multiPart = Multipart.of(user, org);
 
         final HttpRequest request = multiPart.toHttpRequest("/multipart/text");
 
@@ -109,7 +108,7 @@ class SpringServerMultipartTest {
                                           .content("Hello!")
                                           .build();
 
-        final HttpRequest request = MultiPart.of(filePart).toHttpRequest("/multipart/file");
+        final HttpRequest request = Multipart.of(filePart).toHttpRequest("/multipart/file");
 
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(response.content().toStringUtf8()).isEqualTo("test.txt/file/Hello!");

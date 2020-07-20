@@ -25,50 +25,10 @@ import javax.annotation.Nullable;
  * HTTP request or an HTTP response depending on what header values it contains. For example, having a
  * {@link HttpHeaderNames#STATUS} header could mean it is an HTTP response.
  */
-interface AggregatedHttpMessage {
-
-    /**
-     * Returns the HTTP headers.
-     */
-    HttpHeaders headers();
+interface AggregatedHttpMessage extends AggregatedHttpContent {
 
     /**
      * Returns the HTTP trailers.
      */
     HttpHeaders trailers();
-
-    /**
-     * Returns the content of this message.
-     */
-    HttpData content();
-
-    /**
-     * Returns the content of this message as a string encoded in the specified {@link Charset}.
-     */
-    default String content(Charset charset) {
-        return content().toString(charset);
-    }
-
-    /**
-     * Returns the content of this message as a UTF-8 string.
-     */
-    default String contentUtf8() {
-        return content().toStringUtf8();
-    }
-
-    /**
-     * Returns the content of this message as an ASCII string.
-     */
-    default String contentAscii() {
-        return content().toStringAscii();
-    }
-
-    /**
-     * Returns the value of the {@code 'content-type'} header.
-     * @return the valid header value if present, or {@code null} otherwise.
-     */
-    @Nullable
-    default MediaType contentType() {
-        return headers().contentType();
-    }
 }

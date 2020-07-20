@@ -63,9 +63,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public final class ContentDisposition {
 
-    // Forked from https://github
-    // .com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src
-    // /main/java/org/springframework/http/ContentDisposition.java
+    // Forked from https://github.com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src/main/java/org/springframework/http/ContentDisposition.java
 
     private static final ContentDisposition EMPTY =
             new ContentDisposition("", null, null, null, null, null, null, null);
@@ -84,6 +82,16 @@ public final class ContentDisposition {
         requireNonNull(type, "type");
         checkArgument(!type.isEmpty(), "type should not be empty");
         return new ContentDispositionBuilder(type);
+    }
+
+    /**
+     * Returns a new {@link ContentDisposition} with the specified {@code type}.
+     *
+     * @param type the disposition type like for example {@code inline}, {@code attachment},
+     *             or {@code form-data}
+     */
+    public static ContentDisposition of(String type) {
+        return builder(type).build();
     }
 
     /**

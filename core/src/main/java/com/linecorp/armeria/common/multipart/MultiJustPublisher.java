@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import org.reactivestreams.Subscriber;
 
 /**
@@ -43,11 +45,12 @@ final class MultiJustPublisher<T> implements Multi<T> {
     private final T value;
 
     MultiJustPublisher(T value) {
-        this.value = value;
+        this.value = requireNonNull(value, "value");
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         subscriber.onSubscribe(new SingleSubscription<>(value, subscriber));
     }
 }

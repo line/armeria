@@ -43,6 +43,8 @@ import org.reactivestreams.Subscription;
  */
 final class SingleSubscription<T> extends AtomicInteger implements Subscription {
 
+    private static final long serialVersionUID = -5470260379807698726L;
+
     // Forked from https://github.com/oracle/helidon/blob/928783332890a8d30f2e0adbbced4e5a5b8bee08/common/reactive/src/main/java/io/helidon/common/reactive/SingleSubscription.java
 
     private final T value;

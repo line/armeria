@@ -54,7 +54,7 @@ class MultiFilterPublisherTest {
 
         ts.requestMax();
 
-        assertThat(ts.getSubscription()).isNotNull();
+        assertThat(ts.subscription()).isNotNull();
         assertThat(ts.getItems()).isEmpty();
         assertThat(ts.getLastError()).isInstanceOf(IllegalArgumentException.class);
         assertThat(ts.isComplete()).isFalse();

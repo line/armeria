@@ -66,7 +66,7 @@ class MultiFromIterableTest {
         assertThat(ts.getItems()).isEmpty();
         assertThat(ts.isComplete()).isFalse();
         assertThat(ts.getLastError()).isNull();
-        assertThat(ts.getSubscription()).isNotNull();
+        assertThat(ts.subscription()).isNotNull();
 
         ts.requestMax();
 
@@ -85,7 +85,7 @@ class MultiFromIterableTest {
         assertThat(ts.getItems()).isEmpty();
         assertThat(ts.isComplete()).isFalse();
         assertThat(ts.getLastError()).isNull();
-        assertThat(ts.getSubscription()).isNotNull();
+        assertThat(ts.subscription()).isNotNull();
 
         ts.request1();
 
@@ -145,7 +145,7 @@ class MultiFromIterableTest {
 
             @Override
             public Integer next() {
-                ts.getSubscription().cancel();
+                ts.subscription().cancel();
                 return 1;
             }
         }).subscribe(ts);
@@ -195,7 +195,7 @@ class MultiFromIterableTest {
             @Override
             public boolean hasNext() {
                 if (++calls == 2) {
-                    ts.getSubscription().cancel();
+                    ts.subscription().cancel();
                 }
                 return true;
             }
@@ -219,7 +219,7 @@ class MultiFromIterableTest {
             @Override
             public void onNext(Integer item) {
                 super.onNext(item);
-                getSubscription().cancel();
+                subscription().cancel();
                 onComplete();
             }
         };

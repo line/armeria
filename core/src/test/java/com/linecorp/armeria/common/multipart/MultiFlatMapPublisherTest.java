@@ -144,7 +144,7 @@ class MultiFlatMapPublisherTest {
 
         emitter1.onNext(1);
 
-        ts.getSubscription().cancel();
+        ts.subscription().cancel();
 
         emitter1.isCancelled();
         emitter2.isCancelled();

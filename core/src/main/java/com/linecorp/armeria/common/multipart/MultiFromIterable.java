@@ -81,6 +81,8 @@ final class MultiFromIterable<T> implements Multi<T> {
 
     static final class IteratorSubscription<T> extends AtomicLong implements Subscription {
 
+        private static final long serialVersionUID = 487425833923970958L;
+
         private final Subscriber<? super T> downstream;
 
         private Iterator<T> iterator;

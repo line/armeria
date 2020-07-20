@@ -42,6 +42,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -54,8 +56,7 @@ import org.reactivestreams.Subscription;
  */
 final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
-    // Forked from https://github.com/oracle/helidon/blob/c369146ffe8a3cb0c6b2891e2aff970a3b9b3ad6/common
-    // /reactive/src/main/java/io/helidon/common/reactive/MultiFlatMapPublisher.java
+    // Forked from https://github.com/oracle/helidon/blob/c369146ffe8a3cb0c6b2891e2aff970a3b9b3ad6/common/reactive/src/main/java/io/helidon/common/reactive/MultiFlatMapPublisher.java
 
     private final Multi<T> source;
 
@@ -69,8 +70,8 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
     MultiFlatMapPublisher(Multi<T> source, Function<? super T, ? extends Publisher<? extends R>> mapper,
                           long maxConcurrency, long prefetch, boolean delayErrors) {
-        this.source = source;
-        this.mapper = mapper;
+        this.source = requireNonNull(source, "source");
+        this.mapper = requireNonNull(mapper, "mapper");
         this.maxConcurrency = maxConcurrency;
         this.prefetch = prefetch;
         this.delayErrors = delayErrors;
@@ -86,6 +87,8 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
     private static final class FlatMapSubscriber<T, R> extends AtomicInteger
             implements Subscriber<T>, Subscription {
 
+        private static final long serialVersionUID = 3110403754615811849L;
+
         private final Subscriber<? super R> downstream;
 
         private final Function<? super T, ? extends Publisher<? extends R>> mapper;
@@ -96,6 +99,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
         private final boolean delayErrors;
 
+        @Nullable
         private Subscription upstream;
 
         private volatile boolean upstreamDone;
@@ -439,6 +443,8 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
                 extends AtomicReference<Subscription>
                 implements Subscriber<R>, Subscription {
 
+            private static final long serialVersionUID = 8561434642409382652L;
+
             private final FlatMapSubscriber<?, R> parent;
 
             private final long prefetch;
@@ -449,6 +455,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
             private volatile boolean done;
 
+            @Nullable
             private volatile Queue<R> queue;
 
             InnerSubscriber(FlatMapSubscriber<?, R> parent, long prefetch) {
@@ -504,6 +511,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
                 }
             }
 
+            @Nullable
             public Queue<R> getQueue() {
                 return queue;
             }
@@ -541,7 +549,9 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
      * Used for aggregating multiple exceptions via the {@link #addSuppressed(Throwable)}
      * method.
      */
-    static final class FlatMapAggregateException extends RuntimeException {
+    private static final class FlatMapAggregateException extends RuntimeException {
+        private static final long serialVersionUID = 8779904532464658198L;
+
         @Override
         public synchronized Throwable fillInStackTrace() {
             return this; // No stacktrace of its own as it aggregates other exceptions

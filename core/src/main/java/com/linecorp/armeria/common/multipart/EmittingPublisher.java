@@ -154,41 +154,37 @@ final class EmittingPublisher<T> implements Publisher<T> {
         deferredComplete.thenRun(this::signalOnComplete);
     }
 
-    private void signalOnError(Throwable throwable) {
-        synchronized (this) {
-            try {
-                final Subscriber<? super T> subscriber = this.subscriber;
-                if (subscriber == null) {
-                    // cancel released the reference already
-                    return;
-                }
-                if (state.compareAndSet(State.INIT, State.FAILED) ||
-                    state.compareAndSet(State.SUBSCRIBED, State.FAILED) ||
-                    state.compareAndSet(State.REQUESTED, State.FAILED) ||
-                    state.compareAndSet(State.READY_TO_EMIT, State.FAILED)) {
-                    this.subscriber = null;
-                    subscriber.onError(throwable);
-                }
-            } catch (Throwable t) {
-                throw new IllegalStateException("On error threw an exception!", t);
-            }
-        }
-    }
-
-    private void signalOnComplete() {
-        synchronized (this) {
+    private synchronized void signalOnError(Throwable throwable) {
+        try {
             final Subscriber<? super T> subscriber = this.subscriber;
             if (subscriber == null) {
                 // cancel released the reference already
                 return;
             }
-            if (state.compareAndSet(State.INIT, State.COMPLETED) ||
-                state.compareAndSet(State.SUBSCRIBED, State.COMPLETED) ||
-                state.compareAndSet(State.REQUESTED, State.COMPLETED) ||
-                state.compareAndSet(State.READY_TO_EMIT, State.COMPLETED)) {
+            if (state.compareAndSet(State.INIT, State.FAILED) ||
+                state.compareAndSet(State.SUBSCRIBED, State.FAILED) ||
+                state.compareAndSet(State.REQUESTED, State.FAILED) ||
+                state.compareAndSet(State.READY_TO_EMIT, State.FAILED)) {
                 this.subscriber = null;
-                subscriber.onComplete();
+                subscriber.onError(throwable);
             }
+        } catch (Throwable t) {
+            throw new IllegalStateException("On error threw an exception!", t);
+        }
+    }
+
+    private synchronized void signalOnComplete() {
+        final Subscriber<? super T> subscriber = this.subscriber;
+        if (subscriber == null) {
+            // cancel released the reference already
+            return;
+        }
+        if (state.compareAndSet(State.INIT, State.COMPLETED) ||
+            state.compareAndSet(State.SUBSCRIBED, State.COMPLETED) ||
+            state.compareAndSet(State.REQUESTED, State.COMPLETED) ||
+            state.compareAndSet(State.READY_TO_EMIT, State.COMPLETED)) {
+            this.subscriber = null;
+            subscriber.onComplete();
         }
     }
 

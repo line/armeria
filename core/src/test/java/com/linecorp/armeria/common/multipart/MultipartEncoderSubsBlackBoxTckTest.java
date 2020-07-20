@@ -38,12 +38,11 @@ import org.testng.annotations.Test;
 
 import reactor.core.publisher.Flux;
 
-public class MultiPartEncoderSubsBlackBoxTckTest extends SubscriberBlackboxVerification<BodyPart> {
+public class MultipartEncoderSubsBlackBoxTckTest extends SubscriberBlackboxVerification<BodyPart> {
 
-    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media
-    // /multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderSubsBlackBoxTckTest.java
+    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderSubsBlackBoxTckTest.java
 
-    protected MultiPartEncoderSubsBlackBoxTckTest() {
+    protected MultipartEncoderSubsBlackBoxTckTest() {
         super(new TestEnvironment(200));
     }
 
@@ -56,7 +55,7 @@ public class MultiPartEncoderSubsBlackBoxTckTest extends SubscriberBlackboxVerif
     }
 
     @Override
-    public BodyPart createElement(final int element) {
+    public BodyPart createElement(int element) {
         return BodyPart.builder()
                        .content("part" + element)
                        .build();

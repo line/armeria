@@ -167,7 +167,7 @@ enum SubscriptionHelper implements Subscription {
      *         instance
      */
     static boolean deferredSetOnce(AtomicReference<Subscription> subscriptionField,
-                                          AtomicLong requestedField, Subscription upstream) {
+                                   AtomicLong requestedField, Subscription upstream) {
         if (setOnce(subscriptionField, upstream)) {
             final long requested = requestedField.getAndSet(0L);
             if (requested != 0L) {
@@ -186,7 +186,7 @@ enum SubscriptionHelper implements Subscription {
      * @param n the request amount to accumulate or forward, must be positive (not verified)
      */
     static void deferredRequest(AtomicReference<Subscription> subscriptionField,
-                                       AtomicLong requestedField, long n) {
+                                AtomicLong requestedField, long n) {
         Subscription subscription = subscriptionField.get();
         if (subscription != null) {
             subscription.request(n);

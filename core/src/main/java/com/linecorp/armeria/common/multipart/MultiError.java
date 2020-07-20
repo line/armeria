@@ -47,12 +47,8 @@ final class MultiError<T> implements Multi<T> {
 
     private final Throwable error;
 
-    private MultiError(Throwable error) {
+    MultiError(Throwable error) {
         this.error = requireNonNull(error, "error");
-    }
-
-    static <T> MultiError<T> create(Throwable error) {
-        return new MultiError<T>(error);
     }
 
     @Override

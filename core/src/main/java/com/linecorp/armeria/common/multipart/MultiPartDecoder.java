@@ -54,7 +54,7 @@ import io.netty.util.ReferenceCountUtil;
 /**
  * Reactive processor that decodes HTTP payload as a stream of {@link BodyPart}.
  */
-public class MultiPartDecoder implements Processor<HttpData, BodyPart> {
+class MultiPartDecoder implements Processor<HttpData, BodyPart> {
 
     // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media/multipart/src/main/java/io/helidon/media/multipart/MultiPartDecoder.java
 

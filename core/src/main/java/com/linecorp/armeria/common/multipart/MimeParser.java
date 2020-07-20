@@ -450,6 +450,7 @@ final class MimeParser {
      *         header from the body has been reached, or {@code null} if the there is
      *         no more data in the buffer
      */
+    @Nullable
     private String readHeaderLine() {
         final int length = buf.capacity();
         // need more data to progress
@@ -879,6 +880,7 @@ final class MimeParser {
     /**
      * Callback interface to the parser.
      */
+    @FunctionalInterface
     interface EventProcessor {
 
         /**

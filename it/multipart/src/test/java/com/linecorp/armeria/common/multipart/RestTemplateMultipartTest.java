@@ -40,7 +40,7 @@ class RestTemplateMultipartTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/multipart/text", (ctx, req) -> {
                 return HttpResponse.from(
-                        MultiPart.from(req).aggregate().thenApply(multiPart -> {
+                        Multipart.from(req).aggregate().thenApply(multiPart -> {
                             final AggregatedBodyPart user = multiPart.field("user");
                             final AggregatedBodyPart org = multiPart.field("org");
                             return HttpResponse.of(org.contentUtf8() + '/' + user.contentUtf8());
@@ -49,7 +49,7 @@ class RestTemplateMultipartTest {
 
             sb.service("/multipart/file", (ctx, req) -> {
                 return HttpResponse.from(
-                        MultiPart.from(req).aggregate().thenApply(multiPart -> {
+                        Multipart.from(req).aggregate().thenApply(multiPart -> {
                             final AggregatedBodyPart file = multiPart.field("file");
                             return HttpResponse
                                     .of(file.filename() + '/' + file.name() + '/' + file.contentUtf8().trim());

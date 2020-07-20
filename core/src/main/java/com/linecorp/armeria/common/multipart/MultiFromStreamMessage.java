@@ -34,12 +34,14 @@ final class MultiFromStreamMessage<T> implements Multi<T> {
 
     MultiFromStreamMessage(StreamMessage<? extends T> source, SubscriptionOption... options) {
         requireNonNull(source, "source");
+        requireNonNull(options, "options");
         this.source = source;
         this.options = options;
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         source.subscribe(subscriber, options);
     }
 }

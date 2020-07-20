@@ -47,12 +47,12 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.multipart.MultiPartEncoderTest.HttpDataAggregator;
+import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
 
 /**
  * Tests {@link MultiPartDecoder}.
  */
-public class MultiPartDecoderTest {
+public class MultipartDecoderTest {
 
     // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartDecoderTest.java
 

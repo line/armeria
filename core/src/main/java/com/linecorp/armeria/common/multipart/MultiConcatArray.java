@@ -31,6 +31,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.reactivestreams.Publisher;
@@ -52,12 +54,15 @@ final class MultiConcatArray<T> implements Multi<T> {
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         final ConcatArraySubscriber<T> parent = new ConcatArraySubscriber<>(subscriber, sources);
         subscriber.onSubscribe(parent);
         parent.nextSource();
     }
 
     private static final class ConcatArraySubscriber<T> extends SubscriptionArbiter implements Subscriber<T> {
+
+        private static final long serialVersionUID = -9184116713095894096L;
 
         private final Subscriber<? super T> downstream;
 

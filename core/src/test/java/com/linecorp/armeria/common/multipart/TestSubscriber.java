@@ -54,10 +54,7 @@ import org.reactivestreams.Subscription;
  */
 class TestSubscriber<T> implements Subscriber<T> {
 
-    // Forked from https://github.com/oracle/helidon/blob/25ffc5088e87e17c981bf37b8ccb7e8c188a6b0f/common
-    // /reactive/src/test/java/io/helidon/common/reactive/TestSubscriber.java
-
-    private final CountDownLatch latch;
+    // Forked from https://github.com/oracle/helidon/blob/25ffc5088e87e17c981bf37b8ccb7e8c188a6b0f/common/reactive/src/test/java/io/helidon/common/reactive/TestSubscriber.java
 
     private final long initialRequest;
 
@@ -67,13 +64,15 @@ class TestSubscriber<T> implements Subscriber<T> {
 
     private final List<Throwable> errors;
 
+    private final CountDownLatch latch;
+
     private volatile int completions;
 
     /**
      * Returns a new {@link TestSubscriber} with no initial request.
      */
     TestSubscriber() {
-        this(0L);
+        this(0);
     }
 
     /**
@@ -81,7 +80,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param initialRequest the initial request amount, non-negative
      */
     TestSubscriber(long initialRequest) {
-        checkArgument(initialRequest >= 0L, "initialRequest: %s (expected: >= 0)", initialRequest);
+        checkArgument(initialRequest >= 0, "initialRequest: %s (expected: >= 0)", initialRequest);
         this.initialRequest = initialRequest;
         upstream = new AtomicReference<>();
         items = Collections.synchronizedList(new ArrayList<>());
@@ -93,7 +92,7 @@ class TestSubscriber<T> implements Subscriber<T> {
     public void onSubscribe(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         if (upstream.compareAndSet(null, subscription)) {
-            if (initialRequest != 0L) {
+            if (initialRequest != 0) {
                 subscription.request(initialRequest);
             }
         } else {
@@ -148,14 +147,14 @@ class TestSubscriber<T> implements Subscriber<T> {
     /**
      * Returns a mutable, thread-safe list of items received so far.
      */
-    public final List<T> getItems() {
+    final List<T> getItems() {
         return items;
     }
 
     /**
      * Returns a mutable, thread-safe list of error(s) encountered so far.
      */
-    public final List<Throwable> getErrors() {
+    final List<Throwable> getErrors() {
         return errors;
     }
 
@@ -163,7 +162,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * Returns the last error received by this {@link TestSubscriber} or {@code null} if no error happened.
      */
     @Nullable
-    public final Throwable getLastError() {
+    final Throwable getLastError() {
         final int n = errors.size();
         if (n != 0) {
             return errors.get(n - 1);
@@ -174,14 +173,14 @@ class TestSubscriber<T> implements Subscriber<T> {
     /**
      * Returns true if this {@link TestSubscriber} received any {@link #onComplete()} calls.
      */
-    public final boolean isComplete() {
+    final boolean isComplete() {
         return completions != 0;
     }
 
     /**
      * Returns the current upstream {@link Subscription} instance.
      */
-    public final Subscription getSubscription() {
+    final Subscription subscription() {
         return upstream.get();
     }
 
@@ -190,7 +189,8 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param message the extra message to add
      * @return the AssertionError instance
      */
-    protected final AssertionError fail(String message) {
+    final AssertionError fail(String message) {
+        requireNonNull(message, "message");
         final StringBuilder sb = new StringBuilder();
         sb.append(message)
           .append(" (")
@@ -224,7 +224,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @throws IllegalArgumentException if {@code n} is non-positive
      * @throws IllegalStateException if {@link #onSubscribe} was not called on this {@link TestSubscriber} yet.
      */
-    public final TestSubscriber<T> request(long n) {
+    final TestSubscriber<T> request(long n) {
         checkArgument(n > 0, "n: %s (expected: > 0)", n);
         final Subscription s = upstream.get();
         checkState(s != null, "onSubscribe not called yet!");
@@ -237,7 +237,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * Requests one more item from the upstream.
      * @throws IllegalStateException if {@link #onSubscribe} was not called on this {@link TestSubscriber} yet.
      */
-    public final TestSubscriber<T> request1() {
+    final TestSubscriber<T> request1() {
         final Subscription s = upstream.get();
         checkState(s != null, "onSubscribe not called yet!");
 
@@ -249,7 +249,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * Requests {@link Long#MAX_VALUE} items from the upstream.
      * @throws IllegalStateException if {@link #onSubscribe} was not called on this {@link TestSubscriber} yet.
      */
-    public final TestSubscriber<T> requestMax() {
+    final TestSubscriber<T> requestMax() {
         final Subscription s = upstream.get();
         checkState(s != null, "onSubscribe not called yet!");
         s.request(Long.MAX_VALUE);
@@ -259,7 +259,7 @@ class TestSubscriber<T> implements Subscriber<T> {
     /**
      * Cancels the upstream.
      */
-    public final TestSubscriber<T> cancel() {
+    final TestSubscriber<T> cancel() {
         SubscriptionHelper.cancel(upstream);
         return this;
     }
@@ -282,7 +282,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @throws AssertionError if the number of items or the items themselves are not equal to the expected items
      */
     @SafeVarargs
-    public final TestSubscriber<T> assertValues(T... expectedItems) {
+    final TestSubscriber<T> assertValues(T... expectedItems) {
         final int n = items.size();
         if (n != expectedItems.length) {
             throw fail("Number of items differ. Expected: " + expectedItems.length + ", Actual: " + n + '.');
@@ -302,7 +302,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * Asserts that this {@link TestSubscriber} has received exactly one {@link #onComplete()} call.
      * @throws AssertionError if there was none, more than one {@link #onComplete} call or there are also errors
      */
-    public final TestSubscriber<T> assertComplete() {
+    final TestSubscriber<T> assertComplete() {
         final int c = completions;
         if (c == 0) {
             throw fail("onComplete not called.");
@@ -323,7 +323,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @throws AssertionError if no errors were received, different error(s) were received, the same error
      *                        received multiple times or there were also {@link #onComplete} calls as well.
      */
-    public final TestSubscriber<T> assertError(Class<? extends Throwable> clazz) {
+    final TestSubscriber<T> assertError(Class<? extends Throwable> clazz) {
         if (errors.isEmpty()) {
             throw fail("onError not called");
         }
@@ -352,7 +352,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * Asserts that the upstream called {@link #onSubscribe}.
      * @throws AssertionError if {@link #onSubscribe} was not yet called
      */
-    public final TestSubscriber<T> assertOnSubscribe() {
+    final TestSubscriber<T> assertOnSubscribe() {
         if (upstream.get() == null) {
             throw fail("onSubscribe not called");
         }
@@ -365,7 +365,8 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param expectedItems the varargs of items expected
      */
     @SafeVarargs
-    public final TestSubscriber<T> assertResult(T... expectedItems) {
+    final TestSubscriber<T> assertResult(T... expectedItems) {
+        requireNonNull(expectedItems, "expectedItems");
         assertOnSubscribe();
         assertValues(expectedItems);
         assertComplete();
@@ -379,7 +380,9 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param expectedItems the vararg array of the expected items
      */
     @SafeVarargs
-    public final TestSubscriber<T> assertFailure(Class<? extends Throwable> clazz, T... expectedItems) {
+    final TestSubscriber<T> assertFailure(Class<? extends Throwable> clazz, T... expectedItems) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(expectedItems, "expectedItems");
         assertOnSubscribe();
         assertValues(expectedItems);
         assertError(clazz);
@@ -391,7 +394,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param count the expected item count
      * @throws AssertionError if the number of items received differs from the given {@code count}
      */
-    public final TestSubscriber<T> assertItemCount(int count) {
+    final TestSubscriber<T> assertItemCount(int count) {
         final int n = items.size();
         if (n != count) {
             throw fail("Number of items differ. Expected: " + count + ", Actual: " + n + '.');
@@ -403,7 +406,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * Asserts that there were no items or terminal events received by this {@link TestSubscriber}.
      * @throws AssertionError if items or terminal events were received
      */
-    public final TestSubscriber<T> assertEmpty() {
+    final TestSubscriber<T> assertEmpty() {
         assertOnSubscribe();
         assertItemCount(0);
         assertNotTerminated();
@@ -415,7 +418,8 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @throws AssertionError if items or terminal events were received
      */
     @SafeVarargs
-    public final TestSubscriber<T> assertValuesOnly(T... expectedItems) {
+    final TestSubscriber<T> assertValuesOnly(T... expectedItems) {
+        requireNonNull(expectedItems, "expectedItems");
         assertOnSubscribe();
         assertValues(expectedItems);
         assertNotTerminated();
@@ -426,9 +430,9 @@ class TestSubscriber<T> implements Subscriber<T> {
      * Asserts that there were no terminal events received by this {@link TestSubscriber}.
      * @throws AssertionError if terminal events were received
      */
-    public final TestSubscriber<T> assertNotTerminated() {
+    final TestSubscriber<T> assertNotTerminated() {
         if (!errors.isEmpty()) {
-            throw fail("Unexpected errror(s) present.");
+            throw fail("Unexpected error(s) present.");
         }
         if (completions != 0) {
             throw fail("Unexpected completion(s).");
@@ -447,7 +451,8 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param timeout the time to wait
      * @param unit the time unit
      */
-    public final TestSubscriber<T> awaitDone(long timeout, TimeUnit unit) {
+    final TestSubscriber<T> awaitDone(long timeout, TimeUnit unit) {
+        requireNonNull(unit, "unit");
         try {
             if (!latch.await(timeout, unit)) {
                 cancel();
@@ -472,7 +477,7 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param count the number of items to wait for
      * @see #awaitCount(int, long, long, TimeUnit)
      */
-    public final TestSubscriber<T> awaitCount(int count) {
+    final TestSubscriber<T> awaitCount(int count) {
         return awaitCount(count, 10, 5000, TimeUnit.MILLISECONDS);
     }
 
@@ -490,7 +495,8 @@ class TestSubscriber<T> implements Subscriber<T> {
      * @param timeout the maximum time to wait for the items
      * @param unit the time unit
      */
-    public final TestSubscriber<T> awaitCount(int count, long sleep, long timeout, TimeUnit unit) {
+    final TestSubscriber<T> awaitCount(int count, long sleep, long timeout, TimeUnit unit) {
+        requireNonNull(unit, "unit");
         final long end = unit.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS) + timeout;
 
         for (;;) {
@@ -511,7 +517,6 @@ class TestSubscriber<T> implements Subscriber<T> {
                 break;
             }
         }
-
         return this;
     }
 }

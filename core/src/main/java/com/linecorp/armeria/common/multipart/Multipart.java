@@ -31,7 +31,7 @@
 package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.multipart.DefaultMultiPart.DEFAULT_BOUNDARY;
+import static com.linecorp.armeria.common.multipart.DefaultMultipart.DEFAULT_BOUNDARY;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -43,7 +43,6 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -51,65 +50,64 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 /**
- * A reactive {@link MultiPart} that represents
+ * A reactive {@link Multipart} that represents
  * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">multiple part messages</a>.
  */
-public interface MultiPart extends Publisher<HttpData> {
+public interface Multipart extends Publisher<HttpData> {
 
     // Forked form https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/main/java/io/helidon/media/multipart/MultiPart.java
 
     /**
-     * Returns a new {@link MultiPart} with the specified {@link BodyPart}s.
+     * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
-    static MultiPart of(BodyPart... parts) {
+    static Multipart of(BodyPart... parts) {
         return of(DEFAULT_BOUNDARY, parts);
     }
 
     /**
-     * Returns a new {@link MultiPart} with the specified {@code boundary} and {@link BodyPart}s.
+     * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
-    static MultiPart of(String boundary, BodyPart... parts) {
+    static Multipart of(Iterable<? extends BodyPart> parts) {
+        return of(DEFAULT_BOUNDARY, parts);
+    }
+
+    /**
+     * Returns a new {@link Multipart} with the specified {@code boundary} and {@link BodyPart}s.
+     */
+    static Multipart of(String boundary, BodyPart... parts) {
         requireNonNull(parts, "parts");
         return of(boundary, ImmutableList.copyOf(parts));
     }
 
     /**
-     * Returns a new {@link MultiPart} with the specified {@link BodyPart}s.
+     * Returns a new {@link Multipart} with the specified {@code boundary} and {@link BodyPart}s.
      */
-    static MultiPart of(Iterable<? extends BodyPart> parts) {
-        return of(DEFAULT_BOUNDARY, parts);
-    }
-
-    /**
-     * Returns a new {@link MultiPart} with the specified {@code boundary} and {@link BodyPart}s.
-     */
-    static MultiPart of(String boundary, Iterable<? extends BodyPart> parts) {
+    static Multipart of(String boundary, Iterable<? extends BodyPart> parts) {
         requireNonNull(parts, "parts");
         @SuppressWarnings("unchecked")
         final Iterable<BodyPart> cast = (Iterable<BodyPart>) parts;
-        return new DefaultMultiPart(boundary, Multi.from(cast));
+        return new DefaultMultipart(boundary, Multi.from(cast));
     }
 
     /**
-     * Returns a new {@link MultiPart} with the specified {@link BodyPart}s.
+     * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
-    static MultiPart of(Publisher<? extends BodyPart> parts) {
+    static Multipart of(Publisher<? extends BodyPart> parts) {
         return of(DEFAULT_BOUNDARY, parts);
     }
 
     /**
-     * Returns a new {@link MultiPart} with the specified {@link BodyPart}s.
+     * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
-    static MultiPart of(String boundary, Publisher<? extends BodyPart> parts) {
+    static Multipart of(String boundary, Publisher<? extends BodyPart> parts) {
         requireNonNull(parts, "parts");
-        return new DefaultMultiPart(boundary, parts);
+        return new DefaultMultipart(boundary, parts);
     }
 
     /**
-     * Returns a decoded {@link MultiPart} from the specified {@link HttpHeaders} and
-     * {@link Publisher} of {@link HttpData}.
+     * Returns a decoded {@link Multipart} from the specified {@link HttpRequest}.
      */
-    static MultiPart from(HttpRequest request) {
+    static Multipart from(HttpRequest request) {
         final RequestHeaders headers = request.headers();
         final MediaType mediaType = headers.contentType();
         String boundary = null;
@@ -128,10 +126,10 @@ public interface MultiPart extends Publisher<HttpData> {
     }
 
     /**
-     * Returns a decoded {@link MultiPart} from the the specified {@code boundary} and
+     * Returns a decoded {@link Multipart} from the the specified {@code boundary} and
      * {@link Publisher} of {@link HttpData}.
      */
-    static MultiPart from(String boundary, Publisher<HttpData> contents) {
+    static Multipart from(String boundary, Publisher<HttpData> contents) {
         requireNonNull(boundary, "boundary");
         requireNonNull(contents, "contents");
         final MultiPartDecoder decoder = new MultiPartDecoder(boundary);
@@ -140,7 +138,7 @@ public interface MultiPart extends Publisher<HttpData> {
     }
 
     /**
-     * Converts this {@link MultiPart} into a new complete {@link HttpRequest}.
+     * Converts this {@link Multipart} into a new complete {@link HttpRequest}.
      */
     default HttpRequest toHttpRequest(String path) {
         requireNonNull(path, "path");
@@ -151,21 +149,22 @@ public interface MultiPart extends Publisher<HttpData> {
     }
 
     /**
-     * Converts this {@link MultiPart} into a new complete {@link HttpRequest} with the specified
+     * Converts this {@link Multipart} into a new complete {@link HttpRequest} with the specified
      * {@link RequestHeaders}.
      */
     default HttpRequest toHttpRequest(RequestHeaders requestHeaders) {
         requireNonNull(requestHeaders, "requestHeaders");
-        final String rawMediaType = requestHeaders.get(HttpHeaderNames.CONTENT_TYPE);
+        final String mediaTypeString = requestHeaders.get(HttpHeaderNames.CONTENT_TYPE);
         final MediaType contentType;
-        if (rawMediaType != null) {
-            contentType = MediaType.parse(rawMediaType);
+        if (mediaTypeString != null) {
+            contentType = MediaType.parse(mediaTypeString);
             checkArgument("multipart".equals(contentType.type()),
                           "Content-Type: %s (expected: multipart content type)", contentType);
             contentType.withParameter("boundary", boundary());
         } else {
             contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
         }
+
         final RequestHeaders updated = requestHeaders.withMutations(builder -> {
             builder.add(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
         });
@@ -183,8 +182,8 @@ public interface MultiPart extends Publisher<HttpData> {
     Publisher<BodyPart> bodyParts();
 
     /**
-     * Aggregates this {@link MultiPart}. The returned {@link CompletableFuture} will be notified when
-     * the {@link BodyPart}s of the {@link MultiPart} is received fully.
+     * Aggregates this {@link Multipart}. The returned {@link CompletableFuture} will be notified when
+     * the {@link BodyPart}s of the {@link Multipart} is received fully.
      */
-    CompletableFuture<AggregatedMultiPart> aggregate();
+    CompletableFuture<AggregatedMultipart> aggregate();
 }

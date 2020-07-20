@@ -49,20 +49,20 @@ import org.reactivestreams.Subscription;
  */
 final class MultiOnCompleteResumeWith<T> implements Multi<T> {
 
-    // Forked from https://github.com/oracle/helidon/blob/0325cae20e68664da0f518ea2d803b9dd211a7b5/common
-    // /reactive/src/main/java/io/helidon/common/reactive/MultiOnCompleteResumeWith.java
+    // Forked from https://github.com/oracle/helidon/blob/0325cae20e68664da0f518ea2d803b9dd211a7b5/common/reactive/src/main/java/io/helidon/common/reactive/MultiOnCompleteResumeWith.java
 
     private final Multi<T> source;
 
     private final Publisher<? extends T> fallbackPublisher;
 
     MultiOnCompleteResumeWith(Multi<T> source, Publisher<? extends T> fallbackPublisher) {
-        this.source = source;
-        this.fallbackPublisher = fallbackPublisher;
+        this.source = requireNonNull(source, "source");
+        this.fallbackPublisher = requireNonNull(fallbackPublisher, "fallbackPublisher");
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         source.subscribe(new OnCompleteResumeWithSubscriber<>(subscriber, fallbackPublisher));
     }
 
@@ -148,6 +148,8 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
 
         static final class FallbackSubscriber<T> extends AtomicReference<Subscription>
                 implements Subscriber<T> {
+
+            private static final long serialVersionUID = -6724536079209262926L;
 
             private final Subscriber<? super T> downstream;
 

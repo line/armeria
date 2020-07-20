@@ -53,6 +53,7 @@ final class MultiFromPublisher<T> implements Multi<T> {
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         source.subscribe(subscriber);
     }
 }

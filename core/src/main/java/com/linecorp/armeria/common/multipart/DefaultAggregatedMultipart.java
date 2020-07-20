@@ -27,59 +27,24 @@ import com.google.common.base.MoreObjects;
 /**
  * A complete multipart whose body parts are readily available.
  */
-public final class AggregatedMultiPart {
+final class DefaultAggregatedMultipart implements AggregatedMultipart {
 
     private final String boundary;
     private final List<AggregatedBodyPart> bodyParts;
 
-    AggregatedMultiPart(String boundary, List<AggregatedBodyPart> bodyParts) {
+    DefaultAggregatedMultipart(String boundary, List<AggregatedBodyPart> bodyParts) {
         this.boundary = boundary;
         this.bodyParts = bodyParts;
     }
 
-    /**
-     * Returns the boundary string.
-     */
+    @Override
     public String boundary() {
         return boundary;
     }
 
-    /**
-     * Returns all the nested body parts.
-     */
+    @Override
     public List<AggregatedBodyPart> bodyParts() {
         return bodyParts;
-    }
-
-    /**
-     * Returns the first body part identified by the given control name. The control
-     * name is the {@code name} parameter of the {@code Content-Disposition}
-     * header for a body part with disposition type {@code form-data}.
-     *
-     * @param name control name
-     * @return the {@link BodyPart} of the control name, or {@code null} if not present.
-     */
-    @Nullable
-    public AggregatedBodyPart field(String name) {
-        requireNonNull(name, "name");
-        return bodyParts().stream()
-                          .filter(part -> name.equals(part.name()))
-                          .findFirst()
-                          .orElse(null);
-    }
-
-    /**
-     * Returns the body parts identified by the given control name. The control
-     * name is the {@code name} parameter of the {@code Content-Disposition}
-     * header for a body part with disposition type {@code form-data}.
-     *
-     * @param name control name
-     */
-    public List<AggregatedBodyPart> fields(String name) {
-        requireNonNull(name, "name");
-        return bodyParts().stream()
-                          .filter(part -> name.equals(part.name()))
-                          .collect(toImmutableList());
     }
 
     @Override

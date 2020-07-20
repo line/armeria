@@ -40,14 +40,14 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 
-class MultiPartIntegrationTest {
+class MultipartIntegrationTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/multipart", (ctx, req) -> {
-                final MultiPart multiPart = MultiPart.from(req);
+                final Multipart multiPart = Multipart.from(req);
                 final HttpResponseWriter writer = HttpResponse.streaming();
                 final AtomicInteger count = new AtomicInteger();
                 Flux.from(multiPart.bodyParts())
@@ -80,7 +80,7 @@ class MultiPartIntegrationTest {
             });
 
             sb.service("/aggregate", (ctx, req) -> {
-                final CompletableFuture<AggregatedMultiPart> aggregated = MultiPart.from(req).aggregate();
+                final CompletableFuture<AggregatedMultipart> aggregated = Multipart.from(req).aggregate();
                 final HttpResponseWriter writer = HttpResponse.streaming();
                 aggregated.thenAccept(multipart -> {
                     int count = 0;
@@ -110,7 +110,7 @@ class MultiPartIntegrationTest {
             });
 
             sb.service("/simple", (ctx, req) -> {
-                final MultiPart multiPart = MultiPart.from(req);
+                final Multipart multiPart = Multipart.from(req);
                 Flux.from(multiPart.bodyParts())
                     .collectList()
                     .subscribe(bodyParts -> {
@@ -154,7 +154,7 @@ class MultiPartIntegrationTest {
                                        .content("{\"foo\":\"bar\"}")
                                        .build();
 
-        final MultiPart multiPart = MultiPart.of(partA, partB);
+        final Multipart multiPart = Multipart.of(partA, partB);
         final AggregatedHttpResponse response =
                 client.execute(multiPart.toHttpRequest(path)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -169,7 +169,7 @@ class MultiPartIntegrationTest {
                                           .content("hello")
                                           .build();
 
-        final MultiPart multiPart = MultiPart.of(bodyPart);
+        final Multipart multiPart = Multipart.of(bodyPart);
 
         final AggregatedHttpResponse response =
                 client.execute(multiPart.toHttpRequest("/simple")).aggregate().join();

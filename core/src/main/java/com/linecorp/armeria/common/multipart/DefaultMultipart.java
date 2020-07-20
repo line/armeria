@@ -29,7 +29,7 @@ import com.google.common.primitives.Bytes;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-final class DefaultMultiPart implements MultiPart {
+final class DefaultMultipart implements Multipart {
 
     /**
      * The default boundary used for encoding multipart messages.
@@ -40,7 +40,7 @@ final class DefaultMultiPart implements MultiPart {
     private final MultiPartEncoder encoder;
     private final Publisher<? extends BodyPart> parts;
 
-    DefaultMultiPart(String boundary, Publisher<? extends BodyPart> parts) {
+    DefaultMultipart(String boundary, Publisher<? extends BodyPart> parts) {
         this.boundary = boundary;
         encoder = new MultiPartEncoder(boundary);
         this.parts = parts;
@@ -64,11 +64,11 @@ final class DefaultMultiPart implements MultiPart {
     }
 
     @Override
-    public CompletableFuture<AggregatedMultiPart> aggregate() {
+    public CompletableFuture<AggregatedMultipart> aggregate() {
         final BodyPartAggregator aggregator = new BodyPartAggregator();
         parts.subscribe(aggregator);
         return UnmodifiableFuture.wrap(
-                aggregator.future.thenApply(parts -> new AggregatedMultiPart(boundary, parts)));
+                aggregator.future.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
     }
 
     @Override
@@ -95,7 +95,7 @@ final class DefaultMultiPart implements MultiPart {
             final HttpDataAggregator aggregator = new HttpDataAggregator();
             bodyPart.content().subscribe(aggregator);
             aggregator.future.thenAccept(data -> {
-                bodyParts.add(new AggregatedBodyPart(bodyPart.headers(), data));
+                bodyParts.add(AggregatedBodyPart.of(bodyPart.headers(), data));
             });
         }
 
