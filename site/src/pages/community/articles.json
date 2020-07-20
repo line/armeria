@@ -1,6 +1,19 @@
 [
   {
     "title": {
+      "en": "Effective gRPC"
+    },
+    "url": {
+      "en": "https://medium.com/dev-genius/effective-grpc-9152bea2cf50"
+    },
+    "author": {
+      "en": "Viktor Taranenko"
+    },
+    "date": "20200718",
+    "tags": ["articles", "knowledge"]
+  },
+  {
+    "title": {
       "en": "Using Reactive Streams with Armeria - Part 2",
       "ja": "Let’s play Reactive Streams with Armeria vol.2",
       "ko": "Armeria로 Reactive Streams와 놀자! – 2"
