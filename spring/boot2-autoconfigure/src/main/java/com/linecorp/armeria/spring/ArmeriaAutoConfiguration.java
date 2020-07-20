@@ -96,10 +96,6 @@ public class ArmeriaAutoConfiguration {
             return null;
         }
 
-        if (armeriaSettings.isEnableMetrics()) {
-        } else {
-        }
-
         final ServerBuilder serverBuilder = Server.builder();
 
         final List<Port> ports = armeriaSettings.getPorts();

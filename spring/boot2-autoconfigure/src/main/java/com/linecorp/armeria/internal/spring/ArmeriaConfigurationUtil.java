@@ -65,7 +65,6 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
@@ -74,7 +73,6 @@ import com.linecorp.armeria.spring.GrpcExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleRequest;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
-import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.Ssl;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 
@@ -91,8 +89,6 @@ public final class ArmeriaConfigurationUtil {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaConfigurationUtil.class);
 
     private static final String[] EMPTY_PROTOCOL_NAMES = new String[0];
-
-    private static final String METER_TYPE = "server";
 
     /**
      * The pattern for data size text.
@@ -326,16 +322,6 @@ public final class ArmeriaConfigurationUtil {
                                         exampleHeaders.getHeaders());
             }
         }
-    }
-
-    private static Function<? super HttpService, MetricCollectingService> metricCollectingServiceDecorator(
-            AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
-            MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
-        requireNonNull(bean, "bean");
-        requireNonNull(meterIdPrefixFunctionFactory, "meterIdPrefixFunctionFactory");
-
-        return MetricCollectingService.newDecorator(
-                meterIdPrefixFunctionFactory.get(METER_TYPE, bean.getServiceName()));
     }
 
     private static void configureExampleHeaders(DocServiceBuilder docServiceBuilder, String serviceName,
