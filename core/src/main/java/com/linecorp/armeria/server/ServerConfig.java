@@ -100,7 +100,7 @@ public final class ServerConfig {
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private final Supplier<? extends RequestId> requestIdGenerator;
+    private final Supplier<RequestId> requestIdGenerator;
 
     @Nullable
     private String strVal;
@@ -229,7 +229,11 @@ public final class ServerConfig {
 
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
-        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+
+        @SuppressWarnings("unchecked")
+        final Supplier<RequestId> castRequestIdGenerator =
+                (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -581,7 +585,7 @@ public final class ServerConfig {
     /**
      * Returns the {@link Supplier} that generates a {@link RequestId} for each {@link Request}.
      */
-    public Supplier<? extends RequestId> requestIdGenerator() {
+    public Supplier<RequestId> requestIdGenerator() {
         return requestIdGenerator;
     }
 
