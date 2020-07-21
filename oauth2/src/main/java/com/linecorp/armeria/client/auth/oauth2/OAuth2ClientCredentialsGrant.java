@@ -52,8 +52,8 @@ public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGra
 
     OAuth2ClientCredentialsGrant(ClientCredentialsTokenRequest obtainRequest,
                                  RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-                                 @Nullable Supplier<AccessTokenCapsule> tokenSupplier,
-                                 @Nullable Consumer<AccessTokenCapsule> tokenConsumer) {
+                                 @Nullable Supplier<? extends AccessTokenCapsule> tokenSupplier,
+                                 @Nullable Consumer<? super AccessTokenCapsule> tokenConsumer) {
         super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer);
         this.obtainRequest = requireNonNull(obtainRequest);
     }

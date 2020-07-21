@@ -24,17 +24,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -48,7 +50,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 public class OAuth2ClientCredentialsGrantTest {
 
@@ -67,8 +69,8 @@ public class OAuth2ClientCredentialsGrantTest {
         }
     };
 
-    @Rule
-    public ServerRule authServerRule = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension authServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/token", new MockOAuth2ClientCredentialsService()
@@ -82,10 +84,10 @@ public class OAuth2ClientCredentialsGrantTest {
         }
     };
 
-    private final ServerRule resourceServerRule = new ServerRule(false) {
+    private final ServerExtension resourceServer = new ServerExtension(false) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final WebClient introspectClient = WebClient.of(authServerRule.httpUri());
+            final WebClient introspectClient = WebClient.of(authServer.httpUri());
             sb.service("/resource-read-write/",
                        OAuth2TokenIntrospectionAuthorizer.builder(introspectClient, "/introspect/token/")
                                                          .realm("protected resource read-write")
@@ -112,14 +114,13 @@ public class OAuth2ClientCredentialsGrantTest {
 
     @Test
     public void testOk() throws Exception {
-        try (Server resourceServer = resourceServerRule.start()) {
+        final WebClient authClient = WebClient.of(authServer.httpUri());
+        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+                .builder(authClient, "/token/client/")
+                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+            Server server = resourceServer.start()) {
 
-            final WebClient authClient = WebClient.of(authServerRule.httpUri());
-            final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
-                    .builder(authClient, "/token/client/")
-                    .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-
-            final WebClient client = WebClient.builder(resourceServerRule.httpUri())
+            final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
 
@@ -136,15 +137,51 @@ public class OAuth2ClientCredentialsGrantTest {
     }
 
     @Test
+    public void testWithAuthorization() throws Exception {
+        final WebClient authClient = WebClient.of(authServer.httpUri());
+        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+                .builder(authClient, "/token/client/")
+                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+            Server server = resourceServer.start()) {
+
+            final WebClient client = WebClient.of(resourceServer.httpUri());
+
+            final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
+            final CompletionStage<HttpRequest> authorizedRequest1 = grant.withAuthorization(request1);
+
+            final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
+            final CompletionStage<HttpRequest> authorizedRequest2 = grant.withAuthorization(request2);
+
+            final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
+            final CompletionStage<HttpRequest> authorizedRequest3 = grant.withAuthorization(request3);
+
+            final AggregatedHttpResponse response1 =
+                    authorizedRequest1.thenCompose(signed -> client.execute(signed).aggregate())
+                                      .toCompletableFuture().join();
+            assertThat(response1.status()).isEqualTo(HttpStatus.OK);
+
+            final AggregatedHttpResponse response2 =
+                    authorizedRequest2.thenCompose(signed -> client.execute(signed).aggregate())
+                                      .toCompletableFuture().join();
+            assertThat(response2.status()).isEqualTo(HttpStatus.OK);
+
+            final AggregatedHttpResponse response3 =
+                    authorizedRequest3.thenCompose(signed -> client.execute(signed).aggregate())
+                                      .toCompletableFuture().join();
+            assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @Test
     public void testConcurrent() throws Exception {
-        try (Server resourceServer = resourceServerRule.start()) {
+        final WebClient authClient = WebClient.of(authServer.httpUri());
 
-            final WebClient authClient = WebClient.of(authServerRule.httpUri());
-            final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
-                    .builder(authClient, "/token/client/")
-                    .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+                .builder(authClient, "/token/client/")
+                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+            Server server = resourceServer.start()) {
 
-            final WebClient client = WebClient.builder(resourceServerRule.httpUri())
+            final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
 
@@ -190,14 +227,14 @@ public class OAuth2ClientCredentialsGrantTest {
 
     @Test
     public void testUnauthorized() {
-        try (Server resourceServer = resourceServerRule.start()) {
+        final WebClient authClient = WebClient.of(authServer.httpUri());
 
-            final WebClient authClient = WebClient.of(authServerRule.httpUri());
-            final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
-                    .builder(authClient, "/token/client/")
-                    .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
+        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+                .builder(authClient, "/token/client/")
+                .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
+            Server server = resourceServer.start()) {
 
-            final WebClient client = WebClient.builder(resourceServerRule.httpUri())
+            final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
 

@@ -18,16 +18,33 @@ package com.linecorp.armeria.client.auth.oauth2;
 
 import java.util.concurrent.CompletionStage;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule;
 
 /**
  * Represents an OAuth 2.0 Access Token Grant flow to obtain Access Token.
  */
-@FunctionalInterface
-public interface OAuth2AuthorizationGrant {
+public interface OAuth2AuthorizationGrant extends AutoCloseable {
 
     /**
      * Produces OAuth 2.0 Access Token
      */
     CompletionStage<AccessTokenCapsule> getAccessToken();
+
+    /**
+     * Produces (if necessary) OAuth 2.0 Access Token and adds it to the {@code req} in form of the
+     * {@code Authorization} header.
+     * @param req {@link HttpRequest} to wrap with OAuth 2.0 authorization.
+     * @return {@link CompletionStage} that refers to {@link HttpRequest} wrapped wrap with
+     *         OAuth 2.0 authorization information.
+     */
+    default CompletionStage<HttpRequest> withAuthorization(HttpRequest req) {
+        return getAccessToken().thenApply(accessToken -> {
+            // Create a new request with an additional 'Authorization' header
+            return req.withHeaders(req.headers().toBuilder()
+                                   .set(HttpHeaderNames.AUTHORIZATION, accessToken.authorization())
+                                   .build());
+        });
+    }
 }

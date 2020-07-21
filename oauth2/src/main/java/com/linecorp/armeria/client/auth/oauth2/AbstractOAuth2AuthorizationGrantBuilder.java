@@ -48,10 +48,10 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
 
     @Nullable
-    private Supplier<AccessTokenCapsule> tokenSupplier;
+    private Supplier<? extends AccessTokenCapsule> tokenSupplier;
 
     @Nullable
-    private Consumer<AccessTokenCapsule> tokenConsumer;
+    private Consumer<? super AccessTokenCapsule> tokenConsumer;
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -92,8 +92,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * @param authorizationSupplier A supplier of encoded client authorization token.
      */
     @SuppressWarnings("unchecked")
-    public final T clientBasicAuthorization(
-            Supplier<String> authorizationSupplier) {
+    public final T clientBasicAuthorization(Supplier<String> authorizationSupplier) {
         clientAuthorization = ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
         return (T) this;
     }
@@ -143,7 +142,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     }
 
     @Nullable
-    public final Supplier<AccessTokenCapsule> tokenSupplier() {
+    public final Supplier<? extends AccessTokenCapsule> tokenSupplier() {
         return tokenSupplier;
     }
 
@@ -151,14 +150,13 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * A {@link Supplier} to load Access Token from, to be able to restore the previous session. OPTIONAL.
      */
     @SuppressWarnings("unchecked")
-    public final T tokenSupplier(
-            Supplier<AccessTokenCapsule> tokenSupplier) {
+    public final T tokenSupplier(Supplier<? extends AccessTokenCapsule> tokenSupplier) {
         this.tokenSupplier = requireNonNull(tokenSupplier, "tokenSupplier");
         return (T) this;
     }
 
     @Nullable
-    public final Consumer<AccessTokenCapsule> tokenConsumer() {
+    public final Consumer<? super AccessTokenCapsule> tokenConsumer() {
         return tokenConsumer;
     }
 
@@ -166,8 +164,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * A {@link Consumer} to store Access Token to, to be able restore the previous session. OPTIONAL.
      */
     @SuppressWarnings("unchecked")
-    public final T tokenConsumer(
-            Consumer<AccessTokenCapsule> tokenConsumer) {
+    public final T tokenConsumer(Consumer<? super AccessTokenCapsule> tokenConsumer) {
         this.tokenConsumer = requireNonNull(tokenConsumer, "tokenConsumer");
         return (T) this;
     }

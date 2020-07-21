@@ -54,8 +54,8 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrant extends AbstractOAuth2A
     OAuth2ResourceOwnerPasswordCredentialsGrant(ResourceOwnerPasswordCredentialsTokenRequest obtainRequest,
                                                 RefreshAccessTokenRequest refreshRequest,
                                                 Duration refreshBefore,
-                                                @Nullable Supplier<AccessTokenCapsule> tokenSupplier,
-                                                @Nullable Consumer<AccessTokenCapsule> tokenConsumer) {
+                                                @Nullable Supplier<? extends AccessTokenCapsule> tokenSupplier,
+                                                @Nullable Consumer<? super AccessTokenCapsule> tokenConsumer) {
         super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer);
         this.obtainRequest = requireNonNull(obtainRequest);
     }

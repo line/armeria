@@ -16,15 +16,11 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -36,6 +32,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 
@@ -45,9 +42,6 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
  * @param <T> the type of the authorization result.
  */
 abstract class AbstractAuthorizationRequest<T> {
-
-    private static final String FORM_ENTRY_SEPARATOR = "=";
-    private static final String FORM_TUPLE_SEPARATOR = "&";
 
     private final WebClient endpoint;
     private final String endpointPath;
@@ -197,23 +191,10 @@ abstract class AbstractAuthorizationRequest<T> {
      */
     protected CompletableFuture<T> make(LinkedHashMap<String, String> requestForm) {
         final HttpData requestContents = HttpData.ofUtf8(
-                requestForm.entrySet().stream().map(AbstractAuthorizationRequest::urlEncode)
-                           .collect(Collectors.joining(FORM_TUPLE_SEPARATOR)));
+                QueryParams.builder().add(requestForm.entrySet()).toQueryString());
         final RequestHeaders requestHeaders = composeRequestHeaders();
         final HttpResponse response = endpoint().execute(requestHeaders, requestContents);
         // when response aggregated, then extract the results...
         return response.aggregate().thenApply(r -> extractResults(r, Collections.unmodifiableMap(requestForm)));
-    }
-
-    private static String urlEncode(Map.Entry<String, String> entry) {
-        return entry.getKey() + FORM_ENTRY_SEPARATOR + urlEncode(entry.getValue());
-    }
-
-    private static String urlEncode(String s) {
-        try {
-            return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

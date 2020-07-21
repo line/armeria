@@ -18,14 +18,14 @@ package com.linecorp.armeria.common.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.QueryParams;
 
 /**
  * Provides client authorization for the OAuth 2.0 requests,
@@ -48,8 +48,6 @@ public final class ClientAuthorization {
 
   private static final String CLIENT_ID = "client_id";
   private static final String CLIENT_SECRET = "client_secret";
-  private static final char FORM_ENTRY_SEPARATOR = '=';
-  private static final char FORM_TUPLE_SEPARATOR = '&';
 
   private final String authorizationType;
   @Nullable
@@ -169,13 +167,8 @@ public final class ClientAuthorization {
   public String credentialsBodyParameters() {
     requireNonNull(credentialsSupplier, "credentialsSupplier");
     final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
-    final StringBuilder builder = new StringBuilder()
-        .append(CLIENT_ID).append(FORM_ENTRY_SEPARATOR)
-        .append(urlEncode(clientCredentials.getKey()))
-        .append(FORM_TUPLE_SEPARATOR)
-        .append(CLIENT_SECRET).append(FORM_ENTRY_SEPARATOR)
-        .append(urlEncode(clientCredentials.getValue()));
-    return builder.toString();
+    return QueryParams.of(CLIENT_ID, clientCredentials.getKey(),
+                          CLIENT_SECRET, clientCredentials.getValue()).toQueryString();
   }
 
   private static String encodeClientCredentials(String clientId, String clientSecret) {
@@ -183,13 +176,5 @@ public final class ClientAuthorization {
                    .encodeToString(
                            (clientId + CREDENTIALS_SEPARATOR + clientSecret)
                                  .getBytes(StandardCharsets.UTF_8));
-  }
-
-  private static String urlEncode(String s) {
-    try {
-      return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

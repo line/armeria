@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * Base implementation of OAuth 2.0 Access Token Grant flow to obtain Access Token.
  * Implements Access Token loading, storing and refreshing.
  */
-abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant, AutoCloseable {
+abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
 
     /**
      * Holds a reference to the access token capsule.
@@ -59,13 +59,13 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     private final Duration refreshBefore;
 
     @Nullable
-    private final Supplier<AccessTokenCapsule> tokenSupplier;
+    private final Supplier<? extends AccessTokenCapsule> tokenSupplier;
     @Nullable
-    private final Consumer<AccessTokenCapsule> tokenConsumer;
+    private final Consumer<? super AccessTokenCapsule> tokenConsumer;
 
     AbstractOAuth2AuthorizationGrant(RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-                                     @Nullable Supplier<AccessTokenCapsule> tokenSupplier,
-                                     @Nullable Consumer<AccessTokenCapsule> tokenConsumer) {
+                                     @Nullable Supplier<? extends AccessTokenCapsule> tokenSupplier,
+                                     @Nullable Consumer<? super AccessTokenCapsule> tokenConsumer) {
         tokenRef = new AtomicReference<>();
         serialExecutor = Executors.newSingleThreadExecutor();
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
