@@ -311,22 +311,22 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
     }
 
     @Override
-    public boolean isClosing() {
+    public final boolean isClosing() {
         return closeable.isClosing();
     }
 
     @Override
-    public boolean isClosed() {
+    public final boolean isClosed() {
         return closeable.isClosed();
     }
 
     @Override
-    public CompletableFuture<?> whenClosed() {
+    public final CompletableFuture<?> whenClosed() {
         return closeable.whenClosed();
     }
 
     @Override
-    public CompletableFuture<?> closeAsync() {
+    public final CompletableFuture<?> closeAsync() {
         return closeable.closeAsync();
     }
 

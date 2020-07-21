@@ -145,7 +145,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
     /**
      * Returns the name of this {@link ThrottlingStrategy}.
      */
-    public String name() {
+    public final String name() {
         return name;
     }
 }

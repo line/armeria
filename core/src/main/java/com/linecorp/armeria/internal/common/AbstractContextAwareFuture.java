@@ -51,36 +51,36 @@ public abstract class AbstractContextAwareFuture<T>
     }
 
     @Override
-    public RequestContext context() {
+    public final RequestContext context() {
         return context;
     }
 
-    protected Runnable makeContextAwareLoggingException(Runnable action) {
+    protected final Runnable makeContextAwareLoggingException(Runnable action) {
         requireNonNull(action, "action");
         return () -> makeContextAwareLoggingException0(action);
     }
 
-    protected <I> Consumer<I> makeContextAwareLoggingException(Consumer<I> action) {
+    protected final <I> Consumer<I> makeContextAwareLoggingException(Consumer<I> action) {
         requireNonNull(action, "action");
         return t -> makeContextAwareLoggingException0(() -> action.accept(t));
     }
 
-    protected <I, U> BiConsumer<I, U> makeContextAwareLoggingException(BiConsumer<I, U> action) {
+    protected final <I, U> BiConsumer<I, U> makeContextAwareLoggingException(BiConsumer<I, U> action) {
         requireNonNull(action, "action");
         return (t, u) -> makeContextAwareLoggingException0(() -> action.accept(t, u));
     }
 
-    protected <V> Supplier<V> makeContextAwareLoggingException(Supplier<? extends V> supplier) {
+    protected final <V> Supplier<V> makeContextAwareLoggingException(Supplier<? extends V> supplier) {
         requireNonNull(supplier, "supplier");
         return () -> makeContextAwareLoggingException0(supplier);
     }
 
-    protected <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> fn) {
+    protected final <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> fn) {
         requireNonNull(fn, "fn");
         return t -> makeContextAwareLoggingException0(() -> fn.apply(t));
     }
 
-    protected <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> fn) {
+    protected final <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> fn) {
         requireNonNull(fn, "fn");
         return (t, u) -> makeContextAwareLoggingException0(() -> fn.apply(t, u));
     }

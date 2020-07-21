@@ -66,7 +66,7 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
     }
 
     @Override
-    public void onData(HttpData data) {
+    public final void onData(HttpData data) {
         requireNonNull(data, "data");
         if (produced != null) {
             return;
@@ -91,7 +91,7 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
     }
 
     @Override
-    public String produce() {
+    public final String produce() {
         if (produced != null) {
             return produced;
         }

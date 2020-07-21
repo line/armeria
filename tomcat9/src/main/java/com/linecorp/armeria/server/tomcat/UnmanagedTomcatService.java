@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 
-class UnmanagedTomcatService extends TomcatService {
+final class UnmanagedTomcatService extends TomcatService {
 
     @Nullable
     private final String hostName;

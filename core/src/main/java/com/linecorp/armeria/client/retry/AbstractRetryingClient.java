@@ -125,7 +125,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
+    public final O execute(ClientRequestContext ctx, I req) throws Exception {
         final State state =
                 new State(maxTotalAttempts, responseTimeoutMillisForEachAttempt, ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
@@ -165,7 +165,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return retryRuleWithContent;
     }
 
-    RetryRule fromRetryRuleWithContent() {
+    final RetryRule fromRetryRuleWithContent() {
         checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
         return fromRetryRuleWithContent;
     }
@@ -349,7 +349,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return derived;
     }
 
-    private static class State {
+    private static final class State {
 
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;

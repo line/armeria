@@ -82,7 +82,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * Enqueues the {@link HttpResponse} to return to a client of this {@link MockWebServerExtension}. Multiple
      * calls will return multiple responses in order.
      */
-    public MockWebServerExtension enqueue(HttpResponse response) {
+    public final MockWebServerExtension enqueue(HttpResponse response) {
         requireNonNull(response, "response");
         mockResponses.add(response);
         return this;
@@ -92,7 +92,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * Enqueues the {@link AggregatedHttpResponse} to return to a client of this {@link MockWebServerExtension}.
      * Multiple calls will return multiple responses in order.
      */
-    public MockWebServerExtension enqueue(AggregatedHttpResponse response) {
+    public final MockWebServerExtension enqueue(AggregatedHttpResponse response) {
         requireNonNull(response, "response");
         mockResponses.add(response.toHttpResponse());
         return this;
@@ -103,7 +103,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * the requests, in order. Will block up to 10 seconds waiting for a request.
      */
     @Nullable
-    public RecordedRequest takeRequest() {
+    public final RecordedRequest takeRequest() {
         return takeRequest(10, TimeUnit.SECONDS);
     }
 
@@ -112,7 +112,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * the requests, in order. Will block the given amount of time waiting for a request.
      */
     @Nullable
-    public RecordedRequest takeRequest(int amount, TimeUnit unit) {
+    public final RecordedRequest takeRequest(int amount, TimeUnit unit) {
         requireNonNull(unit, "unit");
         boolean interrupted = false;
         try {

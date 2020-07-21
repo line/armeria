@@ -53,7 +53,7 @@ public abstract class RetryingClientBase {
 
     protected abstract WebClient newClient();
 
-    protected String baseUrl() {
+    protected final String baseUrl() {
         return "h2c://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP);
     }
 

@@ -133,7 +133,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      *                                  {@link WebClient#builder(String)} or
      *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
-    protected WebClient buildWebClient() {
+    protected final WebClient buildWebClient() {
         final ClientOptions options = buildOptions();
         final ClientBuilderParams params = clientBuilderParams(options);
         final ClientFactory factory = options.factory();
@@ -147,7 +147,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      *                                  {@link WebClient#builder(String)} or
      *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
-    protected ClientBuilderParams clientBuilderParams(ClientOptions options) {
+    protected final ClientBuilderParams clientBuilderParams(ClientOptions options) {
         requireNonNull(options, "options");
         if (uri != null) {
             return ClientBuilderParams.of(uri, WebClient.class, options);

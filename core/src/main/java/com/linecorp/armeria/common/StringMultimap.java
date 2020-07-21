@@ -637,7 +637,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
-    public StringMultimap<IN_NAME, NAME> setIfAbsent(
+    final StringMultimap<IN_NAME, NAME> setIfAbsent(
             Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
         requireNonNull(entries, "entries");
         final Set<NAME> existingNames = names();

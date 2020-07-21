@@ -87,7 +87,7 @@ public abstract class LoggingDecoratorBuilder {
      * or {@code null} if not set and a default logger should be used.
      */
     @Nullable
-    protected Logger logger() {
+    protected final Logger logger() {
         return logger;
     }
 
@@ -107,7 +107,7 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging requests.
      */
     @VisibleForTesting
-    LogLevel requestLogLevel() {
+    final LogLevel requestLogLevel() {
         return requestLogLevel;
     }
 
@@ -129,7 +129,7 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      */
     @VisibleForTesting
-    LogLevel successfulResponseLogLevel() {
+    final LogLevel successfulResponseLogLevel() {
         return successfulResponseLogLevel;
     }
 
@@ -150,7 +150,7 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      */
     @VisibleForTesting
-    LogLevel failedResponseLogLevel() {
+    final LogLevel failedResponseLogLevel() {
         return failedResponseLogLevel;
     }
 
@@ -170,7 +170,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link LogLevel} to use when logging request logs.
      */
-    protected Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper() {
+    protected final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper() {
         return requestLogLevelMapper;
     }
 
@@ -191,7 +191,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link LogLevel} to use when logging response logs.
      */
-    protected Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
+    protected final Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
         return responseLogLevelMapper;
     }
 
@@ -223,7 +223,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize request headers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
@@ -255,7 +255,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize response headers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
@@ -285,7 +285,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize request trailers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer() {
         return requestTrailersSanitizer;
     }
 
@@ -315,7 +315,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link Function} to use to sanitize response trailers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer() {
         return responseTrailersSanitizer;
     }
 
@@ -401,7 +401,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize request content before logging.
      */
-    protected BiFunction<? super RequestContext, Object, ?> requestContentSanitizer() {
+    protected final BiFunction<? super RequestContext, Object, ?> requestContentSanitizer() {
         return requestContentSanitizer;
     }
 
@@ -432,7 +432,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize response content before logging.
      */
-    protected BiFunction<? super RequestContext, Object, ?> responseContentSanitizer() {
+    protected final BiFunction<? super RequestContext, Object, ?> responseContentSanitizer() {
         return responseContentSanitizer;
     }
 
@@ -510,7 +510,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize response cause before logging.
      */
-    protected BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer() {
         return responseCauseSanitizer;
     }
 

@@ -104,17 +104,17 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return state == State.OPEN;
     }
 
     @Override
-    public boolean isEmpty() {
+    public final boolean isEmpty() {
         return !isOpen() && !wroteAny;
     }
 
     @Override
-    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
+    final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
             final SubscriptionImpl oldSubscription = this.subscription;
             assert oldSubscription != null;
@@ -150,12 +150,12 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    public void abort() {
+    public final void abort() {
         abort0(AbortedStreamException.get());
     }
 
     @Override
-    public void abort(Throwable cause) {
+    public final void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         abort0(cause);
     }
@@ -204,18 +204,18 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    void addObject(T obj) {
+    final void addObject(T obj) {
         wroteAny = true;
         addObjectOrEvent(obj);
     }
 
     @Override
-    long demand() {
+    final long demand() {
         return demand;
     }
 
     @Override
-    void request(long n) {
+    final void request(long n) {
         final SubscriptionImpl subscription = this.subscription;
         // A user cannot access subscription without subscribing.
         assert subscription != null;
@@ -241,7 +241,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    void cancel() {
+    final void cancel() {
         if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
             // It the state was CLOSED, close() or close(cause) has been called before cancel() or abort()
             // is called. We just ignore the previously pushed event and deal with CANCELLED_CLOSE.
@@ -296,7 +296,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    void addObjectOrEvent(Object obj) {
+    final void addObjectOrEvent(Object obj) {
         queue.add(obj);
         notifySubscriber();
     }
@@ -438,14 +438,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    public void close() {
+    public final void close() {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(SUCCESSFUL_CLOSE);
         }
     }
 
     @Override
-    public void close(Throwable cause) {
+    public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
         if (cause instanceof CancelledSubscriptionException) {
             throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");

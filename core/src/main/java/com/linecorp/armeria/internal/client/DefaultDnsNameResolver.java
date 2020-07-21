@@ -46,7 +46,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
-public class DefaultDnsNameResolver {
+public final class DefaultDnsNameResolver {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultDnsNameResolver.class);
 

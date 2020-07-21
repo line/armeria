@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-class DefaultHttpHeadersBuilder
+final class DefaultHttpHeadersBuilder
         extends AbstractHttpHeadersBuilder<DefaultHttpHeadersBuilder>
         implements HttpHeadersBuilder {
 

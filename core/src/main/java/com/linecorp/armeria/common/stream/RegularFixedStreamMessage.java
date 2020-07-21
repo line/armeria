@@ -148,7 +148,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public boolean isEmpty() {
+    public final boolean isEmpty() {
         return false;
     }
 }

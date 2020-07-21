@@ -108,28 +108,28 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
      * Returns the default {@link EventExecutor} which will be used when a user subscribes to a child
      * stream using {@link StreamMessage#subscribe(Subscriber, SubscriptionOption...)}.
      */
-    protected EventExecutor duplicatorExecutor() {
+    protected final EventExecutor duplicatorExecutor() {
         return executor;
     }
 
     @Override
-    public void close() {
+    public final void close() {
         processor.close();
     }
 
     @Override
-    public void abort() {
+    public final void abort() {
         abort(AbortedStreamException.get());
     }
 
     @Override
-    public void abort(Throwable cause) {
+    public final void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         processor.abort(cause);
     }
 
     @VisibleForTesting
-    static class StreamMessageProcessor<T> implements Subscriber<T> {
+    static final class StreamMessageProcessor<T> implements Subscriber<T> {
 
         private enum State {
             DUPLICABLE,
@@ -452,7 +452,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
     }
 
-    private static class ChildStreamMessage<T> implements StreamMessage<T> {
+    private static final class ChildStreamMessage<T> implements StreamMessage<T> {
 
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<ChildStreamMessage, DownstreamSubscription>
@@ -578,7 +578,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
     }
 
-    static class DownstreamSubscription<T> implements Subscription {
+    static final class DownstreamSubscription<T> implements Subscription {
 
         private static final int REQUEST_REMOVAL_THRESHOLD = 50;
 
@@ -867,7 +867,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
      * can be done by multiple threads.
      */
     @VisibleForTesting
-    static class SignalQueue {
+    static final class SignalQueue {
 
         private static final AtomicIntegerFieldUpdater<SignalQueue> lastRemovalRequestedOffsetUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(SignalQueue.class, "lastRemovalRequestedOffset");
