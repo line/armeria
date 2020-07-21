@@ -96,7 +96,7 @@ interface Multi<T> extends Publisher<T> {
     }
 
     /**
-     * Creates a {@link Multi} instance that reports the given exception to its subscriber(s).
+     * Returns a {@link Multi} instance that reports the given exception to its subscriber(s).
      * The exception is reported by invoking {@link Subscriber#onError(Throwable)}
      * when {@link Publisher#subscribe(Subscriber)} is called.
      *
@@ -108,7 +108,7 @@ interface Multi<T> extends Publisher<T> {
     }
 
     /**
-     * Creates a {@link Multi} instance wrapped around the given {@link Publisher}.
+     * Returns a {@link Multi} instance wrapped around the given {@link Publisher}.
      *
      * @param <T> item type
      * @param source source publisher
@@ -137,7 +137,7 @@ interface Multi<T> extends Publisher<T> {
      * @param <T> item type
      * @param iterable iterable to publish
      */
-    static <T> Multi<T> from(Iterable<T> iterable) {
+    static <T> Multi<T> from(Iterable<? extends T> iterable) {
         return new MultiFromIterable<>(iterable);
     }
 

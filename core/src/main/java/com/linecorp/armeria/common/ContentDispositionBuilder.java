@@ -77,6 +77,7 @@ public final class ContentDispositionBuilder {
      * Sets the value of the {@code name} parameter.
      */
     public ContentDispositionBuilder name(String name) {
+        requireNonNull(name, "name");
         this.name = name;
         return this;
     }
@@ -100,7 +101,7 @@ public final class ContentDispositionBuilder {
      * <a link="https://tools.ietf.org/html/rfc7578#section-4.2">RFC 7578, Section 4.2</a>
      * and also RFC 5987 itself mentions it does not apply to multipart requests.
      */
-    public ContentDispositionBuilder filename(String filename, Charset charset) {
+    public ContentDispositionBuilder filename(String filename, @Nullable Charset charset) {
         requireNonNull(filename, "filename");
         checkArgument(!filename.isEmpty(), "filename should not be empty.");
         this.filename = filename;
@@ -115,7 +116,7 @@ public final class ContentDispositionBuilder {
      *             to be removed in a future release.
      */
     @Deprecated
-    public ContentDispositionBuilder size(Long size) {
+    public ContentDispositionBuilder size(long size) {
         this.size = size;
         return this;
     }
@@ -128,6 +129,7 @@ public final class ContentDispositionBuilder {
      */
     @Deprecated
     public ContentDispositionBuilder creationDate(ZonedDateTime creationDate) {
+        requireNonNull(creationDate, "creationDate");
         this.creationDate = creationDate;
         return this;
     }
@@ -140,6 +142,7 @@ public final class ContentDispositionBuilder {
      */
     @Deprecated
     public ContentDispositionBuilder modificationDate(ZonedDateTime modificationDate) {
+        requireNonNull(modificationDate, "modificationDate");
         this.modificationDate = modificationDate;
         return this;
     }
@@ -151,6 +154,7 @@ public final class ContentDispositionBuilder {
      */
     @Deprecated
     public ContentDispositionBuilder readDate(ZonedDateTime readDate) {
+        requireNonNull(readDate, "readDate");
         this.readDate = readDate;
         return this;
     }

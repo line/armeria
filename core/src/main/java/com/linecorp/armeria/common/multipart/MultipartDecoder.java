@@ -54,18 +54,19 @@ import io.netty.util.ReferenceCountUtil;
 /**
  * Reactive processor that decodes HTTP payload as a stream of {@link BodyPart}.
  */
-class MultiPartDecoder implements Processor<HttpData, BodyPart> {
+class MultipartDecoder implements Processor<HttpData, BodyPart> {
 
-    // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media/multipart/src/main/java/io/helidon/media/multipart/MultiPartDecoder.java
+    // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media
+    // /multipart/src/main/java/io/helidon/media/multipart/MultiPartDecoder.java
 
-    private static final AtomicReferenceFieldUpdater<MultiPartDecoder, Subscription> upstreamUpdater =
+    private static final AtomicReferenceFieldUpdater<MultipartDecoder, Subscription> upstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
-                    MultiPartDecoder.class, Subscription.class, "upstream");
+                    MultipartDecoder.class, Subscription.class, "upstream");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<MultiPartDecoder, Subscriber> downstreamUpdater =
+    private static final AtomicReferenceFieldUpdater<MultipartDecoder, Subscriber> downstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
-                    MultiPartDecoder.class, Subscriber.class, "downstream");
+                    MultipartDecoder.class, Subscriber.class, "downstream");
 
     private final CompletableFuture<BufferedEmittingPublisher<BodyPart>> initFuture;
     private final LinkedList<BodyPart> bodyParts;
@@ -88,12 +89,7 @@ class MultiPartDecoder implements Processor<HttpData, BodyPart> {
     @Nullable
     private volatile Subscriber<? super BodyPart> downstream;
 
-    /**
-     * Create a new multipart decoder.
-     *
-     * @param boundary boundary delimiter
-     */
-    MultiPartDecoder(String boundary) {
+    MultipartDecoder(String boundary) {
         requireNonNull(boundary, "boundary");
         parserEventProcessor = new ParserEventProcessor();
         parser = new MimeParser(boundary, parserEventProcessor);
@@ -151,7 +147,7 @@ class MultiPartDecoder implements Processor<HttpData, BodyPart> {
             emitter.complete();
             // parts are delivered sequentially
             // we potentially drop the last part if not requested
-            emitter.clearBuffer(MultiPartDecoder::drainPart);
+            emitter.clearBuffer(MultipartDecoder::drainPart);
         }
 
         // request more data to detect the next part
@@ -190,7 +186,7 @@ class MultiPartDecoder implements Processor<HttpData, BodyPart> {
         if (upstream != null && downstream != null) {
             emitter = new BufferedEmittingPublisher<>();
             emitter.onRequest(this::onPartRequest);
-            emitter.onEmit(MultiPartDecoder::drainPart);
+            emitter.onEmit(MultipartDecoder::drainPart);
             emitter.subscribe(downstream);
             initFuture.complete(emitter);
             downstreamUpdater.set(this, null);
@@ -209,6 +205,7 @@ class MultiPartDecoder implements Processor<HttpData, BodyPart> {
         part.content().subscribe(new Subscriber<HttpData>() {
             @Override
             public void onSubscribe(Subscription subscription) {
+                requireNonNull(subscription, "subscription");
                 subscription.request(Long.MAX_VALUE);
             }
 

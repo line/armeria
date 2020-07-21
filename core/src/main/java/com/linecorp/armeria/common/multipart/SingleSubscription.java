@@ -43,17 +43,18 @@ import org.reactivestreams.Subscription;
  */
 final class SingleSubscription<T> extends AtomicInteger implements Subscription {
 
+    // Forked from https://github.com/oracle/helidon/blob/928783332890a8d30f2e0adbbced4e5a5b8bee08/common
+    // /reactive/src/main/java/io/helidon/common/reactive/SingleSubscription.java
+
     private static final long serialVersionUID = -5470260379807698726L;
 
-    // Forked from https://github.com/oracle/helidon/blob/928783332890a8d30f2e0adbbced4e5a5b8bee08/common/reactive/src/main/java/io/helidon/common/reactive/SingleSubscription.java
+    private static final int FRESH = 0;
+    private static final int REQUESTED = 1;
+    private static final int COMPLETED = 2;
+    private static final int CANCELED = 3;
 
     private final T value;
     private final Subscriber<? super T> subscriber;
-
-    static final int FRESH = 0;
-    static final int REQUESTED = 1;
-    static final int COMPLETED = 2;
-    static final int CANCELED = 3;
 
     SingleSubscription(T value, Subscriber<? super T> subscriber) {
         super(FRESH);

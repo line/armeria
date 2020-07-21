@@ -24,12 +24,12 @@ import com.linecorp.armeria.common.HttpHeaders;
 
 final class DefaultBodyPart implements BodyPart {
 
-    private final Publisher<? extends HttpData> content;
     private final HttpHeaders headers;
+    private final Publisher<? extends HttpData> content;
 
     DefaultBodyPart(HttpHeaders headers, Publisher<? extends HttpData> content) {
-        this.content = content;
         this.headers = headers;
+        this.content = content;
     }
 
     @Override

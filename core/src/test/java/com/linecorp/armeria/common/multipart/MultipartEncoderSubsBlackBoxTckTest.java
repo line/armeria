@@ -48,7 +48,7 @@ public class MultipartEncoderSubsBlackBoxTckTest extends SubscriberBlackboxVerif
 
     @Override
     public Subscriber<BodyPart> createSubscriber() {
-        final MultiPartEncoder encoder = new MultiPartEncoder("boundary");
+        final MultipartEncoder encoder = new MultipartEncoder("boundary");
         Flux.from(encoder)
             .subscribe(ch -> {});
         return encoder;

@@ -51,18 +51,18 @@ import io.netty.util.AsciiString;
 /**
  * Reactive processor that encodes a stream of {@link BodyPart} into an HTTP payload.
  */
-class MultiPartEncoder implements Processor<BodyPart, HttpData> {
+class MultipartEncoder implements Processor<BodyPart, HttpData> {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/main/java/io/helidon/media/multipart/MultiPartEncoder.java
 
-    private static final AtomicReferenceFieldUpdater<MultiPartEncoder, Subscription> upstreamUpdater =
+    private static final AtomicReferenceFieldUpdater<MultipartEncoder, Subscription> upstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
-                    MultiPartEncoder.class, Subscription.class, "upstream");
+                    MultipartEncoder.class, Subscription.class, "upstream");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<MultiPartEncoder, Subscriber> downstreamUpdater =
+    private static final AtomicReferenceFieldUpdater<MultipartEncoder, Subscriber> downstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
-                    MultiPartEncoder.class, Subscriber.class, "downstream");
+                    MultipartEncoder.class, Subscriber.class, "downstream");
 
     private final String boundary;
     private final CompletableFuture<BufferedEmittingPublisher<Publisher<HttpData>>> initFuture;
@@ -77,12 +77,7 @@ class MultiPartEncoder implements Processor<BodyPart, HttpData> {
     @Nullable
     private volatile Subscriber<? super HttpData> downstream;
 
-    /**
-     * Creates a multipart encoder.
-     *
-     * @param boundary boundary delimiter
-     */
-    MultiPartEncoder(String boundary) {
+    MultipartEncoder(String boundary) {
         requireNonNull(boundary, "boundary");
         this.boundary = boundary;
         initFuture = new CompletableFuture<>();

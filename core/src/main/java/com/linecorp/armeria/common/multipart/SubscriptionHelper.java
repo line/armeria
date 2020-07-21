@@ -201,19 +201,4 @@ enum SubscriptionHelper implements Subscription {
             }
         }
     }
-
-    /**
-     * Checks if current is null and incoming is not null.
-     * @param current the current subscription, should be null
-     * @param incoming the incoming subscription, should be non-null
-     * @throws IllegalStateException if current is not-null indicating a bug in an operator calling onSubscribe
-     *                               more than once
-     */
-    static void validate(Subscription current, Subscription incoming) {
-        requireNonNull(incoming, "incoming");
-        if (current != null) {
-            incoming.cancel();
-            throw new IllegalStateException("Subscription already set.");
-        }
-    }
 }

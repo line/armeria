@@ -61,7 +61,7 @@ public class MultipartDecoderSubsBlackBoxTckTest extends SubscriberBlackboxVerif
 
     @Override
     public Subscriber<HttpData> createSubscriber() {
-        final MultiPartDecoder decoder = new MultiPartDecoder("boundary");
+        final MultipartDecoder decoder = new MultipartDecoder("boundary");
         Flux.from(decoder).subscribe(part -> {});
         return decoder;
     }

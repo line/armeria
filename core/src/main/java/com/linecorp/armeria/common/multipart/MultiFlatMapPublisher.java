@@ -56,16 +56,14 @@ import org.reactivestreams.Subscription;
  */
 final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
-    // Forked from https://github.com/oracle/helidon/blob/c369146ffe8a3cb0c6b2891e2aff970a3b9b3ad6/common/reactive/src/main/java/io/helidon/common/reactive/MultiFlatMapPublisher.java
+    // Forked from https://github.com/oracle/helidon/blob/c369146ffe8a3cb0c6b2891e2aff970a3b9b3ad6/common
+    // /reactive/src/main/java/io/helidon/common/reactive/MultiFlatMapPublisher.java
 
     private final Multi<T> source;
-
     private final Function<? super T, ? extends Publisher<? extends R>> mapper;
 
     private final long maxConcurrency;
-
     private final long prefetch;
-
     private final boolean delayErrors;
 
     MultiFlatMapPublisher(Multi<T> source, Function<? super T, ? extends Publisher<? extends R>> mapper,
@@ -90,37 +88,28 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
         private static final long serialVersionUID = 3110403754615811849L;
 
         private final Subscriber<? super R> downstream;
-
         private final Function<? super T, ? extends Publisher<? extends R>> mapper;
 
         private final long maxConcurrency;
-
         private final long prefetch;
-
         private final boolean delayErrors;
+
+        private final AtomicReference<Throwable> errors;
+        private final ConcurrentMap<InnerSubscriber<R>, Object> subscribers;
+        private final AtomicReference<Queue<InnerSubscriber<R>>> queue;
+        private final AtomicLong requested;
+
+        private volatile boolean canceled;
+        private volatile boolean upstreamDone;
+
+        private long emitted;
 
         @Nullable
         private Subscription upstream;
 
-        private volatile boolean upstreamDone;
-
-        private final AtomicReference<Throwable> errors;
-
-        private volatile boolean canceled;
-
-        private final ConcurrentMap<InnerSubscriber<R>, Object> subscribers;
-
-        private final AtomicReference<Queue<InnerSubscriber<R>>> queue;
-
-        private final AtomicLong requested;
-
-        private long emitted;
-
         FlatMapSubscriber(Subscriber<? super R> downstream,
                           Function<? super T, ? extends Publisher<? extends R>> mapper,
-                          long maxConcurrency,
-                          long prefetch,
-                          boolean delayErrors) {
+                          long maxConcurrency, long prefetch, boolean delayErrors) {
             this.downstream = downstream;
             this.mapper = mapper;
             this.maxConcurrency = maxConcurrency;
@@ -184,7 +173,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             }
         }
 
-        void doError(Throwable throwable) {
+        private void doError(Throwable throwable) {
             if (delayErrors) {
                 addError(throwable);
             } else {
@@ -214,14 +203,14 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             cancelInners();
         }
 
-        void cancelInners() {
+        private void cancelInners() {
             for (InnerSubscriber<R> inner : subscribers.keySet()) {
                 inner.cancel();
             }
             subscribers.clear();
         }
 
-        public void innerNext(R item, InnerSubscriber<R> sender) {
+        void innerNext(R item, InnerSubscriber<R> sender) {
             // fast enter into the serializer
             if (get() == 0 && compareAndSet(0, 1)) {
                 final long r = requested.get();
@@ -262,7 +251,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             drainLoop();
         }
 
-        public void innerError(Throwable ex, InnerSubscriber<R> sender) {
+        void innerError(Throwable ex, InnerSubscriber<R> sender) {
             if (delayErrors) {
                 addError(ex);
                 sender.setDone();
@@ -277,7 +266,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             drain();
         }
 
-        public void innerComplete(InnerSubscriber<R> sender) {
+        void innerComplete(InnerSubscriber<R> sender) {
             sender.setDone();
             if (get() == 0 && compareAndSet(0, 1)) {
 
@@ -318,7 +307,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             drainLoop();
         }
 
-        Queue<InnerSubscriber<R>> getOrCreateQueue() {
+        private Queue<InnerSubscriber<R>> getOrCreateQueue() {
             Queue<InnerSubscriber<R>> q = queue.get();
             if (q == null) {
                 q = new ConcurrentLinkedQueue<>();
@@ -329,7 +318,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             return q;
         }
 
-        void addError(Throwable throwable) {
+        private void addError(Throwable throwable) {
             for (;;) {
                 final Throwable ex = errors.get();
                 if (ex == null) {
@@ -350,13 +339,13 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             }
         }
 
-        void drain() {
+        private void drain() {
             if (getAndIncrement() == 0) {
                 drainLoop();
             }
         }
 
-        void drainLoop() {
+        private void drainLoop() {
 
             int missed = 1;
 
@@ -439,20 +428,16 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
          * Publishers and calls back to the enclosing parent class.
          * @param <R> the element type of the inner sequence
          */
-        static final class InnerSubscriber<R>
-                extends AtomicReference<Subscription>
+        static final class InnerSubscriber<R> extends AtomicReference<Subscription>
                 implements Subscriber<R>, Subscription {
 
             private static final long serialVersionUID = 8561434642409382652L;
 
             private final FlatMapSubscriber<?, R> parent;
-
             private final long prefetch;
-
             private final long limit;
 
             private long produced;
-
             private volatile boolean done;
 
             @Nullable
@@ -493,7 +478,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
                 // deliberately empty
             }
 
-            public void produced(long n) {
+            private void produced(long n) {
                 final long p = produced + n;
                 if (p >= limit) {
                     produced = 0L;
@@ -512,11 +497,11 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
             }
 
             @Nullable
-            public Queue<R> getQueue() {
+            private Queue<R> getQueue() {
                 return queue;
             }
 
-            public void enqueue(R item) {
+            private void enqueue(R item) {
                 Queue<R> q = queue;
                 if (q == null) {
                     q = new ConcurrentLinkedQueue<>();
@@ -525,11 +510,11 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
                 q.offer(item);
             }
 
-            public void setDone() {
+            private void setDone() {
                 done = true;
             }
 
-            public boolean isDone() {
+            private boolean isDone() {
                 return done;
             }
 

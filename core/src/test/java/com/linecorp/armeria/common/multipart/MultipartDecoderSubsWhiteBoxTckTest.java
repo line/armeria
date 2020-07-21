@@ -65,7 +65,7 @@ public class MultipartDecoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerif
     @Override
     public Subscriber<HttpData> createSubscriber(final WhiteboxSubscriberProbe<HttpData> probe) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final MultiPartDecoder decoder = new MultiPartDecoder("boundary") {
+        final MultipartDecoder decoder = new MultipartDecoder("boundary") {
             @Override
             public void onSubscribe(final Subscription subscription) {
                 super.onSubscribe(subscription);

@@ -52,7 +52,6 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
     // Forked from https://github.com/oracle/helidon/blob/0325cae20e68664da0f518ea2d803b9dd211a7b5/common/reactive/src/main/java/io/helidon/common/reactive/MultiOnCompleteResumeWith.java
 
     private final Multi<T> source;
-
     private final Publisher<? extends T> fallbackPublisher;
 
     MultiOnCompleteResumeWith(Multi<T> source, Publisher<? extends T> fallbackPublisher) {
@@ -69,17 +68,14 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
     static final class OnCompleteResumeWithSubscriber<T> implements Subscriber<T>, Subscription {
 
         private final Subscriber<? super T> downstream;
-
         private final Publisher<? extends T> fallbackPublisher;
-
-        @Nullable
-        private Subscription upstream;
+        private final AtomicLong requested;
+        private final FallbackSubscriber<T> fallbackSubscriber;
 
         private long received;
 
-        private final AtomicLong requested;
-
-        private final FallbackSubscriber<T> fallbackSubscriber;
+        @Nullable
+        private Subscription upstream;
 
         OnCompleteResumeWithSubscriber(Subscriber<? super T> downstream,
                                        Publisher<? extends T> fallbackPublisher) {
@@ -91,7 +87,11 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            SubscriptionHelper.validate(upstream, subscription);
+            requireNonNull(subscription, "subscription");
+            if (upstream != null) {
+                subscription.cancel();
+                throw new IllegalStateException("Subscription already set.");
+            }
             upstream = subscription;
             downstream.onSubscribe(this);
         }
@@ -152,7 +152,6 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
             private static final long serialVersionUID = -6724536079209262926L;
 
             private final Subscriber<? super T> downstream;
-
             private final AtomicLong requested;
 
             FallbackSubscriber(Subscriber<? super T> downstream, AtomicLong requested) {

@@ -59,7 +59,7 @@ import com.linecorp.armeria.common.MediaType;
 import reactor.core.publisher.Flux;
 
 /**
- * Test {@link MultiPartEncoder}.
+ * Test {@link MultipartEncoder}.
  */
 public class MultipartEncoderTest {
 
@@ -118,7 +118,7 @@ public class MultipartEncoderTest {
 
     @Test
     public void testRequests() throws Exception {
-        final MultiPartEncoder enc = new MultiPartEncoder("boundary");
+        final MultipartEncoder enc = new MultipartEncoder("boundary");
         final List<BodyPart> parts = LongStream.range(1, 500)
                                                .mapToObj(i -> BodyPart.builder()
                                                                       .content("part" + i)
@@ -154,7 +154,7 @@ public class MultipartEncoderTest {
 
     @Test
     public void testSubscribingMoreThanOnce() {
-        final MultiPartEncoder encoder = new MultiPartEncoder("boundary");
+        final MultipartEncoder encoder = new MultipartEncoder("boundary");
         Multi.<BodyPart>empty().subscribe(encoder);
         assertThatThrownBy(() -> Multi.<BodyPart>empty().subscribe(encoder))
                 .isInstanceOf(IllegalStateException.class)
@@ -163,7 +163,7 @@ public class MultipartEncoderTest {
 
     @Test
     public void testUpstreamError() {
-        final MultiPartEncoder decoder = new MultiPartEncoder("boundary");
+        final MultipartEncoder decoder = new MultipartEncoder("boundary");
         Multi.<BodyPart>error(new IllegalStateException("oops")).subscribe(decoder);
         final HttpDataAggregator subscriber = new HttpDataAggregator();
         decoder.subscribe(subscriber);
@@ -178,7 +178,7 @@ public class MultipartEncoderTest {
 
     @Test
     public void testPartContentPublisherError() {
-        final MultiPartEncoder encoder = new MultiPartEncoder("boundary");
+        final MultipartEncoder encoder = new MultipartEncoder("boundary");
         final HttpDataAggregator subscriber = new HttpDataAggregator();
         encoder.subscribe(subscriber);
 
@@ -196,7 +196,7 @@ public class MultipartEncoderTest {
     }
 
     private static String encodeParts(String boundary, BodyPart... parts) throws Exception {
-        final MultiPartEncoder encoder = new MultiPartEncoder(boundary);
+        final MultipartEncoder encoder = new MultipartEncoder(boundary);
         Multi.just(parts).subscribe(encoder);
         return Flux.from(encoder)
                    .map(HttpData::array)

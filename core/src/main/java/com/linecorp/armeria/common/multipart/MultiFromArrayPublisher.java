@@ -61,16 +61,14 @@ final class MultiFromArrayPublisher<T> implements Multi<T> {
 
         private static final long serialVersionUID = 6780020322333114084L;
 
-        private final Subscriber<? super T> downstream;
+        private static final int CANCEL = 1;
+        private static final int BAD_REQUEST = 2;
 
+        private final Subscriber<? super T> downstream;
         private final T[] array;
 
         private int index;
-
         private volatile int canceled;
-
-        static final int CANCEL = 1;
-        static final int BAD_REQUEST = 2;
 
         ArraySubscription(Subscriber<? super T> downstream, T[] array) {
             this.downstream = downstream;

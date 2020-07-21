@@ -83,6 +83,7 @@ public interface Multipart extends Publisher<HttpData> {
      * Returns a new {@link Multipart} with the specified {@code boundary} and {@link BodyPart}s.
      */
     static Multipart of(String boundary, Iterable<? extends BodyPart> parts) {
+        requireNonNull(boundary, "boundary");
         requireNonNull(parts, "parts");
         @SuppressWarnings("unchecked")
         final Iterable<BodyPart> cast = (Iterable<BodyPart>) parts;
@@ -108,6 +109,7 @@ public interface Multipart extends Publisher<HttpData> {
      * Returns a decoded {@link Multipart} from the specified {@link HttpRequest}.
      */
     static Multipart from(HttpRequest request) {
+        requireNonNull(request, "request");
         final RequestHeaders headers = request.headers();
         final MediaType mediaType = headers.contentType();
         String boundary = null;
@@ -132,7 +134,7 @@ public interface Multipart extends Publisher<HttpData> {
     static Multipart from(String boundary, Publisher<HttpData> contents) {
         requireNonNull(boundary, "boundary");
         requireNonNull(contents, "contents");
-        final MultiPartDecoder decoder = new MultiPartDecoder(boundary);
+        final MultipartDecoder decoder = new MultipartDecoder(boundary);
         contents.subscribe(decoder);
         return of(decoder);
     }

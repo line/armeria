@@ -21,4 +21,3 @@
 package com.linecorp.armeria.common.multipart;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
-

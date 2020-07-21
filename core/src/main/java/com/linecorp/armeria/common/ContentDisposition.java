@@ -59,7 +59,6 @@ import com.google.common.annotations.VisibleForTesting;
  * @author Rossen Stoyanchev
  * @author Sergey Tsypanov
  * @see <a href="https://tools.ietf.org/html/rfc6266">RFC 6266</a>
- * @since 5.0
  */
 public final class ContentDisposition {
 
@@ -123,6 +122,9 @@ public final class ContentDisposition {
 
     @Nullable
     private final ZonedDateTime readDate;
+
+    @Nullable
+    private String strVal;
 
     ContentDisposition(String type, @Nullable String name, @Nullable String filename,
                        @Nullable Charset charset, @Nullable Long size,
@@ -226,20 +228,20 @@ public final class ContentDisposition {
         if (!(other instanceof ContentDisposition)) {
             return false;
         }
-        final ContentDisposition cast = (ContentDisposition) other;
-        return Objects.equals(type, cast.type) &&
-               Objects.equals(name, cast.name) &&
-               Objects.equals(filename, cast.filename) &&
-               Objects.equals(charset, cast.charset) &&
-               Objects.equals(size, cast.size) &&
-               Objects.equals(creationDate, cast.creationDate) &&
-               Objects.equals(modificationDate, cast.modificationDate) &&
-               Objects.equals(readDate, cast.readDate);
+        final ContentDisposition that = (ContentDisposition) other;
+        return type.equals(that.type) &&
+               Objects.equals(name, that.name) &&
+               Objects.equals(filename, that.filename) &&
+               Objects.equals(charset, that.charset) &&
+               Objects.equals(size, that.size) &&
+               Objects.equals(creationDate, that.creationDate) &&
+               Objects.equals(modificationDate, that.modificationDate) &&
+               Objects.equals(readDate, that.readDate);
     }
 
     @Override
     public int hashCode() {
-        int result = Objects.hashCode(type);
+        int result = type.hashCode();
         result = 31 * result + Objects.hashCode(name);
         result = 31 * result + Objects.hashCode(filename);
         result = 31 * result + Objects.hashCode(charset);
@@ -251,11 +253,11 @@ public final class ContentDisposition {
     }
 
     /**
-     * Parses a {@code Content-Disposition} header value as defined in RFC 2183.
+     * Parses a {@code "content-disposition"} header value as defined in RFC 2183.
      *
-     * <p>Note that Only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported.
+     * <p>Note that only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported.
      *
-     * @param contentDisposition the {@code Content-Disposition} header value
+     * @param contentDisposition the {@code "content-disposition"} header value
      * @return the parsed content disposition
      * @see #toString()
      */
@@ -429,7 +431,7 @@ public final class ContentDisposition {
     }
 
     /**
-     * Encode the given header field param as describe in RFC 5987.
+     * Encodes the given header field param as describe in RFC 5987.
      * @param input the header field param
      * @param charset the charset of the header field param string,
      *                only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported
@@ -462,8 +464,11 @@ public final class ContentDisposition {
      * Returns the header value for this content disposition as defined in RFC 6266.
      * @see #parse(String)
      */
-    @Override
-    public String toString() {
+    public String asHeaderValue() {
+        if (strVal != null) {
+            return strVal;
+        }
+
         final StringBuilder sb = new StringBuilder();
         if (type != null) {
             sb.append(type);
@@ -500,6 +505,15 @@ public final class ContentDisposition {
             sb.append(RFC_1123_DATE_TIME.format(readDate));
             sb.append('\"');
         }
-        return sb.toString();
+        return strVal = sb.toString();
+    }
+
+    /**
+     * Returns the header value for this content disposition as defined in RFC 6266.
+     * @see #parse(String)
+     */
+    @Override
+    public String toString() {
+        return asHeaderValue();
     }
 }

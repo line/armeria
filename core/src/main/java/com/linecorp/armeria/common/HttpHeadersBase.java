@@ -271,7 +271,7 @@ class HttpHeadersBase
 
     final void contentDisposition(ContentDisposition contentDisposition) {
         requireNonNull(contentDisposition, "contentDisposition");
-        set(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition.toString());
+        set(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition.asHeaderValue());
     }
 
     // Getters

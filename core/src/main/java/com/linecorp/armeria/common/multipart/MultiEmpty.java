@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
@@ -45,6 +47,7 @@ final class MultiEmpty implements Multi<Object> {
 
     @Override
     public void subscribe(Subscriber<? super Object> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         subscriber.onSubscribe(NoopSubscription.INSTANCE);
         subscriber.onComplete();
     }

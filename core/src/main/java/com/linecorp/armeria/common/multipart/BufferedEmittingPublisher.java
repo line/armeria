@@ -31,6 +31,8 @@
 
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -64,14 +66,16 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
     private final AtomicBoolean draining = new AtomicBoolean(false);
     private final AtomicReference<Throwable> error = new AtomicReference<>();
 
+    private boolean safeToSkipBuffer;
+
     @Nullable
     private BiConsumer<Long, Long> requestCallback;
     @Nullable
     private Consumer<? super T> onEmitCallback;
-    private boolean safeToSkipBuffer;
 
     @Override
-    public void subscribe(final Subscriber<? super T> subscriber) {
+    public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         emitter.onSubscribe(() -> state.get().drain(this));
         emitter.onRequest((n, cnt) -> {
             if (requestCallback != null) {
@@ -86,10 +90,9 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
     /**
      * Callback executed when request signal from downstream arrive.
      * <ul>
-     * <li><b>param</b> {@code n} the requested count.</li>
-     * <li><b>param</b> {@code result} the current total cumulative requested count, ranges between [0,
-     * {@link Long#MAX_VALUE}]
-     * where the max indicates that this publisher is unbounded.</li>
+     *   <li><b>param</b> {@code n} the requested count.</li>
+     *   <li><b>param</b> {@code result} the current total cumulative requested count, ranges between
+     *       [0, {@link Long#MAX_VALUE}] where the max indicates that this publisher is unbounded.</li>
      * </ul>
      *
      * @param requestCallback to be executed
@@ -109,7 +112,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
     /**
      * Callback executed right after {@code onNext} is actually sent.
      * <ul>
-     * <li><b>param</b> {@code i} sent item</li>
+     *   <li><b>param</b> {@code i} sent item</li>
      * </ul>
      *
      * @param onEmitCallback to be executed
@@ -134,7 +137,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
      * @return actual size of the buffer, value should be used as informative and can change asynchronously
      * @throws IllegalStateException if cancelled, completed of failed
      */
-    int emit(final T item) {
+    int emit(T item) {
         return state.get().emit(this, item);
     }
 
@@ -170,7 +173,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
      *
      * @param consumer to be invoked for each item
      */
-    public void clearBuffer(Consumer<T> consumer) {
+    void clearBuffer(Consumer<T> consumer) {
         while (!buffer.isEmpty()) {
             consumer.accept(buffer.poll());
         }
@@ -191,7 +194,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
      *
      * @return true if demand is higher than 0
      */
-    public boolean hasRequests() {
+    boolean hasRequests() {
         return emitter.hasRequests();
     }
 
@@ -200,7 +203,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
      *
      * @return true if so
      */
-    public boolean isCancelled() {
+    boolean isCancelled() {
         return state.get() == State.CANCELLED;
     }
 

@@ -45,7 +45,6 @@ final class MultiFilterPublisher<T> implements Multi<T> {
     // Forked from https://github.com/oracle/helidon/blob/5005bd7ebd57f416586149679c12778c8abebac3/common/reactive/src/main/java/io/helidon/common/reactive/MultiFilterPublisher.java
 
     private final Multi<T> source;
-
     private final Predicate<? super T> predicate;
 
     MultiFilterPublisher(Multi<T> source, Predicate<? super T> predicate) {
@@ -62,7 +61,6 @@ final class MultiFilterPublisher<T> implements Multi<T> {
     static final class FilterSubscriber<T> implements Subscriber<T>, Subscription {
 
         private final Subscriber<? super T> downstream;
-
         private final Predicate<? super T> predicate;
 
         @Nullable

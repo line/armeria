@@ -53,6 +53,7 @@ final class MultiError<T> implements Multi<T> {
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         subscriber.onSubscribe(NoopSubscription.INSTANCE);
         subscriber.onError(error);
     }

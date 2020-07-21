@@ -36,6 +36,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -48,9 +50,9 @@ final class MultiFromIterable<T> implements Multi<T> {
 
     // Forked from https://github.com/oracle/helidon/blob/269608534a1d5d99b7cd65f51f878398ee07ca6d/common/reactive/src/main/java/io/helidon/common/reactive/MultiFromIterable.java
 
-    private final Iterable<T> iterable;
+    private final Iterable<? extends T> iterable;
 
-    MultiFromIterable(Iterable<T> iterable) {
+    MultiFromIterable(Iterable<? extends T> iterable) {
         requireNonNull(iterable, "iterable");
         this.iterable = iterable;
     }
@@ -59,7 +61,7 @@ final class MultiFromIterable<T> implements Multi<T> {
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
 
-        final Iterator<T> iterator;
+        final Iterator<? extends T> iterator;
         final boolean hasFirst;
         try {
             iterator = iterable.iterator();
@@ -83,14 +85,15 @@ final class MultiFromIterable<T> implements Multi<T> {
 
         private static final long serialVersionUID = 487425833923970958L;
 
+        private static final int NORMAL_CANCEL = 1;
+        private static final int BAD_REQUEST = 2;
+
         private final Subscriber<? super T> downstream;
 
+        @Nullable
         private Iterator<T> iterator;
 
         private volatile int canceled;
-
-        static final int NORMAL_CANCEL = 1;
-        static final int BAD_REQUEST = 2;
 
         IteratorSubscription(Subscriber<? super T> downstream, Iterator<T> iterator) {
             this.downstream = downstream;

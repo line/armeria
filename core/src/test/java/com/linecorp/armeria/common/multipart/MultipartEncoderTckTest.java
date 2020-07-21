@@ -53,7 +53,7 @@ public class MultipartEncoderTckTest extends PublisherVerification<HttpData> {
 
     @Override
     public Publisher<HttpData> createPublisher(final long l) {
-        final MultiPartEncoder encoder = new MultiPartEncoder("boundary");
+        final MultipartEncoder encoder = new MultipartEncoder("boundary");
         Flux.fromStream(LongStream.rangeClosed(1, l)
                                   .mapToObj(i -> BodyPart.builder()
                                                          .content("part" + i)

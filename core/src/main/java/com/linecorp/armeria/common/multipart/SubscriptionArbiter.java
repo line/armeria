@@ -57,32 +57,43 @@ import org.reactivestreams.Subscription;
  */
 class SubscriptionArbiter extends AtomicInteger implements Subscription {
 
-    private static final long serialVersionUID = 1163246596979976791L;
+    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common
+    // /reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
 
-    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
+    private static final long serialVersionUID = 1163246596979976791L;
 
     // TODO(ikhoon): Remove AtomicInteger from superclass
 
-    /** The current outstanding request amount. */
+    /**
+     * The current outstanding request amount.
+     */
     private long requested;
 
-    /** The current subscription to relay requests for. */
-    @Nullable
-    private Subscription subscription;
-
-    /** The new subscription to use. */
+    /**
+     * The new subscription to use.
+     */
     private final AtomicReference<Subscription> newSubscription;
 
-    /** Requests accumulated. */
+    /**
+     * Requests accumulated.
+     */
     private final AtomicLong newRequested;
 
-    /** Item production count accumulated. */
+    /**
+     * Item production count accumulated.
+     */
     private final AtomicLong newProduced;
+
+    /**
+     * The current subscription to relay requests for.
+     */
+    @Nullable
+    private Subscription subscription;
 
     /**
      * Constructs an empty arbiter.
      */
-    protected SubscriptionArbiter() {
+    SubscriptionArbiter() {
         newProduced = new AtomicLong();
         newRequested = new AtomicLong();
         newSubscription = new AtomicReference<>();
@@ -105,7 +116,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
      * @param subscription the new subscription
      * @throws NullPointerException if {@code subscription} is {@code null}
      */
-    protected void setSubscription(Subscription subscription) {
+    final void setSubscription(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         for (;;) {
             final Subscription previous = newSubscription.get();
@@ -125,7 +136,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
      * before switching to the next subscription.
      * @param n the number of items produced, positive
      */
-    protected void produced(long n) {
+    final void produced(long n) {
         SubscriptionHelper.addRequest(newProduced, n);
         drain();
     }
@@ -193,14 +204,5 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         if (requestFrom != null && toRequest != 0L) {
             requestFrom.request(toRequest);
         }
-    }
-
-    /**
-     * Checks if this arbiter, and all its hosted subscriptions,
-     * have been canceled.
-     * @return true if canceled
-     */
-    protected final boolean isCanceled() {
-        return newSubscription.get() == SubscriptionHelper.CANCELED;
     }
 }

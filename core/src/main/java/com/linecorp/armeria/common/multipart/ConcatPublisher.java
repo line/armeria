@@ -34,13 +34,12 @@ package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -73,28 +72,27 @@ final class ConcatPublisher<T> implements Multi<T> {
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         final ConcatCancelingSubscription<T> parent =
                 new ConcatCancelingSubscription<>(subscriber, firstPublisher, secondPublisher);
         subscriber.onSubscribe(parent);
         parent.drain();
     }
 
-    static final class ConcatCancelingSubscription<T>
-            extends AtomicInteger implements Subscription {
+    static final class ConcatCancelingSubscription<T> extends AtomicInteger implements Subscription {
 
         private static final long serialVersionUID = -1593224722447706944L;
 
         private final InnerSubscriber<T> inner1;
-
         private final InnerSubscriber<T> inner2;
-
         private final AtomicBoolean canceled;
 
-        private Publisher<? extends T> source1;
-
-        private Publisher<? extends T> source2;
-
         private int index;
+
+        @Nullable
+        private Publisher<? extends T> source1;
+        @Nullable
+        private Publisher<? extends T> source2;
 
         ConcatCancelingSubscription(Subscriber<? super T> subscriber,
                                     Publisher<? extends T> source1, Publisher<? extends T> source2) {
@@ -155,25 +153,12 @@ final class ConcatPublisher<T> implements Multi<T> {
             }
         }
 
-        private void writeObject(ObjectOutputStream stream)
-                throws IOException {
-            stream.defaultWriteObject();
-        }
-
-        private void readObject(ObjectInputStream stream)
-                throws IOException, ClassNotFoundException {
-            stream.defaultReadObject();
-        }
-
-        static final class InnerSubscriber<T> extends AtomicReference<Subscription>
-                implements Subscriber<T> {
+        static final class InnerSubscriber<T> extends AtomicReference<Subscription> implements Subscriber<T> {
 
             private static final long serialVersionUID = 3029954591185720794L;
 
             private final Subscriber<? super T> downstream;
-
             private final ConcatCancelingSubscription<T> parent;
-
             private final AtomicLong requested;
 
             private long produced;
@@ -185,8 +170,9 @@ final class ConcatPublisher<T> implements Multi<T> {
             }
 
             @Override
-            public void onSubscribe(Subscription s) {
-                SubscriptionHelper.deferredSetOnce(this, requested, s);
+            public void onSubscribe(Subscription subscription) {
+                requireNonNull(subscription, "s");
+                SubscriptionHelper.deferredSetOnce(this, requested, subscription);
             }
 
             @Override
@@ -213,16 +199,6 @@ final class ConcatPublisher<T> implements Multi<T> {
                     lazySet(SubscriptionHelper.CANCELED);
                     parent.drain();
                 }
-            }
-
-            private void writeObject(ObjectOutputStream stream)
-                    throws IOException {
-                stream.defaultWriteObject();
-            }
-
-            private void readObject(ObjectInputStream stream)
-                    throws IOException, ClassNotFoundException {
-                stream.defaultReadObject();
             }
         }
     }

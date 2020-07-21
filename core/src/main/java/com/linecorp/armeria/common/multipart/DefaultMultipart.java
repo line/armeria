@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -37,12 +39,12 @@ final class DefaultMultipart implements Multipart {
     static final String DEFAULT_BOUNDARY = "!@==boundary==@!";
 
     private final String boundary;
-    private final MultiPartEncoder encoder;
+    private final MultipartEncoder encoder;
     private final Publisher<? extends BodyPart> parts;
 
     DefaultMultipart(String boundary, Publisher<? extends BodyPart> parts) {
         this.boundary = boundary;
-        encoder = new MultiPartEncoder(boundary);
+        encoder = new MultipartEncoder(boundary);
         this.parts = parts;
     }
 
@@ -87,6 +89,7 @@ final class DefaultMultipart implements Multipart {
 
         @Override
         public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
             subscription.request(Long.MAX_VALUE);
         }
 
@@ -120,6 +123,7 @@ final class DefaultMultipart implements Multipart {
 
         @Override
         public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
             subscription.request(Long.MAX_VALUE);
         }
 

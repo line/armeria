@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
+import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 
@@ -64,22 +65,32 @@ public interface BodyPart {
     /**
      * Returns the control name.
      *
-     * @return the {@code name} parameter of the {@code Content-Disposition}
+     * @return the {@code name} parameter of the {@code "content-disposition"}
      *         header, or {@code null} if not present.
      */
     @Nullable
     default String name() {
-        return headers().contentDisposition().name();
+        final ContentDisposition contentDisposition = headers().contentDisposition();
+        if (contentDisposition != null) {
+            return contentDisposition.name();
+        } else {
+            return null;
+        }
     }
 
     /**
      * Returns the file name.
      *
-     * @return the {@code filename} parameter of the {@code Content-Disposition}
+     * @return the {@code filename} parameter of the {@code "content-disposition"}
      *         header, or {@code null} if not present.
      */
     @Nullable
     default String filename() {
-        return headers().contentDisposition().filename();
+        final ContentDisposition contentDisposition = headers().contentDisposition();
+        if (contentDisposition != null) {
+            return contentDisposition.filename();
+        } else {
+            return null;
+        }
     }
 }

@@ -50,7 +50,6 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
     // Forked from https://github.com/oracle/helidon/blob/d7a465172789e30c414fc69dd174ab05e2c94000/common/reactive/src/main/java/io/helidon/common/reactive/MultiMapperPublisher.java
 
     private final Publisher<T> source;
-
     private final Function<? super T, ? extends R> mapper;
 
     MultiMapperPublisher(Publisher<T> source, Function<? super T, ? extends R> mapper) {
@@ -67,7 +66,6 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
     static final class MapperSubscriber<T, R> implements Subscriber<T>, Subscription {
 
         private final Subscriber<? super R> downstream;
-
         private final Function<? super T, ? extends R> mapper;
 
         @Nullable
@@ -80,7 +78,11 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            SubscriptionHelper.validate(upstream, subscription);
+            requireNonNull(subscription, "subscription");
+            if (upstream != null) {
+                subscription.cancel();
+                throw new IllegalStateException("Subscription already set.");
+            }
             upstream = subscription;
             downstream.onSubscribe(this);
         }

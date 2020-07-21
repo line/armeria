@@ -76,7 +76,7 @@ public class MultipartDecoderTckTest extends PublisherVerification<BodyPart> {
 
     @Override
     public Publisher<BodyPart> createPublisher(final long l) {
-        final MultiPartDecoder decoder = new MultiPartDecoder("boundary");
+        final MultipartDecoder decoder = new MultipartDecoder("boundary");
         upstream(l).subscribe(decoder);
         return decoder;
     }

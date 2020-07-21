@@ -66,7 +66,7 @@ public final class BodyPartBuilder {
     }
 
     /**
-     * Adds the specified {@link CharSequence} as a body part content.
+     * Adds the specified {@link CharSequence} as a UTF-8-encoded body part content.
      */
     public BodyPartBuilder content(CharSequence content) {
         requireNonNull(content, "content");

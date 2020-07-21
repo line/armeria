@@ -50,7 +50,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
 
 /**
- * Tests {@link MultiPartDecoder}.
+ * Tests {@link MultipartDecoder}.
  */
 public class MultipartDecoderTest {
 
@@ -380,7 +380,7 @@ public class MultipartDecoderTest {
 
     @Test
     void testUpstreamError() {
-        final MultiPartDecoder decoder = new MultiPartDecoder("boundary");
+        final MultipartDecoder decoder = new MultipartDecoder("boundary");
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, null);
         decoder.subscribe(testSubscriber);
         Multi.<HttpData>error(new IllegalStateException("oops")).subscribe(decoder);
@@ -391,7 +391,7 @@ public class MultipartDecoderTest {
 
     @Test
     void testSubcribingMoreThanOnce() {
-        final MultiPartDecoder decoder = new MultiPartDecoder("boundary");
+        final MultipartDecoder decoder = new MultipartDecoder("boundary");
         chunksPublisher("foo".getBytes()).subscribe(decoder);
         assertThatThrownBy(() -> chunksPublisher("bar".getBytes()).subscribe(decoder))
                 .isInstanceOf(IllegalStateException.class)
@@ -474,7 +474,7 @@ public class MultipartDecoderTest {
      * @return publisher of body parts
      */
     static Publisher<? extends BodyPart> partsPublisher(String boundary, List<byte[]> data) {
-        final MultiPartDecoder decoder = new MultiPartDecoder(boundary);
+        final MultipartDecoder decoder = new MultipartDecoder(boundary);
         chunksPublisher(data).subscribe(decoder);
         return decoder;
     }

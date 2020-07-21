@@ -65,13 +65,10 @@ final class MultiConcatArray<T> implements Multi<T> {
         private static final long serialVersionUID = -9184116713095894096L;
 
         private final Subscriber<? super T> downstream;
-
         private final Publisher<? extends T>[] sources;
-
         private final AtomicInteger wip;
 
         private int index;
-
         private long produced;
 
         ConcatArraySubscriber(Subscriber<? super T> downstream, Publisher<? extends T>[] sources) {

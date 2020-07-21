@@ -84,7 +84,7 @@ public interface AggregatedMultipart {
 
     /**
      * Returns the first body part identified by the given control name. The control
-     * name is the {@code name} parameter of the {@code Content-Disposition}
+     * name is the {@code name} parameter of the {@code "content-disposition"}
      * header for a body part with disposition type {@code form-data}.
      *
      * @param name control name
@@ -101,7 +101,7 @@ public interface AggregatedMultipart {
 
     /**
      * Returns the body parts identified by the given control name. The control
-     * name is the {@code name} parameter of the {@code Content-Disposition}
+     * name is the {@code name} parameter of the {@code "content-disposition"}
      * header for a body part with disposition type {@code form-data}.
      *
      * @param name control name

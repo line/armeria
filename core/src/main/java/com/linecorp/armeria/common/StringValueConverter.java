@@ -79,6 +79,10 @@ final class StringValueConverter implements ValueConverter<String> {
             return ((CacheControl) value).asHeaderValue();
         }
 
+        if (value instanceof ContentDisposition) {
+            return ((ContentDisposition) value).asHeaderValue();
+        }
+
         // Obsolete types.
         if (value instanceof Date) {
             return DateFormatter.format((Date) value);

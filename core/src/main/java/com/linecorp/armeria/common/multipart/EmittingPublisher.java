@@ -78,7 +78,7 @@ final class EmittingPublisher<T> implements Publisher<T> {
     private Runnable cancelCallback = () -> {};
 
     @Override
-    public void subscribe(final Subscriber<? super T> subscriber) {
+    public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
 
         if (!subscribed.compareAndSet(false, true)) {
@@ -249,10 +249,9 @@ final class EmittingPublisher<T> implements Publisher<T> {
     /**
      * Callback executed when request signal from downstream arrive.
      * <ul>
-     * <li><b>param</b> {@code n} the requested count.</li>
-     * <li><b>param</b> {@code result} the current total cumulative requested count, ranges between [0,
-     * {@link Long#MAX_VALUE}]
-     * where the max indicates that this publisher is unbounded.</li>
+     *   <li><b>param</b> {@code n} the requested count.</li>
+     *   <li><b>param</b> {@code result} the current total cumulative requested count, ranges between
+     *       [0, {@link Long#MAX_VALUE}] where the max indicates that this publisher is unbounded.</li>
      * </ul>
      *
      * @param requestCallback to be executed

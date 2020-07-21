@@ -41,7 +41,7 @@ public interface AggregatedBodyPart extends AggregatedHttpContent {
     /**
      * Returns the control name.
      *
-     * @return the {@code name} parameter of the {@code Content-Disposition}
+     * @return the {@code name} parameter of the {@code "content-disposition"}
      *         header, or {@code null} if not present.
      */
     @Nullable
@@ -57,7 +57,7 @@ public interface AggregatedBodyPart extends AggregatedHttpContent {
     /**
      * Returns the file name.
      *
-     * @return the {@code filename} parameter of the {@code Content-Disposition}
+     * @return the {@code filename} parameter of the {@code "content-disposition"}
      *         header, or {@code null} if not present.
      */
     @Nullable

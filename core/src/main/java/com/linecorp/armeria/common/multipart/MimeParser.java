@@ -76,16 +76,9 @@ final class MimeParser {
     private static final EndMessageEvent END_MESSAGE_EVENT = new EndMessageEvent();
 
     /**
-     * The current parser state.
+     * Read-only byte array of the current byte buffer being processed.
      */
-    private State state = State.START_MESSAGE;
-
-    /**
-     * The parser state to resume to, non {@code null} when {@link #state} is
-     * equal to {@link State#DATA_REQUIRED}.
-     */
-    @Nullable
-    private State resumeState;
+    private final CompositeByteBuf buf;
 
     /**
      * Boundary as bytes.
@@ -108,6 +101,23 @@ final class MimeParser {
     private final int[] goodSuffixes;
 
     /**
+     * The event listener.
+     */
+    private final EventProcessor listener;
+
+    /**
+     * The current parser state.
+     */
+    private State state = State.START_MESSAGE;
+
+    /**
+     * The parser state to resume to, non {@code null} when {@link #state} is
+     * equal to {@link State#DATA_REQUIRED}.
+     */
+    @Nullable
+    private State resumeState;
+
+    /**
      * Read and process body partsList until we see the terminating boundary
      * line.
      */
@@ -119,11 +129,6 @@ final class MimeParser {
     private boolean startOfLine;
 
     /**
-     * Read-only byte array of the current byte buffer being processed.
-     */
-    private final CompositeByteBuf buf;
-
-    /**
      * The position of the next boundary.
      */
     private int boundaryStart;
@@ -132,11 +137,6 @@ final class MimeParser {
      * Indicates if this parser is closed.
      */
     private boolean closed;
-
-    /**
-     * The event listener.
-     */
-    private final EventProcessor listener;
 
     /**
      * Parses the MIME content.
@@ -444,7 +444,7 @@ final class MimeParser {
     }
 
     /**
-     * Read the lines for a single header.
+     * Reads the lines for a single header.
      *
      * @return a header line or an empty string if the blank line separating the
      *         header from the body has been reached, or {@code null} if the there is
@@ -561,7 +561,7 @@ final class MimeParser {
     }
 
     /**
-     * Get the bytes representation of a string.
+     * Gets the bytes representation of a string.
      * @param str string to convert
      * @return byte[]
      */
@@ -684,13 +684,11 @@ final class MimeParser {
          * This event is issued when there is not enough data in the buffer to
          * continue parsing. If issued after:
          * <ul>
-         * <li>{@link #START_MESSAGE} - the parser did not detect the end of
-         * the preamble</li>
-         * <li>{@link #HEADER} - the parser
-         * did not detect the blank line that separates the part headers and the
-         * part body</li>
-         * <li>{@link #CONTENT} - the parser did not
-         * detect the next starting boundary or closing boundary</li>
+         *   <li>{@link #START_MESSAGE} - the parser did not detect the end of the preamble</li>
+         *   <li>{@link #HEADER} - the parser did not detect the blank line that separates
+         *       the part headers and the part body</li>
+         *   <li>{@link #CONTENT} - the parser did not detect the next starting boundary or
+         *       closing boundary</li>
          * </ul>
          */
         DATA_REQUIRED
@@ -702,13 +700,13 @@ final class MimeParser {
     abstract static class ParserEvent {
 
         /**
-         * Get the event type.
+         * Returns the event type.
          * @return EVENT_TYPE
          */
         abstract EventType type();
 
         /**
-         * Get this event as a {@link HeaderEvent}.
+         * Returns this event as a {@link HeaderEvent}.
          * @return HeaderEvent
          */
         HeaderEvent asHeaderEvent() {
@@ -716,7 +714,7 @@ final class MimeParser {
         }
 
         /**
-         * Get this event as a {@link ContentEvent}.
+         * Returns this event as a {@link ContentEvent}.
          *
          * @return ContentEvent
          */
@@ -725,7 +723,7 @@ final class MimeParser {
         }
 
         /**
-         * Get this event as a {@link DataRequiredEvent}.
+         * Returns this event as a {@link DataRequiredEvent}.
          *
          * @return DataRequiredEvent
          */
@@ -794,8 +792,7 @@ final class MimeParser {
      */
     static final class EndHeadersEvent extends ParserEvent {
 
-        private EndHeadersEvent() {
-        }
+        private EndHeadersEvent() {}
 
         @Override
         EventType type() {
@@ -829,8 +826,7 @@ final class MimeParser {
      */
     static final class EndPartEvent extends ParserEvent {
 
-        private EndPartEvent() {
-        }
+        private EndPartEvent() {}
 
         @Override
         EventType type() {
@@ -843,8 +839,7 @@ final class MimeParser {
      */
     static final class EndMessageEvent extends ParserEvent {
 
-        private EndMessageEvent() {
-        }
+        private EndMessageEvent() {}
 
         @Override
         EventType type() {
@@ -884,7 +879,7 @@ final class MimeParser {
     interface EventProcessor {
 
         /**
-         * Process a parser event.
+         * Processes a parser event.
          * @param event generated event
          */
         void process(ParserEvent event);
