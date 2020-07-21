@@ -44,7 +44,6 @@ import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
-import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 
 class ArmeriaConfigurationUtilTest {
@@ -63,7 +62,6 @@ class ArmeriaConfigurationUtilTest {
                                    null);
         final Server s1 = sb1.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(s1).as(MetricCollectingService.class)).isNotNull();
 
         reset(decorator);
 

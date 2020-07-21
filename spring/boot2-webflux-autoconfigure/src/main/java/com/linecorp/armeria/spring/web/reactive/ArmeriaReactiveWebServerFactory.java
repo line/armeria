@@ -71,7 +71,6 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
-import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 import com.linecorp.armeria.spring.web.ArmeriaWebServer;
 
@@ -229,30 +228,21 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     }
 
     private void configureArmeriaService(ServerBuilder sb, ArmeriaSettings settings) {
-        final MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory =
-                settings.isEnableMetrics() ? firstNonNull(findBean(MeterIdPrefixFunctionFactory.class),
-                                                          MeterIdPrefixFunctionFactory.ofDefault())
-                                           : null;
-
         configurePorts(sb, settings.getPorts());
         final DocServiceBuilder docServiceBuilder = DocService.builder();
         configureThriftServices(sb,
                                 docServiceBuilder,
                                 findBeans(ThriftServiceRegistrationBean.class),
-                                meterIdPrefixFunctionFactory,
                                 settings.getDocsPath());
         configureGrpcServices(sb,
                               docServiceBuilder,
                               findBeans(GrpcServiceRegistrationBean.class),
-                              meterIdPrefixFunctionFactory,
                               settings.getDocsPath());
         configureHttpServices(sb,
-                              findBeans(HttpServiceRegistrationBean.class),
-                              meterIdPrefixFunctionFactory);
+                              findBeans(HttpServiceRegistrationBean.class));
         configureAnnotatedServices(sb,
                                    docServiceBuilder,
                                    findBeans(AnnotatedServiceRegistrationBean.class),
-                                   meterIdPrefixFunctionFactory,
                                    settings.getDocsPath());
         configureServerWithArmeriaSettings(sb, settings,
                                            firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
