@@ -337,11 +337,6 @@ public final class Flags {
     private static final String ROUTE_DECORATOR_CACHE_SPEC =
             caffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
 
-    private static final String DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC = "maximumSize=256";
-    @Nullable
-    private static final String COMPOSITE_SERVICE_CACHE_SPEC =
-            caffeineSpec("compositeServiceCache", DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC);
-
     private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String PARSED_PATH_CACHE_SPEC =
@@ -988,22 +983,6 @@ public final class Flags {
      */
     public static List<String> cachedHeaders() {
         return CACHED_HEADERS;
-    }
-
-    /**
-     * Returns the value of the {@code compositeServiceCache} parameter. It would be used to create a
-     * Caffeine {@link Cache} instance using {@link CaffeineSpec} for routing a request.
-     * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
-     * {@link ServiceConfig} for a request to improve server performance.
-     *
-     * <p>The default value of this flag is {@value DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC}. Specify the
-     * {@code -Dcom.linecorp.armeria.compositeServiceCache=<spec>} JVM option to override the default value.
-     * For example, {@code -Dcom.linecorp.armeria.compositeServiceCache=maximumSize=256,expireAfterAccess=600s}.
-     * Also, specify {@code -Dcom.linecorp.armeria.compositeServiceCache=off} JVM option to disable it.
-     */
-    @Nullable
-    public static String compositeServiceCacheSpec() {
-        return COMPOSITE_SERVICE_CACHE_SPEC;
     }
 
     /**
