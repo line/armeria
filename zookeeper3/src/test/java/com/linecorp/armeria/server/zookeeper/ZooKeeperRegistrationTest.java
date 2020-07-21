@@ -15,11 +15,10 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil.startServerWithRetries;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -116,11 +115,7 @@ class ZooKeeperRegistrationTest {
                                              .sessionTimeoutMillis(SESSION_TIMEOUT_MILLIS)
                                              .build();
             server.addListener(listener);
-
-            // Work around sporadic 'address already in use' errors.
-            await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(
-                    () -> assertThatCode(() -> server.start().join()).doesNotThrowAnyException());
-
+            startServerWithRetries(server);
             servers.add(server);
         }
         return servers;

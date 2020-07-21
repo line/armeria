@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil.startServerWithRetries;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -82,7 +83,7 @@ class CuratorServiceDiscoveryCompatibilityTest {
                                     .service("/", (ctx, req) -> HttpResponse.of(200))
                                     .build();
         server.addListener(listener);
-        server.start().join();
+        startServerWithRetries(server);
         assertInstance(registered);
         server.stop().join();
         client.close();
