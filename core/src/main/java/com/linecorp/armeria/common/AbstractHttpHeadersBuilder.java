@@ -58,7 +58,7 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
         return getters != null ? getters.contentDisposition() : null;
     }
 
-    public SELF contentDisposition(ContentDisposition contentDisposition) {
+    public final SELF contentDisposition(ContentDisposition contentDisposition) {
         setters().contentDisposition(contentDisposition);
         return self();
     }
