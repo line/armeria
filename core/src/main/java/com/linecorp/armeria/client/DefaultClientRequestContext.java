@@ -187,7 +187,7 @@ public final class DefaultClientRequestContext
 
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
-        additionalRequestHeaders = options.get(ClientOption.HTTP_HEADERS);
+        additionalRequestHeaders = options.get(ClientOptions.HTTP_HEADERS);
         customizers = copyThreadLocalCustomizers();
     }
 

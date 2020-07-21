@@ -46,7 +46,6 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -235,7 +234,7 @@ class ThriftOverHttpClientTest {
             decoBuilder.addRpc(LoggingRpcClient.newDecorator());
         }
 
-        clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));
+        clientOptions = ClientOptions.of(ClientOptions.DECORATION.newValue(decoBuilder.build()));
     }
 
     @AfterAll
@@ -735,7 +734,7 @@ class ThriftOverHttpClientTest {
     }
 
     private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {
-        return ClientOption.HTTP_HEADERS.newValue(HttpHeaders.of(name, value));
+        return ClientOptions.HTTP_HEADERS.newValue(HttpHeaders.of(name, value));
     }
 
     private static class ParametersProvider implements ArgumentsProvider {

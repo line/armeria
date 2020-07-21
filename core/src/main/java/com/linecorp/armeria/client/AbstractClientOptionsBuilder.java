@@ -104,9 +104,9 @@ public class AbstractClientOptionsBuilder {
     public <T> AbstractClientOptionsBuilder option(ClientOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
         final ClientOption<?> opt = optionValue.option();
-        if (opt == ClientOption.DECORATION) {
+        if (opt == ClientOptions.DECORATION) {
             decoration.add((ClientDecoration) optionValue.value());
-        } else if (opt == ClientOption.HTTP_HEADERS) {
+        } else if (opt == ClientOptions.HTTP_HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
             setHttpHeaders(h);
         } else {
@@ -120,7 +120,7 @@ public class AbstractClientOptionsBuilder {
      * The default is {@link ClientFactory#ofDefault()}.
      */
     public AbstractClientOptionsBuilder factory(ClientFactory factory) {
-        return option(ClientOption.FACTORY, requireNonNull(factory, "factory"));
+        return option(ClientOptions.FACTORY, requireNonNull(factory, "factory"));
     }
 
     /**
@@ -138,7 +138,7 @@ public class AbstractClientOptionsBuilder {
      * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public AbstractClientOptionsBuilder writeTimeoutMillis(long writeTimeoutMillis) {
-        return option(ClientOption.WRITE_TIMEOUT_MILLIS, writeTimeoutMillis);
+        return option(ClientOptions.WRITE_TIMEOUT_MILLIS, writeTimeoutMillis);
     }
 
     /**
@@ -156,7 +156,7 @@ public class AbstractClientOptionsBuilder {
      * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public AbstractClientOptionsBuilder responseTimeoutMillis(long responseTimeoutMillis) {
-        return option(ClientOption.RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
+        return option(ClientOptions.RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
     }
 
     /**
@@ -165,14 +165,14 @@ public class AbstractClientOptionsBuilder {
      * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
      */
     public AbstractClientOptionsBuilder maxResponseLength(long maxResponseLength) {
-        return option(ClientOption.MAX_RESPONSE_LENGTH, maxResponseLength);
+        return option(ClientOptions.MAX_RESPONSE_LENGTH, maxResponseLength);
     }
 
     /**
      * Sets the {@link Supplier} that generates a {@link RequestId}.
      */
     public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
-        return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
+        return option(ClientOptions.REQUEST_ID_GENERATOR, requestIdGenerator);
     }
 
     /**
@@ -206,13 +206,13 @@ public class AbstractClientOptionsBuilder {
      *
      * <p>Note that the remapping does not occur recursively but only once.</p>
      *
-     * @see ClientOption#ENDPOINT_REMAPPER
+     * @see ClientOptions#ENDPOINT_REMAPPER
      * @see ClientOptions#endpointRemapper()
      */
     public AbstractClientOptionsBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         requireNonNull(endpointRemapper, "endpointRemapper");
-        return option(ClientOption.ENDPOINT_REMAPPER, endpointRemapper);
+        return option(ClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
     }
 
     /**
@@ -344,8 +344,8 @@ public class AbstractClientOptionsBuilder {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
-        optValArray[numOpts] = ClientOption.DECORATION.newValue(decoration.build());
-        optValArray[numOpts + 1] = ClientOption.HTTP_HEADERS.newValue(httpHeaders.build());
+        optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
+        optValArray[numOpts + 1] = ClientOptions.HTTP_HEADERS.newValue(httpHeaders.build());
 
         if (baseOptions != null) {
             return ClientOptions.of(baseOptions, optValArray);

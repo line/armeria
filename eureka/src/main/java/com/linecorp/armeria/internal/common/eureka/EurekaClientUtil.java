@@ -16,7 +16,6 @@
 package com.linecorp.armeria.internal.common.eureka;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.eureka.EurekaEndpointGroupBuilder;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -29,7 +28,7 @@ import com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder;
 public final class EurekaClientUtil {
 
     private static final ClientOptions retryingClientOptions =
-            ClientOptions.of(ClientOption.DECORATION.newValue(ClientDecoration.of(
+            ClientOptions.of(ClientOptions.DECORATION.newValue(ClientDecoration.of(
                     RetryingClient.newDecorator(RetryRule.failsafe(), 3))));
 
     /**

@@ -16,33 +16,132 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientOption.DECORATION;
-import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
-import static com.linecorp.armeria.client.ClientOption.FACTORY;
-import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
-import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
-import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
-import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
-import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AbstractOptions;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+
+import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
+import io.netty.util.AsciiString;
 
 /**
  * A set of {@link ClientOption}s and their respective values.
  */
 public final class ClientOptions
         extends AbstractOptions<ClientOption<Object>, ClientOptionValue<Object>> {
+
+    /**
+     * The {@link ClientFactory} used for creating a client.
+     */
+    public static final ClientOption<ClientFactory> FACTORY =
+            ClientOption.define("FACTORY", ClientFactory.ofDefault());
+
+    /**
+     * The timeout of a socket write.
+     */
+    public static final ClientOption<Long> WRITE_TIMEOUT_MILLIS =
+            ClientOption.define("WRITE_TIMEOUT_MILLIS", Flags.defaultWriteTimeoutMillis());
+
+    /**
+     * The timeout of a server reply to a client call.
+     */
+    public static final ClientOption<Long> RESPONSE_TIMEOUT_MILLIS =
+            ClientOption.define("RESPONSE_TIMEOUT_MILLIS", Flags.defaultResponseTimeoutMillis());
+
+    /**
+     * The maximum allowed length of a server response.
+     */
+    public static final ClientOption<Long> MAX_RESPONSE_LENGTH =
+            ClientOption.define("MAX_RESPONSE_LENGTH", Flags.defaultMaxResponseLength());
+
+    /**
+     * The {@link Function} that decorates the client components.
+     */
+    public static final ClientOption<ClientDecoration> DECORATION =
+            ClientOption.define("DECORATION", ClientDecoration.of(), Function.identity(),
+                                (oldValue, newValue) -> {
+                                    final ClientDecoration newDecoration = newValue.value();
+                                    if (newDecoration.isEmpty()) {
+                                        return oldValue;
+                                    }
+                                    final ClientDecoration oldDecoration = oldValue.value();
+                                    if (oldDecoration.isEmpty()) {
+                                        return newValue;
+                                    }
+                                    return newValue.option().newValue(
+                                            ClientDecoration.builder()
+                                                            .add(oldDecoration)
+                                                            .add(newDecoration)
+                                                            .build());
+                                });
+
+    /**
+     * The {@link Supplier} that generates a {@link RequestId}.
+     */
+    public static final ClientOption<Supplier<RequestId>> REQUEST_ID_GENERATOR = ClientOption.define(
+            "REQUEST_ID_GENERATOR", RequestId::random);
+
+    /**
+     * A {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
+     *
+     * @see ClientBuilder#endpointRemapper(Function)
+     */
+    public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
+            ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
+
+    private static final List<AsciiString> BLACKLISTED_HEADER_NAMES = ImmutableList.of(
+            HttpHeaderNames.CONNECTION,
+            HttpHeaderNames.HOST,
+            HttpHeaderNames.HTTP2_SETTINGS,
+            HttpHeaderNames.METHOD,
+            HttpHeaderNames.PATH,
+            HttpHeaderNames.SCHEME,
+            HttpHeaderNames.STATUS,
+            HttpHeaderNames.TRANSFER_ENCODING,
+            HttpHeaderNames.UPGRADE,
+            ArmeriaHttpUtil.HEADER_NAME_KEEP_ALIVE,
+            ArmeriaHttpUtil.HEADER_NAME_PROXY_CONNECTION,
+            ExtensionHeaderNames.PATH.text(),
+            ExtensionHeaderNames.SCHEME.text(),
+            ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),
+            ExtensionHeaderNames.STREAM_ID.text(),
+            ExtensionHeaderNames.STREAM_PROMISE_ID.text());
+
+    /**
+     * The additional HTTP headers to send with requests.
+     */
+    public static final ClientOption<HttpHeaders> HTTP_HEADERS =
+            ClientOption.define("HTTP_HEADERS", HttpHeaders.of(), newHeaders -> {
+                for (AsciiString name : BLACKLISTED_HEADER_NAMES) {
+                    if (newHeaders.contains(name)) {
+                        throw new IllegalArgumentException("prohibited header name: " + name);
+                    }
+                }
+                return newHeaders;
+            }, (oldValue, newValue) -> {
+                final HttpHeaders newHeaders = newValue.value();
+                if (newHeaders.isEmpty()) {
+                    return oldValue;
+                }
+                final HttpHeaders oldHeaders = oldValue.value();
+                if (oldHeaders.isEmpty()) {
+                    return newValue;
+                }
+                return newValue.option().newValue(oldHeaders.toBuilder().set(newHeaders).build());
+            });
 
     private static final ClientOptions EMPTY = new ClientOptions(ImmutableList.of());
 

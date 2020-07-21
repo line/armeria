@@ -28,7 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
@@ -128,10 +128,10 @@ class HttpServerRequestTimeoutTest {
     @BeforeEach
     void setUp() {
         client = WebClient.builder(server.httpUri())
-                          .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                          .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                           .build();
         withoutTimeoutServerClient = WebClient.builder(serverWithoutTimeout.httpUri())
-                                              .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                                              .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                                               .build();
     }
 

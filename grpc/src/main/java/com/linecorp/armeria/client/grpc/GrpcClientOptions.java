@@ -25,6 +25,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
@@ -43,7 +44,7 @@ public final class GrpcClientOptions {
     /**
      * The maximum size, in bytes, of messages coming in a response.
      * The default value is {@value ArmeriaMessageDeframer#NO_MAX_INBOUND_MESSAGE_SIZE},
-     * which means 'use {@link ClientOption#MAX_RESPONSE_LENGTH}'.
+     * which means 'use {@link ClientOptions#MAX_RESPONSE_LENGTH}'.
      */
     public static final ClientOption<Integer> MAX_INBOUND_MESSAGE_SIZE_BYTES =
             ClientOption.define("GRPC_MAX_INBOUND_MESSAGE_SIZE_BYTES",
