@@ -24,11 +24,13 @@ import java.time.Duration;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.throttling.ThrottlingHeaders;
 
 /**
  * Builds {@link TokenBucketThrottlingStrategy}.
  */
+@UnstableApi
 public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
 
     private final TokenBucket tokenBucket;

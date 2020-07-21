@@ -306,7 +306,7 @@ class DefaultEventLoopSchedulerTest {
         if (endpoint != null) {
             acquired = s.acquire(SessionProtocol.HTTP, endpoint, endpoint);
         } else {
-            acquired = s.acquire(SessionProtocol.HTTP, EndpointGroup.empty(), null);
+            acquired = s.acquire(SessionProtocol.HTTP, EndpointGroup.of(), null);
         }
         assert acquired instanceof AbstractEventLoopEntry;
         return (AbstractEventLoopEntry) acquired;

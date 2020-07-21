@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -64,7 +65,6 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
@@ -73,7 +73,6 @@ import com.linecorp.armeria.spring.GrpcExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleRequest;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
-import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.Ssl;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 
@@ -90,8 +89,6 @@ public final class ArmeriaConfigurationUtil {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaConfigurationUtil.class);
 
     private static final String[] EMPTY_PROTOCOL_NAMES = new String[0];
-
-    private static final String METER_TYPE = "server";
 
     /**
      * The pattern for data size text.
@@ -147,6 +144,9 @@ public final class ArmeriaConfigurationUtil {
                     DropwizardSupport.addExposition(settings, server, meterRegistry);
                 }
             }
+
+            server.decorator(MetricCollectingService.newDecorator(
+                    MeterIdPrefixFunction.ofDefault("armeria.server")));
         }
 
         if (settings.getSsl() != null) {
@@ -180,7 +180,6 @@ public final class ArmeriaConfigurationUtil {
     public static void configureThriftServices(
             ServerBuilder server, DocServiceBuilder docServiceBuilder,
             List<ThriftServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
             @Nullable String docsPath) {
         requireNonNull(server, "server");
         requireNonNull(docServiceBuilder, "docServiceBuilder");
@@ -193,7 +192,6 @@ public final class ArmeriaConfigurationUtil {
             for (Function<? super HttpService, ? extends HttpService> decorator : bean.getDecorators()) {
                 service = service.decorate(decorator);
             }
-            service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
             server.service(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
             ThriftServiceUtils.serviceNames(bean.getService())
@@ -218,8 +216,7 @@ public final class ArmeriaConfigurationUtil {
      * Adds HTTP services to the specified {@link ServerBuilder}.
      */
     public static void configureHttpServices(
-            ServerBuilder server, List<HttpServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
+            ServerBuilder server, List<HttpServiceRegistrationBean> beans) {
         requireNonNull(server, "server");
         requireNonNull(beans, "beans");
 
@@ -228,7 +225,6 @@ public final class ArmeriaConfigurationUtil {
             for (Function<? super HttpService, ? extends HttpService> decorator : bean.getDecorators()) {
                 service = service.decorate(decorator);
             }
-            service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
             server.service(bean.getRoute(), service);
         });
     }
@@ -239,7 +235,6 @@ public final class ArmeriaConfigurationUtil {
     public static void configureGrpcServices(
             ServerBuilder server, DocServiceBuilder docServiceBuilder,
             List<GrpcServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
             @Nullable String docsPath) {
         requireNonNull(server, "server");
         requireNonNull(docServiceBuilder, "docServiceBuilder");
@@ -258,9 +253,7 @@ public final class ArmeriaConfigurationUtil {
                                 : bean.getDecorators()) {
                             service = service.decorate(decorator);
                         }
-                        server.service(route,
-                                       setupMetricCollectingService(service, bean,
-                                                                    meterIdPrefixFunctionFactory));
+                        server.service(route, service);
                     }
             );
         });
@@ -285,7 +278,6 @@ public final class ArmeriaConfigurationUtil {
     public static void configureAnnotatedServices(
             ServerBuilder server, DocServiceBuilder docServiceBuilder,
             List<AnnotatedServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
             @Nullable String docsPath) {
         requireNonNull(server, "server");
         requireNonNull(docServiceBuilder, "docServiceBuilder");
@@ -297,10 +289,6 @@ public final class ArmeriaConfigurationUtil {
             Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
             for (Function<? super HttpService, ? extends HttpService> d : bean.getDecorators()) {
                 decorator = decorator.andThen(d);
-            }
-            if (meterIdPrefixFunctionFactory != null) {
-                decorator = decorator.andThen(
-                        metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory));
             }
             final ImmutableList<Object> exceptionHandlersAndConverters =
                     ImmutableList.builder()
@@ -334,28 +322,6 @@ public final class ArmeriaConfigurationUtil {
                                         exampleHeaders.getHeaders());
             }
         }
-    }
-
-    private static HttpService setupMetricCollectingService(
-            HttpService service, AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
-        requireNonNull(service, "service");
-        requireNonNull(bean, "bean");
-
-        if (meterIdPrefixFunctionFactory == null) {
-            return service;
-        }
-        return service.decorate(metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory));
-    }
-
-    private static Function<? super HttpService, MetricCollectingService> metricCollectingServiceDecorator(
-            AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
-            MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
-        requireNonNull(bean, "bean");
-        requireNonNull(meterIdPrefixFunctionFactory, "meterIdPrefixFunctionFactory");
-
-        return MetricCollectingService.newDecorator(
-                meterIdPrefixFunctionFactory.get(METER_TYPE, bean.getServiceName()));
     }
 
     private static void configureExampleHeaders(DocServiceBuilder docServiceBuilder, String serviceName,

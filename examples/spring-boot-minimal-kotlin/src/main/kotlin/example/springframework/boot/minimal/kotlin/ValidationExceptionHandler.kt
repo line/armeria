@@ -22,15 +22,23 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
         return if (cause is ValidationException) {
             try {
                 val status = HttpStatus.BAD_REQUEST
-                HttpResponse.of(status, MediaType.JSON,
-                        mapper.writeValueAsBytes(ErrorResponse(status.reasonPhrase(),
-                                cause.message ?: "empty message",
-                                req.path(),
-                                status.code(),
-                                Instant.now().toString())))
+                HttpResponse.of(
+                    status, MediaType.JSON,
+                    mapper.writeValueAsBytes(
+                        ErrorResponse(
+                            status.reasonPhrase(),
+                            cause.message ?: "empty message",
+                            req.path(),
+                            status.code(),
+                            Instant.now().toString()
+                        )
+                    )
+                )
             } catch (e: JsonProcessingException) {
-                HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
-                        cause.message ?: "empty message")
+                HttpResponse.of(
+                    HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
+                    cause.message ?: "empty message"
+                )
             }
         } else ExceptionHandlerFunction.fallthrough()
     }

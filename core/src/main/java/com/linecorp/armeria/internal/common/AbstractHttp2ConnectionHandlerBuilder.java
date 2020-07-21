@@ -48,92 +48,92 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends AbstractHt
     }
 
     @Override
-    public B initialSettings(Http2Settings settings) {
+    public final B initialSettings(Http2Settings settings) {
         return super.initialSettings(settings);
     }
 
     @Override
-    public B frameListener(Http2FrameListener frameListener) {
+    public final B frameListener(Http2FrameListener frameListener) {
         return super.frameListener(frameListener);
     }
 
     @Override
-    public B gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
+    public final B gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
         return super.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
     }
 
     @Override
-    public B server(boolean isServer) {
+    public final B server(boolean isServer) {
         return super.server(isServer);
     }
 
     @Override
-    public B maxReservedStreams(int maxReservedStreams) {
+    public final B maxReservedStreams(int maxReservedStreams) {
         return super.maxReservedStreams(maxReservedStreams);
     }
 
     @Override
-    public B connection(Http2Connection connection) {
+    public final B connection(Http2Connection connection) {
         return super.connection(connection);
     }
 
     @Override
-    public B codec(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
+    public final B codec(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
         return super.codec(decoder, encoder);
     }
 
     @Override
-    public B validateHeaders(boolean validateHeaders) {
+    public final B validateHeaders(boolean validateHeaders) {
         return super.validateHeaders(validateHeaders);
     }
 
     @Override
-    public B frameLogger(Http2FrameLogger frameLogger) {
+    public final B frameLogger(Http2FrameLogger frameLogger) {
         return super.frameLogger(frameLogger);
     }
 
     @Override
-    public B encoderEnforceMaxConcurrentStreams(boolean encoderEnforceMaxConcurrentStreams) {
+    public final B encoderEnforceMaxConcurrentStreams(boolean encoderEnforceMaxConcurrentStreams) {
         return super.encoderEnforceMaxConcurrentStreams(encoderEnforceMaxConcurrentStreams);
     }
 
     @Override
-    public B encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
+    public final B encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
         return super.encoderEnforceMaxQueuedControlFrames(maxQueuedControlFrames);
     }
 
     @Override
-    public B headerSensitivityDetector(SensitivityDetector headerSensitivityDetector) {
+    public final B headerSensitivityDetector(SensitivityDetector headerSensitivityDetector) {
         return super.headerSensitivityDetector(headerSensitivityDetector);
     }
 
     @Override
-    public B encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
+    public final B encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
         return super.encoderIgnoreMaxHeaderListSize(ignoreMaxHeaderListSize);
     }
 
     @Override
-    public B promisedRequestVerifier(Http2PromisedRequestVerifier promisedRequestVerifier) {
+    public final B promisedRequestVerifier(Http2PromisedRequestVerifier promisedRequestVerifier) {
         return super.promisedRequestVerifier(promisedRequestVerifier);
     }
 
     @Override
-    public B decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
+    public final B decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
         return super.decoderEnforceMaxConsecutiveEmptyDataFrames(maxConsecutiveEmptyFrames);
     }
 
     @Override
-    public B autoAckSettingsFrame(boolean autoAckSettings) {
+    public final B autoAckSettingsFrame(boolean autoAckSettings) {
         return super.autoAckSettingsFrame(autoAckSettings);
     }
 
     @Override
-    public B autoAckPingFrame(boolean autoAckPingFrame) {
+    public final B autoAckPingFrame(boolean autoAckPingFrame) {
         return super.autoAckPingFrame(autoAckPingFrame);
     }
 
     @Override
-    public B decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
+    public final B decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
         return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
     }
 }

@@ -73,9 +73,6 @@ configure(projectsWithFlags('java')) {
                                 kotlinGrpc {}
                             }
                         }
-                        if (project.ext.hasFlag('kotlin-grpc') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
-                            kotlinGrpc {}
-                        }
                     }
 
                     all().each { task ->

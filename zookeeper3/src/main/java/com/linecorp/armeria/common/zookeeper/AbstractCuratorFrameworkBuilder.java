@@ -94,7 +94,7 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Returns the znode Path.
      */
-    protected String znodePath() {
+    protected final String znodePath() {
         return znodePath;
     }
 

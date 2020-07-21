@@ -77,14 +77,14 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
-    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+    protected final ChannelFuture writePing(ChannelHandlerContext ctx) {
         lastPingPayload = random.nextLong();
         final ChannelFuture future = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise());
         ctx.flush();
         return future;
     }
 
-    public void onPingAck(long data) {
+    public final void onPingAck(long data) {
         final long elapsed = getStopwatchElapsedInNanos();
         if (!isGoodPingAck(data)) {
             return;
@@ -102,7 +102,7 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
-    protected boolean pingResetsPreviousPing() {
+    protected final boolean pingResetsPreviousPing() {
         return true;
     }
 
@@ -122,7 +122,7 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @VisibleForTesting
-    long lastPingPayload() {
+    final long lastPingPayload() {
         return lastPingPayload;
     }
 

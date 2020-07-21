@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import java.util.function.Function;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -30,6 +32,7 @@ import com.linecorp.armeria.common.Response;
 public interface HttpService extends Service<HttpRequest, HttpResponse> {
 
     @Override
+    @CheckReturnValue
     HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception;
 
     /**

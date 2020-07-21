@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -57,6 +59,7 @@ public interface StreamMessageDuplicator<T> extends SafeCloseable {
      * Returns a new {@link StreamMessage} that publishes the same elements as the {@link StreamMessage}
      * that this duplicator is created from.
      */
+    @CheckReturnValue
     StreamMessage<T> duplicate();
 
     /**

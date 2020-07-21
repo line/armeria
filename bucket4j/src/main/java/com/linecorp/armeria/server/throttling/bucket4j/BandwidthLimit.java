@@ -23,12 +23,15 @@ import java.time.Duration;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Refill;
 
 /**
  * Stores configurations of a single Token-Bucket bandwidth limit.
  */
+@UnstableApi
 public final class BandwidthLimit {
 
     /**

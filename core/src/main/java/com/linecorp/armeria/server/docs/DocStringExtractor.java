@@ -63,7 +63,7 @@ public abstract class DocStringExtractor {
      * Extract all docstrings from files at the configured path, delegating to
      * {@link #getDocStringsFromFiles(Map)} for actual processing.
      */
-    public Map<String, String> getAllDocStrings(ClassLoader classLoader) {
+    public final Map<String, String> getAllDocStrings(ClassLoader classLoader) {
         requireNonNull(classLoader, "classLoader");
         return cached.computeIfAbsent(classLoader, this::getAllDocStrings0);
     }

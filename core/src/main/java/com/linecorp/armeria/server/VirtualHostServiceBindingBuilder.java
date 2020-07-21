@@ -232,8 +232,9 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
         return (VirtualHostServiceBindingBuilder) super.decorator(decorator);
     }
 
+    @SafeVarargs
     @Override
-    public VirtualHostServiceBindingBuilder decorators(
+    public final VirtualHostServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return (VirtualHostServiceBindingBuilder) super.decorators(decorators);
     }

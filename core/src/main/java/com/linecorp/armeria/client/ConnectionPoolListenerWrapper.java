@@ -15,34 +15,25 @@
  */
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 import io.netty.util.AttributeMap;
 
 /**
  * A {@link ConnectionPoolListener} that wraps an existing {@link ConnectionPoolListener}.
  */
-public class ConnectionPoolListenerWrapper implements ConnectionPoolListener {
-
-    private final ConnectionPoolListener delegate;
+public class ConnectionPoolListenerWrapper
+        extends AbstractUnwrappable<ConnectionPoolListener>
+        implements ConnectionPoolListener {
 
     /**
      * Creates a new instance with the specified {@code delegate}.
      */
     protected ConnectionPoolListenerWrapper(ConnectionPoolListener delegate) {
-        this.delegate = requireNonNull(delegate, "delegate");
-    }
-
-    /**
-     * Returns the {@link ConnectionPoolListener} this handler decorates.
-     */
-    @SuppressWarnings("unchecked")
-    protected final <T extends ConnectionPoolListener> T delegate() {
-        return (T) delegate;
+        super(delegate);
     }
 
     @Override
@@ -50,7 +41,7 @@ public class ConnectionPoolListenerWrapper implements ConnectionPoolListener {
                                InetSocketAddress remoteAddr,
                                InetSocketAddress localAddr,
                                AttributeMap attrs) throws Exception {
-        delegate().connectionOpen(protocol, remoteAddr, localAddr, attrs);
+        unwrap().connectionOpen(protocol, remoteAddr, localAddr, attrs);
     }
 
     @Override
@@ -58,6 +49,6 @@ public class ConnectionPoolListenerWrapper implements ConnectionPoolListener {
                                  InetSocketAddress remoteAddr,
                                  InetSocketAddress localAddr,
                                  AttributeMap attrs) throws Exception {
-        delegate().connectionClosed(protocol, remoteAddr, localAddr, attrs);
+        unwrap().connectionClosed(protocol, remoteAddr, localAddr, attrs);
     }
 }

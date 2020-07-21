@@ -18,13 +18,13 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -121,7 +121,7 @@ class ServiceBindingTest {
         propertyCheckLatch.await();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
-        assertThat(decoratorLog.stream().collect(Collectors.toList())).containsExactly(3, 2, 1);
+        await().untilAsserted(() -> assertThat(decoratorLog).containsExactly(3, 2, 1));
 
         res = client.post("/greet", "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -141,7 +141,7 @@ class ServiceBindingTest {
                                            .aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
-        assertThat(decoratorLog.stream().collect(Collectors.toList())).containsExactly(3, 2, 1);
+        await().untilAsserted(() -> assertThat(decoratorLog).containsExactly(3, 2, 1));
 
         res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),

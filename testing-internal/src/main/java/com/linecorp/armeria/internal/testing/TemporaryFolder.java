@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 /**
  * A helper class to handle temporary folders in JUnit {@code Extension}s.
  */
-public class TemporaryFolder {
+public final class TemporaryFolder {
 
     // Forked from CentralDogma 0.44.4
     // https://github.com/line/centraldogma/blob/4dbc351addc92b509f77be784605b88c3d1b21f2/testing/common/src/main/java/com/linecorp/centraldogma/testing/internal/TemporaryFolder.java

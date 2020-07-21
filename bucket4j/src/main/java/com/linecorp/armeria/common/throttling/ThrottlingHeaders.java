@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.common.throttling;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.netty.util.AsciiString;
 
 /**
  * A RateLimit Header Scheme for HTTP.
  */
+@UnstableApi
 public interface ThrottlingHeaders {
     /**
      * Describes

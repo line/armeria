@@ -24,9 +24,12 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Stores configuration of the Token-Bucket algorithm, comprised of multiple limits.
  */
+@UnstableApi
 public final class TokenBucket {
 
     /**

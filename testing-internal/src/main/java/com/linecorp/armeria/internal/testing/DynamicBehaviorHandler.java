@@ -24,7 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
 @Sharable
-public class DynamicBehaviorHandler extends ChannelDuplexHandler {
+public final class DynamicBehaviorHandler extends ChannelDuplexHandler {
 
     @Nullable
     private volatile ThrowingBiConsumer<ChannelHandlerContext, Object> channelReadCustomizer;

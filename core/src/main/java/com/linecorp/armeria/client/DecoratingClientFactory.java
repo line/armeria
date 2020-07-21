@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.URI;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -29,6 +27,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,22 +37,13 @@ import io.netty.channel.EventLoopGroup;
 /**
  * A {@link ClientFactory} that delegates the creation of {@link Client}s to another {@link ClientFactory}.
  */
-public class DecoratingClientFactory implements ClientFactory {
-
-    private final ClientFactory delegate;
+public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> implements ClientFactory {
 
     /**
      * Creates a new instance.
      */
     protected DecoratingClientFactory(ClientFactory delegate) {
-        this.delegate = requireNonNull(delegate, "delegate");
-    }
-
-    /**
-     * Returns the delegate {@link ClientFactory}.
-     */
-    protected final ClientFactory delegate() {
-        return delegate;
+        super(delegate);
     }
 
     /**
@@ -61,10 +51,10 @@ public class DecoratingClientFactory implements ClientFactory {
      * {@link ClientOptions} with the specified {@link ClientBuilderParams}. Note that {@code path} and
      * {@link SerializationFormat} are always {@code "/"} and {@link SerializationFormat#NONE}.
      */
-    protected HttpClient newHttpClient(ClientBuilderParams params) {
+    protected final HttpClient newHttpClient(ClientBuilderParams params) {
         final URI uri = params.uri();
         final ClientBuilderParams newParams;
-        final ClientOptions newOptions = params.options().toBuilder().factory(delegate()).build();
+        final ClientOptions newOptions = params.options().toBuilder().factory(unwrap()).build();
         if (Clients.isUndefinedUri(uri)) {
             newParams = ClientBuilderParams.of(uri, HttpClient.class, newOptions);
         } else {
@@ -73,83 +63,83 @@ public class DecoratingClientFactory implements ClientFactory {
                                                null, HttpClient.class, newOptions);
         }
 
-        return (HttpClient) delegate().newClient(newParams);
+        return (HttpClient) unwrap().newClient(newParams);
     }
 
     @Override
     public Set<Scheme> supportedSchemes() {
-        return delegate().supportedSchemes();
+        return unwrap().supportedSchemes();
     }
 
     @Override
     public EventLoopGroup eventLoopGroup() {
-        return delegate().eventLoopGroup();
+        return unwrap().eventLoopGroup();
     }
 
     @Override
     public Supplier<EventLoop> eventLoopSupplier() {
-        return delegate().eventLoopSupplier();
+        return unwrap().eventLoopSupplier();
     }
 
     @Override
     public ReleasableHolder<EventLoop> acquireEventLoop(SessionProtocol sessionProtocol,
                                                         EndpointGroup endpointGroup,
                                                         @Nullable Endpoint endpoint) {
-        return delegate().acquireEventLoop(sessionProtocol, endpointGroup, endpoint);
+        return unwrap().acquireEventLoop(sessionProtocol, endpointGroup, endpoint);
     }
 
     @Override
     public MeterRegistry meterRegistry() {
-        return delegate().meterRegistry();
+        return unwrap().meterRegistry();
     }
 
     @Override
     public void setMeterRegistry(MeterRegistry meterRegistry) {
-        delegate().setMeterRegistry(meterRegistry);
+        unwrap().setMeterRegistry(meterRegistry);
     }
 
     @Override
     public ClientFactoryOptions options() {
-        return delegate().options();
+        return unwrap().options();
     }
 
     @Override
     public Object newClient(ClientBuilderParams params) {
-        return delegate().newClient(params);
+        return unwrap().newClient(params);
     }
 
     @Override
     public <T> ClientBuilderParams clientBuilderParams(T client) {
-        return delegate().clientBuilderParams(client);
+        return unwrap().clientBuilderParams(client);
     }
 
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
-        return delegate().unwrap(client, type);
+        return unwrap().unwrap(client, type);
     }
 
     @Override
     public boolean isClosing() {
-        return delegate().isClosing();
+        return unwrap().isClosing();
     }
 
     @Override
     public boolean isClosed() {
-        return delegate().isClosed();
+        return unwrap().isClosed();
     }
 
     @Override
     public CompletableFuture<?> whenClosed() {
-        return delegate().whenClosed();
+        return unwrap().whenClosed();
     }
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        return delegate().closeAsync();
+        return unwrap().closeAsync();
     }
 
     @Override
     public void close() {
-        delegate().close();
+        unwrap().close();
     }
 }

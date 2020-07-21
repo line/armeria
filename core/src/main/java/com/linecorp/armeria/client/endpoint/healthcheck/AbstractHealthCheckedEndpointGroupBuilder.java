@@ -188,7 +188,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
-    public HealthCheckedEndpointGroup build() {
+    public final HealthCheckedEndpointGroup build() {
         final HealthCheckStrategy healthCheckStrategy;
         if (maxEndpointCount != null) {
             healthCheckStrategy = new PartialHealthCheckStrategyBuilder()

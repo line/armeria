@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
@@ -31,6 +32,7 @@ import io.netty.util.AttributeKey;
 /**
  * Provides utility methods useful for storing and releasing the {@link ByteBuf} backing a {@link Message}.
  */
+@UnstableApi
 public final class GrpcUnsafeBufferUtil {
 
     /**

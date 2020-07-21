@@ -147,14 +147,14 @@ public abstract class AbstractOption<
     /**
      * Returns the name of this option.
      */
-    public String name() {
+    public final String name() {
         return name;
     }
 
     /**
      * Returns the default value of this option.
      */
-    public V defaultValue() {
+    public final V defaultValue() {
         return defaultValue;
     }
 

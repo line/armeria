@@ -270,7 +270,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     }
 
     @Override
-    public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
+    public final ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
         if (!isWritable(id)) {
             return newClosedSessionFuture();
         }
@@ -365,7 +365,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     }
 
     @Override
-    public boolean isClosed() {
+    public final boolean isClosed() {
         return closed;
     }
 

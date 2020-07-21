@@ -32,8 +32,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
@@ -44,6 +42,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.NetUtil;
 
@@ -154,8 +153,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final int weight;
     private final List<Endpoint> endpoints;
     private final HostType hostType;
-    @Nullable
-    private String authority;
+    private final String authority;
+    private final String strVal;
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
         this.host = host;
@@ -168,6 +167,39 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
         assert ipAddr == null && hostType == HostType.HOSTNAME_ONLY ||
                ipAddr != null && hostType != HostType.HOSTNAME_ONLY;
+
+        // Pre-generate the authority.
+        authority = generateAuthority(host, port, hostType);
+
+        // Pre-generate toString() value.
+        strVal = generateToString(authority, ipAddr, weight, hostType);
+    }
+
+    private static String generateAuthority(String host, int port, HostType hostType) {
+        if (port != 0) {
+            if (hostType == HostType.IPv6_ONLY) {
+                return '[' + host + "]:" + port;
+            } else {
+                return host + ':' + port;
+            }
+        }
+
+        if (hostType == HostType.IPv6_ONLY) {
+            return '[' + host + ']';
+        } else {
+            return  host;
+        }
+    }
+
+    private static String generateToString(String authority, @Nullable String ipAddr,
+                                           int weight, HostType hostType) {
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("Endpoint{").append(authority);
+        if (hostType == HostType.HOSTNAME_AND_IPv4 ||
+            hostType == HostType.HOSTNAME_AND_IPv6) {
+            buf.append(", ipAddr=").append(ipAddr);
+        }
+        return buf.append(", weight=").append(weight).append('}').toString();
     }
 
     @Override
@@ -447,24 +479,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @return the authority string
      */
     public String authority() {
-        String authority = this.authority;
-        if (authority != null) {
-            return authority;
-        }
-
-        if (port != 0) {
-            if (hostType == HostType.IPv6_ONLY) {
-                authority = '[' + host() + "]:" + port;
-            } else {
-                authority = host() + ':' + port;
-            }
-        } else if (hostType == HostType.IPv6_ONLY) {
-            authority = '[' + host() + ']';
-        } else {
-            authority = host();
-        }
-
-        return this.authority = authority;
+        return authority;
     }
 
     /**
@@ -496,7 +511,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         try {
-            return new URI(scheme, authority(), path, null, null);
+            return new URI(scheme, authority, path, null, null);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
@@ -552,7 +567,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public URI toUri(Scheme scheme, @Nullable String path) {
         requireNonNull(scheme, "scheme");
         try {
-            return new URI(scheme.uriText(), authority(), path, null, null);
+            return new URI(scheme.uriText(), authority, path, null, null);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
@@ -568,11 +583,17 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     // Methods from Auto/AsyncCloseable
 
+    /**
+     * This method does nothing but returning an immediately complete future.
+     */
     @Override
     public CompletableFuture<?> closeAsync() {
         return UnmodifiableFuture.completedFuture(null);
     }
 
+    /**
+     * This method does nothing.
+     */
     @Override
     public void close() {}
 
@@ -604,13 +625,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public String toString() {
-        final ToStringHelper helper = MoreObjects.toStringHelper(this);
-        helper.addValue(authority());
-        if (hostType == HostType.HOSTNAME_AND_IPv4 ||
-            hostType == HostType.HOSTNAME_AND_IPv6) {
-            helper.add("ipAddr", ipAddr);
-        }
-        helper.add("weight", weight);
-        return helper.toString();
+        return strVal;
     }
 }

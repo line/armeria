@@ -40,7 +40,7 @@ class EndpointGroupTest {
 
     @Test
     void orElse() {
-        final EndpointGroup emptyEndpointGroup = EndpointGroup.empty();
+        final EndpointGroup emptyEndpointGroup = EndpointGroup.of();
         final EndpointGroup endpointGroup1 = EndpointGroup.of(Endpoint.of("127.0.0.1", 1234));
         // Make sure factory that takes an Iterable accepts a list of Endpoint (subclass).
         final List<Endpoint> endpoint2Endpoints = ImmutableList.of(Endpoint.of("127.0.0.1", 2345));

@@ -69,7 +69,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      */
     @UnstableApi
     protected FilteredStreamMessage(StreamMessage<T> upstream, boolean withPooledObjects) {
-        this.upstream = requireNonNull(upstream, "upstream");
+        this.upstream = requireNonNull(upstream, "delegate");
         filterSupportsPooledObjects = withPooledObjects;
     }
 
@@ -104,28 +104,28 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return upstream.isOpen();
     }
 
     @Override
-    public boolean isEmpty() {
+    public final boolean isEmpty() {
         return upstream.isEmpty();
     }
 
     @Override
-    public CompletableFuture<Void> whenComplete() {
+    public final CompletableFuture<Void> whenComplete() {
         return upstream.whenComplete();
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
+    public final void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
         subscribe(subscriber, executor, false, false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
+    public final void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
+                                SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
@@ -152,17 +152,17 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public EventExecutor defaultSubscriberExecutor() {
+    public final EventExecutor defaultSubscriberExecutor() {
         return upstream.defaultSubscriberExecutor();
     }
 
     @Override
-    public void abort() {
+    public final void abort() {
         upstream.abort();
     }
 
     @Override
-    public void abort(Throwable cause) {
+    public final void abort(Throwable cause) {
         upstream.abort(requireNonNull(cause, "cause"));
     }
 

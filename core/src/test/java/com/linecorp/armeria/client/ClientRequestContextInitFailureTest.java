@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 class ClientRequestContextInitFailureTest {
     @Test
     void endpointSelectionFailure() {
-        assertFailure(EndpointGroup.empty(), actualCause -> {
+        assertFailure(EndpointGroup.of(), actualCause -> {
             assertThat(actualCause).isInstanceOf(EmptyEndpointGroupException.class);
         });
     }

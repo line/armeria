@@ -78,23 +78,23 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return !completionFuture.isDone();
     }
 
     @Override
-    public boolean isEmpty() {
+    public final boolean isEmpty() {
         return !isOpen() && !publishedAny;
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
         subscribe0(subscriber, executor, false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                                SubscriptionOption... options) {
         requireNonNull(options, "options");
 
         final boolean notifyCancellation = containsNotifyCancellation(options);
@@ -141,12 +141,12 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void abort() {
+    public final void abort() {
         abort0(AbortedStreamException.get());
     }
 
     @Override
-    public void abort(Throwable cause) {
+    public final void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         abort0(cause);
     }
@@ -171,7 +171,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<Void> whenComplete() {
+    public final CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }
 
