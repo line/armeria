@@ -44,9 +44,7 @@ import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
-import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
-import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 
 class ArmeriaConfigurationUtilTest {
 
@@ -61,17 +59,16 @@ class ArmeriaConfigurationUtilTest {
         final ServerBuilder sb1 = Server.builder();
         final DocServiceBuilder dsb1 = DocService.builder();
         configureAnnotatedServices(sb1, dsb1, ImmutableList.of(bean),
-                                       MeterIdPrefixFunctionFactory.ofDefault(), null);
+                                   null);
         final Server s1 = sb1.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(s1).as(MetricCollectingService.class)).isNotNull();
 
         reset(decorator);
 
         final ServerBuilder sb2 = Server.builder();
         final DocServiceBuilder dsb2 = DocService.builder();
         configureAnnotatedServices(sb2, dsb2, ImmutableList.of(bean),
-                                       null, null);
+                                   null);
         final Server s2 = sb2.build();
         verify(decorator, times(2)).apply(any());
         assertThat(getServiceForHttpMethod(sb2.build(), HttpMethod.OPTIONS))
@@ -88,7 +85,7 @@ class ArmeriaConfigurationUtilTest {
 
         final ServerBuilder sb = Server.builder();
         final DocServiceBuilder dsb = DocService.builder();
-        configureAnnotatedServices(sb, dsb, ImmutableList.of(bean), null, null);
+        configureAnnotatedServices(sb, dsb, ImmutableList.of(bean), null);
         final Server s = sb.build();
         verify(decorator, times(2)).apply(any());
         assertThat(service(s).as(SimpleDecorator.class)).isNotNull();
