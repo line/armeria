@@ -102,7 +102,7 @@ public final class ClientOptions
     public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
-    private static final List<AsciiString> BLACKLISTED_HEADER_NAMES = ImmutableList.of(
+    private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.CONNECTION,
             HttpHeaderNames.HOST,
             HttpHeaderNames.HTTP2_SETTINGS,
@@ -125,7 +125,7 @@ public final class ClientOptions
      */
     public static final ClientOption<HttpHeaders> HTTP_HEADERS =
             ClientOption.define("HTTP_HEADERS", HttpHeaders.of(), newHeaders -> {
-                for (AsciiString name : BLACKLISTED_HEADER_NAMES) {
+                for (AsciiString name : PROHIBITED_HEADER_NAMES) {
                     if (newHeaders.contains(name)) {
                         throw new IllegalArgumentException("prohibited header name: " + name);
                     }

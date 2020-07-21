@@ -191,6 +191,7 @@ public final class ClientFactoryOptions
             ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
+
     /**
      * The {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
      */
