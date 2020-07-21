@@ -34,7 +34,7 @@ public class ReadSuppressingHandler extends ChannelOutboundHandlerAdapter {
     protected ReadSuppressingHandler() {}
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public final void read(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().config().isAutoRead()) {
             super.read(ctx);
         }

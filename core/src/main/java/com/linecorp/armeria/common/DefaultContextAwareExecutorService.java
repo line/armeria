@@ -38,7 +38,7 @@ class DefaultContextAwareExecutorService implements ContextAwareExecutorService 
     }
 
     @Override
-    public RequestContext context() {
+    public final RequestContext context() {
         return context;
     }
 

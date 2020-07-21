@@ -26,7 +26,7 @@ import com.google.common.base.MoreObjects;
 /**
  * Stores configurations of circuit breaker.
  */
-class CircuitBreakerConfig {
+final class CircuitBreakerConfig {
 
     @Nullable
     private final String name;

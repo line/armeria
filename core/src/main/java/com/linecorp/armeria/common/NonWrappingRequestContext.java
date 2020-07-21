@@ -81,12 +81,12 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     }
 
     @Override
-    public HttpRequest request() {
+    public final HttpRequest request() {
         return req;
     }
 
     @Override
-    public RpcRequest rpcRequest() {
+    public final RpcRequest rpcRequest() {
         return rpcReq;
     }
 
@@ -193,20 +193,20 @@ public abstract class NonWrappingRequestContext implements RequestContext {
 
     @Nullable
     @Override
-    public <V> V ownAttr(AttributeKey<V> key) {
+    public final <V> V ownAttr(AttributeKey<V> key) {
         requireNonNull(key, "key");
         return attrs.ownAttr(key);
     }
 
     @Override
-    public <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
+    public final <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");
         attrs.setAttr(key, value);
     }
 
     @Nullable
     @Override
-    public <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
+    public final <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
         requireNonNull(key, "key");
         requireNonNull(value, "value");
         return attrs.setAttrIfAbsent(key, value);
@@ -214,8 +214,8 @@ public abstract class NonWrappingRequestContext implements RequestContext {
 
     @Nullable
     @Override
-    public <V> V computeAttrIfAbsent(AttributeKey<V> key,
-                                     Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
+    public final <V> V computeAttrIfAbsent(AttributeKey<V> key,
+                                           Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
         requireNonNull(key, "key");
         requireNonNull(mappingFunction, "mappingFunction");
         return attrs.computeAttrIfAbsent(key, mappingFunction);
@@ -227,7 +227,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     }
 
     @Override
-    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+    public final Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         return attrs.ownAttrs();
     }
 }

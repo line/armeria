@@ -69,12 +69,12 @@ class PairContext extends BaseContext {
     }
 
     @Override
-    protected void write() {
+    protected final void write() {
         lhs = !lhs;
     }
 
     @Override
-    protected void read() {
+    protected final void read() {
         lhs = !lhs;
         // every other time, do a read, since the read gets the name & value
         // at once.
@@ -89,7 +89,7 @@ class PairContext extends BaseContext {
     }
 
     @Override
-    protected JsonNode getCurrentChild() {
+    protected final JsonNode getCurrentChild() {
         assert currentChild != null;
         if (lhs) {
             return new TextNode(currentChild.getKey());
@@ -98,12 +98,12 @@ class PairContext extends BaseContext {
     }
 
     @Override
-    protected boolean hasMoreChildren() {
+    protected final boolean hasMoreChildren() {
         assert children != null;
         return children.hasNext();
     }
 
-    protected boolean isLhs() {
+    protected final boolean isLhs() {
         return lhs;
     }
 }

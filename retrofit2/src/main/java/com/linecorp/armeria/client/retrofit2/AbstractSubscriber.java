@@ -151,12 +151,12 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
         }
     }
 
-    void request(long n) {
+    final void request(long n) {
         assert subscription != null;
         subscription.request(n);
     }
 
-    void safeOnFailure(IOException e) {
+    final void safeOnFailure(IOException e) {
         if (callbackCalled) {
             return;
         }
@@ -164,7 +164,7 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
         callbackExecutor.execute(() -> callback.onFailure(armeriaCall, e));
     }
 
-    void safeOnResponse(BufferedSource content) {
+    final void safeOnResponse(BufferedSource content) {
         if (callbackCalled) {
             return;
         }

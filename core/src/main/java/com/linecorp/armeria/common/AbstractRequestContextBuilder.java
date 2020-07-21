@@ -507,7 +507,7 @@ public abstract class AbstractRequestContextBuilder {
     }
 
     @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
-    private static class FakeChannel implements Channel {
+    private static final class FakeChannel implements Channel {
 
         private final ChannelId id = DefaultChannelId.newInstance();
         private final EventLoop eventLoop;

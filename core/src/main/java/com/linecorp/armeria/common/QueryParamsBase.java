@@ -51,28 +51,28 @@ class QueryParamsBase
     }
 
     @Override
-    int hashName(String s) {
+    final int hashName(String s) {
         return s.hashCode();
     }
 
     @Override
-    boolean nameEquals(String a, String b) {
+    final boolean nameEquals(String a, String b) {
         // Keys in URL parameters are case-sensitive - https://tools.ietf.org/html/rfc3986#page-39
         return a.equals(b);
     }
 
     @Override
-    boolean isFirstGroup(String s) {
+    final boolean isFirstGroup(String s) {
         return true;
     }
 
     @Override
-    String normalizeName(String s) {
+    final String normalizeName(String s) {
         return s;
     }
 
     @Override
-    void validateValue(String value) {}
+    final void validateValue(String value) {}
 
     @Override
     public boolean equals(@Nullable Object o) {

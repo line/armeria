@@ -71,13 +71,13 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     /**
      * Returns {@code true} if {@link ChannelHandlerContext#close()} has been called.
      */
-    public boolean isClosing() {
+    public final boolean isClosing() {
         return closing;
     }
 
     @Override
-    protected void onConnectionError(ChannelHandlerContext ctx, boolean outbound,
-                                     Throwable cause, Http2Exception http2Ex) {
+    protected final void onConnectionError(ChannelHandlerContext ctx, boolean outbound,
+                                           Throwable cause, Http2Exception http2Ex) {
         if (handlingConnectionError) {
             return;
         }
@@ -100,8 +100,8 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     }
 
     @Override
-    public ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
-                                ChannelPromise promise) {
+    public final ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+                                      ByteBuf debugData, ChannelPromise promise) {
         if (!ctx.channel().isActive()) {
             // There's no point of sending a GOAWAY frame because the connection is over already.
             promise.unvoid().trySuccess();
@@ -113,7 +113,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public final void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (!closing) {
             closing = true;
 

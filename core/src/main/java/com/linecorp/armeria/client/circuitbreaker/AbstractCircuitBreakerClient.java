@@ -120,7 +120,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     }
 
     @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
+    public final O execute(ClientRequestContext ctx, I req) throws Exception {
         final CircuitBreaker circuitBreaker;
         try {
             circuitBreaker = mapping.get(ctx, req);
