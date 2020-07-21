@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.RequestContext;
 /**
  * Implementation of {@link JavaVersionSpecific} using Java 9 APIs.
  */
-final class Java9VersionSpecific extends JavaVersionSpecific {
+class Java9VersionSpecific extends JavaVersionSpecific {
 
     @Override
     String name() {
