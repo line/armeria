@@ -16,20 +16,20 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.ACTIVE;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.AUDIENCE;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.CLIENT_ID;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.EXPIRES_AT;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.ISSUED_AT;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.ISSUER;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.JSON;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.JWT_ID;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.NOT_BEFORE;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.SCOPE;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.SCOPE_SEPARATOR;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.SUBJECT;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.TOKEN_TYPE;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.USER_NAME;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.ACTIVE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.AUDIENCE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.CLIENT_ID;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.EXPIRES_AT;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.ISSUED_AT;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.ISSUER;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.JSON;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.JWT_ID;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.NOT_BEFORE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SUBJECT;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.TOKEN_TYPE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.USER_NAME;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
@@ -44,14 +44,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * Builds an instance of {@link TokenDescriptor}.
+ * Builds an instance of {@link OAuth2TokenDescriptor}.
  */
-public class TokenDescriptorBuilder {
+public class OAuth2TokenDescriptorBuilder {
 
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
 
-    static TokenDescriptor of(String rawResponse) {
+    static OAuth2TokenDescriptor of(String rawResponse) {
 
         final LinkedHashMap<String, String> map;
         try {
@@ -60,7 +60,7 @@ public class TokenDescriptorBuilder {
             throw new RuntimeException(e);
         }
 
-        final TokenDescriptorBuilder builder = new TokenDescriptorBuilder(
+        final OAuth2TokenDescriptorBuilder builder = new OAuth2TokenDescriptorBuilder(
                 Boolean.parseBoolean(requireNonNull(map.remove(ACTIVE), ACTIVE)));
 
         final String scope = map.remove(SCOPE);
@@ -154,8 +154,8 @@ public class TokenDescriptorBuilder {
     private final ImmutableMap.Builder<String, String> extras = ImmutableMap.builder();
 
     /**
-     * Constructs a new instance of {@link TokenDescriptorBuilder} given the mandatory token {@code active}
-     * status.
+     * Constructs a new instance of {@link OAuth2TokenDescriptorBuilder} given the mandatory token
+     * {@code active} status.
      * @param active {@code active} Token Introspection Response field,
      *               REQUIRED. Boolean indicator of whether or not the presented token is currently active. The
      *               specifics of a token's "active" state will vary depending on the implementation of the
@@ -165,7 +165,7 @@ public class TokenDescriptorBuilder {
      *               given time window of validity (e.g., after its issuance time and before its expiration
      *               time).
      */
-    TokenDescriptorBuilder(boolean active) {
+    OAuth2TokenDescriptorBuilder(boolean active) {
         this.active = active;
     }
 
@@ -173,7 +173,7 @@ public class TokenDescriptorBuilder {
      * {@code scope} Token Introspection Response field,
      * OPTIONAL. An {@link Iterable} of individual scope values.
      */
-    public TokenDescriptorBuilder scope(Iterable<String> scope) {
+    public OAuth2TokenDescriptorBuilder scope(Iterable<String> scope) {
         this.scope.addAll(requireNonNull(scope, "scope"));
         return this;
     }
@@ -182,7 +182,7 @@ public class TokenDescriptorBuilder {
      * {@code scope} Token Introspection Response field,
      * OPTIONAL. An array of individual scope values.
      */
-    public TokenDescriptorBuilder scope(String... scope) {
+    public OAuth2TokenDescriptorBuilder scope(String... scope) {
         this.scope.add(requireNonNull(scope, "scope"));
         return this;
     }
@@ -191,7 +191,7 @@ public class TokenDescriptorBuilder {
      * {@code client_id} Token Introspection Response field,
      * OPTIONAL. Client identifier for the OAuth 2.0 client that requested this token.
      */
-    public TokenDescriptorBuilder clientId(String clientId) {
+    public OAuth2TokenDescriptorBuilder clientId(String clientId) {
         this.clientId = requireNonNull(clientId, "clientId");
         return this;
     }
@@ -200,7 +200,7 @@ public class TokenDescriptorBuilder {
      * {@code username} Token Introspection Response field,
      * OPTIONAL. Human-readable identifier for the resource owner who authorized this token.
      */
-    public TokenDescriptorBuilder userName(String userName) {
+    public OAuth2TokenDescriptorBuilder userName(String userName) {
         this.userName = requireNonNull(userName, "userName");
         return this;
     }
@@ -210,7 +210,7 @@ public class TokenDescriptorBuilder {
      * OPTIONAL. Type of the token as defined at
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      */
-    public TokenDescriptorBuilder tokenType(String tokenType) {
+    public OAuth2TokenDescriptorBuilder tokenType(String tokenType) {
         this.tokenType = requireNonNull(tokenType, "tokenType");
         return this;
     }
@@ -220,7 +220,7 @@ public class TokenDescriptorBuilder {
      * OPTIONAL. {@link Instant} timestamp, indicating when this token will expire, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
-    public TokenDescriptorBuilder expiresAt(Instant expiresAt) {
+    public OAuth2TokenDescriptorBuilder expiresAt(Instant expiresAt) {
         this.expiresAt = requireNonNull(expiresAt, "expiresAt");
         return this;
     }
@@ -230,7 +230,7 @@ public class TokenDescriptorBuilder {
      * OPTIONAL. {@link Instant} timestamp, indicating when this token was originally issued, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
-    public TokenDescriptorBuilder issuedAt(Instant issuedAt) {
+    public OAuth2TokenDescriptorBuilder issuedAt(Instant issuedAt) {
         this.issuedAt = requireNonNull(issuedAt, "issuedAt");
         return this;
     }
@@ -240,7 +240,7 @@ public class TokenDescriptorBuilder {
      * OPTIONAL. {@link Instant} timestamp, indicating when this token is not to be used before, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
-    public TokenDescriptorBuilder notBefore(Instant notBefore) {
+    public OAuth2TokenDescriptorBuilder notBefore(Instant notBefore) {
         this.notBefore = requireNonNull(notBefore, "notBefore");
         return this;
     }
@@ -251,7 +251,7 @@ public class TokenDescriptorBuilder {
      * identifier of the resource owner who authorized this token. As defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
-    public TokenDescriptorBuilder subject(String subject) {
+    public OAuth2TokenDescriptorBuilder subject(String subject) {
         this.subject = requireNonNull(subject, "subject");
         return this;
     }
@@ -262,7 +262,7 @@ public class TokenDescriptorBuilder {
      * intended audience for this token, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
-    public TokenDescriptorBuilder audience(String audience) {
+    public OAuth2TokenDescriptorBuilder audience(String audience) {
         this.audience = requireNonNull(audience, "audience");
         return this;
     }
@@ -272,7 +272,7 @@ public class TokenDescriptorBuilder {
      * OPTIONAL. String representing the issuer of this token, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
-    public TokenDescriptorBuilder issuer(String issuer) {
+    public OAuth2TokenDescriptorBuilder issuer(String issuer) {
         this.issuer = requireNonNull(issuer, "issuer");
         return this;
     }
@@ -282,7 +282,7 @@ public class TokenDescriptorBuilder {
      * OPTIONAL. String identifier for the token - JWT ID, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
-    public TokenDescriptorBuilder jwtId(String jwtId) {
+    public OAuth2TokenDescriptorBuilder jwtId(String jwtId) {
         this.jwtId = requireNonNull(jwtId, "jwtId");
         return this;
     }
@@ -291,7 +291,7 @@ public class TokenDescriptorBuilder {
      * A pair of extra system-specific token parameters included with Token Introspection Response,
      * OPTIONAL.
      */
-    public TokenDescriptorBuilder extras(String key, String value) {
+    public OAuth2TokenDescriptorBuilder extras(String key, String value) {
         extras.put(key, value);
         return this;
     }
@@ -300,7 +300,7 @@ public class TokenDescriptorBuilder {
      * A {@link Map} of extra system-specific token parameters included with Token Introspection Response,
      * OPTIONAL.
      */
-    public TokenDescriptorBuilder extras(Map<String, String> extras) {
+    public OAuth2TokenDescriptorBuilder extras(Map<String, String> extras) {
         this.extras.putAll(extras);
         return this;
     }
@@ -310,22 +310,22 @@ public class TokenDescriptorBuilder {
      * OPTIONAL.
      */
     @SuppressWarnings("UnstableApiUsage")
-    public TokenDescriptorBuilder extras(Iterable<? extends Map.Entry<String, String>> extras) {
+    public OAuth2TokenDescriptorBuilder extras(Iterable<? extends Map.Entry<String, String>> extras) {
         this.extras.putAll(extras);
         return this;
     }
 
-    private TokenDescriptorBuilder rawResponse(String rawResponse) {
+    private OAuth2TokenDescriptorBuilder rawResponse(String rawResponse) {
         this.rawResponse = requireNonNull(rawResponse, "rawResponse");
         return this;
     }
 
     /**
-     * Builds a new instance of {@link TokenDescriptor} based on the configured parameters.
+     * Builds a new instance of {@link OAuth2TokenDescriptor} based on the configured parameters.
      */
-    public TokenDescriptor build() {
-        return new TokenDescriptor(active, scope.build(), clientId, userName, tokenType,
-                                   expiresAt, issuedAt, notBefore, subject, audience, issuer, jwtId,
-                                   extras.build(), rawResponse);
+    public OAuth2TokenDescriptor build() {
+        return new OAuth2TokenDescriptor(active, scope.build(), clientId, userName, tokenType,
+                                         expiresAt, issuedAt, notBefore, subject, audience, issuer, jwtId,
+                                         extras.build(), rawResponse);
     }
 }

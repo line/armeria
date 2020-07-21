@@ -41,12 +41,12 @@ import com.linecorp.armeria.common.HttpHeaderNames;
  * Defines a structure of the Access Token Response, as per
  * <a href="https://tools.ietf.org/html/rfc6749#section-5.1">[RFC6749], Section 5.1</a>.
  */
-public class AccessTokenCapsule implements Serializable {
+public class OAuth2AccessToken implements Serializable {
 
     private static final long serialVersionUID = 8698118404098897958L;
 
     /**
-     * Creates a new {@link AccessTokenCapsule} based on the {@code JSON}-formatted raw response body and
+     * Creates a new {@link OAuth2AccessToken} based on the {@code JSON}-formatted raw response body and
      * optional raw formatted {@code scope} used to request the token.
      * @param rawResponse {@code JSON}-formatted raw response body.
      * @param requestScope OPTIONAL. A list of space-delimited, case-sensitive strings.
@@ -59,19 +59,19 @@ public class AccessTokenCapsule implements Serializable {
      *                     If the client omits the scope parameter when requesting authorization, the
      *                     authorization server MUST either process the request using a pre-defined default
      *                     value or fail the request indicating an invalid scope.
-     * @return A new instance of {@link AccessTokenCapsule}.
+     * @return A new instance of {@link OAuth2AccessToken}.
      */
-    public static AccessTokenCapsule of(String rawResponse, @Nullable String requestScope) {
-        return AccessTokenCapsuleBuilder.of(rawResponse, requestScope);
+    public static OAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
+        return OAuth2AccessTokenBuilder.of(rawResponse, requestScope);
     }
 
     /**
-     * Creates a new {@link AccessTokenCapsuleBuilder} to build a new {@link AccessTokenCapsule} and
+     * Creates a new {@link OAuth2AccessTokenBuilder} to build a new {@link OAuth2AccessToken} and
      * supplied it with a value of {@code access_token} Access Token response field.
-     * @return A new instance of {@link AccessTokenCapsuleBuilder}.
+     * @return A new instance of {@link OAuth2AccessTokenBuilder}.
      */
-    public static AccessTokenCapsuleBuilder builder(String accessToken) {
-        return new AccessTokenCapsuleBuilder(accessToken);
+    public static OAuth2AccessTokenBuilder builder(String accessToken) {
+        return new OAuth2AccessTokenBuilder(accessToken);
     }
 
     static final String ACCESS_TOKEN = "access_token";
@@ -167,11 +167,11 @@ public class AccessTokenCapsule implements Serializable {
     @Nullable
     private transient String toString;
 
-    AccessTokenCapsule(String accessToken, @Nullable String tokenType,
-                       Instant issuedAt, @Nullable Duration expiresIn,
-                       @Nullable String refreshToken, @Nullable List<String> scopeList,
-                       @Nullable ImmutableMap<String, String> extras,
-                       @Nullable String rawResponse) {
+    OAuth2AccessToken(String accessToken, @Nullable String tokenType,
+                      Instant issuedAt, @Nullable Duration expiresIn,
+                      @Nullable String refreshToken, @Nullable List<String> scopeList,
+                      @Nullable ImmutableMap<String, String> extras,
+                      @Nullable String rawResponse) {
         // token fields
         this.accessToken = requireNonNull(accessToken, ACCESS_TOKEN);
         this.tokenType = tokenType;
@@ -325,8 +325,8 @@ public class AccessTokenCapsule implements Serializable {
     }
 
     /**
-     * {@code JSON}-formatted raw Token Introspection Response body. If the {@link AccessTokenCapsule} was not
-     * parsed out of the raw response body, this value calculated based on the other {@link AccessTokenCapsule}
+     * {@code JSON}-formatted raw Token Introspection Response body. If the {@link OAuth2AccessToken} was not
+     * parsed out of the raw response body, this value calculated based on the other {@link OAuth2AccessToken}
      * values.
      */
     public String rawResponse() {
@@ -354,10 +354,10 @@ public class AccessTokenCapsule implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof AccessTokenCapsule)) {
+        if (!(o instanceof OAuth2AccessToken)) {
             return false;
         }
-        final AccessTokenCapsule that = (AccessTokenCapsule) o;
+        final OAuth2AccessToken that = (OAuth2AccessToken) o;
         return Objects.equals(rawResponse(), that.rawResponse());
     }
 

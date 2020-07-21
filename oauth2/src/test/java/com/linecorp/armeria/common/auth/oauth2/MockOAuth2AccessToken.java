@@ -27,11 +27,11 @@ import javax.annotation.Nullable;
 
 public class MockOAuth2AccessToken {
 
-    public static final TokenDescriptor INACTIVE_TOKEN = TokenDescriptor.of("{\"active\":false}");
+    public static final OAuth2TokenDescriptor INACTIVE_TOKEN = OAuth2TokenDescriptor.of("{\"active\":false}");
 
     private final String accessToken;
-    private final AccessTokenCapsule tokenCapsule;
-    private final TokenDescriptor tokenDescriptor;
+    private final OAuth2AccessToken tokenCapsule;
+    private final OAuth2TokenDescriptor tokenDescriptor;
 
     @SuppressWarnings("DynamicRegexReplaceableByCompiledPattern")
     public static MockOAuth2AccessToken generate(String clientId, @Nullable String username,
@@ -39,12 +39,12 @@ public class MockOAuth2AccessToken {
                                                  @Nullable String... scope) {
 
         final Instant issuedAt = Instant.now();
-        final TokenDescriptorBuilder builder = TokenDescriptor.builder(true).clientId(clientId)
-                                                              .tokenType("bearer")
-                                                              .expiresAt(issuedAt.plus(expiresIn))
-                                                              .issuedAt(issuedAt)
-                                                              .subject("access_token")
-                                                              .issuer("MockOAuth2Server");
+        final OAuth2TokenDescriptorBuilder builder = OAuth2TokenDescriptor.builder(true).clientId(clientId)
+                                                                          .tokenType("bearer")
+                                                                          .expiresAt(issuedAt.plus(expiresIn))
+                                                                          .issuedAt(issuedAt)
+                                                                          .subject("access_token")
+                                                                          .issuer("MockOAuth2Server");
         if (username != null) {
             builder.userName(username);
         }
@@ -54,18 +54,18 @@ public class MockOAuth2AccessToken {
         if (scope != null) {
             builder.scope(scope);
         }
-        final TokenDescriptor descriptor = builder.build();
+        final OAuth2TokenDescriptor descriptor = builder.build();
         final String accessToken = UUID.randomUUID().toString().replaceAll("-", "");
         final String refreshToken = UUID.randomUUID().toString().replaceAll("-", "");
         return new MockOAuth2AccessToken(accessToken, descriptor, refreshToken);
     }
 
-    public MockOAuth2AccessToken(String accessToken, TokenDescriptor descriptor,
+    public MockOAuth2AccessToken(String accessToken, OAuth2TokenDescriptor descriptor,
                                  @Nullable String refreshToken) {
         this.accessToken = accessToken;
         tokenDescriptor = descriptor;
-        final AccessTokenCapsuleBuilder tokenCapsuleBuilder =
-                new AccessTokenCapsuleBuilder(requireNonNull(accessToken, "accessToken"))
+        final OAuth2AccessTokenBuilder tokenCapsuleBuilder =
+                new OAuth2AccessTokenBuilder(requireNonNull(accessToken, "accessToken"))
                         .scope(requireNonNull(descriptor, "descriptor").scope())
                         .issuedAt(requireNonNull(descriptor.issuedAt(), "issuedAt"));
         final String tokenType = descriptor.tokenType();
@@ -86,11 +86,11 @@ public class MockOAuth2AccessToken {
         return accessToken;
     }
 
-    public AccessTokenCapsule tokenCapsule() {
+    public OAuth2AccessToken tokenCapsule() {
         return tokenCapsule;
     }
 
-    public TokenDescriptor tokenDescriptor() {
+    public OAuth2TokenDescriptor tokenDescriptor() {
         return tokenDescriptor;
     }
 }

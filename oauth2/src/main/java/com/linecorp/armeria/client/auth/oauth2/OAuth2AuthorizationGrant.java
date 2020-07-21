@@ -20,7 +20,7 @@ import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
 
 /**
  * Represents an OAuth 2.0 Access Token Grant flow to obtain Access Token.
@@ -30,7 +30,7 @@ public interface OAuth2AuthorizationGrant extends AutoCloseable {
     /**
      * Produces OAuth 2.0 Access Token
      */
-    CompletionStage<AccessTokenCapsule> getAccessToken();
+    CompletionStage<OAuth2AccessToken> getAccessToken();
 
     /**
      * Produces (if necessary) OAuth 2.0 Access Token and adds it to the {@code req} in form of the

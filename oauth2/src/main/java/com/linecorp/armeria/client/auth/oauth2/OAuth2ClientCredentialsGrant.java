@@ -26,8 +26,8 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule;
 import com.linecorp.armeria.common.auth.oauth2.ClientCredentialsTokenRequest;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.RefreshAccessTokenRequest;
 
 /**
@@ -52,14 +52,14 @@ public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGra
 
     OAuth2ClientCredentialsGrant(ClientCredentialsTokenRequest obtainRequest,
                                  RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-                                 @Nullable Supplier<? extends AccessTokenCapsule> tokenSupplier,
-                                 @Nullable Consumer<? super AccessTokenCapsule> tokenConsumer) {
+                                 @Nullable Supplier<? extends OAuth2AccessToken> tokenSupplier,
+                                 @Nullable Consumer<? super OAuth2AccessToken> tokenConsumer) {
         super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer);
         this.obtainRequest = requireNonNull(obtainRequest);
     }
 
     @Override
-    protected CompletableFuture<AccessTokenCapsule> obtainAccessTokenAsync(@Nullable AccessTokenCapsule token) {
+    protected CompletableFuture<OAuth2AccessToken> obtainAccessTokenAsync(@Nullable OAuth2AccessToken token) {
         return obtainRequest.make(token == null ? null : token.scope());
     }
 }

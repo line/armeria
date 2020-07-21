@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
 
 import java.util.Map;
 
@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
  * A common abstraction for the requests implementing various Access Token request/response flows,
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
  */
-public abstract class AbstractAccessTokenRequest extends AbstractAuthorizationRequest<AccessTokenCapsule> {
+public abstract class AbstractAccessTokenRequest extends AbstractAuthorizationRequest<OAuth2AccessToken> {
 
     protected static final String GRANT_TYPE = "grant_type";
 
@@ -54,11 +54,11 @@ public abstract class AbstractAccessTokenRequest extends AbstractAuthorizationRe
      * type {@code AccessTokenCapsule}.
      */
     @Override
-    protected AccessTokenCapsule extractOkResults(AggregatedHttpResponse response,
-                                                  Map<String, String> requestData) {
+    protected OAuth2AccessToken extractOkResults(AggregatedHttpResponse response,
+                                                 Map<String, String> requestData) {
         // if scope was added to the request the response may not include the scope
         // in such case - use the requested scope for the token
         final String scope = requestData.get(SCOPE);
-        return AccessTokenCapsule.of(response.contentUtf8(), scope);
+        return OAuth2AccessToken.of(response.contentUtf8(), scope);
     }
 }

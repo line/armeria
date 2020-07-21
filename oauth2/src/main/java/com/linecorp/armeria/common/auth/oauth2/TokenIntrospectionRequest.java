@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
  * Implements Token Introspection request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc7662#section-2">[RFC7662], Section 2</a>.
  */
-public class TokenIntrospectionRequest extends AbstractTokenOperationRequest<TokenDescriptor> {
+public class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAuth2TokenDescriptor> {
 
     /**
      * Implements Token Introspection request/response flow,
@@ -50,8 +50,8 @@ public class TokenIntrospectionRequest extends AbstractTokenOperationRequest<Tok
      * type {@code TokenDescriptor}.
      */
     @Override
-    protected TokenDescriptor extractOkResults(AggregatedHttpResponse response,
-                                               Map<String, String> requestData) {
-        return TokenDescriptor.of(response.contentUtf8());
+    protected OAuth2TokenDescriptor extractOkResults(AggregatedHttpResponse response,
+                                                     Map<String, String> requestData) {
+        return OAuth2TokenDescriptor.of(response.contentUtf8());
     }
 }

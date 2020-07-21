@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashMap;
@@ -54,7 +54,7 @@ public class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
     /**
      * Makes Client Credentials Grant request and handles the response converting the result data
-     * to {@link AccessTokenCapsule}.
+     * to {@link OAuth2AccessToken}.
      * @param scope OPTIONAL. Scope to request for the token. A list of space-delimited,
      *              case-sensitive strings. The strings are defined by the authorization server.
      *              The authorization server MAY fully or partially ignore the scope requested by the
@@ -65,7 +65,7 @@ public class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      *              If the client omits the scope parameter when requesting authorization, the
      *              authorization server MUST either process the request using a pre-defined default
      *              value or fail the request indicating an invalid scope.
-     * @return A {@link CompletableFuture} carrying the target result as {@link AccessTokenCapsule}.
+     * @return A {@link CompletableFuture} carrying the target result as {@link OAuth2AccessToken}.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -75,7 +75,7 @@ public class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    public CompletableFuture<AccessTokenCapsule> make(@Nullable String scope) {
+    public CompletableFuture<OAuth2AccessToken> make(@Nullable String scope) {
         final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(2);
 
         // populate request form data

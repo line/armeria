@@ -30,7 +30,7 @@ import com.google.common.cache.Cache;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.auth.OAuth2Token;
-import com.linecorp.armeria.common.auth.oauth2.TokenDescriptor;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.common.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -66,7 +66,7 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
     static final String INVALID_TOKEN = "invalid_token";
     static final String INSUFFICIENT_SCOPE = "insufficient_scope";
 
-    private final Cache<String, TokenDescriptor> tokenCache;
+    private final Cache<String, OAuth2TokenDescriptor> tokenCache;
     private final Set<String> permittedScope;
     @Nullable
     private final String accessTokenType;
@@ -75,7 +75,7 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
     private final TokenIntrospectionRequest tokenIntrospectionRequest;
     private final AuthFailureHandler authFailureHandler;
 
-    OAuth2TokenIntrospectionAuthorizer(Cache<String, TokenDescriptor> tokenCache,
+    OAuth2TokenIntrospectionAuthorizer(Cache<String, OAuth2TokenDescriptor> tokenCache,
                                        @Nullable String accessTokenType, @Nullable String realm,
                                        Set<String> permittedScope,
                                        TokenIntrospectionRequest tokenIntrospectionRequest) {
@@ -144,7 +144,7 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
     public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, OAuth2Token data) {
 
         final String accessToken = data.accessToken();
-        final TokenDescriptor tokenDescriptor = tokenCache.getIfPresent(accessToken);
+        final OAuth2TokenDescriptor tokenDescriptor = tokenCache.getIfPresent(accessToken);
         if (tokenDescriptor != null) {
             // just re-validate existing token
             return CompletableFuture.completedFuture(validateDescriptor(ctx, tokenDescriptor));
@@ -163,7 +163,7 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
     }
 
     @SuppressWarnings("MethodMayBeStatic")
-    private boolean validateDescriptor(ServiceRequestContext ctx, TokenDescriptor tokenDescriptor) {
+    private boolean validateDescriptor(ServiceRequestContext ctx, OAuth2TokenDescriptor tokenDescriptor) {
         // check whether the token still valid
         if (!tokenDescriptor.isValid()) {
             ctx.setAttr(ERROR_CODE, HttpStatus.UNAUTHORIZED.code());
@@ -174,7 +174,7 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
         return true;
     }
 
-    private boolean authorizeNewDescriptor(ServiceRequestContext ctx, TokenDescriptor tokenDescriptor) {
+    private boolean authorizeNewDescriptor(ServiceRequestContext ctx, OAuth2TokenDescriptor tokenDescriptor) {
         // check whether the token active
         if (!tokenDescriptor.isActive()) {
             ctx.setAttr(ERROR_CODE, HttpStatus.UNAUTHORIZED.code());

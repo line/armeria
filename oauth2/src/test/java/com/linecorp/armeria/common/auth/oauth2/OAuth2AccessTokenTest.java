@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.SCOPE_SEPARATOR;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE_SEPARATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 
-public class AccessTokenCapsuleTest {
+public class OAuth2AccessTokenTest {
 
     @Test
     void testBuilder() throws Exception {
@@ -47,14 +47,14 @@ public class AccessTokenCapsuleTest {
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
 
-        final AccessTokenCapsule capsule = AccessTokenCapsule.builder(accessToken)
-                                                             .tokenType(tokenType)
-                                                             .issuedAt(issuedAt)
-                                                             .expiresIn(expiresIn)
-                                                             .refreshToken(refreshToken)
-                                                             .extras(extras)
-                                                             .scope(scope)
-                                                             .build();
+        final OAuth2AccessToken capsule = OAuth2AccessToken.builder(accessToken)
+                                                           .tokenType(tokenType)
+                                                           .issuedAt(issuedAt)
+                                                           .expiresIn(expiresIn)
+                                                           .refreshToken(refreshToken)
+                                                           .extras(extras)
+                                                           .scope(scope)
+                                                           .build();
 
         assertThat(capsule.accessToken()).isEqualTo(accessToken);
         assertThat(capsule.tokenType()).isEqualTo(tokenType);
@@ -89,7 +89,7 @@ public class AccessTokenCapsuleTest {
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
 
-        final AccessTokenCapsule capsule = AccessTokenCapsule.of(rawResponse, null);
+        final OAuth2AccessToken capsule = OAuth2AccessToken.of(rawResponse, null);
 
         Thread.sleep(100);
 
@@ -125,7 +125,7 @@ public class AccessTokenCapsuleTest {
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"example_parameter\":\"example_value\"}";
 
-        final AccessTokenCapsule capsule = AccessTokenCapsule.of(rawResponse, "read write");
+        final OAuth2AccessToken capsule = OAuth2AccessToken.of(rawResponse, "read write");
 
         Thread.sleep(100);
 
@@ -164,14 +164,14 @@ public class AccessTokenCapsuleTest {
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
 
-        final AccessTokenCapsule capsule = AccessTokenCapsule.builder(accessToken)
-                                                             .tokenType(tokenType)
-                                                             .issuedAt(issuedAt)
-                                                             .expiresIn(expiresIn)
-                                                             .refreshToken(refreshToken)
-                                                             .extras(extras)
-                                                             .scope(scope)
-                                                             .build();
+        final OAuth2AccessToken capsule = OAuth2AccessToken.builder(accessToken)
+                                                           .tokenType(tokenType)
+                                                           .issuedAt(issuedAt)
+                                                           .expiresIn(expiresIn)
+                                                           .refreshToken(refreshToken)
+                                                           .extras(extras)
+                                                           .scope(scope)
+                                                           .build();
 
         System.out.println(capsule);
         assertThat(capsule.toString()).isEqualTo(toString);
@@ -188,7 +188,7 @@ public class AccessTokenCapsuleTest {
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
-        final AccessTokenCapsule capsule1 = AccessTokenCapsule.of(rawResponse1, null);
+        final OAuth2AccessToken capsule1 = OAuth2AccessToken.of(rawResponse1, null);
         assertThat(capsule1.scope()).isEqualTo(toScopeString(scope));
         assertThat(capsule1.scopeSet()).containsExactly(scope);
 
@@ -198,7 +198,7 @@ public class AccessTokenCapsuleTest {
                 "\"expires_in\":3600," +
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"example_parameter\":\"example_value\"}";
-        final AccessTokenCapsule capsule2 = AccessTokenCapsule.of(rawResponse2, "read write");
+        final OAuth2AccessToken capsule2 = OAuth2AccessToken.of(rawResponse2, "read write");
         assertThat(capsule2.scope()).isEqualTo(toScopeString(scope));
         assertThat(capsule2.scopeSet()).containsExactly(scope);
 
@@ -209,7 +209,7 @@ public class AccessTokenCapsuleTest {
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
-        final AccessTokenCapsule capsule3 = AccessTokenCapsule.of(rawResponse3, "foo");
+        final OAuth2AccessToken capsule3 = OAuth2AccessToken.of(rawResponse3, "foo");
         assertThat(capsule3.scope()).isEqualTo(toScopeString(scope));
         assertThat(capsule3.scopeSet()).containsExactly(scope);
     }
@@ -224,45 +224,45 @@ public class AccessTokenCapsuleTest {
         final String[] scope = { "read", "write" };
         final Map<String, String> extras = Collections.singletonMap("example_parameter", "example_value");
 
-        final AccessTokenCapsule capsule1 = AccessTokenCapsule.builder(accessToken)
-                                                              .tokenType(tokenType)
-                                                              .issuedAt(issuedAt)
-                                                              .expiresIn(expiresIn)
-                                                              .refreshToken(refreshToken)
-                                                              .extras(extras)
-                                                              .scope(scope)
-                                                              .build();
+        final OAuth2AccessToken capsule1 = OAuth2AccessToken.builder(accessToken)
+                                                            .tokenType(tokenType)
+                                                            .issuedAt(issuedAt)
+                                                            .expiresIn(expiresIn)
+                                                            .refreshToken(refreshToken)
+                                                            .extras(extras)
+                                                            .scope(scope)
+                                                            .build();
 
-        final AccessTokenCapsule capsule2 = AccessTokenCapsule.builder(accessToken)
-                                                              .tokenType(tokenType)
-                                                              .issuedAt(issuedAt)
-                                                              .expiresIn(expiresIn)
-                                                              .refreshToken(refreshToken)
-                                                              .extras(extras)
-                                                              .scope(scope)
-                                                              .build();
+        final OAuth2AccessToken capsule2 = OAuth2AccessToken.builder(accessToken)
+                                                            .tokenType(tokenType)
+                                                            .issuedAt(issuedAt)
+                                                            .expiresIn(expiresIn)
+                                                            .refreshToken(refreshToken)
+                                                            .extras(extras)
+                                                            .scope(scope)
+                                                            .build();
 
         assertThat(capsule2).isEqualTo(capsule1);
 
-        final AccessTokenCapsule capsule3 = AccessTokenCapsule.builder(accessToken)
-                                                              .tokenType(tokenType)
-                                                              .issuedAt(issuedAt)
-                                                              .expiresIn(expiresIn)
-                                                              .refreshToken(refreshToken)
-                                                              .extras(extras)
-                                                              .scope("read")
-                                                              .build();
+        final OAuth2AccessToken capsule3 = OAuth2AccessToken.builder(accessToken)
+                                                            .tokenType(tokenType)
+                                                            .issuedAt(issuedAt)
+                                                            .expiresIn(expiresIn)
+                                                            .refreshToken(refreshToken)
+                                                            .extras(extras)
+                                                            .scope("read")
+                                                            .build();
 
         assertThat(capsule3).isNotEqualTo(capsule1);
 
-        final AccessTokenCapsule capsule4 = AccessTokenCapsule.builder(accessToken)
-                                                              .tokenType(tokenType)
-                                                              .issuedAt(Instant.now())
-                                                              .expiresIn(expiresIn)
-                                                              .refreshToken(refreshToken)
-                                                              .extras(extras)
-                                                              .scope(scope)
-                                                              .build();
+        final OAuth2AccessToken capsule4 = OAuth2AccessToken.builder(accessToken)
+                                                            .tokenType(tokenType)
+                                                            .issuedAt(Instant.now())
+                                                            .expiresIn(expiresIn)
+                                                            .refreshToken(refreshToken)
+                                                            .extras(extras)
+                                                            .scope(scope)
+                                                            .build();
 
         assertThat(capsule4).isEqualTo(capsule1);
     }

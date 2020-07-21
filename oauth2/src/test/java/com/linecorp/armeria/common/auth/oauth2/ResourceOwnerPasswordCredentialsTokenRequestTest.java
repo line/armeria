@@ -72,7 +72,7 @@ public class ResourceOwnerPasswordCredentialsTokenRequestTest {
                                                        .aggregate().join();
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
         assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        final AccessTokenCapsule tokenCapsule1 = AccessTokenCapsule.of(response1.contentUtf8(), null);
+        final OAuth2AccessToken tokenCapsule1 = OAuth2AccessToken.of(response1.contentUtf8(), null);
         assertThat(tokenCapsule1).isEqualTo(TOKEN.tokenCapsule());
     }
 

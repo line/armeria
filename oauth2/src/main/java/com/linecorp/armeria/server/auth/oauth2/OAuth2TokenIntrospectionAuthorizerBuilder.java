@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
-import com.linecorp.armeria.common.auth.oauth2.TokenDescriptor;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.common.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.auth.Authorizer;
 
@@ -42,7 +42,7 @@ public class OAuth2TokenIntrospectionAuthorizerBuilder {
     private static final long DEFAULT_CACHE_MAX_SIZE = 1000;
     private static final Duration DEFAULT_CACHE_MAX_AGE = Duration.ofHours(1L);
 
-    private static Cache<String, TokenDescriptor> createDefaultCache() {
+    private static Cache<String, OAuth2TokenDescriptor> createDefaultCache() {
         final CacheBuilder<Object, Object> cacheBuilder =
                 CacheBuilder.newBuilder().maximumSize(DEFAULT_CACHE_MAX_SIZE)
                             .concurrencyLevel(Runtime.getRuntime().availableProcessors());
@@ -65,7 +65,7 @@ public class OAuth2TokenIntrospectionAuthorizerBuilder {
     private final ImmutableSet.Builder<String> permittedScope = ImmutableSet.builder();
 
     @Nullable
-    private Cache<String, TokenDescriptor> tokenCache;
+    private Cache<String, OAuth2TokenDescriptor> tokenCache;
 
     /**
      * Constructs new new builder for OAuth 2.0 Token Introspection {@link Authorizer},
@@ -178,16 +178,17 @@ public class OAuth2TokenIntrospectionAuthorizerBuilder {
     }
 
     /**
-     * Provides caching facility for OAuth 2.0 {@link TokenDescriptor} in order to avoid continuous Token
+     * Provides caching facility for OAuth 2.0 {@link OAuth2TokenDescriptor} in order to avoid continuous Token
      * Introspection as per <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
      */
-    public OAuth2TokenIntrospectionAuthorizerBuilder tokenCache(Cache<String, TokenDescriptor> tokenCache) {
+    public OAuth2TokenIntrospectionAuthorizerBuilder tokenCache(
+            Cache<String, OAuth2TokenDescriptor> tokenCache) {
         this.tokenCache = requireNonNull(tokenCache, "tokenCache");
         return this;
     }
 
     /**
-     * Provides caching facility for OAuth 2.0 {@link TokenDescriptor} in order to avoid continuous Token
+     * Provides caching facility for OAuth 2.0 {@link OAuth2TokenDescriptor} in order to avoid continuous Token
      * Introspection as per <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
      * @param maxSize Specifies the maximum number of entries the cache may contain.
      * @param maxAge Specifies that each entry should be automatically removed from the cache once given
@@ -205,7 +206,7 @@ public class OAuth2TokenIntrospectionAuthorizerBuilder {
     }
 
     /**
-     * Provides caching facility for OAuth 2.0 {@link TokenDescriptor} in order to avoid continuous Token
+     * Provides caching facility for OAuth 2.0 {@link OAuth2TokenDescriptor} in order to avoid continuous Token
      * Introspection as per <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
      * @param maxSize Specifies the maximum number of entries the cache may contain.
      * @param maxIdle Specifies that each entry should be automatically removed from the cache once given

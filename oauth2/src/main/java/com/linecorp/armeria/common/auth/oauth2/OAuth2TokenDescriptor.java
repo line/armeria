@@ -39,26 +39,26 @@ import com.google.common.collect.ImmutableSet;
  * Defines a structure of the Token Introspection Response, as per
  * <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
  */
-public class TokenDescriptor implements Serializable {
+public class OAuth2TokenDescriptor implements Serializable {
 
     private static final long serialVersionUID = -3976877781134216467L;
 
     /**
-     * Creates a new {@link TokenDescriptor} based on the {@code JSON}-formatted raw response body.
+     * Creates a new {@link OAuth2TokenDescriptor} based on the {@code JSON}-formatted raw response body.
      * @param rawResponse {@code JSON}-formatted raw response body.
-     * @return A new instance of {@link TokenDescriptor}.
+     * @return A new instance of {@link OAuth2TokenDescriptor}.
      */
-    public static TokenDescriptor of(String rawResponse) {
-        return TokenDescriptorBuilder.of(rawResponse);
+    public static OAuth2TokenDescriptor of(String rawResponse) {
+        return OAuth2TokenDescriptorBuilder.of(rawResponse);
     }
 
     /**
-     * Creates a new {@link TokenDescriptorBuilder} to build a new {@link TokenDescriptor} and
+     * Creates a new {@link OAuth2TokenDescriptorBuilder} to build a new {@link OAuth2TokenDescriptor} and
      * supplied it with a value of {@code active} Token Introspection Response field.
-     * @return A new instance of {@link TokenDescriptorBuilder}.
+     * @return A new instance of {@link OAuth2TokenDescriptorBuilder}.
      */
-    public static TokenDescriptorBuilder builder(boolean active) {
-        return new TokenDescriptorBuilder(active);
+    public static OAuth2TokenDescriptorBuilder builder(boolean active) {
+        return new OAuth2TokenDescriptorBuilder(active);
     }
 
     static final String ACTIVE = "active";
@@ -199,13 +199,13 @@ public class TokenDescriptor implements Serializable {
     @Nullable
     private transient String toString;
 
-    TokenDescriptor(boolean active, @Nullable List<String> scopeList, @Nullable String clientId,
-                    @Nullable String userName, @Nullable String tokenType,
-                    @Nullable Instant expiresAt, @Nullable Instant issuedAt,
-                    @Nullable Instant notBefore, @Nullable String subject,
-                    @Nullable String audience, @Nullable String issuer,
-                    @Nullable String jwtId, @Nullable ImmutableMap<String, String> extras,
-                    @Nullable String rawResponse) {
+    OAuth2TokenDescriptor(boolean active, @Nullable List<String> scopeList, @Nullable String clientId,
+                          @Nullable String userName, @Nullable String tokenType,
+                          @Nullable Instant expiresAt, @Nullable Instant issuedAt,
+                          @Nullable Instant notBefore, @Nullable String subject,
+                          @Nullable String audience, @Nullable String issuer,
+                          @Nullable String jwtId, @Nullable ImmutableMap<String, String> extras,
+                          @Nullable String rawResponse) {
         this.active = active;
         scope = toScopeString(scopeList);
         scopeSet = (scopeList == null) ? ImmutableSet.of() : ImmutableSet.copyOf(scopeList);
@@ -403,9 +403,9 @@ public class TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code JSON}-formatted raw Token Introspection Response body. If the {@link TokenDescriptor} was not
-     * parsed out of the raw response body, this value calculated based on the other {@link TokenDescriptor}
-     * values.
+     * {@code JSON}-formatted raw Token Introspection Response body. If the {@link OAuth2TokenDescriptor} was
+     * not parsed out of the raw response body, this value calculated based on the other
+     * {@link OAuth2TokenDescriptor} values.
      */
     public String rawResponse() {
         if (rawResponse == null) {
@@ -430,10 +430,10 @@ public class TokenDescriptor implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof TokenDescriptor)) {
+        if (!(o instanceof OAuth2TokenDescriptor)) {
             return false;
         }
-        final TokenDescriptor that = (TokenDescriptor) o;
+        final OAuth2TokenDescriptor that = (OAuth2TokenDescriptor) o;
         return Objects.equals(rawResponse(), that.rawResponse());
     }
 
@@ -455,7 +455,7 @@ public class TokenDescriptor implements Serializable {
 
     /**
      * Composes {@code JSON}-formatted raw Token Introspection Response body based on the other
-     * {@link TokenDescriptor} values.
+     * {@link OAuth2TokenDescriptor} values.
      */
     private static String composeRawResponse(
             boolean active, @Nullable String scope, @Nullable String clientId,

@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.ACCESS_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.EXPIRES_IN;
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.ISSUED_AT;
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.JSON;
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.REFRESH_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.SCOPE;
-import static com.linecorp.armeria.common.auth.oauth2.AccessTokenCapsule.TOKEN_TYPE;
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.SCOPE_SEPARATOR;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.ACCESS_TOKEN;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.EXPIRES_IN;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.ISSUED_AT;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.JSON;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.REFRESH_TOKEN;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.TOKEN_TYPE;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
 import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 import static java.util.Objects.requireNonNull;
 
@@ -40,14 +40,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * Builds an instance of {@link AccessTokenCapsule}.
+ * Builds an instance of {@link OAuth2AccessToken}.
  */
-public class AccessTokenCapsuleBuilder {
+public class OAuth2AccessTokenBuilder {
 
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
 
-    static AccessTokenCapsule of(String rawResponse, @Nullable String requestScope) {
+    static OAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
 
         final LinkedHashMap<String, String> map;
         try {
@@ -56,8 +56,8 @@ public class AccessTokenCapsuleBuilder {
             throw new RuntimeException(e);
         }
 
-        final AccessTokenCapsuleBuilder builder =
-                new AccessTokenCapsuleBuilder(requireNonNull(map.remove(ACCESS_TOKEN), ACCESS_TOKEN));
+        final OAuth2AccessTokenBuilder builder =
+                new OAuth2AccessTokenBuilder(requireNonNull(map.remove(ACCESS_TOKEN), ACCESS_TOKEN));
 
         final String tokenType = map.remove(TOKEN_TYPE);
         if (tokenType != null) {
@@ -111,12 +111,12 @@ public class AccessTokenCapsuleBuilder {
     private String rawResponse;
 
     /**
-     * Constructs a new instance of {@link AccessTokenCapsuleBuilder} given the mandatory value
+     * Constructs a new instance of {@link OAuth2AccessTokenBuilder} given the mandatory value
      * {@code access_token} of the access token issued by the authorization server.
      * @param accessToken {@code access_token} Access Token response field,
      *                    REQUIRED. The access token issued by the authorization server.
      */
-    AccessTokenCapsuleBuilder(String accessToken) {
+    OAuth2AccessTokenBuilder(String accessToken) {
         this.accessToken = requireNonNull(accessToken, "accessToken");
     }
 
@@ -126,7 +126,7 @@ public class AccessTokenCapsuleBuilder {
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      * Value is case insensitive.
      */
-    public AccessTokenCapsuleBuilder tokenType(String tokenType) {
+    public OAuth2AccessTokenBuilder tokenType(String tokenType) {
         this.tokenType = requireNonNull(tokenType, "tokenType");
         return this;
     }
@@ -138,7 +138,7 @@ public class AccessTokenCapsuleBuilder {
      * the response was generated. If omitted, the authorization server SHOULD provide the expiration
      * time via other means or document the default value.
      */
-    public AccessTokenCapsuleBuilder expiresIn(Duration expiresIn) {
+    public OAuth2AccessTokenBuilder expiresIn(Duration expiresIn) {
         this.expiresIn = requireNonNull(expiresIn, "expiresIn");
         return this;
     }
@@ -148,7 +148,7 @@ public class AccessTokenCapsuleBuilder {
      * OPTIONAL. The value is NOT supplied with the Access Token response and calculated approximately using
      * {@code expires_in} field.
      */
-    public AccessTokenCapsuleBuilder issuedAt(Instant issuedAt) {
+    public OAuth2AccessTokenBuilder issuedAt(Instant issuedAt) {
         this.issuedAt = requireNonNull(issuedAt, "issuedAt");
         return this;
     }
@@ -159,7 +159,7 @@ public class AccessTokenCapsuleBuilder {
      * authorization grant as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
      */
-    public AccessTokenCapsuleBuilder refreshToken(String refreshToken) {
+    public OAuth2AccessTokenBuilder refreshToken(String refreshToken) {
         this.refreshToken = requireNonNull(refreshToken, "refreshToken");
         return this;
     }
@@ -168,7 +168,7 @@ public class AccessTokenCapsuleBuilder {
      * {@code scope} Access Token Response field,
      * OPTIONAL. An {@link Iterable} of individual scope values.
      */
-    public AccessTokenCapsuleBuilder scope(Iterable<String> scope) {
+    public OAuth2AccessTokenBuilder scope(Iterable<String> scope) {
         this.scope.addAll(requireNonNull(scope, "scope"));
         return this;
     }
@@ -177,7 +177,7 @@ public class AccessTokenCapsuleBuilder {
      * {@code scope} Access Token Response field,
      * OPTIONAL. An array of individual scope values.
      */
-    public AccessTokenCapsuleBuilder scope(String... scope) {
+    public OAuth2AccessTokenBuilder scope(String... scope) {
         this.scope.add(requireNonNull(scope, "scope"));
         return this;
     }
@@ -186,7 +186,7 @@ public class AccessTokenCapsuleBuilder {
      * A pair of extra system-specific token parameters included with Access Token Response,
      * OPTIONAL.
      */
-    public AccessTokenCapsuleBuilder extras(String key, String value) {
+    public OAuth2AccessTokenBuilder extras(String key, String value) {
         extras.put(key, value);
         return this;
     }
@@ -195,7 +195,7 @@ public class AccessTokenCapsuleBuilder {
      * A {@link Map} of extra system-specific token parameters included with Access Token Response,
      * OPTIONAL.
      */
-    public AccessTokenCapsuleBuilder extras(Map<String, String> extras) {
+    public OAuth2AccessTokenBuilder extras(Map<String, String> extras) {
         this.extras.putAll(extras);
         return this;
     }
@@ -205,23 +205,23 @@ public class AccessTokenCapsuleBuilder {
      * OPTIONAL.
      */
     @SuppressWarnings("UnstableApiUsage")
-    public AccessTokenCapsuleBuilder extras(
+    public OAuth2AccessTokenBuilder extras(
             Iterable<? extends Map.Entry<String, String>> extras) {
         this.extras.putAll(extras);
         return this;
     }
 
-    private AccessTokenCapsuleBuilder rawResponse(String rawResponse) {
+    private OAuth2AccessTokenBuilder rawResponse(String rawResponse) {
         this.rawResponse = requireNonNull(rawResponse, "rawResponse");
         return this;
     }
 
     /**
-     * Builds a new instance of {@link AccessTokenCapsule} based on the configured parameters.
+     * Builds a new instance of {@link OAuth2AccessToken} based on the configured parameters.
      */
-    public AccessTokenCapsule build() {
-        return new AccessTokenCapsule(accessToken, tokenType,
+    public OAuth2AccessToken build() {
+        return new OAuth2AccessToken(accessToken, tokenType,
                                       (issuedAt == null) ? Instant.now() : issuedAt, expiresIn,
-                                      refreshToken, scope.build(), extras.build(), rawResponse);
+                                     refreshToken, scope.build(), extras.build(), rawResponse);
     }
 }

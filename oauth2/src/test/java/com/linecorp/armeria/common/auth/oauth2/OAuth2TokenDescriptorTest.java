@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.TokenDescriptor.SCOPE_SEPARATOR;
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 
-public class TokenDescriptorTest {
+public class OAuth2TokenDescriptorTest {
 
     @Test
     void testBuilder() throws Exception {
@@ -61,20 +61,20 @@ public class TokenDescriptorTest {
                 "\"jti\":\"12345\"," +
                 "\"extension_field\":\"twenty-seven\"}";
 
-        final TokenDescriptor descriptor = TokenDescriptor.builder(active)
-                                                          .clientId(clientId)
-                                                          .userName(userName)
-                                                          .tokenType(tokenType)
-                                                          .expiresAt(expiresAt)
-                                                          .issuedAt(issuedAt)
-                                                          .notBefore(issuedAt)
-                                                          .subject(subject)
-                                                          .audience(audience)
-                                                          .issuer(issuer)
-                                                          .jwtId(jwtId)
-                                                          .extras(extras)
-                                                          .scope(scope)
-                                                          .build();
+        final OAuth2TokenDescriptor descriptor = OAuth2TokenDescriptor.builder(active)
+                                                                      .clientId(clientId)
+                                                                      .userName(userName)
+                                                                      .tokenType(tokenType)
+                                                                      .expiresAt(expiresAt)
+                                                                      .issuedAt(issuedAt)
+                                                                      .notBefore(issuedAt)
+                                                                      .subject(subject)
+                                                                      .audience(audience)
+                                                                      .issuer(issuer)
+                                                                      .jwtId(jwtId)
+                                                                      .extras(extras)
+                                                                      .scope(scope)
+                                                                      .build();
 
         assertThat(descriptor.isActive()).isEqualTo(active);
         assertThat(descriptor.scope()).isEqualTo(toScopeString(scope));
@@ -127,7 +127,7 @@ public class TokenDescriptorTest {
                 "\"jti\":\"12345\"," +
                 "\"extension_field\":\"twenty-seven\"}";
 
-        final TokenDescriptor descriptor = TokenDescriptor.of(rawResponse);
+        final OAuth2TokenDescriptor descriptor = OAuth2TokenDescriptor.of(rawResponse);
 
         Thread.sleep(100);
 
@@ -183,20 +183,20 @@ public class TokenDescriptorTest {
                 "\"jti\":\"12345\"," +
                 "\"extension_field\":\"twenty-seven\"}";
 
-        final TokenDescriptor descriptor = TokenDescriptor.builder(active)
-                                                          .clientId(clientId)
-                                                          .userName(userName)
-                                                          .tokenType(tokenType)
-                                                          .expiresAt(expiresAt)
-                                                          .issuedAt(issuedAt)
-                                                          .notBefore(issuedAt)
-                                                          .subject(subject)
-                                                          .audience(audience)
-                                                          .issuer(issuer)
-                                                          .jwtId(jwtId)
-                                                          .extras(extras)
-                                                          .scope(scope)
-                                                          .build();
+        final OAuth2TokenDescriptor descriptor = OAuth2TokenDescriptor.builder(active)
+                                                                      .clientId(clientId)
+                                                                      .userName(userName)
+                                                                      .tokenType(tokenType)
+                                                                      .expiresAt(expiresAt)
+                                                                      .issuedAt(issuedAt)
+                                                                      .notBefore(issuedAt)
+                                                                      .subject(subject)
+                                                                      .audience(audience)
+                                                                      .issuer(issuer)
+                                                                      .jwtId(jwtId)
+                                                                      .extras(extras)
+                                                                      .scope(scope)
+                                                                      .build();
 
         System.out.println(descriptor);
         assertThat(descriptor.toString()).isEqualTo(rawResponse);
@@ -218,69 +218,69 @@ public class TokenDescriptorTest {
         final String jwtId = "12345";
         final Map<String, String> extras = Collections.singletonMap("extension_field", "twenty-seven");
 
-        final TokenDescriptor descriptor1 = TokenDescriptor.builder(active)
-                                                           .clientId(clientId)
-                                                           .userName(userName)
-                                                           .tokenType(tokenType)
-                                                           .expiresAt(expiresAt)
-                                                           .issuedAt(issuedAt)
-                                                           .notBefore(issuedAt)
-                                                           .subject(subject)
-                                                           .audience(audience)
-                                                           .issuer(issuer)
-                                                           .jwtId(jwtId)
-                                                           .extras(extras)
-                                                           .scope(scope)
-                                                           .build();
+        final OAuth2TokenDescriptor descriptor1 = OAuth2TokenDescriptor.builder(active)
+                                                                       .clientId(clientId)
+                                                                       .userName(userName)
+                                                                       .tokenType(tokenType)
+                                                                       .expiresAt(expiresAt)
+                                                                       .issuedAt(issuedAt)
+                                                                       .notBefore(issuedAt)
+                                                                       .subject(subject)
+                                                                       .audience(audience)
+                                                                       .issuer(issuer)
+                                                                       .jwtId(jwtId)
+                                                                       .extras(extras)
+                                                                       .scope(scope)
+                                                                       .build();
 
-        final TokenDescriptor descriptor2 = TokenDescriptor.builder(active)
-                                                           .clientId(clientId)
-                                                           .userName(userName)
-                                                           .tokenType(tokenType)
-                                                           .expiresAt(expiresAt)
-                                                           .issuedAt(issuedAt)
-                                                           .notBefore(issuedAt)
-                                                           .subject(subject)
-                                                           .audience(audience)
-                                                           .issuer(issuer)
-                                                           .jwtId(jwtId)
-                                                           .extras(extras)
-                                                           .scope(scope)
-                                                           .build();
+        final OAuth2TokenDescriptor descriptor2 = OAuth2TokenDescriptor.builder(active)
+                                                                       .clientId(clientId)
+                                                                       .userName(userName)
+                                                                       .tokenType(tokenType)
+                                                                       .expiresAt(expiresAt)
+                                                                       .issuedAt(issuedAt)
+                                                                       .notBefore(issuedAt)
+                                                                       .subject(subject)
+                                                                       .audience(audience)
+                                                                       .issuer(issuer)
+                                                                       .jwtId(jwtId)
+                                                                       .extras(extras)
+                                                                       .scope(scope)
+                                                                       .build();
 
         assertThat(descriptor2).isEqualTo(descriptor1);
 
-        final TokenDescriptor descriptor3 = TokenDescriptor.builder(active)
-                                                           .clientId(clientId)
-                                                           .userName(userName)
-                                                           .tokenType(tokenType)
-                                                           .expiresAt(expiresAt)
-                                                           .issuedAt(issuedAt)
-                                                           .notBefore(issuedAt)
-                                                           .subject(subject)
-                                                           .audience(audience)
-                                                           .issuer(issuer)
-                                                           .jwtId(jwtId)
-                                                           .extras(extras)
-                                                           .scope("read")
-                                                           .build();
+        final OAuth2TokenDescriptor descriptor3 = OAuth2TokenDescriptor.builder(active)
+                                                                       .clientId(clientId)
+                                                                       .userName(userName)
+                                                                       .tokenType(tokenType)
+                                                                       .expiresAt(expiresAt)
+                                                                       .issuedAt(issuedAt)
+                                                                       .notBefore(issuedAt)
+                                                                       .subject(subject)
+                                                                       .audience(audience)
+                                                                       .issuer(issuer)
+                                                                       .jwtId(jwtId)
+                                                                       .extras(extras)
+                                                                       .scope("read")
+                                                                       .build();
 
         assertThat(descriptor3).isNotEqualTo(descriptor1);
 
-        final TokenDescriptor descriptor4 = TokenDescriptor.builder(active)
-                                                           .clientId(clientId)
-                                                           .userName(userName)
-                                                           .tokenType(tokenType)
-                                                           .expiresAt(expiresAt)
-                                                           .issuedAt(issuedAt)
-                                                           .notBefore(issuedAt)
-                                                           .subject(subject)
-                                                           .audience(audience)
-                                                           .issuer(issuer)
-                                                           .jwtId("6789")
-                                                           .extras(extras)
-                                                           .scope(scope)
-                                                           .build();
+        final OAuth2TokenDescriptor descriptor4 = OAuth2TokenDescriptor.builder(active)
+                                                                       .clientId(clientId)
+                                                                       .userName(userName)
+                                                                       .tokenType(tokenType)
+                                                                       .expiresAt(expiresAt)
+                                                                       .issuedAt(issuedAt)
+                                                                       .notBefore(issuedAt)
+                                                                       .subject(subject)
+                                                                       .audience(audience)
+                                                                       .issuer(issuer)
+                                                                       .jwtId("6789")
+                                                                       .extras(extras)
+                                                                       .scope(scope)
+                                                                       .build();
 
         assertThat(descriptor4).isNotEqualTo(descriptor1);
     }
