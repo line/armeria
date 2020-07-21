@@ -107,6 +107,34 @@ public interface Multipart extends Publisher<HttpData> {
 
     /**
      * Returns a decoded {@link Multipart} from the specified {@link HttpRequest}.
+     * You can reactively subscribe body parts using the {@link Publisher} of {@link #bodyParts()}:
+     * <pre>{@code
+     * > import reactor.core.publisher.Flux;
+     *
+     * > HttpRequest req = ...;
+     * > Multipart multiPart = Multipart.from(req);
+     *
+     * > Flux.from(multiPart.bodyParts())
+     * >     .subscribe(bodyPart -> {
+     * >         Flux.from(bodyPart.content())
+     * >             .map(HttpData::toStringUtf8)
+     * >             .collectList()
+     * >             .subscribe(contents -> { ... });
+     * >     });
+     * }</pre>
+     * , or aggregate this {@link Multipart} using {@link #aggregate()}:
+     * <pre>{@code
+     * > Multipart.from(req).aggregate()
+     * >          .thenAccept(multipart -> {
+     * >              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+     * >                  String content = bodyPart.contentUtf8();
+     * >                  ...
+     * >              }
+     * >          });
+     * }</pre>
+     *
+     * @see #bodyParts()
+     * @see #aggregate()
      */
     static Multipart from(HttpRequest request) {
         requireNonNull(request, "request");
@@ -141,6 +169,20 @@ public interface Multipart extends Publisher<HttpData> {
 
     /**
      * Converts this {@link Multipart} into a new complete {@link HttpRequest}.
+     * This method is commonly used to send a multipart request to the specified {@code path} of an endpoint.
+     *
+     * <p>For example:<pre>{@code
+     * > HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+     * >                                      ContentDisposition.of("form-data", "file", "test.txt"));
+     * > byte[] fileData = ...;
+     * > BodyPart filePart = BodyPart.builder()
+     * >                             .headers(headers)
+     * >                             .content(fileData)
+     * >                             .build();
+     *
+     * > HttpRequest request = Multipart.of(filePart).toHttpRequest("/upload");
+     * > CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
+     * }</pre>
      */
     default HttpRequest toHttpRequest(String path) {
         requireNonNull(path, "path");
@@ -153,6 +195,21 @@ public interface Multipart extends Publisher<HttpData> {
     /**
      * Converts this {@link Multipart} into a new complete {@link HttpRequest} with the specified
      * {@link RequestHeaders}.
+     * This method is commonly used to send a multipart request using the specified {@link RequestHeaders}.
+     *
+     * <p>For example:<pre>{@code
+     * > HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+     * >                                      ContentDisposition.of("form-data", "file", "test.txt"));
+     * > byte[] fileData = ...;
+     * > BodyPart filePart = BodyPart.builder()
+     * >                             .headers(headers)
+     * >                             .content(fileData)
+     * >                             .build();
+     *
+     * > RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/upload");
+     * > HttpRequest request = Multipart.of(filePart).toHttpRequest(requestHeaders);
+     * > CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
+     * }</pre>
      */
     default HttpRequest toHttpRequest(RequestHeaders requestHeaders) {
         requireNonNull(requestHeaders, "requestHeaders");
@@ -180,12 +237,52 @@ public interface Multipart extends Publisher<HttpData> {
 
     /**
      * Returns all the nested body parts.
+     *
+     * <p>Note: Once a {@link BodyPart} is subscribed, you should subscribe {@link BodyPart#content()}
+     * before subscribing the next {@link BodyPart}.<pre>{@code
+     * > import reactor.core.publisher.Flux;
+     *
+     * > HttpRequest req = ...;
+     * > Multipart multiPart = Multipart.from(req);
+     *
+     * > // Good:
+     * > Flux.from(multiPart.bodyParts())
+     * >     .subscribe(bodyPart -> {
+     * >         Flux.from(bodyPart.content()) // Safely subscribe BodyPart.content()
+     * >             .map(HttpData::toStringUtf8)
+     * >             .collectList()
+     * >             .subscribe(contents -> { ... });
+     * >     });
+     *
+     * > // Bad:
+     * > Flux.from(multiPart.bodyParts())
+     * >     .collectList() // This will subscribe BodyPart.content() before you consume it.
+     * >     .subscribe(bodyParts -> {
+     * >         bodyParts.forEach(part -> {
+     * >             Flux.from(part.content())
+     * >                 .collectList() // Throws IllegalStateException("Only single subscriber is allowed")
+     * >                 .subscribe(contents -> { ... });
+     * >         });
+     * >     });
+     * } </pre>
+     * If you don't know what this means, use {@link #aggregate()}.
      */
     Publisher<BodyPart> bodyParts();
 
     /**
      * Aggregates this {@link Multipart}. The returned {@link CompletableFuture} will be notified when
      * the {@link BodyPart}s of the {@link Multipart} is received fully.
+     *
+     * <p>For example: <pre>{@code
+     * > HttpRequest req = ...;
+     * > Multipart.from(req).aggregate()
+     * >          .thenAccept(multipart -> {
+     * >              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+     * >                  String content = bodyPart.contentUtf8();
+     * >                  ...
+     * >              }
+     * >          });
+     * }</pre>
      */
     CompletableFuture<AggregatedMultipart> aggregate();
 }

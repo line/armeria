@@ -720,6 +720,15 @@ class HttpHeadersBaseTest {
         assertThat(headers.uri()).isEqualTo(URI.create("https://netty.io/index.html"));
     }
 
+    @Test
+    void testContentDispositionObject() {
+        final HttpHeadersBase headers = newHttp2Headers();
+        final ContentDisposition contentDisposition = ContentDisposition.of("form-data", "fieldA", "text.txt");
+        headers.addObject(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition);
+        assertThat(headers.get(HttpHeaderNames.CONTENT_DISPOSITION))
+                .isSameAs(contentDisposition.asHeaderValue());
+    }
+
     private static void verifyAllPseudoHeadersPresent(HttpHeadersBase headers) {
         for (PseudoHeaderName pseudoName : PseudoHeaderName.values()) {
             assertThat(headers.get(pseudoName.value())).isNotNull();
@@ -728,7 +737,7 @@ class HttpHeadersBaseTest {
 
     static void verifyPseudoHeadersFirst(HttpHeadersBase headers) {
         AsciiString lastNonPseudoName = null;
-        for (Map.Entry<AsciiString, String> entry: headers) {
+        for (Map.Entry<AsciiString, String> entry : headers) {
             if (entry.getKey().isEmpty() || entry.getKey().charAt(0) != ':') {
                 lastNonPseudoName = entry.getKey();
             } else if (lastNonPseudoName != null) {

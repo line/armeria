@@ -30,9 +30,12 @@ import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -95,20 +98,30 @@ class SpringServerMultipartTest {
 
     @Test
     void fileUpload() {
-        final HttpHeaders headers =
-                HttpHeaders.builder()
-                           .contentDisposition(ContentDisposition.builder("form-data")
-                                                                 .name("file")
-                                                                 .filename("test.txt")
-                                                                 .build())
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                           .build();
+        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+                                                   ContentDisposition.of("form-data", "file", "test.txt"));
         final BodyPart filePart = BodyPart.builder()
                                           .headers(headers)
                                           .content("Hello!")
                                           .build();
 
         final HttpRequest request = Multipart.of(filePart).toHttpRequest("/multipart/file");
+
+        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
+        assertThat(response.content().toStringUtf8()).isEqualTo("test.txt/file/Hello!");
+    }
+
+    @Test
+    void fileUploadWithRequestHeaders() {
+        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+                                                   ContentDisposition.of("form-data", "file", "test.txt"));
+        final BodyPart filePart = BodyPart.builder()
+                                          .headers(headers)
+                                          .content("Hello!")
+                                          .build();
+
+        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/upload");
+        final HttpRequest request = Multipart.of(filePart).toHttpRequest(requestHeaders);
 
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(response.content().toStringUtf8()).isEqualTo("test.txt/file/Hello!");

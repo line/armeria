@@ -281,4 +281,21 @@ class ContentDispositionTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Charset should be UTF-8 or ISO-8859-1.");
     }
+
+    @Test
+    void testFactory() {
+        assertThat(ContentDisposition.of("typeA"))
+                .isEqualTo(ContentDisposition.builder("typeA").build());
+
+        assertThat(ContentDisposition.of("typeB", "nameB"))
+                .isEqualTo(ContentDisposition.builder("typeB")
+                                             .name("nameB")
+                                             .build());
+
+        assertThat(ContentDisposition.of("typeC", "nameC", "file.txt"))
+                .isEqualTo(ContentDisposition.builder("typeC")
+                                             .name("nameC")
+                                             .filename("file.txt")
+                                             .build());
+    }
 }

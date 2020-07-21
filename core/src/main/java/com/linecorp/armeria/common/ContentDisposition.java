@@ -94,6 +94,32 @@ public final class ContentDisposition {
     }
 
     /**
+     * Returns a new {@link ContentDisposition} with the specified {@code type}.
+     *
+     * @param type the disposition type like for example {@code inline}, {@code attachment},
+     *             or {@code form-data}
+     * @param name the name parameter
+     */
+    public static ContentDisposition of(String type, String name) {
+        return builder(type).name(name).build();
+    }
+
+    /**
+     * Returns a new {@link ContentDisposition} with the specified {@code type}.
+     *
+     * @param type the disposition type like for example {@code inline}, {@code attachment},
+     *             or {@code form-data}
+     * @param name the name parameter
+     * @param filename the filename parameter that will be be formatted as quoted-string,
+     *                 as defined in RFC 2616, section 2.2, and any quote characters within
+     *                 the filename value will be escaped with a backslash,
+     *                 e.g. {@code "foo\"bar.txt"} becomes {@code "foo\\\"bar.txt"}
+     */
+    public static ContentDisposition of(String type, String name, String filename) {
+        return builder(type).name(name).filename(filename).build();
+    }
+
+    /**
      * Returns an empty {@link ContentDisposition}.
      */
     public static ContentDisposition of() {

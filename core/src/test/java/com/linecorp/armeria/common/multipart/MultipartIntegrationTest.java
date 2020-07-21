@@ -91,7 +91,7 @@ class MultipartIntegrationTest {
                             assertThat(dispositionA.type()).isEqualTo("form-data");
 
                             assertThat(bodyPart.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-                            assertThat(bodyPart.content().toStringUtf8()).isEqualTo("contentA");
+                            assertThat(bodyPart.contentUtf8()).isEqualTo("contentA");
                         } else {
                             final ContentDisposition dispositionB = bodyPart.headers().contentDisposition();
                             assertThat(dispositionB.name()).isEqualTo("fieldB");
@@ -130,11 +130,8 @@ class MultipartIntegrationTest {
     @ParameterizedTest
     void multipart(String path) {
         final WebClient client = WebClient.of(server.httpUri());
-        final ContentDisposition dispositionA = ContentDisposition.builder("form-data")
-                                                                  .name("fieldA")
-                                                                  .build();
         final HttpHeaders headerA = HttpHeaders.builder()
-                                               .contentDisposition(dispositionA)
+                                               .contentDisposition(ContentDisposition.of("form-data", "fieldA"))
                                                .contentType(MediaType.PLAIN_TEXT_UTF_8)
                                                .build();
         final BodyPart partA = BodyPart.builder()
