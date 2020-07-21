@@ -1100,7 +1100,10 @@ public final class Flags {
      *
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.useLegacyMeterNames=true}
      * JVM option to enable it.</p>
+     *
+     * @deprecated This property will be removed without a replacement.
      */
+    @Deprecated
     public static boolean useLegacyMeterNames() {
         return USE_LEGACY_METER_NAMES;
     }
