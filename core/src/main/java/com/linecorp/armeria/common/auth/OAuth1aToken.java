@@ -76,16 +76,6 @@ public final class OAuth1aToken {
     static final String OAUTH_VERSION = "version";
 
     /**
-     * Creates a new {@link OAuth1aToken} from the given arguments.
-     *
-     * @deprecated Use {@link #builder()}.
-     */
-    @Deprecated
-    public static OAuth1aToken of(Map<String, String> params) {
-        return builder().putAll(params).build();
-    }
-
-    /**
      * Returns a new {@link OAuth1aTokenBuilder}.
      */
     public static OAuth1aTokenBuilder builder() {

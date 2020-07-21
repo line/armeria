@@ -183,7 +183,7 @@ public abstract class AbstractHttpFile implements HttpFile {
             headers.set(HttpHeaderNames.ETAG, '\"' + etag + '\"');
         }
 
-        headers.set(this.additionalHeaders);
+        headers.set(additionalHeaders);
         return headers.build();
     }
 

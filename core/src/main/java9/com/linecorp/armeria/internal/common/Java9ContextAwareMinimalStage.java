@@ -26,7 +26,6 @@ import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
-@SuppressWarnings("unchecked")
 final class Java9ContextAwareMinimalStage<T> implements CompletionStage<T> {
 
     private final CompletableFuture<T> delegate;

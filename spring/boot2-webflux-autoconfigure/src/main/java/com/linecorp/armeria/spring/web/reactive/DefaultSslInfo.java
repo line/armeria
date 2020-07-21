@@ -57,38 +57,32 @@ final class DefaultSslInfo implements SslInfo {
     @Nullable
     private final X509Certificate[] peerCertificates;
 
-    DefaultSslInfo(@Nullable String sessionId, X509Certificate[] peerCertificates) {
-        Assert.notNull(peerCertificates, "No SSL certificates");
-        this.sessionId = sessionId;
-        this.peerCertificates = peerCertificates;
-    }
-
     DefaultSslInfo(SSLSession session) {
         Assert.notNull(session, "SSLSession is required");
-        this.sessionId = initSessionId(session);
-        this.peerCertificates = initCertificates(session);
+        sessionId = initSessionId(session);
+        peerCertificates = initCertificates(session);
     }
 
     @Override
     @Nullable
     public String getSessionId() {
-        return this.sessionId;
+        return sessionId;
     }
 
     @Override
     @Nullable
     public X509Certificate[] getPeerCertificates() {
-        return this.peerCertificates;
+        return peerCertificates;
     }
 
     @Nullable
     private static String initSessionId(SSLSession session) {
-        byte[] bytes = session.getId();
+        final byte[] bytes = session.getId();
         if (bytes == null) {
             return null;
         }
 
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
             String digit = Integer.toHexString(b);
             if (digit.length() < 2) {
@@ -104,19 +98,19 @@ final class DefaultSslInfo implements SslInfo {
 
     @Nullable
     private static X509Certificate[] initCertificates(SSLSession session) {
-        Certificate[] certificates;
+        final Certificate[] certificates;
         try {
             certificates = session.getPeerCertificates();
         } catch (Throwable ex) {
             return null;
         }
 
-        List<X509Certificate> result = new ArrayList<>(certificates.length);
+        final List<X509Certificate> result = new ArrayList<>(certificates.length);
         for (Certificate certificate : certificates) {
             if (certificate instanceof X509Certificate) {
                 result.add((X509Certificate) certificate);
             }
         }
-        return (!result.isEmpty() ? result.toArray(new X509Certificate[0]) : null);
+        return !result.isEmpty() ? result.toArray(new X509Certificate[0]) : null;
     }
 }

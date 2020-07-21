@@ -44,13 +44,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -232,47 +230,10 @@ public interface ServiceRequestContext extends RequestContext {
         throw newIllegalContextPushingException(this, oldCtx);
     }
 
-    @Deprecated
-    @Override
-    ServiceRequestContext newDerivedContext(RequestId id,
-                                            @Nullable HttpRequest req,
-                                            @Nullable RpcRequest rpcReq);
-
     /**
      * Returns the {@link ServiceConfig} of the {@link Service} that is handling the current {@link Request}.
      */
     ServiceConfig config();
-
-    /**
-     * Returns the {@link Server} that is handling the current {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default Server server() {
-        return config().server();
-    }
-
-    /**
-     * Returns the {@link VirtualHost} that is handling the current {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default VirtualHost virtualHost() {
-        return config().virtualHost();
-    }
-
-    /**
-     * Returns the {@link Route} associated with the {@link Service} that is handling the current
-     * {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default Route route() {
-        return config().route();
-    }
 
     /**
      * Returns the {@link RoutingContext} used to find the {@link Service}.
@@ -291,16 +252,6 @@ public interface ServiceRequestContext extends RequestContext {
     @Nullable
     default String pathParam(String name) {
         return pathParams().get(name);
-    }
-
-    /**
-     * Returns the {@link HttpService} that is handling the current {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default HttpService service() {
-        return config().service();
     }
 
     /**
@@ -506,28 +457,6 @@ public interface ServiceRequestContext extends RequestContext {
      * @see ContentTooLargeException
      */
     void setMaxRequestLength(long maxRequestLength);
-
-    /**
-     * Returns whether the verbose response mode is enabled. When enabled, the service responses will contain
-     * the exception type and its full stack trace, which may be useful for debugging while potentially
-     * insecure. When disabled, the service responses will not expose such server-side details to the client.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default boolean verboseResponses() {
-        return config().verboseResponses();
-    }
-
-    /**
-     * Returns the {@link AccessLogWriter}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default AccessLogWriter accessLogWriter() {
-        return config().accessLogWriter();
-    }
 
     /**
      * Returns the {@link HttpHeaders} which will be included when a {@link Service} sends an

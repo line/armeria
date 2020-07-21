@@ -104,10 +104,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return create(host, 0);
     }
 
-    // TODO(trustin): Remove weight and make Endpoint a pure endpoint representation.
-    //                We could specify an additional attributes such as weight/priority
-    //                when adding an Endpoint to an EndpointGroup.
-
     private static Endpoint create(String host, int port) {
         requireNonNull(host, "host");
 

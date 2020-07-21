@@ -52,22 +52,6 @@ abstract class AbstractThreadFactory implements ThreadFactory {
     abstract Thread newThread(@Nullable ThreadGroup threadGroup, Runnable r, String name);
 
     private final class ThreadFactoryImpl extends DefaultThreadFactory {
-        ThreadFactoryImpl(String threadNamePrefix) {
-            super(threadNamePrefix);
-        }
-
-        ThreadFactoryImpl(String threadNamePrefix, boolean daemon) {
-            super(threadNamePrefix, daemon);
-        }
-
-        ThreadFactoryImpl(String threadNamePrefix, int priority) {
-            super(threadNamePrefix, priority);
-        }
-
-        ThreadFactoryImpl(String threadNamePrefix, boolean daemon, int priority) {
-            super(threadNamePrefix, daemon, priority);
-        }
-
         ThreadFactoryImpl(String threadNamePrefix, boolean daemon, int priority,
                           @Nullable ThreadGroup threadGroup) {
             super(threadNamePrefix, daemon, priority, threadGroup);

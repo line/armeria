@@ -298,8 +298,7 @@ class RetryingClientTest {
     @Test
     void retryWhenContentMatched() {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(new RetryIfContentMatch("Need to retry"))
-                              .contentPreviewLength(1024)
+                RetryingClient.builder(new RetryIfContentMatch("Need to retry"), 1024)
                               .newDecorator();
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)

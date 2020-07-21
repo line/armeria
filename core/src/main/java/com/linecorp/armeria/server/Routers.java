@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.server.RouteCache.wrapCompositeServiceRouter;
 import static com.linecorp.armeria.server.RouteCache.wrapRouteDecoratingServiceRouter;
 import static com.linecorp.armeria.server.RouteCache.wrapVirtualHostRouter;
 import static java.util.Objects.requireNonNull;
@@ -45,8 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
 /**
  * A factory that creates a {@link Router} instance.
@@ -80,39 +77,6 @@ public final class Routers {
         return wrapVirtualHostRouter(defaultRouter(configs, virtualHost.fallbackServiceConfig(),
                                                    ServiceConfig::route, rejectionConsumer),
                                      ambiguousRoutes);
-    }
-
-    /**
-     * Returns the default implementation of the {@link Router} to find a {@link CompositeServiceEntry}.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public static <T extends Service<?, ?>> Router<T> ofCompositeService(
-            List<CompositeServiceEntry<T>> entries) {
-        requireNonNull(entries, "entries");
-
-        final Router<CompositeServiceEntry<T>> delegate = wrapCompositeServiceRouter(defaultRouter(
-                entries, /* fallbackValue */ null, CompositeServiceEntry::route,
-                (mapping, existingMapping) -> {
-                    final String a = mapping.toString();
-                    final String b = existingMapping.toString();
-                    if (a.equals(b)) {
-                        throw new IllegalStateException(
-                                "Your composite service has a duplicate path mapping: " + a);
-                    }
-
-                    throw new IllegalStateException(
-                            "Your composite service has path mappings with a conflict: " +
-                            a + " vs. " + b);
-                }), resolveAmbiguousRoutes(entries.stream()
-                                                  .map(CompositeServiceEntry::route)
-                                                  .collect(toImmutableList())));
-
-        return new CompositeRouter<>(delegate, result ->
-                result.isPresent() ? Routed.of(result.route(), result.routingResult(),
-                                               result.value().service())
-                                   : Routed.empty());
     }
 
     /**

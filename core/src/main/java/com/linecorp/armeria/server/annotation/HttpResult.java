@@ -123,16 +123,6 @@ public interface HttpResult<T> {
 
     /**
      * Returns the HTTP trailers of a response.
-     *
-     * @deprecated Use {@link #trailers()}.
-     */
-    @Deprecated
-    default HttpHeaders trailingHeaders() {
-        return trailers();
-    }
-
-    /**
-     * Returns the HTTP trailers of a response.
      */
     default HttpHeaders trailers() {
         return HttpHeaders.of();

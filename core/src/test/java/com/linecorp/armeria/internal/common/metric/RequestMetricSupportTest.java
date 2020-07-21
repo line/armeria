@@ -223,7 +223,7 @@ class RequestMetricSupportTest {
 
     private static void addLogInfoInDerivedCtx(ClientRequestContext ctx) {
         final ClientRequestContext derivedCtx =
-                ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest());
+                ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest(), ctx.endpoint());
 
         ctx.logBuilder().addChild(derivedCtx.log());
         derivedCtx.logBuilder().session(null, ctx.sessionProtocol(), newConnectionTimings());
