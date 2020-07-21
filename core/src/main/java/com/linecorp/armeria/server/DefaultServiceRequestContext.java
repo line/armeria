@@ -46,13 +46,11 @@ import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.TimeoutController;
@@ -210,38 +208,6 @@ public final class DefaultServiceRequestContext
     @Override
     public InetAddress clientAddress() {
         return clientAddress;
-    }
-
-    @Deprecated
-    @Override
-    public ServiceRequestContext newDerivedContext(RequestId id,
-                                                   @Nullable HttpRequest req,
-                                                   @Nullable RpcRequest rpcReq) {
-        requireNonNull(req, "req");
-        if (rpcRequest() != null) {
-            requireNonNull(rpcReq, "rpcReq");
-        }
-
-        final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
-                cfg, ch, meterRegistry(), sessionProtocol(), id, routingContext,
-                routingResult, req, sslSession(), proxiedAddresses(), clientAddress(),
-                System.nanoTime(), SystemInfo.currentTimeMicros(),
-                additionalResponseHeaders, additionalResponseTrailers);
-
-        if (rpcReq != null) {
-            ctx.updateRpcRequest(rpcReq);
-        }
-
-        for (final Iterator<Entry<AttributeKey<?>, Object>> i = attrs(); i.hasNext();/* noop */) {
-            ctx.addAttr(i.next());
-        }
-
-        return ctx;
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> void addAttr(Entry<AttributeKey<?>, Object> attribute) {
-        setAttr((AttributeKey<T>) attribute.getKey(), (T) attribute.getValue());
     }
 
     @Override

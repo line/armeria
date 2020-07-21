@@ -118,22 +118,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    @Deprecated
-    public LoggingRpcClientBuilder requestHeadersSanitizer(
-            Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
-        return (LoggingRpcClientBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
-    }
-
-    @Override
     public LoggingRpcClientBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer) {
-        return (LoggingRpcClientBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
-    }
-
-    @Override
-    @Deprecated
-    public LoggingRpcClientBuilder responseHeadersSanitizer(
-            Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
         return (LoggingRpcClientBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
@@ -144,22 +130,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    @Deprecated
-    public LoggingRpcClientBuilder requestTrailersSanitizer(
-            Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
-        return (LoggingRpcClientBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
-    }
-
-    @Override
     public LoggingRpcClientBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer) {
-        return (LoggingRpcClientBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
-    }
-
-    @Override
-    @Deprecated
-    public LoggingRpcClientBuilder responseTrailersSanitizer(
-            Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
         return (LoggingRpcClientBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
@@ -170,20 +142,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    @Deprecated
-    public LoggingRpcClientBuilder headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
-        return (LoggingRpcClientBuilder) super.headersSanitizer(headersSanitizer);
-    }
-
-    @Override
     public LoggingRpcClientBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object, ?> requestContentSanitizer) {
-        return (LoggingRpcClientBuilder) super.requestContentSanitizer(requestContentSanitizer);
-    }
-
-    @Override
-    @Deprecated
-    public LoggingRpcClientBuilder requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
         return (LoggingRpcClientBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
@@ -194,33 +154,14 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    @Deprecated
-    public LoggingRpcClientBuilder responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
-        return (LoggingRpcClientBuilder) super.responseContentSanitizer(responseContentSanitizer);
-    }
-
-    @Override
     public LoggingRpcClientBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object, ?> contentSanitizer) {
         return (LoggingRpcClientBuilder) super.contentSanitizer(contentSanitizer);
     }
 
     @Override
-    @Deprecated
-    public LoggingRpcClientBuilder contentSanitizer(Function<Object, ?> contentSanitizer) {
-        return (LoggingRpcClientBuilder) super.contentSanitizer(contentSanitizer);
-    }
-
-    @Override
     public LoggingRpcClientBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer) {
-        return (LoggingRpcClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
-    }
-
-    @Override
-    @Deprecated
-    public LoggingRpcClientBuilder responseCauseSanitizer(
-            Function<? super Throwable, ?> responseCauseSanitizer) {
         return (LoggingRpcClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
 }

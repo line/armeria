@@ -21,9 +21,6 @@ import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
@@ -48,7 +45,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements HttpClient {
-    private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
 
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;

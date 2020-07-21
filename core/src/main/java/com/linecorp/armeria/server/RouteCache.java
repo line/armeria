@@ -36,7 +36,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
-import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -70,25 +69,6 @@ final class RouteCache {
         return FIND_CACHE == null ? delegate
                                   : new CachingRouter<>(delegate, ServiceConfig::route,
                                                         FIND_CACHE, FIND_ALL_CACHE, ambiguousRoutes);
-    }
-
-    /**
-     * Returns a {@link Router} which is wrapped with a {@link Cache} layer in order to improve the
-     * performance of the {@link CompositeServiceEntry} search.
-     */
-    static <T extends Service<?, ?>> Router<CompositeServiceEntry<T>> wrapCompositeServiceRouter(
-            Router<CompositeServiceEntry<T>> delegate, Set<Route> ambiguousRoutes) {
-        if (Flags.compositeServiceCacheSpec() == null) {
-            return delegate;
-        }
-
-        final Cache<RoutingContext, CompositeServiceEntry<T>> cache =
-                buildCache(Flags.compositeServiceCacheSpec());
-
-        final Cache<RoutingContext, List<CompositeServiceEntry<T>>> listCache =
-                buildCache(Flags.compositeServiceCacheSpec());
-
-        return new CachingRouter<>(delegate, CompositeServiceEntry::route, cache, listCache, ambiguousRoutes);
     }
 
     /**

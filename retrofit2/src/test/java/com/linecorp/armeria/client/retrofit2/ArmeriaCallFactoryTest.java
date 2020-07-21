@@ -456,7 +456,6 @@ class ArmeriaCallFactoryTest {
             assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
             assertThat(log.requestHeaders().authority()).isEqualTo("127.0.0.1:" + server.httpPort());
 
-            // TODO(ide) Use the actual `host:port`. See https://github.com/line/armeria/issues/379
             final HttpUrl url = response.raw().request().url();
             assertThat(url.scheme()).isEqualTo("http");
             assertThat(url.host()).startsWith("armeria-group-");

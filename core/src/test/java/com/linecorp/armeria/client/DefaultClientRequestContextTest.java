@@ -71,7 +71,7 @@ class DefaultClientRequestContextTest {
 
             final ClientRequestContext derivedContext = clientContext.newDerivedContext(
                     clientContext.id(), clientContext.request(),
-                    clientContext.rpcRequest());
+                    clientContext.rpcRequest(), clientContext.endpoint());
             assertThat(derivedContext.attr(fooKey)).isNotNull();
             // Attributes in serviceContext is not copied to clientContext when derived.
 
@@ -113,7 +113,8 @@ class DefaultClientRequestContextTest {
                 HttpHeaderNames.SCHEME, "http",
                 HttpHeaderNames.AUTHORITY, "example.com:8080",
                 "foo", "bar"));
-        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newId, newRequest, null);
+        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newId, newRequest, null,
+                                                                              originalCtx.endpoint());
         assertThat(derivedCtx.endpoint()).isSameAs(originalCtx.endpoint());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
         assertThat(derivedCtx.method()).isSameAs(originalCtx.method());

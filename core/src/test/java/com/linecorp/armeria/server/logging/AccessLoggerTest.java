@@ -19,12 +19,12 @@ package com.linecorp.armeria.server.logging;
 import static com.linecorp.armeria.server.logging.AccessLogger.escapeAndQuote;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class AccessLoggerTest {
+class AccessLoggerTest {
 
     @Test
-    public void testQuote() {
+    void testQuote() {
         assertThat(escapeAndQuote(new StringBuilder(), "a").toString())
                 .isEqualTo("\"a\"");
         assertThat(escapeAndQuote(new StringBuilder(), "\"a\"").toString())

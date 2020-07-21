@@ -24,11 +24,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
-
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
@@ -58,8 +55,6 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                                                         .stream()
                                                         .map(f -> Scheme.of(f, p)))
                   .collect(toImmutableSet());
-
-    private static final Consumer<MessageMarshaller.Builder> NO_OP = unused -> {};
 
     /**
      * Creates a new instance from the specified {@link ClientFactory} that supports the "none+http" scheme.

@@ -73,22 +73,16 @@ class AbstractAllOrEachExtensionTest {
 
     @RegisterExtension
     @Order(1)
-    static final BeforeAllCallback CHECK_START = new BeforeAllCallback() {
-        @Override
-        public void beforeAll(ExtensionContext context) throws Exception {
-            assertThat(BEFORE_ALL_NUM_INVOCATIONS).hasValue(0);
-            assertThat(BEFORE_EACH_NUM_INVOCATIONS).hasValue(0);
-        }
+    static final BeforeAllCallback CHECK_START = context -> {
+        assertThat(BEFORE_ALL_NUM_INVOCATIONS).hasValue(0);
+        assertThat(BEFORE_EACH_NUM_INVOCATIONS).hasValue(0);
     };
 
     @RegisterExtension
     @Order(1)
-    static final AfterAllCallback CHECK_END = new AfterAllCallback() {
-        @Override
-        public void afterAll(ExtensionContext context) throws Exception {
-            assertThat(BEFORE_ALL_NUM_INVOCATIONS).hasValue(2);
-            assertThat(BEFORE_EACH_NUM_INVOCATIONS).hasValue(4);
-        }
+    static final AfterAllCallback CHECK_END = context -> {
+        assertThat(BEFORE_ALL_NUM_INVOCATIONS).hasValue(2);
+        assertThat(BEFORE_EACH_NUM_INVOCATIONS).hasValue(4);
     };
 
     @Test

@@ -295,7 +295,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         if (endpointGroup != null && !initialAttempt) {
             derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.selectNow(ctx));
         } else {
-            derived = ctx.newDerivedContext(id, req, rpcReq);
+            derived = ctx.newDerivedContext(id, req, rpcReq, ctx.endpoint());
         }
 
         final RequestLogAccess parentLog = ctx.log();

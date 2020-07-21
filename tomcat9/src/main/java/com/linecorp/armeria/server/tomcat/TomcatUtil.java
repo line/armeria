@@ -21,7 +21,6 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipFile;
 
@@ -56,21 +55,6 @@ final class TomcatUtil {
 
     static LifecycleListener getDefaultWebXmlListener() {
         return defaultWebXmlListener;
-    }
-
-    static Class<?>[] classContext() {
-        final AtomicReference<Class<?>[]> classContextRef = new AtomicReference<>();
-        new SecurityManager() {
-            {
-                classContextRef.set(getClassContext());
-            }
-        };
-
-        // Remove the first two classes which are:
-        // - This class
-        // - The anonymous SecurityManager
-        final Class<?>[] classContext = classContextRef.get();
-        return Arrays.copyOfRange(classContext, 2, classContext.length);
     }
 
     /**

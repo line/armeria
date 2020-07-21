@@ -624,14 +624,4 @@ public interface RequestContext {
     default Logger makeContextAware(Logger logger) {
         return ContextAwareLogger.of(this, logger);
     }
-
-    /**
-     * Creates a new {@link RequestContext} whose properties and {@link #attrs()} are copied from this
-     * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
-     * and its own {@link RequestLog}.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    RequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 }
