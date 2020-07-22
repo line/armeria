@@ -300,15 +300,10 @@
     font-weight: bold;
   }
 
-  :global(.ant-select) {
-    @media (max-width: @layout-width-0-max) {
-      margin: 0 @margin-md @margin-md;
-      width: calc(100% - @margin-md * 2);
-    }
-
-    @media (min-width: @layout-width-1-min) {
-      margin: 0 0 0 @margin-xl;
-      width: @layout-sidebar-width - @margin-xl * 2;
+  .newsletter {
+    margin-right: @margin-md;
+    > p {
+      margin-bottom: 0;
     }
   }
 }

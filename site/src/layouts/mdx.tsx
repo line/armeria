@@ -1,11 +1,11 @@
 import { GithubOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import loadable from '@loadable/component';
 import { MDXProvider } from '@mdx-js/react';
-import { globalHistory, RouteComponentProps } from '@reach/router';
-import { Button, Layout, Select, Tabs as AntdTabs } from 'antd';
-import { Link, navigate, withPrefix } from 'gatsby';
+import { RouteComponentProps } from '@reach/router';
+import { Button, Layout, Tabs as AntdTabs } from 'antd';
+import { Link, withPrefix } from 'gatsby';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React, { useLayoutEffect, useCallback } from 'react';
+import React, { useLayoutEffect } from 'react';
 import StickyBox from 'react-sticky-box';
 import tocbot from 'tocbot';
 
@@ -16,6 +16,7 @@ import { TypeLink } from '../components/api-link';
 import AspectRatio from '../components/aspect-ratio';
 import CodeBlock from '../components/code-block';
 import Emoji from '../components/emoji';
+import Mailchimp from '../components/mailchimp';
 import MaxWidth from '../components/max-width';
 import NoWrap from '../components/nowrap';
 import BaseLayout from './base';
@@ -116,7 +117,7 @@ const mdxComponents: any = {
   AspectRatio,
   CodeBlock,
   Emoji,
-  Mailchimp: loadable(() => import('../components/mailchimp')),
+  Mailchimp,
   MaxWidth,
   NoWrap,
   Tabs: (props: any) => {
@@ -245,7 +246,6 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   const currentMdxNode = findCurrentMdxNode();
 
   // Generate some properties required for rendering.
-  const showSearch = typeof window === 'undefined' || window.innerWidth > 768;
   const pageTitle = `${props.pageTitle} — ${props.pageTitleSuffix}`;
   const relpath = pagePath(props.location).substring(1);
   const githubHref = props.noEdit
@@ -406,53 +406,10 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
             <StickyBox offsetTop={24} offsetBottom={24}>
               <nav>
                 <div className={styles.pageToc} />
-                <Select
-                  showSearch={showSearch}
-                  placeholder="Jump to other page"
-                  onChange={useCallback((href) => {
-                    const hrefStr = `${href}`;
-                    if (hrefStr.includes('://')) {
-                      globalHistory.navigate(hrefStr);
-                    } else {
-                      navigate(hrefStr);
-                    }
-                  }, [])}
-                  filterOption={useCallback((input, option) => {
-                    return (
-                      option.children
-                        ?.toLowerCase()
-                        .indexOf(input.toLowerCase()) >= 0
-                    );
-                  }, [])}
-                >
-                  {Object.entries(groupToMdxNodes).map(
-                    ([group, groupedMdxNodes]) => {
-                      function renderMdxNodes() {
-                        return groupedMdxNodes.map((mdxNode) => (
-                          <Select.Option
-                            key={mdxNode.href}
-                            value={mdxNode.href}
-                          >
-                            {mdxNode.tableOfContents.items[0].title}
-                          </Select.Option>
-                        ));
-                      }
-
-                      if (group === 'root') {
-                        return renderMdxNodes();
-                      }
-
-                      return (
-                        <Select.OptGroup
-                          key={`group-${group}`}
-                          label={group.toUpperCase()}
-                        >
-                          {renderMdxNodes()}
-                        </Select.OptGroup>
-                      );
-                    },
-                  )}
-                </Select>
+                <div className={styles.newsletter}>
+                  <p>Like what we&apos;re doing?</p>
+                  <Mailchimp />
+                </div>
               </nav>
             </StickyBox>
           </div>
