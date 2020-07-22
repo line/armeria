@@ -89,7 +89,7 @@ public class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
         }
 
         // make actual access token request
-        return make(requestFormItems);
+        return executeWithParameters(requestFormItems);
     }
 
     /**

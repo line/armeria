@@ -29,19 +29,21 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 
 /**
- * A common abstraction for the requests implementing various Authorization request/response flows,
+ * A common abstraction for the requests implementing various OAuth 2.0 request/response flows,
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a> and other relevant specifications.
  * @param <T> the type of the authorization result.
  */
-abstract class AbstractAuthorizationRequest<T> {
+abstract class AbstractOAuth2Request<T> {
 
     private final WebClient endpoint;
     private final String endpointPath;
@@ -52,17 +54,17 @@ abstract class AbstractAuthorizationRequest<T> {
      * A common abstraction for the requests implementing various Authorization request/response flows,
      * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a> and other relevant specifications.
      *
-     * @param authorizationEndpoint A {@link WebClient} to facilitate the Authorization requests. Must
-     *                              correspond to the required Authorization endpoint of the OAuth 2 system.
-     * @param authorizationEndpointPath A URI path that corresponds to the Authorization endpoint of the
-     *                                  OAuth 2 system.
+     * @param endpoint A {@link WebClient} to facilitate the Authorization requests. Must
+     *                 correspond to the required Authorization endpoint of the OAuth 2 system.
+     * @param endpointPath A URI path that corresponds to the Authorization endpoint of the
+     *                     OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    protected AbstractAuthorizationRequest(WebClient authorizationEndpoint, String authorizationEndpointPath,
-                                           @Nullable ClientAuthorization clientAuthorization) {
-        endpoint = Objects.requireNonNull(authorizationEndpoint, "authorizationEndpoint");
-        endpointPath = Objects.requireNonNull(authorizationEndpointPath, "authorizationEndpointPath");
+    protected AbstractOAuth2Request(WebClient endpoint, String endpointPath,
+                                    @Nullable ClientAuthorization clientAuthorization) {
+        this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
+        this.endpointPath = Objects.requireNonNull(endpointPath, "endpointPath");
         this.clientAuthorization = clientAuthorization; // optional
     }
 
@@ -81,6 +83,19 @@ abstract class AbstractAuthorizationRequest<T> {
     }
 
     /**
+     * Returns the client authorization object.
+     */
+    @Nullable
+    protected ClientAuthorization clientAuthorization() {
+        return clientAuthorization;
+    }
+
+    /**
+     * Extracts data from OK response and converts it to the target type {@code T}.
+     */
+    protected abstract T extractOkResults(AggregatedHttpResponse response, Map<String, String> requestData);
+
+    /**
      * Returns the value for the {@link HttpHeaderNames#AUTHORIZATION}.
      */
     @Nullable
@@ -89,17 +104,44 @@ abstract class AbstractAuthorizationRequest<T> {
     }
 
     /**
-     * Composes headers for the authorization request.
+     * Sets client credentials as form data parameters,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    protected RequestHeaders composeRequestHeaders() {
+    protected void setCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
+        if (clientAuthorization != null) {
+            clientAuthorization.setCredentialsAsBodyParameters(formBuilder);
+        }
+    }
+
+    /**
+     * Makes a request to the authorization endpoint using supplied {@code requestForm} parameters and converts
+     * the result to the given type {@code T}.
+     */
+    protected CompletableFuture<T> executeWithParameters(LinkedHashMap<String, String> requestFormData) {
+        final Map<String, String> requestData = Collections.unmodifiableMap(requestFormData);
+        final HttpResponse response = endpoint().execute(createHttpRequest(endpointPath, requestData));
+        // when response aggregated, then extract the results...
+        return response.aggregate().thenApply(r -> extractResults(r, Collections.unmodifiableMap(requestData)));
+    }
+
+    /**
+     * Produces {@link HttpRequest} based on this object.
+     */
+    private HttpRequest createHttpRequest(String endpointPath, Map<String, String> requestFormData) {
+        final QueryParamsBuilder requestFormBuilder = QueryParams.builder();
+        requestFormBuilder.add(requestFormData.entrySet());
+
         final RequestHeadersBuilder headersBuilder =
-                RequestHeaders.of(HttpMethod.POST, endpointPath()).toBuilder();
+                RequestHeaders.of(HttpMethod.POST, endpointPath).toBuilder();
         final String authorizationHeaderValue = authorizationHeaderValue();
         if (authorizationHeaderValue != null) {
             headersBuilder.add(HttpHeaderNames.AUTHORIZATION, authorizationHeaderValue);
+        } else {
+            setCredentialsAsBodyParameters(requestFormBuilder);
         }
         headersBuilder.add(HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA.toString());
-        return headersBuilder.build();
+
+        return HttpRequest.of(headersBuilder.build(), HttpData.ofUtf8(requestFormBuilder.toQueryString()));
     }
 
     /**
@@ -136,27 +178,6 @@ abstract class AbstractAuthorizationRequest<T> {
     }
 
     /**
-     * Validates the content type of the response.
-     */
-    private static void validateContentType(AggregatedHttpResponse response, MediaType expectedType) {
-        final MediaType contentType = response.contentType();
-        if (contentType == null) {
-            // if omitted, assume that the type matches the expected
-            return;
-        }
-        final String mediaType = contentType.nameWithoutParameters();
-        if (!mediaType.equalsIgnoreCase(expectedType.nameWithoutParameters())) {
-            throw new UnsupportedMediaTypeException(mediaType,
-                                                    response.status().toString(), response.contentUtf8());
-        }
-    }
-
-    /**
-     * Extracts data from OK response and converts it to the target type {@code T}.
-     */
-    protected abstract T extractOkResults(AggregatedHttpResponse response, Map<String, String> requestData);
-
-    /**
      * Composes {@link TokenRequestException} upon 400 Bad Request response
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-5.2">[RFC6749], Section 5.2</a>.
      * @param errorResponse response received from the server
@@ -186,15 +207,18 @@ abstract class AbstractAuthorizationRequest<T> {
     }
 
     /**
-     * Makes a request to the authorization endpoint using supplied {@code requestForm} parameters and converts
-     * the result to the given type {@code T}.
+     * Validates the content type of the response.
      */
-    protected CompletableFuture<T> make(LinkedHashMap<String, String> requestForm) {
-        final HttpData requestContents = HttpData.ofUtf8(
-                QueryParams.builder().add(requestForm.entrySet()).toQueryString());
-        final RequestHeaders requestHeaders = composeRequestHeaders();
-        final HttpResponse response = endpoint().execute(requestHeaders, requestContents);
-        // when response aggregated, then extract the results...
-        return response.aggregate().thenApply(r -> extractResults(r, Collections.unmodifiableMap(requestForm)));
+    private static void validateContentType(AggregatedHttpResponse response, MediaType expectedType) {
+        final MediaType contentType = response.contentType();
+        if (contentType == null) {
+            // if omitted, assume that the type matches the expected
+            return;
+        }
+        final String mediaType = contentType.nameWithoutParameters();
+        if (!mediaType.equalsIgnoreCase(expectedType.nameWithoutParameters())) {
+            throw new UnsupportedMediaTypeException(mediaType,
+                                                    response.status().toString(), response.contentUtf8());
+        }
     }
 }

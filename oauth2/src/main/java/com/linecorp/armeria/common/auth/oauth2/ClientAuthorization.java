@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 
 /**
  * Provides client authorization for the OAuth 2.0 requests,
@@ -161,14 +162,32 @@ public final class ClientAuthorization {
    * <pre>{@code
    * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
    * }</pre>.
-   *
-   * @return encoded client credentials request body parameters.
+   * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
    */
-  public String credentialsBodyParameters() {
+  public void setCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
     requireNonNull(credentialsSupplier, "credentialsSupplier");
     final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
-    return QueryParams.of(CLIENT_ID, clientCredentials.getKey(),
-                          CLIENT_SECRET, clientCredentials.getValue()).toQueryString();
+    formBuilder.add(CLIENT_ID, requireNonNull(clientCredentials.getKey(), CLIENT_ID));
+    final String clientSecret = clientCredentials.getValue();
+    if (clientSecret != null && !clientSecret.isEmpty()) {
+      formBuilder.add(CLIENT_SECRET, clientSecret);
+    }
+  }
+
+  /**
+   * Fetches client credentials from the supplier and composes required body parameters,
+   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
+   * <pre>{@code
+   * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
+   * }</pre>.
+   * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
+   *
+   * @return encoded client credentials request body parameters as a {@link String}.
+   */
+  public String credentialsBodyParameters() {
+    final QueryParamsBuilder formBuilder = QueryParams.builder();
+    setCredentialsAsBodyParameters(formBuilder);
+    return formBuilder.toQueryString();
   }
 
   private static String encodeClientCredentials(String clientId, String clientSecret) {

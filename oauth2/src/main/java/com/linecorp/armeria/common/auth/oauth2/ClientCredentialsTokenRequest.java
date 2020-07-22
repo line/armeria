@@ -89,6 +89,6 @@ public class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
         // so no other request parameters required here
 
         // make actual access token request
-        return make(requestFormItems);
+        return executeWithParameters(requestFormItems);
     }
 }

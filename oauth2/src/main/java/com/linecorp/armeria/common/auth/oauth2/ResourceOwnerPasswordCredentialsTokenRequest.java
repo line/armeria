@@ -103,6 +103,6 @@ public class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccess
         }
 
         // make actual access token request
-        return make(requestFormItems);
+        return executeWithParameters(requestFormItems);
     }
 }

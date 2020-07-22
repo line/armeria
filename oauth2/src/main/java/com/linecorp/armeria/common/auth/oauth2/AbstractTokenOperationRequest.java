@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.WebClient;
  * and Token Revocation flow (<a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>).
  * @param <T> the type of the authorization result.
  */
-abstract class AbstractTokenOperationRequest<T> extends AbstractAuthorizationRequest<T> {
+abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Request<T> {
 
     private static final String TOKEN = "token";
     private static final String TOKEN_TYPE_HINT = "token_type_hint";
@@ -85,7 +85,7 @@ abstract class AbstractTokenOperationRequest<T> extends AbstractAuthorizationReq
         }
 
         // make actual operational request
-        return make(requestFormItems);
+        return executeWithParameters(requestFormItems);
     }
 
     /**

@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
  * A common abstraction for the requests implementing various Access Token request/response flows,
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
  */
-public abstract class AbstractAccessTokenRequest extends AbstractAuthorizationRequest<OAuth2AccessToken> {
+public abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<OAuth2AccessToken> {
 
     protected static final String GRANT_TYPE = "grant_type";
 
