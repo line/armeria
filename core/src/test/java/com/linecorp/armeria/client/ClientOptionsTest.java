@@ -15,13 +15,13 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientOption.DECORATION;
-import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
-import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
-import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
-import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
-import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
-import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
+import static com.linecorp.armeria.client.ClientOptions.DECORATION;
+import static com.linecorp.armeria.client.ClientOptions.ENDPOINT_REMAPPER;
+import static com.linecorp.armeria.client.ClientOptions.HTTP_HEADERS;
+import static com.linecorp.armeria.client.ClientOptions.MAX_RESPONSE_LENGTH;
+import static com.linecorp.armeria.client.ClientOptions.REQUEST_ID_GENERATOR;
+import static com.linecorp.armeria.client.ClientOptions.RESPONSE_TIMEOUT_MILLIS;
+import static com.linecorp.armeria.client.ClientOptions.WRITE_TIMEOUT_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;

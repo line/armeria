@@ -82,7 +82,7 @@ class ClientFactoryBuilderTest {
             final ClientFactoryOptions factory2Option = factory2.options();
             for (ClientFactoryOptionValue<?> optionValue : factory2.options()) {
                 final ClientFactoryOption<?> option = optionValue.option();
-                if (option.compareTo(ClientFactoryOption.IDLE_TIMEOUT_MILLIS) == 0) {
+                if (option.compareTo(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS) == 0) {
                     assertThat(factory1Option.get(option)).isNotEqualTo(factory2Option.get(option));
                 } else {
                     assertThat(factory1Option.get(option)).isEqualTo(factory2Option.get(option));
@@ -97,7 +97,7 @@ class ClientFactoryBuilderTest {
                                                   .options(ClientFactoryOptions.of())
                                                   .build()) {
             final Map<ChannelOption<?>, Object> channelOptions =
-                    factory.options().get(ClientFactoryOption.CHANNEL_OPTIONS);
+                    factory.options().get(ClientFactoryOptions.CHANNEL_OPTIONS);
             final int connectTimeoutMillis = (int) channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
             assertThat(connectTimeoutMillis).isEqualTo(Flags.defaultConnectTimeoutMillis());
         }

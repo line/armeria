@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
@@ -71,7 +71,7 @@ public final class UnaryGrpcClient {
     public UnaryGrpcClient(WebClient webClient) {
         this.webClient = Clients.newDerivedClient(
                 webClient,
-                ClientOption.DECORATION.newValue(
+                ClientOptions.DECORATION.newValue(
                         ClientDecoration.of(GrpcFramingDecorator::new)
                 ));
     }

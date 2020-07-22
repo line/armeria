@@ -53,7 +53,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
@@ -826,7 +826,7 @@ class GrpcClientTest {
         TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOption.HTTP_HEADERS.newValue(
+                        ClientOptions.HTTP_HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
@@ -1048,7 +1048,7 @@ class GrpcClientTest {
         final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
-                        ClientOption.HTTP_HEADERS.newValue(
+                        ClientOptions.HTTP_HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
@@ -1096,7 +1096,7 @@ class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(
+                        ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(
                                 TimeUnit.MINUTES.toMillis(configuredTimeoutMinutes)));
         stub.emptyCall(EMPTY);
         final long transferredTimeoutMinutes = TimeUnit.NANOSECONDS.toMinutes(
@@ -1112,7 +1112,7 @@ class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(
+                        ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(
                                 TimeUnit.SECONDS.toMillis(10)));
         stub
                 .streamingOutputCall(
@@ -1133,7 +1133,7 @@ class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(10L));
+                        ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(10L));
         final StreamingOutputCallRequest request = StreamingOutputCallRequest
                 .newBuilder()
                 .addResponseParameters(ResponseParameters.newBuilder()
@@ -1173,7 +1173,7 @@ class GrpcClientTest {
         final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
-                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(30L));
+                        ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(30L));
         stub.streamingOutputCall(request, recorder);
         recorder.awaitCompletion();
 
@@ -1423,7 +1423,7 @@ class GrpcClientTest {
     void timeoutOnSleepingServer() throws Exception {
         final TestServiceStub stub = Clients.newDerivedClient(
                 asyncStub,
-                ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(1L));
+                ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(1L));
 
         final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
         final StreamObserver<StreamingOutputCallRequest> requestObserver =
