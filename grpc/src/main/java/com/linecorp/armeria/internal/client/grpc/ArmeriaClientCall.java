@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.client.grpc;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static java.util.Objects.requireNonNull;
 
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
@@ -29,6 +30,8 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -73,6 +76,7 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -292,7 +296,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, message), null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
-            req.write(messageFramer.writePayload(serialized));
+            req.write(messageFramer.writePayload(serialized, false));
             req.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     try (SafeCloseable ignored = ctx.push()) {
@@ -317,9 +321,25 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     public void messageRead(DeframedMessage message) {
         if (isGrpcWeb && message.type() >> 7 == 1) {
             // grpc-web trailers
-            final ByteBuf buf = message.buf();
-            // trailers never compressed
-            assert buf != null;
+            final ByteBuf messageBuf = message.buf();
+            final ByteBuf buf;
+            if (messageBuf != null) {
+                buf = messageBuf;
+            } else {
+                buf = ctx.alloc().compositeBuffer();
+                boolean success = false;
+                try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
+                    final InputStream stream = message.stream();
+                    assert stream != null;
+                    ByteStreams.copy(stream, os);
+                    success = true;
+                } catch (Throwable t) {
+                    if (!success) {
+                        buf.release();
+                    }
+                    cancel(null, t);
+                }
+            }
             try {
                 final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                 if (trailers == null) {
@@ -335,6 +355,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             }
             return;
         }
+
         try {
             final O msg = marshaller.deserializeResponse(message);
             if (firstResponse == null) {

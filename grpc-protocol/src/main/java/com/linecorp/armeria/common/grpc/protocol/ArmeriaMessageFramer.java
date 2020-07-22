@@ -55,6 +55,8 @@ import java.io.OutputStream;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
@@ -82,6 +84,10 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private static final int HEADER_LENGTH = 5;
     private static final byte UNCOMPRESSED = 0;
     private static final byte COMPRESSED = 1;
+    @VisibleForTesting
+    static final byte UNCOMPRESSED_TRAILERS = (byte) (1 << 7);
+    @VisibleForTesting
+    static final byte COMPRESSED_TRAILERS = (byte) ((1 << 7) | COMPRESSED);
 
     private final ByteBufAllocator alloc;
     private final int maxOutboundMessageSize;
@@ -104,19 +110,20 @@ public class ArmeriaMessageFramer implements AutoCloseable {
      * Writes out a payload message.
      *
      * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
+     * @param webTrailers tells whether the payload is web trailers
      *
      * @return an {@link HttpData} with the framed payload. Ownership is passed to caller.
      */
-    public HttpData writePayload(ByteBuf message) {
+    public HttpData writePayload(ByteBuf message, boolean webTrailers) {
         verifyNotClosed();
         final boolean compressed = messageCompression && compressor != null;
         final int messageLength = message.readableBytes();
         try {
             final ByteBuf buf;
             if (messageLength != 0 && compressed) {
-                buf = writeCompressed(message);
+                buf = writeCompressed(message, webTrailers);
             } else {
-                buf = writeUncompressed(message);
+                buf = writeUncompressed(message, webTrailers);
             }
             return HttpData.wrap(buf);
         } catch (IOException | RuntimeException e) {
@@ -144,7 +151,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         this.compressor = compressor;
     }
 
-    private ByteBuf writeCompressed(ByteBuf message) throws IOException {
+    private ByteBuf writeCompressed(ByteBuf message, boolean webTrailers) throws IOException {
         assert compressor != null;
 
         final CompositeByteBuf compressed = alloc.compositeBuffer();
@@ -154,14 +161,14 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             message.release();
         }
 
-        return write(compressed, true);
+        return write(compressed, true, webTrailers);
     }
 
-    private ByteBuf writeUncompressed(ByteBuf message) {
-        return write(message, false);
+    private ByteBuf writeUncompressed(ByteBuf message, boolean webTrailers) {
+        return write(message, false, webTrailers);
     }
 
-    private ByteBuf write(ByteBuf message, boolean compressed) {
+    private ByteBuf write(ByteBuf message, boolean compressed, boolean webTrailers) {
         final int messageLength = message.readableBytes();
         if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
             message.release();
@@ -171,13 +178,20 @@ public class ArmeriaMessageFramer implements AutoCloseable {
                                   maxOutboundMessageSize));
         }
 
+        final byte flag;
+        if (webTrailers) {
+            flag = compressed ? COMPRESSED_TRAILERS : UNCOMPRESSED_TRAILERS;
+        } else {
+            flag = compressed ? COMPRESSED : UNCOMPRESSED;
+        }
+
         // Here comes some heuristics.
         // TODO(trustin): Consider making this configurable.
         if (messageLength <= 128) {
             // Frame is so small that the cost of composition outweighs.
             try {
                 final ByteBuf buf = alloc.buffer(HEADER_LENGTH + messageLength);
-                buf.writeByte(compressed ? COMPRESSED : UNCOMPRESSED);
+                buf.writeByte(flag);
                 buf.writeInt(messageLength);
                 buf.writeBytes(message);
                 return buf;
@@ -189,7 +203,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         // Frame is fairly large that composition might reduce memory footprint.
         return new CompositeByteBuf(alloc, true, 2,
                                     alloc.buffer(HEADER_LENGTH)
-                                         .writeByte(compressed ? COMPRESSED : UNCOMPRESSED)
+                                         .writeByte(flag)
                                          .writeInt(messageLength),
                                     message);
     }

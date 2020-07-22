@@ -140,7 +140,7 @@ public final class UnaryGrpcClient {
                                    final HttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                                            ctx.alloc(), Integer.MAX_VALUE)) {
-                                       framed = framer.writePayload(buf);
+                                       framed = framer.writePayload(buf, false);
                                    }
 
                                    try {

@@ -53,7 +53,7 @@ public class GrpcServiceBenchmark {
 
     static {
         try (HttpData data = new ArmeriaMessageFramer(ByteBufAllocator.DEFAULT, 0)
-                .writePayload(Unpooled.wrappedBuffer(Empty.getDefaultInstance().toByteArray()))) {
+                .writePayload(Unpooled.wrappedBuffer(Empty.getDefaultInstance().toByteArray()), false)) {
             FRAMED_EMPTY = data.array();
         }
     }

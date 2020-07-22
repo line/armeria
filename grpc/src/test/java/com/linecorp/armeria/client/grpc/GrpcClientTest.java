@@ -61,7 +61,6 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -76,6 +75,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;
@@ -175,8 +175,8 @@ class GrpcClientTest {
                                        .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                                        .useClientTimeoutHeader(false)
                                        .build()
-                                       .decorate((client, ctx, req) -> {
-                                           final HttpResponse res = client.serve(ctx, req);
+                                       .decorate((service, ctx, req) -> {
+                                           final HttpResponse res = service.serve(ctx, req);
                                            return new FilteredHttpResponse(res) {
                                                private boolean headersReceived;
 
@@ -211,11 +211,9 @@ class GrpcClientTest {
         final URI uri = server.httpUri(GrpcSerializationFormats.PROTO);
         blockingStub = Clients.builder(uri)
                               .maxResponseLength(MAX_MESSAGE_SIZE)
-                              .decorator(LoggingClient.builder().newDecorator())
                               .decorator(requestLogRecorder)
                               .build(TestServiceBlockingStub.class);
         asyncStub = Clients.builder(uri.getScheme(), server.httpEndpoint())
-                           .decorator(LoggingClient.builder().newDecorator())
                            .decorator(requestLogRecorder)
                            .build(TestServiceStub.class);
     }
@@ -285,6 +283,29 @@ class GrpcClientTest {
     }
 
     @Test
+    void largeUnary_grpcWeb() throws Exception {
+        final SimpleRequest request =
+                SimpleRequest.newBuilder()
+                             .setResponseSize(314159)
+                             .setResponseCompression(CompressionType.GZIP)
+                             .setResponseType(COMPRESSABLE)
+                             .setPayload(Payload.newBuilder()
+                                                .setBody(ByteString.copyFrom(new byte[271828])))
+                             .build();
+        final SimpleResponse simpleResponse =
+                SimpleResponse.newBuilder()
+                              .setPayload(Payload.newBuilder()
+                                                 .setType(COMPRESSABLE)
+                                                 .setBody(ByteString.copyFrom(new byte[314159])))
+                              .build();
+
+        final TestServiceBlockingStub stub =
+                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB),
+                                  TestServiceBlockingStub.class);
+        assertThat(stub.unaryCall(request)).isEqualTo(simpleResponse);
+    }
+
+    @Test
     void largeUnary_unsafe() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
@@ -303,7 +324,6 @@ class GrpcClientTest {
         final TestServiceStub stub =
                 Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
                        .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
-                       .decorator(LoggingClient.builder().newDecorator())
                        .build(TestServiceStub.class);
 
         final BlockingQueue<Object> resultQueue = new LinkedTransferQueue<>();
@@ -889,7 +909,6 @@ class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
                 Clients.builder("gproto+http://localhost:" + server.httpPort())
-                       .decorator(LoggingClient.builder().newDecorator())
                        .build(TestServiceBlockingStub.class)
                        .withCallCredentials(
                                new CallCredentials() {
@@ -928,7 +947,6 @@ class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
                 Clients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
-                       .decorator(LoggingClient.builder().newDecorator())
                        .factory(ClientFactory.insecure())
                        .build(TestServiceBlockingStub.class)
                        .withCallCredentials(
@@ -957,7 +975,6 @@ class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
                 Clients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
-                       .decorator(LoggingClient.builder().newDecorator())
                        .factory(ClientFactory.insecure())
                        .build(TestServiceBlockingStub.class)
                        .withCallCredentials(

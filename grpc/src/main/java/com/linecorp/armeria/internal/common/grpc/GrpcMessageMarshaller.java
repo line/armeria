@@ -206,7 +206,7 @@ public final class GrpcMessageMarshaller<I, O> {
             }
             return buf;
         } else {
-            final ByteBuf buf = alloc.buffer();
+            final ByteBuf buf = alloc.compositeBuffer();
             boolean success = false;
             try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
                 @SuppressWarnings("unchecked")
