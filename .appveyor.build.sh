@@ -80,10 +80,12 @@ if [[ -d /var/cache/appveyor ]] && \
   if [[ "$PURGE_CACHE" != '1' ]]; then
     # Restore the home directory from the cache.
     BRANCH_CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/branches/$APPVEYOR_REPO_BRANCH/$PROFILE"
+    msg "Branch cache directory: $BRANCH_CACHE_DIR"
     if [[ -z "$APPVEYOR_PULL_REQUEST_NUMBER" ]]; then
       CACHE_DIR="$BRANCH_CACHE_DIR"
     else
       CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/pulls/$APPVEYOR_PULL_REQUEST_NUMBER/$PROFILE"
+      msg "Pull request cache directory: $CACHE_DIR"
     fi
 
     # Fetch the home directory from the cache directory.
@@ -95,6 +97,8 @@ if [[ -d /var/cache/appveyor ]] && \
       touch "$BRANCH_CACHE_DIR/.."
       msg "Restoring $HOME from the branch build cache: $BRANCH_CACHE_DIR .."
       echo_and_run rsync -a --stats "$BRANCH_CACHE_DIR/" "$HOME"
+    else
+      msg "Cache does not exist."
     fi
   else
     # Purge the cache directory if 'PURGE_CACHE' is '1'.
