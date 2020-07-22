@@ -95,7 +95,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *   <li>{@link CacheControl} and {@link ContentDisposition}
  *     <ul>
  *       <li>Converted via {@code asHeaderValue()}</li>
- *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}, {@code form-data; name="fieldName"}</li>
+ *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}, {@code "form-data; name=\"fieldName\""}</li>
  *     </ul>
  *   </li>
  *   <li>{@link Instant}, {@link TemporalAccessor}, {@link Date} and {@link Calendar}

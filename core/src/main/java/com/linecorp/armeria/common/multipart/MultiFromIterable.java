@@ -93,7 +93,7 @@ final class MultiFromIterable<T> implements Multi<T> {
         @Nullable
         private Iterator<T> iterator;
 
-        private volatile int canceled;
+        private volatile int cancelled;
 
         IteratorSubscription(Subscriber<? super T> downstream, Iterator<T> iterator) {
             this.downstream = downstream;
@@ -103,7 +103,7 @@ final class MultiFromIterable<T> implements Multi<T> {
         @Override
         public void request(long n) {
             if (n <= 0L) {
-                canceled = BAD_REQUEST;
+                cancelled = BAD_REQUEST;
                 n = 1; // for cleanup
             }
 
@@ -116,10 +116,10 @@ final class MultiFromIterable<T> implements Multi<T> {
 
             for (;;) {
                 while (emitted != n) {
-                    final int isCanceled = canceled;
-                    if (isCanceled != 0) {
+                    final int isCancelled = cancelled;
+                    if (isCancelled != 0) {
                         iterator = null;
-                        if (isCanceled == BAD_REQUEST) {
+                        if (isCancelled == BAD_REQUEST) {
                             downstream.onError(new IllegalArgumentException(
                                     "Rule §3.9 violated: non-positive request amount is forbidden"));
                         }
@@ -133,18 +133,18 @@ final class MultiFromIterable<T> implements Multi<T> {
                                 "The iterator returned a null value");
                     } catch (Throwable ex) {
                         iterator = null;
-                        canceled = NORMAL_CANCEL;
+                        cancelled = NORMAL_CANCEL;
                         downstream.onError(ex);
                         return;
                     }
 
-                    if (canceled != 0) {
+                    if (cancelled != 0) {
                         continue;
                     }
 
                     downstream.onNext(value);
 
-                    if (canceled != 0) {
+                    if (cancelled != 0) {
                         continue;
                     }
 
@@ -154,12 +154,12 @@ final class MultiFromIterable<T> implements Multi<T> {
                         hasNext = iterator.hasNext();
                     } catch (Throwable ex) {
                         iterator = null;
-                        canceled = NORMAL_CANCEL;
+                        cancelled = NORMAL_CANCEL;
                         downstream.onError(ex);
                         return;
                     }
 
-                    if (canceled != 0) {
+                    if (cancelled != 0) {
                         continue;
                     }
 
@@ -185,7 +185,7 @@ final class MultiFromIterable<T> implements Multi<T> {
 
         @Override
         public void cancel() {
-            canceled = NORMAL_CANCEL;
+            cancelled = NORMAL_CANCEL;
             request(1); // for cleanup
         }
     }

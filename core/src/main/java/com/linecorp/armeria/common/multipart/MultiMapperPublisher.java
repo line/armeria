@@ -91,7 +91,7 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
         public void onNext(T item) {
             // in case the upstream doesn't stop immediately after a failed mapping
             final Subscription s = upstream;
-            if (s != SubscriptionHelper.CANCELED) {
+            if (s != SubscriptionHelper.CANCELLED) {
                 final R result;
 
                 try {
@@ -109,8 +109,8 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
         @Override
         public void onError(Throwable throwable) {
             // if mapper.map fails above, the upstream may still emit an onError without request
-            if (upstream != SubscriptionHelper.CANCELED) {
-                upstream = SubscriptionHelper.CANCELED;
+            if (upstream != SubscriptionHelper.CANCELLED) {
+                upstream = SubscriptionHelper.CANCELLED;
                 downstream.onError(throwable);
             }
         }
@@ -118,8 +118,8 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
         @Override
         public void onComplete() {
             // if mapper.map fails above, the upstream may still emit an onComplete without request
-            if (upstream != SubscriptionHelper.CANCELED) {
-                upstream = SubscriptionHelper.CANCELED;
+            if (upstream != SubscriptionHelper.CANCELLED) {
+                upstream = SubscriptionHelper.CANCELLED;
                 downstream.onComplete();
             }
         }
@@ -132,7 +132,7 @@ final class MultiMapperPublisher<T, R> implements Multi<R> {
         @Override
         public void cancel() {
             upstream.cancel();
-            upstream = SubscriptionHelper.CANCELED;
+            upstream = SubscriptionHelper.CANCELLED;
         }
     }
 }

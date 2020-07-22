@@ -87,7 +87,7 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
     public void subscribe(Subscriber<? super HttpData> subscriber) {
         requireNonNull(subscriber, "subscriber");
         if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
-            subscriber.onSubscribe(SubscriptionHelper.CANCELED);
+            subscriber.onSubscribe(SubscriptionHelper.CANCELLED);
             subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
             return;
         }

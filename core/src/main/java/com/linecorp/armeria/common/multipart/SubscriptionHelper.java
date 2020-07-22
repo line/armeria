@@ -47,9 +47,9 @@ enum SubscriptionHelper implements Subscription {
     // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionHelper.java
 
     /**
-     * The singleton instance indicating a canceled subscription.
+     * The singleton instance indicating a cancelled subscription.
      */
-    CANCELED;
+    CANCELLED;
 
     @Override
     public void request(long n) {
@@ -62,16 +62,16 @@ enum SubscriptionHelper implements Subscription {
     }
 
     /**
-     * Atomically swap in the {@link #CANCELED} instance and call cancel() on
+     * Atomically swap in the {@link #CANCELLED} instance and call cancel() on
      * any previous Subscription held.
      * @param subscriptionField the target field to cancel atomically.
      * @return true if the current thread succeeded with the cancellation (as only one thread is able to)
      */
     static boolean cancel(AtomicReference<Subscription> subscriptionField) {
         Subscription subscription = subscriptionField.get();
-        if (subscription != CANCELED) {
-            subscription = subscriptionField.getAndSet(CANCELED);
-            if (subscription != CANCELED) {
+        if (subscription != CANCELLED) {
+            subscription = subscriptionField.getAndSet(CANCELLED);
+            if (subscription != CANCELLED) {
                 if (subscription != null) {
                     subscription.cancel();
                 }
@@ -133,14 +133,14 @@ enum SubscriptionHelper implements Subscription {
      * @param subscriptionField the field to store the only upstream subscription
      * @param upstream the only upstream to set and request from
      * @return true if the operation succeeded, false if the field holds the cancellation indicator
-     * @throws IllegalStateException if the subscriptionField already contains a non-canceled subscription
+     * @throws IllegalStateException if the subscriptionField already contains a non-cancelled subscription
      *         instance
      */
     static boolean setOnce(AtomicReference<Subscription> subscriptionField, Subscription upstream) {
         requireNonNull(upstream, "upstream");
         for (;;) {
             final Subscription current = subscriptionField.get();
-            if (current == CANCELED) {
+            if (current == CANCELLED) {
                 upstream.cancel();
                 return false;
             }
@@ -163,7 +163,7 @@ enum SubscriptionHelper implements Subscription {
      * @param upstream the only upstream to set and request from
      * @return true if the operation succeeded, false if the field indicated the upstream
      *         should be cancelled immediately
-     * @throws IllegalStateException if the subscriptionField already contains a non-canceled subscription
+     * @throws IllegalStateException if the subscriptionField already contains a non-cancelled subscription
      *         instance
      */
     static boolean deferredSetOnce(AtomicReference<Subscription> subscriptionField,
@@ -179,7 +179,7 @@ enum SubscriptionHelper implements Subscription {
     }
 
     /**
-     * Accumulates request amounts until the subscription field receives a Subscription instance,
+     * Accumulates request amounts until the subscription field receives a {@link Subscription} instance,
      * then requests this accumulated amount and forwards subsequent requests to it.
      * @param subscriptionField the field possibly containing a Subscription instance.
      * @param requestedField the field used for accumulating requests until the Subscription instance arrives

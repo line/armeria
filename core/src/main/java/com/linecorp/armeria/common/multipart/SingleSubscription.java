@@ -51,7 +51,7 @@ final class SingleSubscription<T> extends AtomicInteger implements Subscription 
     private static final int FRESH = 0;
     private static final int REQUESTED = 1;
     private static final int COMPLETED = 2;
-    private static final int CANCELED = 3;
+    private static final int CANCELLED = 3;
 
     private final T value;
     private final Subscriber<? super T> subscriber;
@@ -80,6 +80,6 @@ final class SingleSubscription<T> extends AtomicInteger implements Subscription 
 
     @Override
     public void cancel() {
-        set(CANCELED);
+        set(CANCELLED);
     }
 }

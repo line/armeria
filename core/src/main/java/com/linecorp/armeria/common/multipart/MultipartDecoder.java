@@ -101,7 +101,7 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
     public void subscribe(Subscriber<? super BodyPart> subscriber) {
         requireNonNull(subscriber, "subscriber");
         if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
-            subscriber.onSubscribe(SubscriptionHelper.CANCELED);
+            subscriber.onSubscribe(SubscriptionHelper.CANCELLED);
             subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
             return;
         }
@@ -153,7 +153,7 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
         // request more data to detect the next part
         // if not in the middle of a part content
         // or if the part content subscriber needs more
-        if (upstream != SubscriptionHelper.CANCELED &&
+        if (upstream != SubscriptionHelper.CANCELLED &&
             emitter.hasRequests() &&
             parserEventProcessor.isDataRequired() &&
             (!parserEventProcessor.isContentDataRequired() || bodyPartPublisher.hasRequests())) {
@@ -170,8 +170,8 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
     @Override
     public void onComplete() {
         initFuture.whenComplete((e, t) -> {
-            if (upstream != SubscriptionHelper.CANCELED) {
-                upstream = SubscriptionHelper.CANCELED;
+            if (upstream != SubscriptionHelper.CANCELLED) {
+                upstream = SubscriptionHelper.CANCELLED;
                 try {
                     parser.close();
                 } catch (MimeParsingException ex) {

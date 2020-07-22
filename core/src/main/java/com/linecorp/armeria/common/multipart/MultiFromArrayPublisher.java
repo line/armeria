@@ -68,7 +68,7 @@ final class MultiFromArrayPublisher<T> implements Multi<T> {
         private final T[] array;
 
         private int index;
-        private volatile int canceled;
+        private volatile int cancelled;
 
         ArraySubscription(Subscriber<? super T> downstream, T[] array) {
             this.downstream = downstream;
@@ -78,7 +78,7 @@ final class MultiFromArrayPublisher<T> implements Multi<T> {
         @Override
         public void request(long n) {
             if (n <= 0L) {
-                canceled = BAD_REQUEST;
+                cancelled = BAD_REQUEST;
                 n = 1;
             }
             if (SubscriptionHelper.addRequest(this, n) != 0L) {
@@ -91,7 +91,7 @@ final class MultiFromArrayPublisher<T> implements Multi<T> {
             final int length = array.length;
             outer:
             for (;;) {
-                int c = canceled;
+                int c = cancelled;
                 if (c != 0) {
                     if (c == BAD_REQUEST) {
                         downstream.onError(new IllegalArgumentException(
@@ -109,7 +109,7 @@ final class MultiFromArrayPublisher<T> implements Multi<T> {
                             return;
                         }
                         downstream.onNext(item);
-                        if (canceled != 0) {
+                        if (cancelled != 0) {
                             continue outer;
                         }
                     }
@@ -134,7 +134,7 @@ final class MultiFromArrayPublisher<T> implements Multi<T> {
 
         @Override
         public void cancel() {
-            canceled = CANCEL;
+            cancelled = CANCEL;
         }
     }
 }

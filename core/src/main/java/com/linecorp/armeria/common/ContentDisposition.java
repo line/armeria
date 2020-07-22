@@ -128,7 +128,7 @@ public final class ContentDisposition {
      *
      * @param contentDisposition the {@code "content-disposition"} header value
      * @return the parsed content disposition
-     * @see #toString()
+     * @see #asHeaderValue()
      */
     public static ContentDisposition parse(String contentDisposition) {
         final List<String> parts = tokenize(contentDisposition);
@@ -191,7 +191,7 @@ public final class ContentDisposition {
                     }
                 }
             } else {
-                throw new IllegalArgumentException("Invalid content disposition format");
+                throw new IllegalArgumentException("Invalid content disposition format: " + contentDisposition);
             }
         }
         return new ContentDisposition(type, name, filename, charset, size,
@@ -321,9 +321,8 @@ public final class ContentDisposition {
     private static List<String> tokenize(String headerValue) {
         int index = headerValue.indexOf(';');
         final String type = (index >= 0 ? headerValue.substring(0, index) : headerValue).trim();
-        if (type.isEmpty()) {
-            throw new IllegalArgumentException("Content-Disposition header must not be empty");
-        }
+        checkArgument(!type.isEmpty(), "Content-Disposition header must not be empty");
+
         final List<String> parts = new ArrayList<>();
         parts.add(type);
         if (index >= 0) {
@@ -535,7 +534,6 @@ public final class ContentDisposition {
 
     /**
      * Returns the header value for this content disposition as defined in RFC 6266.
-     * @see #parse(String)
      */
     @Override
     public String toString() {

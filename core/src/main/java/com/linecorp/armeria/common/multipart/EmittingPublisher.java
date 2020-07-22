@@ -82,7 +82,7 @@ final class EmittingPublisher<T> implements Publisher<T> {
         requireNonNull(subscriber, "subscriber");
 
         if (!subscribed.compareAndSet(false, true)) {
-            subscriber.onSubscribe(SubscriptionHelper.CANCELED);
+            subscriber.onSubscribe(SubscriptionHelper.CANCELLED);
             subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
             return;
         }
@@ -194,7 +194,7 @@ final class EmittingPublisher<T> implements Publisher<T> {
      * If there is requested less than 1, nothing is sent and method returns false.
      *
      * @param item to be sent downstream
-     * @return true if item successfully sent, false if canceled or no demand
+     * @return true if item successfully sent, false if cancelled or no demand
      * @throws IllegalStateException if publisher is completed
      */
     boolean emit(T item) {

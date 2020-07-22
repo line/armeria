@@ -34,8 +34,8 @@ package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -83,11 +83,18 @@ final class ConcatPublisher<T> implements Multi<T> {
 
         private static final long serialVersionUID = -1593224722447706944L;
 
+        @SuppressWarnings("rawtypes")
+        private static final AtomicIntegerFieldUpdater<ConcatCancelingSubscription> cancelledUpdater =
+                AtomicIntegerFieldUpdater.newUpdater(
+                        ConcatCancelingSubscription.class, "cancelled");
+
         private final InnerSubscriber<T> inner1;
         private final InnerSubscriber<T> inner2;
-        private final AtomicBoolean canceled;
 
         private int index;
+
+        // Updated via `cancelledUpdater`
+        private volatile int cancelled;
 
         @Nullable
         private Publisher<? extends T> source1;
@@ -98,7 +105,6 @@ final class ConcatPublisher<T> implements Multi<T> {
                                     Publisher<? extends T> source1, Publisher<? extends T> source2) {
             inner1 = new InnerSubscriber<>(subscriber, this);
             inner2 = new InnerSubscriber<>(subscriber, this);
-            canceled = new AtomicBoolean();
             this.source1 = source1;
             this.source2 = source2;
         }
@@ -111,7 +117,7 @@ final class ConcatPublisher<T> implements Multi<T> {
 
         @Override
         public void cancel() {
-            if (canceled.compareAndSet(false, true)) {
+            if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 SubscriptionHelper.cancel(inner1);
                 SubscriptionHelper.cancel(inner2);
                 drain();
@@ -141,7 +147,7 @@ final class ConcatPublisher<T> implements Multi<T> {
                     source.subscribe(inner2);
                 } else if (index == 2) {
                     index = 3;
-                    if (!canceled.get()) {
+                    if (cancelled != 1) {
                         inner1.downstream.onComplete();
                     }
                 }
@@ -171,13 +177,13 @@ final class ConcatPublisher<T> implements Multi<T> {
 
             @Override
             public void onSubscribe(Subscription subscription) {
-                requireNonNull(subscription, "s");
+                requireNonNull(subscription, "subscription");
                 SubscriptionHelper.deferredSetOnce(this, requested, subscription);
             }
 
             @Override
             public void onNext(T t) {
-                if (get() != SubscriptionHelper.CANCELED) {
+                if (get() != SubscriptionHelper.CANCELLED) {
                     produced++;
                     downstream.onNext(t);
                 }
@@ -185,8 +191,8 @@ final class ConcatPublisher<T> implements Multi<T> {
 
             @Override
             public void onError(Throwable t) {
-                if (get() != SubscriptionHelper.CANCELED) {
-                    lazySet(SubscriptionHelper.CANCELED);
+                if (get() != SubscriptionHelper.CANCELLED) {
+                    lazySet(SubscriptionHelper.CANCELLED);
                     downstream.onError(t);
 
                     parent.cancel();
@@ -195,8 +201,8 @@ final class ConcatPublisher<T> implements Multi<T> {
 
             @Override
             public void onComplete() {
-                if (get() != SubscriptionHelper.CANCELED) {
-                    lazySet(SubscriptionHelper.CANCELED);
+                if (get() != SubscriptionHelper.CANCELLED) {
+                    lazySet(SubscriptionHelper.CANCELLED);
                     parent.drain();
                 }
             }

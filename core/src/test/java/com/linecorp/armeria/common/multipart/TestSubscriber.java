@@ -97,7 +97,7 @@ class TestSubscriber<T> implements Subscriber<T> {
             }
         } else {
             subscription.cancel();
-            if (upstream.get() != SubscriptionHelper.CANCELED) {
+            if (upstream.get() != SubscriptionHelper.CANCELLED) {
                 errors.add(new IllegalStateException("Subscription already set!"));
             }
         }
@@ -203,7 +203,7 @@ class TestSubscriber<T> implements Subscriber<T> {
 
         if (upstream.get() == null) {
             sb.append(", no onSubscribe!");
-        } else if (upstream.get() == SubscriptionHelper.CANCELED) {
+        } else if (upstream.get() == SubscriptionHelper.CANCELLED) {
             sb.append(", canceled!");
         }
 

@@ -199,6 +199,18 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
     }
 
     /**
+     * Check if publisher sent {@code onComplete} signal downstream.
+     * Returns {@code true} right after calling {@code BufferedEmittingPublisher.completeNow()}
+     * but after calling {@link BufferedEmittingPublisher#complete()} returns
+     * {@code false} until whole buffer has been drained.
+     *
+     * @return true if so
+     */
+    boolean isCompleted() {
+        return state.get() == State.COMPLETED;
+    }
+
+    /**
      * Checks if publisher is in terminal {@link State#CANCELLED}.
      *
      * @return true if so

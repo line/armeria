@@ -99,7 +99,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
         private final AtomicReference<Queue<InnerSubscriber<R>>> queue;
         private final AtomicLong requested;
 
-        private volatile boolean canceled;
+        private volatile boolean cancelled;
         private volatile boolean upstreamDone;
 
         private long emitted;
@@ -149,7 +149,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
                 final InnerSubscriber<R> innerSubscriber = new InnerSubscriber<>(this, prefetch);
                 subscribers.put(innerSubscriber, innerSubscriber);
-                if (canceled) {
+                if (cancelled) {
                     subscribers.remove(innerSubscriber);
                     return;
                 }
@@ -198,7 +198,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
         @Override
         public void cancel() {
-            canceled = true;
+            cancelled = true;
             upstream.cancel();
             cancelInners();
         }
@@ -286,7 +286,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
                         } else {
                             downstream.onError(ex);
                         }
-                        canceled = true;
+                        cancelled = true;
                     } else {
                         if (!done) {
                             upstream.request(1L);
@@ -358,14 +358,14 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
 
             for (;;) {
 
-                if (canceled) {
+                if (cancelled) {
                     queue.lazySet(null);
                     subscribers.clear();
                 } else {
                     if (!delayErrors) {
                         final Throwable ex = errors.get();
                         if (ex != null) {
-                            canceled = true;
+                            cancelled = true;
                             downstream.onError(ex);
                             continue;
                         }
@@ -377,7 +377,7 @@ final class MultiFlatMapPublisher<T, R> implements Multi<R> {
                     final boolean noQueuedItems = q == null || q.isEmpty();
 
                     if (done && noActiveInnerSubscribers && noQueuedItems) {
-                        canceled = true;
+                        cancelled = true;
                         final Throwable ex = errors.get();
                         if (ex != null) {
                             downstream.onError(ex);

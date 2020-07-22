@@ -104,13 +104,13 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
 
         @Override
         public void onError(Throwable throwable) {
-            upstream = SubscriptionHelper.CANCELED;
+            upstream = SubscriptionHelper.CANCELLED;
             downstream.onError(throwable);
         }
 
         @Override
         public void onComplete() {
-            upstream = SubscriptionHelper.CANCELED;
+            upstream = SubscriptionHelper.CANCELLED;
             final long p = received;
             if (p != 0L) {
                 SubscriptionHelper.produced(requested, p);

@@ -107,12 +107,14 @@ class ContentDispositionTest {
         assertThatThrownBy(() -> parse("form-data; name=\"name\"; filename*=UTF-8''%A"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(
-                        "Invalid filename header field parameter format (as defined in RFC 5987): %A (charset: UTF-8)");
+                        "Invalid filename header field parameter format (as defined in RFC 5987): " +
+                        "%A (charset: UTF-8)");
 
         assertThatThrownBy(() -> parse("form-data; name=\"name\"; filename*=UTF-8''%A.txt"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(
-                        "Invalid filename header field parameter format (as defined in RFC 5987): %A.txt (charset: UTF-8)");
+                        "Invalid filename header field parameter format (as defined in RFC 5987): " +
+                        "%A.txt (charset: UTF-8)");
     }
 
     // gh-23077

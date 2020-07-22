@@ -120,7 +120,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         requireNonNull(subscription, "subscription");
         for (;;) {
             final Subscription previous = newSubscription.get();
-            if (previous == SubscriptionHelper.CANCELED) {
+            if (previous == SubscriptionHelper.CANCELLED) {
                 subscription.cancel();
                 return;
             }
@@ -158,12 +158,12 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
                 prod = newProduced.getAndSet(0L);
             }
             final Subscription next = newSubscription.get();
-            final boolean isCanceled = next == SubscriptionHelper.CANCELED;
+            final boolean isCancelled = next == SubscriptionHelper.CANCELLED;
             if (next != null) {
                 newSubscription.compareAndSet(next, null);
             }
 
-            if (isCanceled) {
+            if (isCancelled) {
                 final Subscription s = subscription;
                 subscription = null;
                 if (s != null) {
