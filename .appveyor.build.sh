@@ -79,20 +79,20 @@ if [[ -d /var/cache/appveyor ]] && \
 
   if [[ "$PURGE_CACHE" != '1' ]]; then
     # Restore the home directory from the cache.
-    BRANCH_CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/branches/$APPVEYOR_REPO_BRANCH"
+    BRANCH_CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/branches/$APPVEYOR_REPO_BRANCH/$PROFILE"
     if [[ -z "$APPVEYOR_PULL_REQUEST_NUMBER" ]]; then
       CACHE_DIR="$BRANCH_CACHE_DIR"
     else
-      CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/pulls/$APPVEYOR_PULL_REQUEST_NUMBER"
+      CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/pulls/$APPVEYOR_PULL_REQUEST_NUMBER/$PROFILE"
     fi
 
     # Fetch the home directory from the cache directory.
     if [[ -d "$CACHE_DIR" ]]; then
-      touch "$CACHE_DIR"
+      touch "$CACHE_DIR/.."
       msg "Restoring $HOME from the build cache: $CACHE_DIR .."
       echo_and_run rsync -a --stats "$CACHE_DIR/" "$HOME"
     elif [[ -d "$BRANCH_CACHE_DIR" ]]; then
-      touch "$BRANCH_CACHE_DIR"
+      touch "$BRANCH_CACHE_DIR/.."
       msg "Restoring $HOME from the branch build cache: $BRANCH_CACHE_DIR .."
       echo_and_run rsync -a --stats "$BRANCH_CACHE_DIR/" "$HOME"
     fi
@@ -161,11 +161,11 @@ fi
 # Update the cache directory.
 if [[ -n "$CACHE_DIR" ]]; then
   msg "Updating the build cache: $CACHE_DIR .."
-  echo_and_run mkdir -p "$CACHE_DIR"
+  echo_and_run mkdir -p "$(dirname "$CACHE_DIR")"
   if [[ ! -d "$CACHE_DIR" ]] && [[ -n "$BRANCH_CACHE_DIR" ]] && [[ -d "$BRANCH_CACHE_DIR" ]]; then
     # Create a hard link to make a differential copy and save disk space.
     echo_and_run cp -al "$BRANCH_CACHE_DIR" "$CACHE_DIR"
   fi
   echo_and_run rsync -a --stats --delete "$HOME/" "$CACHE_DIR" || true
-  echo_and_run touch "$CACHE_DIR"
+  echo_and_run touch "$CACHE_DIR/.."
 fi
