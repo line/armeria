@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil.startServerWithRetries;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -87,7 +88,7 @@ class ServerSetRegistrationTest {
                                     .https(endpoints.get(1).port())
                                     .service("/", (ctx, req) -> HttpResponse.of(200))
                                     .build();
-        server.start().join();
+        startServerWithRetries(server);
 
         final byte[] updatingListenerBytes;
         try (CloseableZooKeeper zk = zkInstance.connection()) {

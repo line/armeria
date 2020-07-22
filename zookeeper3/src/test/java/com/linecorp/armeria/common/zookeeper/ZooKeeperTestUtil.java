@@ -16,9 +16,13 @@
 
 package com.linecorp.armeria.common.zookeeper;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.awaitility.Awaitility.await;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.time.Duration;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.server.Server;
 
 public final class ZooKeeperTestUtil {
 
@@ -59,6 +64,12 @@ public final class ZooKeeperTestUtil {
         }
 
         return ports;
+    }
+
+    public static void startServerWithRetries(Server server) {
+        // Work around sporadic 'address already in use' errors.
+        await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(
+                () -> assertThatCode(() -> server.start().join()).doesNotThrowAnyException());
     }
 
     private ZooKeeperTestUtil() {}
