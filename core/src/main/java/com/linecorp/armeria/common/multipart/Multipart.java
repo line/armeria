@@ -238,8 +238,8 @@ public interface Multipart extends Publisher<HttpData> {
     /**
      * Returns all the nested body parts.
      *
-     * <p>Note: Once a {@link BodyPart} is subscribed, you should subscribe {@link BodyPart#content()}
-     * before subscribing the next {@link BodyPart}.<pre>{@code
+     * <p>Note: Once a {@link BodyPart} is subscribed, you should subscribe to {@link BodyPart#content()}
+     * before subscribing to the next {@link BodyPart}.<pre>{@code
      * > import reactor.core.publisher.Flux;
      *
      * > HttpRequest req = ...;
@@ -248,7 +248,7 @@ public interface Multipart extends Publisher<HttpData> {
      * > // Good:
      * > Flux.from(multiPart.bodyParts())
      * >     .subscribe(bodyPart -> {
-     * >         Flux.from(bodyPart.content()) // Safely subscribe BodyPart.content()
+     * >         Flux.from(bodyPart.content()) // Safely subscribe to BodyPart.content()
      * >             .map(HttpData::toStringUtf8)
      * >             .collectList()
      * >             .subscribe(contents -> { ... });
@@ -256,7 +256,7 @@ public interface Multipart extends Publisher<HttpData> {
      *
      * > // Bad:
      * > Flux.from(multiPart.bodyParts())
-     * >     .collectList() // This will subscribe BodyPart.content() before you consume it.
+     * >     .collectList() // This will subscribe BodyPart.content() first before you subscribe to it.
      * >     .subscribe(bodyParts -> {
      * >         bodyParts.forEach(part -> {
      * >             Flux.from(part.content())

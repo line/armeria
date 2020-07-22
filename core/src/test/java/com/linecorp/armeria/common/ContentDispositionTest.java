@@ -99,18 +99,20 @@ class ContentDispositionTest {
     void parseEncodedFilenameWithInvalidCharset() {
         assertThatThrownBy(() -> parse("form-data; name=\"name\"; filename*=UTF-16''test.txt"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Charset should be UTF-8 or ISO-8859-1");
+                .hasMessageContaining("Charset: UTF-16 (expected: UTF-8 or ISO-8859-1)");
     }
 
     @Test
     void parseEncodedFilenameWithInvalidName() {
         assertThatThrownBy(() -> parse("form-data; name=\"name\"; filename*=UTF-8''%A"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(ContentDisposition.INVALID_HEADER_FIELD_PARAMETER_FORMAT);
+                .hasMessageContaining(
+                        "Invalid filename header field parameter format (as defined in RFC 5987): %A (charset: UTF-8)");
 
         assertThatThrownBy(() -> parse("form-data; name=\"name\"; filename*=UTF-8''%A.txt"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(ContentDisposition.INVALID_HEADER_FIELD_PARAMETER_FORMAT);
+                .hasMessageContaining(
+                        "Invalid filename header field parameter format (as defined in RFC 5987): %A.txt (charset: UTF-8)");
     }
 
     // gh-23077

@@ -49,8 +49,6 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Representation of the Content-Disposition type and parameters as defined in RFC 6266.
  *
@@ -67,12 +65,8 @@ public final class ContentDisposition {
     private static final ContentDisposition EMPTY =
             new ContentDisposition("", null, null, null, null, null, null, null);
 
-    @VisibleForTesting
-    static final String INVALID_HEADER_FIELD_PARAMETER_FORMAT =
-            "Invalid header field parameter format (as defined in RFC 5987)";
-
     /**
-     * Returns a new {@link ContentDispositionBuilder}.
+     * Returns a new {@link ContentDispositionBuilder} with the specified {@code type}.
      *
      * @param type the disposition type like for example {@code inline}, {@code attachment},
      *             or {@code form-data}
@@ -94,7 +88,7 @@ public final class ContentDisposition {
     }
 
     /**
-     * Returns a new {@link ContentDisposition} with the specified {@code type}.
+     * Returns a new {@link ContentDisposition} with the specified {@code type} and {@code name}.
      *
      * @param type the disposition type like for example {@code inline}, {@code attachment},
      *             or {@code form-data}
@@ -105,7 +99,8 @@ public final class ContentDisposition {
     }
 
     /**
-     * Returns a new {@link ContentDisposition} with the specified {@code type}.
+     * Returns a new {@link ContentDisposition} with the specified {@code type}, {@code name}
+     * and {@code filename}.
      *
      * @param type the disposition type like for example {@code inline}, {@code attachment},
      *             or {@code form-data}
@@ -124,6 +119,83 @@ public final class ContentDisposition {
      */
     public static ContentDisposition of() {
         return EMPTY;
+    }
+
+    /**
+     * Parses a {@code "content-disposition"} header value as defined in RFC 2183.
+     *
+     * <p>Note that only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported.
+     *
+     * @param contentDisposition the {@code "content-disposition"} header value
+     * @return the parsed content disposition
+     * @see #toString()
+     */
+    public static ContentDisposition parse(String contentDisposition) {
+        final List<String> parts = tokenize(contentDisposition);
+        final String type = parts.get(0);
+        String name = null;
+        String filename = null;
+        Charset charset = null;
+        Long size = null;
+        ZonedDateTime creationDate = null;
+        ZonedDateTime modificationDate = null;
+        ZonedDateTime readDate = null;
+        for (int i = 1; i < parts.size(); i++) {
+            final String part = parts.get(i);
+            final int eqIndex = part.indexOf('=');
+            if (eqIndex != -1) {
+                final String attribute = part.substring(0, eqIndex);
+                final String value;
+                if (part.startsWith("\"", eqIndex + 1) && part.endsWith("\"")) {
+                    value = part.substring(eqIndex + 2, part.length() - 1);
+                } else {
+                    value = part.substring(eqIndex + 1);
+                }
+
+                if ("name".equals(attribute)) {
+                    name = value;
+                } else if ("filename*".equals(attribute)) {
+                    final int idx1 = value.indexOf('\'');
+                    final int idx2 = value.indexOf('\'', idx1 + 1);
+                    if (idx1 != -1 && idx2 != -1) {
+                        charset = Charset.forName(value.substring(0, idx1).trim());
+                        checkArgument(UTF_8.equals(charset) || ISO_8859_1.equals(charset),
+                                      "Charset: %s (expected: UTF-8 or ISO-8859-1)", charset);
+
+                        filename = decodeFilename(value.substring(idx2 + 1), charset);
+                    } else {
+                        // US ASCII
+                        filename = decodeFilename(value, StandardCharsets.US_ASCII);
+                    }
+                } else if ("filename".equals(attribute) && (filename == null)) {
+                    filename = value;
+                } else if ("size".equals(attribute)) {
+                    size = Long.parseLong(value);
+                } else if ("creation-date".equals(attribute)) {
+                    try {
+                        creationDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
+                    } catch (DateTimeParseException ex) {
+                        // ignore
+                    }
+                } else if ("modification-date".equals(attribute)) {
+                    try {
+                        modificationDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
+                    } catch (DateTimeParseException ex) {
+                        // ignore
+                    }
+                } else if ("read-date".equals(attribute)) {
+                    try {
+                        readDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
+                    } catch (DateTimeParseException ex) {
+                        // ignore
+                    }
+                }
+            } else {
+                throw new IllegalArgumentException("Invalid content disposition format");
+            }
+        }
+        return new ContentDisposition(type, name, filename, charset, size,
+                                      creationDate, modificationDate, readDate);
     }
 
     private final String type;
@@ -202,7 +274,7 @@ public final class ContentDisposition {
     /**
      * Returns the value of the {@code size} parameter, or {@code null} if not defined.
      *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Apendix B</a>,
+     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
      *             to be removed in a future release.
      */
     @Deprecated
@@ -214,7 +286,7 @@ public final class ContentDisposition {
     /**
      * Returns the value of the {@code creation-date} parameter, or {@code null} if not defined.
      *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Apendix B</a>,
+     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
      *             to be removed in a future release.
      */
     @Deprecated
@@ -225,7 +297,7 @@ public final class ContentDisposition {
 
     /**
      * Returns the value of the {@code modification-date} parameter, or {@code null} if not defined.
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Apendix B</a>,
+     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
      *             to be removed in a future release.
      */
     @Deprecated
@@ -237,122 +309,13 @@ public final class ContentDisposition {
     /**
      * Returns the value of the {@code read-date} parameter, or {@code null} if not defined.
      *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Apendix B</a>,
+     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
      *             to be removed in a future release.
      */
     @Deprecated
     @Nullable
     public ZonedDateTime readDate() {
         return readDate;
-    }
-
-    @Override
-    public boolean equals(@Nullable Object other) {
-        if (this == other) {
-            return true;
-        }
-        if (!(other instanceof ContentDisposition)) {
-            return false;
-        }
-        final ContentDisposition that = (ContentDisposition) other;
-        return type.equals(that.type) &&
-               Objects.equals(name, that.name) &&
-               Objects.equals(filename, that.filename) &&
-               Objects.equals(charset, that.charset) &&
-               Objects.equals(size, that.size) &&
-               Objects.equals(creationDate, that.creationDate) &&
-               Objects.equals(modificationDate, that.modificationDate) &&
-               Objects.equals(readDate, that.readDate);
-    }
-
-    @Override
-    public int hashCode() {
-        int result = type.hashCode();
-        result = 31 * result + Objects.hashCode(name);
-        result = 31 * result + Objects.hashCode(filename);
-        result = 31 * result + Objects.hashCode(charset);
-        result = 31 * result + Objects.hashCode(size);
-        result = 31 * result + (creationDate != null ? creationDate.hashCode() : 0);
-        result = 31 * result + (modificationDate != null ? modificationDate.hashCode() : 0);
-        result = 31 * result + (readDate != null ? readDate.hashCode() : 0);
-        return result;
-    }
-
-    /**
-     * Parses a {@code "content-disposition"} header value as defined in RFC 2183.
-     *
-     * <p>Note that only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported.
-     *
-     * @param contentDisposition the {@code "content-disposition"} header value
-     * @return the parsed content disposition
-     * @see #toString()
-     */
-    public static ContentDisposition parse(String contentDisposition) {
-        final List<String> parts = tokenize(contentDisposition);
-        final String type = parts.get(0);
-        String name = null;
-        String filename = null;
-        Charset charset = null;
-        Long size = null;
-        ZonedDateTime creationDate = null;
-        ZonedDateTime modificationDate = null;
-        ZonedDateTime readDate = null;
-        for (int i = 1; i < parts.size(); i++) {
-            final String part = parts.get(i);
-            final int eqIndex = part.indexOf('=');
-            if (eqIndex != -1) {
-                final String attribute = part.substring(0, eqIndex);
-                final String value;
-                if (part.startsWith("\"", eqIndex + 1) && part.endsWith("\"")) {
-                    value = part.substring(eqIndex + 2, part.length() - 1);
-                } else {
-                    value = part.substring(eqIndex + 1);
-                }
-
-                if ("name".equals(attribute)) {
-                    name = value;
-                } else if ("filename*".equals(attribute)) {
-                    final int idx1 = value.indexOf('\'');
-                    final int idx2 = value.indexOf('\'', idx1 + 1);
-                    if (idx1 != -1 && idx2 != -1) {
-                        charset = Charset.forName(value.substring(0, idx1).trim());
-                        checkArgument(UTF_8.equals(charset) || ISO_8859_1.equals(charset),
-                                      "Charset should be UTF-8 or ISO-8859-1.");
-
-                        filename = decodeFilename(value.substring(idx2 + 1), charset);
-                    } else {
-                        // US ASCII
-                        filename = decodeFilename(value, StandardCharsets.US_ASCII);
-                    }
-                } else if ("filename".equals(attribute) && (filename == null)) {
-                    filename = value;
-                } else if ("size".equals(attribute)) {
-                    size = Long.parseLong(value);
-                } else if ("creation-date".equals(attribute)) {
-                    try {
-                        creationDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
-                    } catch (DateTimeParseException ex) {
-                        // ignore
-                    }
-                } else if ("modification-date".equals(attribute)) {
-                    try {
-                        modificationDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
-                    } catch (DateTimeParseException ex) {
-                        // ignore
-                    }
-                } else if ("read-date".equals(attribute)) {
-                    try {
-                        readDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
-                    } catch (DateTimeParseException ex) {
-                        // ignore
-                    }
-                }
-            } else {
-                throw new IllegalArgumentException("Invalid content disposition format");
-            }
-        }
-        return new ContentDisposition(type, name, filename, charset, size,
-                                      creationDate, modificationDate, readDate);
     }
 
     private static List<String> tokenize(String headerValue) {
@@ -415,11 +378,15 @@ public final class ContentDisposition {
                 try {
                     baos.write(Integer.parseInt(String.valueOf(array), 16));
                 } catch (NumberFormatException ex) {
-                    throw new IllegalArgumentException(INVALID_HEADER_FIELD_PARAMETER_FORMAT, ex);
+                    throw new IllegalArgumentException(
+                            "Invalid filename header field parameter format (as defined in RFC 5987): " +
+                            filename + " (charset: " + charset + ')', ex);
                 }
                 index += 3;
             } else {
-                throw new IllegalArgumentException(INVALID_HEADER_FIELD_PARAMETER_FORMAT);
+                throw new IllegalArgumentException(
+                        "Invalid filename header field parameter format (as defined in RFC 5987): " +
+                        filename + " (charset: " + charset + ')');
             }
         }
         try {
@@ -466,7 +433,7 @@ public final class ContentDisposition {
      */
     private static String encodeFilename(String input, Charset charset) {
         checkArgument(UTF_8.equals(charset) || ISO_8859_1.equals(charset),
-                      "Charset should be UTF-8 or ISO-8859-1.");
+                      "Charset: %s (expected: UTF-8 or ISO-8859-1)", charset);
         final byte[] source = input.getBytes(charset);
         final int len = source.length;
         final StringBuilder sb = new StringBuilder(len << 1);
@@ -484,6 +451,38 @@ public final class ContentDisposition {
             }
         }
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof ContentDisposition)) {
+            return false;
+        }
+        final ContentDisposition that = (ContentDisposition) other;
+        return type.equals(that.type) &&
+               Objects.equals(name, that.name) &&
+               Objects.equals(filename, that.filename) &&
+               Objects.equals(charset, that.charset) &&
+               Objects.equals(size, that.size) &&
+               Objects.equals(creationDate, that.creationDate) &&
+               Objects.equals(modificationDate, that.modificationDate) &&
+               Objects.equals(readDate, that.readDate);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type.hashCode();
+        result = 31 * result + Objects.hashCode(name);
+        result = 31 * result + Objects.hashCode(filename);
+        result = 31 * result + Objects.hashCode(charset);
+        result = 31 * result + Objects.hashCode(size);
+        result = 31 * result + (creationDate != null ? creationDate.hashCode() : 0);
+        result = 31 * result + (modificationDate != null ? modificationDate.hashCode() : 0);
+        result = 31 * result + (readDate != null ? readDate.hashCode() : 0);
+        return result;
     }
 
     /**
