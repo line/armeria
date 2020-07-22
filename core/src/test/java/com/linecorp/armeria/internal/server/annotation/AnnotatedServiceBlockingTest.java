@@ -64,14 +64,18 @@ class AnnotatedServiceBlockingTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/myEvenLoop", new MyEventLoopAnnotatedService());
+            sb.annotatedService("/myEvenLoop", new MyAnnotatedService());
             sb.annotatedService("/myBlocking", new MyBlockingAnnotatedService());
             sb.annotatedService("/blockingService", new BlockingClassAnnotatedService());
+            sb.annotatedService()
+              .pathPrefix("/useBlockingExecutor")
+              .useBlockingTaskExecutor(true)
+              .build(new MyAnnotatedService());
             sb.blockingTaskExecutor(executor, true);
         }
     };
 
-    static class MyEventLoopAnnotatedService {
+    static class MyAnnotatedService {
 
         @Get("/httpResponse")
         public HttpResponse httpResponse() {
@@ -160,7 +164,11 @@ class AnnotatedServiceBlockingTest {
             "/myBlocking/jsonNode, 1",
             "/myBlocking/completionStage, 1",
             "/blockingService/block, 1",
-            "/blockingService/duplicated, 1"
+            "/blockingService/duplicated, 1",
+            "/useBlockingExecutor/httpResponse, 1",
+            "/useBlockingExecutor/aggregatedHttpResponse, 1",
+            "/useBlockingExecutor/jsonNode, 1",
+            "/useBlockingExecutor/completionStage, 1"
     })
     void testOnlyBlockingWithBlockingAnnotation(String path, Integer count) throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
