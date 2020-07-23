@@ -67,7 +67,7 @@ interface PathMapping {
     String meterTag();
 
     /**
-     * Returns the path pattern of this {@link Route}. The returned path pattern is different according to
+     * Returns the path pattern of this {@link PathMapping}. The returned path pattern is different according to
      * the value of {@link #pathType()}.
      *
      * <ul>
