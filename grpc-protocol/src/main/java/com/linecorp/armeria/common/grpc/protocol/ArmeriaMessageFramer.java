@@ -169,6 +169,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private ByteBuf writeCompressed(ByteBuf message, boolean webTrailers) throws IOException {
         assert compressor != null;
 
+        // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
         final CompositeByteBuf compressed = alloc.compositeBuffer();
         try (OutputStream compressingStream = compressor.compress(new ByteBufOutputStream(compressed))) {
             compressingStream.write(ByteBufUtil.getBytes(message));

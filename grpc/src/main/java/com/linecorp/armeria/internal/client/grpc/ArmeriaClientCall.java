@@ -326,6 +326,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             if (messageBuf != null) {
                 buf = messageBuf;
             } else {
+                // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                 buf = ctx.alloc().compositeBuffer();
                 boolean success = false;
                 try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
