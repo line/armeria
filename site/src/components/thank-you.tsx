@@ -1,3 +1,4 @@
+import { Typography } from 'antd';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import ReactMixitup from 'react-mixitup';
@@ -5,6 +6,8 @@ import shuffleSeed from 'shuffle-seed';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 
 import styles from './thank-you.module.less';
+
+const { Paragraph } = Typography;
 
 interface ThankYouProps {
   usernames: string[];
@@ -30,10 +33,10 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
     return props.message ? (
       props.message(newSeed)
     ) : (
-      <p>
+      <Paragraph>
         This release was possible thanks to the following contributors who
         shared their brilliant ideas and awesome pull requests:
-      </p>
+      </Paragraph>
     );
   }
 

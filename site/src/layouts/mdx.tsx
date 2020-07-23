@@ -2,7 +2,7 @@ import { GithubOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import loadable from '@loadable/component';
 import { MDXProvider } from '@mdx-js/react';
 import { RouteComponentProps } from '@reach/router';
-import { Button, Layout, Tabs as AntdTabs } from 'antd';
+import { Button, Layout, Tabs as AntdTabs, Typography } from 'antd';
 import { Link, withPrefix } from 'gatsby';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import React, { useLayoutEffect } from 'react';
@@ -24,6 +24,7 @@ import pagePath from './page-path';
 import styles from './mdx.module.less';
 
 const { Content } = Layout;
+const { Paragraph, Title } = Typography;
 
 interface MdxLayoutProps extends RouteComponentProps {
   pageContext: any;
@@ -88,6 +89,10 @@ const mdxComponents: any = {
       <CodeBlock language={language}>{props.children.props.children}</CodeBlock>
     );
   },
+  h1: (props: any) => <Title level={1} {...props} />,
+  h2: (props: any) => <Title level={2} {...props} />,
+  h3: (props: any) => <Title level={3} {...props} />,
+  h4: (props: any) => <Title level={4} {...props} />,
   table: (props: any) => {
     return (
       <div className="ant-table ant-table-small ant-table-bordered">
@@ -250,7 +255,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   const relpath = pagePath(props.location).substring(1);
   const githubHref = props.noEdit
     ? undefined
-    : `https://github.com/line/armeria/tree/master/site/src/pages/${relpath}${
+    : `https://github.com/line/armeria/edit/master/site/src/pages/${relpath}${
         relpath === props.prefix ? '/index' : ''
       }.mdx`;
   let prevLabel;
@@ -407,7 +412,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
               <nav>
                 <div className={styles.pageToc} />
                 <div className={styles.newsletter}>
-                  <p>Like what we&apos;re doing?</p>
+                  <Paragraph>Like what we&apos;re doing?</Paragraph>
                   <Mailchimp />
                 </div>
               </nav>
