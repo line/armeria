@@ -58,8 +58,8 @@ class EmitterTest {
                                             .boxed()
                                             .collect(toImmutableList());
 
-        final BufferedEmittingPublisher<Integer> emitter = new BufferedEmittingPublisher<>();
-        emitter.onEmit(intercepted::add);
+        final BufferedEmittingPublisher<Integer> emitter =
+                new BufferedEmittingPublisher<>(null, intercepted::add);
 
         final TestSubscriber<Integer> subscriber = new TestSubscriber<>();
         emitter.subscribe(subscriber);

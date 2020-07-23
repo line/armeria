@@ -34,6 +34,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -45,10 +46,9 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -61,6 +61,9 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
     private static final AtomicReferenceFieldUpdater<MultipartDecoder, Subscription> upstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
                     MultipartDecoder.class, Subscription.class, "upstream");
+
+    private static final AtomicIntegerFieldUpdater<MultipartDecoder> initializedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "initialized");
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<MultipartDecoder, Subscriber> downstreamUpdater =
@@ -84,9 +87,11 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
     // Updated only via upstreamUpdater
     @Nullable
     private volatile Subscription upstream;
-    // Updated only via downstreamUpdater
+    // Set a non-null value via downstreamUpdater or directly set null
     @Nullable
     private volatile Subscriber<? super BodyPart> downstream;
+    // Updated via initializedUpdater
+    private volatile int initialized;
 
     MultipartDecoder(String boundary) {
         requireNonNull(boundary, "boundary");
@@ -120,17 +125,13 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
     @Override
     public void onNext(HttpData chunk) {
         try {
-            final ByteBuf byteBuf;
-            if (chunk instanceof ByteBufHolder) {
-                byteBuf = ((ByteBufHolder) chunk).content();
-            } else {
-                byteBuf = Unpooled.wrappedBuffer(chunk.array());
-            }
-            parser.offer(byteBuf);
+            parser.offer(chunk.byteBuf());
             parser.parse();
         } catch (MimeParsingException ex) {
             emitter.fail(ex);
-            ReferenceCountUtil.release(chunk);
+            PooledObjects.close(chunk);
+            upstream.cancel();
+            return;
         }
 
         // submit parsed parts
@@ -163,7 +164,7 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
     @Override
     public void onError(Throwable throwable) {
         requireNonNull(throwable, "throwable");
-        initFuture.whenComplete((e, t) -> e.fail(throwable));
+        initFuture.thenAccept(emitter -> emitter.fail(throwable));
     }
 
     @Override
@@ -183,16 +184,16 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
     private void deferredInit() {
         final Subscriber<? super BodyPart> downstream = this.downstream;
         if (upstream != null && downstream != null) {
-            emitter = new BufferedEmittingPublisher<>();
-            emitter.onRequest(this::onPartRequest);
-            emitter.onEmit(MultipartDecoder::drainPart);
-            emitter.subscribe(downstream);
-            initFuture.complete(emitter);
-            downstreamUpdater.set(this, null);
+            if (initializedUpdater.compareAndSet(this, 0, 1)) {
+                emitter = new BufferedEmittingPublisher<>(this::onPartRequest, MultipartDecoder::drainPart);
+                emitter.subscribe(downstream);
+                initFuture.complete(emitter);
+                this.downstream = null;
+            }
         }
     }
 
-    private void onPartRequest(long requested, long total) {
+    private void onPartRequest(long unused) {
         // require more raw chunks to decode if the decoding has not
         // yet started or if more data is required to make progress
         if (!parserEventProcessor.isStarted() || parserEventProcessor.isDataRequired()) {

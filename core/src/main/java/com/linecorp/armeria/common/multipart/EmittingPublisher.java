@@ -38,7 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -70,12 +70,25 @@ final class EmittingPublisher<T> implements Publisher<T> {
     private final AtomicBoolean subscribed = new AtomicBoolean(false);
     private final CompletableFuture<Void> deferredComplete = new CompletableFuture<>();
 
+    private final Consumer<Long> requestCallback;
+    private final Runnable onSubscribeCallback;
+    private final Runnable cancelCallback;
+
     @Nullable
     private volatile Subscriber<? super T> subscriber;
-    @Nullable
-    private BiConsumer<Long, Long> requestCallback;
-    private Runnable onSubscribeCallback = () -> {};
-    private Runnable cancelCallback = () -> {};
+
+    /**
+     * Returns a new {@link EmittingPublisher}.
+     * @param requestCallback the request callback executed when request signal from downstream arrive.
+     * @param onSubscribeCallback the onSubscribe callback executed when subscribe signal from
+     *                            downstream arrive.
+     * @param cancelCallback the cancel callback executed when cancel signal from downstream arrive.
+     */
+    EmittingPublisher(Consumer<Long> requestCallback, Runnable onSubscribeCallback, Runnable cancelCallback) {
+        this.onSubscribeCallback = onSubscribeCallback;
+        this.requestCallback = requestCallback;
+        this.cancelCallback = cancelCallback;
+    }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
@@ -91,7 +104,7 @@ final class EmittingPublisher<T> implements Publisher<T> {
 
         subscriber.onSubscribe(new Subscription() {
             @Override
-            public void request(final long n) {
+            public void request(long n) {
                 if (state.get().isTerminated()) {
                     return;
                 }
@@ -105,7 +118,7 @@ final class EmittingPublisher<T> implements Publisher<T> {
                 if (state.updateAndGet(s -> s == State.SUBSCRIBED ? State.READY_TO_EMIT : s) ==
                     State.READY_TO_EMIT) {
                     if (requestCallback != null) {
-                        requestCallback.accept(n, requested.get());
+                        requestCallback.accept(n);
                     }
                 }
             }
@@ -123,7 +136,7 @@ final class EmittingPublisher<T> implements Publisher<T> {
         if (state.compareAndSet(State.REQUESTED, State.READY_TO_EMIT)) {
             if (requestCallback != null) {
                 //defer request signals until we are out of onSubscribe
-                requestCallback.accept(requested.get(), requested.get());
+                requestCallback.accept(requested.get());
             }
         }
 
@@ -218,54 +231,6 @@ final class EmittingPublisher<T> implements Publisher<T> {
      */
     boolean isUnbounded() {
         return state.get() == State.READY_TO_EMIT && unbounded();
-    }
-
-    /**
-     * Executed when request signal from downstream arrive.
-     *
-     * @param onSubscribeCallback to be executed
-     */
-    void onSubscribe(Runnable onSubscribeCallback) {
-        final Runnable first = this.onSubscribeCallback;
-        this.onSubscribeCallback = () -> {
-            first.run();
-            onSubscribeCallback.run();
-        };
-    }
-
-    /**
-     * Executed when cancel signal from downstream arrive.
-     *
-     * @param cancelCallback to be executed
-     */
-    void onCancel(Runnable cancelCallback) {
-        final Runnable first = this.cancelCallback;
-        this.cancelCallback = () -> {
-            first.run();
-            cancelCallback.run();
-        };
-    }
-
-    /**
-     * Callback executed when request signal from downstream arrive.
-     * <ul>
-     *   <li><b>param</b> {@code n} the requested count.</li>
-     *   <li><b>param</b> {@code result} the current total cumulative requested count, ranges between
-     *       [0, {@link Long#MAX_VALUE}] where the max indicates that this publisher is unbounded.</li>
-     * </ul>
-     *
-     * @param requestCallback to be executed
-     */
-    void onRequest(BiConsumer<Long, Long> requestCallback) {
-        if (this.requestCallback == null) {
-            this.requestCallback = requestCallback;
-        } else {
-            final BiConsumer<Long, Long> first = this.requestCallback;
-            this.requestCallback = (n, result) -> {
-                first.accept(n, result);
-                requestCallback.accept(n, result);
-            };
-        }
     }
 
     private boolean unbounded() {

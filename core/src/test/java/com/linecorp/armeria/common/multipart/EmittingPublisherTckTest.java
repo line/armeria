@@ -36,6 +36,8 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
@@ -74,8 +76,9 @@ public class EmittingPublisherTckTest extends PublisherVerification<Integer> {
     public Publisher<Integer> createPublisher(long l) {
         final AtomicLong counter = new AtomicLong(l);
         final CountDownLatch completeLatch = new CountDownLatch((int) l);
-        final EmittingPublisher<Integer> osp = new EmittingPublisher<>();
-        osp.onRequest((r, demand) -> {
+        final AtomicReference<EmittingPublisher<Integer>> emittingPublisherRef = new AtomicReference<>();
+        final Consumer<Long> requestCallback = r -> {
+            final EmittingPublisher<Integer> emittingPublisher = emittingPublisherRef.get();
             boolean accepted = true;
             for (long n = 0; n < r && n <= l && accepted; n++) {
                 final long fn = n;
@@ -86,13 +89,13 @@ public class EmittingPublisherTckTest extends PublisherVerification<Integer> {
                     executor.submit(() -> {
                         final long cnt = counter.getAndDecrement();
                         if (cnt > 0) {
-                            osp.emit((int) fn);
+                            emittingPublisher.emit((int) fn);
                             completeLatch.countDown();
                             if (cnt == 1) {
                                 executor.submit(() -> {
                                     try {
                                         completeLatch.await(2, TimeUnit.SECONDS);
-                                        osp.complete();
+                                        emittingPublisher.complete();
                                     } catch (InterruptedException e) {
                                         logger.error(e.getMessage(), e);
                                     }
@@ -102,8 +105,10 @@ public class EmittingPublisherTckTest extends PublisherVerification<Integer> {
                     });
                 }
             }
-        });
+        };
 
+        final EmittingPublisher<Integer> osp = new EmittingPublisher<>(requestCallback, () -> {}, () -> {});
+        emittingPublisherRef.set(osp);
         return osp;
     }
 

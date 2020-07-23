@@ -37,7 +37,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -61,72 +60,38 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
     // TODO(ikhoon): Use Atomic*FieldUpdater
     private final AtomicReference<State> state = new AtomicReference<>(State.READY_TO_EMIT);
     private final ConcurrentLinkedQueue<T> buffer = new ConcurrentLinkedQueue<>();
-    private final EmittingPublisher<T> emitter = new EmittingPublisher<>();
+    private final EmittingPublisher<T> emitter;
     private final AtomicLong deferredDrains = new AtomicLong(0);
     private final AtomicBoolean draining = new AtomicBoolean(false);
     private final AtomicReference<Throwable> error = new AtomicReference<>();
 
+    @Nullable
+    private final Consumer<? super T> onEmitCallback;
+
     private boolean safeToSkipBuffer;
 
-    @Nullable
-    private BiConsumer<Long, Long> requestCallback;
-    @Nullable
-    private Consumer<? super T> onEmitCallback;
+    BufferedEmittingPublisher() {
+        this(null, null);
+    }
+
+    BufferedEmittingPublisher(@Nullable Consumer<Long> requestCallback,
+                              @Nullable Consumer<? super T> onEmitCallback) {
+        this.onEmitCallback = onEmitCallback;
+        emitter = new EmittingPublisher<>(
+                n -> {
+                    if (requestCallback != null) {
+                        requestCallback.accept(n);
+                    }
+                    state.get().drain(this);
+                },
+                () -> state.get().drain(this),
+                () -> state.compareAndSet(State.READY_TO_EMIT, State.CANCELLED));
+    }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        emitter.onSubscribe(() -> state.get().drain(this));
-        emitter.onRequest((n, cnt) -> {
-            if (requestCallback != null) {
-                requestCallback.accept(n, cnt);
-            }
-            state.get().drain(this);
-        });
-        emitter.onCancel(() -> state.compareAndSet(State.READY_TO_EMIT, State.CANCELLED));
         emitter.subscribe(subscriber);
-    }
-
-    /**
-     * Callback executed when request signal from downstream arrive.
-     * <ul>
-     *   <li><b>param</b> {@code n} the requested count.</li>
-     *   <li><b>param</b> {@code result} the current total cumulative requested count, ranges between
-     *       [0, {@link Long#MAX_VALUE}] where the max indicates that this publisher is unbounded.</li>
-     * </ul>
-     *
-     * @param requestCallback to be executed
-     */
-    void onRequest(BiConsumer<Long, Long> requestCallback) {
-        if (this.requestCallback == null) {
-            this.requestCallback = requestCallback;
-        } else {
-            final BiConsumer<Long, Long> first = this.requestCallback;
-            this.requestCallback = (n, result) -> {
-                first.accept(n, result);
-                requestCallback.accept(n, result);
-            };
-        }
-    }
-
-    /**
-     * Callback executed right after {@code onNext} is actually sent.
-     * <ul>
-     *   <li><b>param</b> {@code i} sent item</li>
-     * </ul>
-     *
-     * @param onEmitCallback to be executed
-     */
-    void onEmit(Consumer<T> onEmitCallback) {
-        if (this.onEmitCallback == null) {
-            this.onEmitCallback = onEmitCallback;
-        } else {
-            final Consumer<? super T> first = this.onEmitCallback;
-            this.onEmitCallback = e -> {
-                first.accept(e);
-                onEmitCallback.accept(e);
-            };
-        }
     }
 
     /**
@@ -321,7 +286,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
 
             @Override
             <T> void drain(BufferedEmittingPublisher<T> publisher) {
-                //noop
+                // noop
             }
         },
         FAILED {
@@ -332,7 +297,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
 
             @Override
             <T> void drain(BufferedEmittingPublisher<T> publisher) {
-                //Can't happen twice, internal emitter keeps the state too
+                // Can't happen twice, internal emitter keeps the state too
                 publisher.emitter.fail(publisher.error.get());
             }
         },
@@ -355,7 +320,7 @@ final class BufferedEmittingPublisher<T> implements Publisher<T> {
 
             @Override
             <T> void drain(BufferedEmittingPublisher<T> publisher) {
-                //Can't happen twice, internal emitter keeps the state too
+                // Can't happen twice, internal emitter keeps the state too
                 publisher.emitter.complete();
             }
         };

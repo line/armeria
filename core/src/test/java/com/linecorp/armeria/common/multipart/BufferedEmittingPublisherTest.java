@@ -232,8 +232,7 @@ class BufferedEmittingPublisherTest {
     @Test
     void testHookOnRequested() {
         final AtomicLong requested = new AtomicLong();
-        final BufferedEmittingPublisher<Long> publisher = new BufferedEmittingPublisher<>();
-        publisher.onRequest((n, demand) -> requested.set(n));
+        final BufferedEmittingPublisher<Long> publisher = new BufferedEmittingPublisher<>(requested::set, null);
         final TestSubscriber<Long> subscriber = new TestSubscriber<Long>() {
             @Override
             public void onSubscribe(Subscription subscription) {

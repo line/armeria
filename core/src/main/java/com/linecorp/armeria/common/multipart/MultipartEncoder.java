@@ -34,6 +34,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
@@ -64,6 +65,9 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
             AtomicReferenceFieldUpdater.newUpdater(
                     MultipartEncoder.class, Subscriber.class, "downstream");
 
+    private static final AtomicIntegerFieldUpdater<MultipartEncoder> initializedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(MultipartEncoder.class, "initialized");
+
     private final String boundary;
     private final CompletableFuture<BufferedEmittingPublisher<Publisher<HttpData>>> initFuture;
 
@@ -73,9 +77,11 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
     // Updated only via upstreamUpdater
     @Nullable
     private volatile Subscription upstream;
-    // Updated only via downstreamUpdater
+    // Set a non-null value via downstreamUpdater or directly set null
     @Nullable
     private volatile Subscriber<? super HttpData> downstream;
+    // Updated via initializedUpdater
+    private volatile int initialized;
 
     MultipartEncoder(String boundary) {
         requireNonNull(boundary, "boundary");
@@ -108,15 +114,16 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
         final Subscription upstream = this.upstream;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (upstream != null && downstream != null) {
-            emitter = new BufferedEmittingPublisher<>();
             // relay request to upstream, already reduced by flatmap
-            emitter.onRequest((r, t) -> upstream.request(r));
-            Multi.from(emitter)
-                 .flatMap(Function.identity())
-                 .onCompleteResume(HttpData.ofUtf8("--" + boundary + "--"))
-                 .subscribe(downstream);
-            initFuture.complete(emitter);
-            downstreamUpdater.set(this, null);
+            if (initializedUpdater.compareAndSet(this, 0, 1)) {
+                emitter = new BufferedEmittingPublisher<>(upstream::request, null);
+                Multi.from(emitter)
+                     .flatMap(Function.identity())
+                     .onCompleteResume(HttpData.ofUtf8("--" + boundary + "--"))
+                     .subscribe(downstream);
+                initFuture.complete(emitter);
+                this.downstream = null;
+            }
         }
     }
 
