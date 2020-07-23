@@ -31,8 +31,6 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
-import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
 /**
@@ -71,14 +69,6 @@ public class ServiceRequestContextWrapper
     @Override
     public InetAddress clientAddress() {
         return delegate().clientAddress();
-    }
-
-    @Deprecated
-    @Override
-    public ServiceRequestContext newDerivedContext(RequestId id,
-                                                   @Nullable HttpRequest req,
-                                                   @Nullable RpcRequest rpcReq) {
-        return delegate().newDerivedContext(id, req, rpcReq);
     }
 
     @Override

@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
  * <h3>How are decorators and HTTP headers configured?</h3>
  *
  * <p>Unlike other options, when a user calls {@link #option(ClientOption, Object)} or {@code options()} with
- * a {@link ClientOption#DECORATION} or a {@link ClientOption#HTTP_HEADERS}, this builder will not simply
+ * a {@link ClientOptions#DECORATION} or a {@link ClientOptions#HTTP_HEADERS}, this builder will not simply
  * replace the old option but <em>merge</em> the specified option into the previous option value. For example:
  * <pre>{@code
  * ClientOptionsBuilder b = ClientOptions.builder();

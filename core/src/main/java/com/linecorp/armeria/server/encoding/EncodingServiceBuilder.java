@@ -45,7 +45,7 @@ public final class EncodingServiceBuilder {
                             MediaType.JAVASCRIPT_UTF_8,
                             MediaType.JSON_UTF_8);
 
-    // TODO(minwoox) consider this condition to align with the default text preveiwer.
+    // TODO(minwoox) consider this condition to align with the default text previewer.
     private static final Predicate<MediaType> defaultEncodableContentTypePredicate =
             contentType -> {
                 for (MediaType encodableMediaType : defaultEncodableMediaTypsSet) {

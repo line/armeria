@@ -61,20 +61,10 @@ public final class ThriftFunction {
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
 
-    ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func) throws Exception {
-        this(serviceType, func.getMethodName(), func, Type.SYNC,
-             getArgFields(func), getResult(func), getDeclaredExceptions(func), null);
-    }
-
     ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func,
                    @Nullable Object implementation) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.SYNC,
              getArgFields(func), getResult(func), getDeclaredExceptions(func), implementation);
-    }
-
-    ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func) throws Exception {
-        this(serviceType, func.getMethodName(), func, Type.ASYNC,
-             getArgFields(func), getResult(func), getDeclaredExceptions(func), null);
     }
 
     ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func,
@@ -320,26 +310,6 @@ public final class ThriftFunction {
             }
         }
         return false;
-    }
-
-    private static TBase<?, ?> getArgs(ProcessFunction<?, ?> func) {
-        return getArgs0(Type.SYNC, func.getClass(), func.getMethodName());
-    }
-
-    private static TBase<?, ?> getArgs(AsyncProcessFunction<?, ?, ?> asyncFunc) {
-        return getArgs0(Type.ASYNC, asyncFunc.getClass(), asyncFunc.getMethodName());
-    }
-
-    private static TBase<?, ?> getArgs0(Type type, Class<?> funcClass, String methodName) {
-        final String argsTypeName = typeName(type, funcClass, methodName, methodName + "_args");
-        try {
-            @SuppressWarnings("unchecked")
-            final Class<TBase<?, ?>> argsType =
-                    (Class<TBase<?, ?>>) Class.forName(argsTypeName, false, funcClass.getClassLoader());
-            return argsType.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            throw new IllegalStateException("cannot determine the args class of method: " + methodName, e);
-        }
     }
 
     private static TFieldIdEnum[] getArgFields(ProcessFunction<?, ?> func) {

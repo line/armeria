@@ -1,15 +1,18 @@
 import { MailOutlined } from '@ant-design/icons';
-import { Input, message } from 'antd';
+import { Button, Input, message } from 'antd';
+import { ButtonType } from 'antd/es/button';
 import EmailValidator from 'email-validator';
 import jsonp from 'jsonp';
 import React, { useState, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 
 import Emoji from './emoji';
+import styles from './mailchimp.module.less';
 
 interface MailchimpProps {
   url?: string;
   botCode?: string;
+  buttonType?: ButtonType;
 }
 
 const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
@@ -19,6 +22,7 @@ const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
       url:
         'https://github.us19.list-manage.com/subscribe/post?u=3447f8227584634e6ee046edf&id=852d70ccdc',
       botCode: 'b_3447f8227584634e6ee046edf_852d70ccdc',
+      buttonType: givenProps.buttonType,
     };
   } else {
     props = givenProps;
@@ -30,10 +34,18 @@ const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
 
   return (
     <Input.Search
+      className={styles.signUpForm}
       type="email"
       prefix={<MailOutlined />}
-      placeholder="E-mail"
-      enterButton="Sign up"
+      placeholder="Your e-mail"
+      enterButton={
+        <Button
+          type={props.buttonType || 'default'}
+          title="Sign up for our newsletters"
+        >
+          Subscribe
+        </Button>
+      }
       required
       aria-required
       value={email}

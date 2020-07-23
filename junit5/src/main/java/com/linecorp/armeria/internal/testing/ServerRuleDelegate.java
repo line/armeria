@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.testing;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
@@ -329,12 +328,5 @@ public abstract class ServerRuleDelegate {
     private void ensureStarted() {
         // This will ensure that the server has started.
         server();
-    }
-
-    private static String validatePath(String path) {
-        requireNonNull(path, "path");
-        checkArgument(path.startsWith("/"),
-                      "path: %s (expected: an absolute path starting with '/')", path);
-        return path;
     }
 }

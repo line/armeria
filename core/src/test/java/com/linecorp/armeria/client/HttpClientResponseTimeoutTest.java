@@ -54,7 +54,7 @@ class HttpClientResponseTimeoutTest {
     void shouldSetResponseTimeoutWithNoTimeout() {
         final WebClient client = WebClient
                 .builder(server.httpUri())
-                .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                 .decorator((delegate, ctx, req) -> {
                     ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
                     assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
@@ -74,7 +74,7 @@ class HttpClientResponseTimeoutTest {
     void setRequestTimeoutAtPendingTimeoutTask(Consumer<? super ClientRequestContext> timeoutCustomizer) {
         final WebClient client = WebClient
                 .builder(server.httpUri())
-                .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(30L))
+                .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(30L))
                 .decorator((delegate, ctx, req) -> {
                     // set timeout before initializing timeout controller
                     timeoutCustomizer.accept(ctx);

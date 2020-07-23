@@ -57,7 +57,7 @@ final class SamlInitializer {
      * Returns {@code true} if and only if the OpenSAML library is available.
      */
     static boolean isAvailable() {
-        return UNAVAILABILITY_CAUSE == null;
+        return unavailabilityCause() == null;
     }
 
     /**
@@ -66,8 +66,8 @@ final class SamlInitializer {
      * @throws Error if unavailable
      */
     static void ensureAvailability() {
-        if (UNAVAILABILITY_CAUSE != null) {
-            throw new Error("failed to initialize OpenSAML library", UNAVAILABILITY_CAUSE);
+        if (!isAvailable()) {
+            throw new Error("failed to initialize OpenSAML library", unavailabilityCause());
         }
     }
 

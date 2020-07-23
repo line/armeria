@@ -90,8 +90,12 @@ public final class GrpcWebUtil {
             // - '1' for trailers
             // - '0' for data
             //
-            // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2
+            // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
             if (type >> 7 == 1) {
+                if ((type & 1) > 0) {
+                    // TODO(minwoox) support compressed trailer.
+                    break;
+                }
                 trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                 break;
             } else {

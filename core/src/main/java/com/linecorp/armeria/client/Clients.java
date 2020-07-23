@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
@@ -436,61 +435,6 @@ public final class Clients {
         requireNonNull(value, "value");
         return withHttpHeaders(headersBuilder -> {
             headersBuilder.setObject(name, value);
-        });
-    }
-
-    /**
-     * Sets the specified HTTP header manipulating function in a thread-local variable so that the manipulated
-     * headers are sent by the client call made from the current thread. Use the {@code try-with-resources}
-     * block with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
-     * <pre>{@code
-     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
-     *
-     * try (SafeCloseable ignored = withHttpHeaders(headers -> {
-     *     return headers.toBuilder()
-     *                   .set(HttpHeaders.AUTHORIZATION, myCredential)
-     *                   .set(HttpHeaders.USER_AGENT, myAgent)
-     *                   .build();
-     * })) {
-     *     client.executeSomething(..);
-     * }
-     * }</pre>
-     * You can also nest the header manipulation:
-     * <pre>{@code
-     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
-     *
-     * try (SafeCloseable ignored = withHttpHeaders(h -> {
-     *          return h.toBuilder()
-     *                  .set(USER_AGENT, myAgent)
-     *                  .build();
-     *      })) {
-     *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeaders(h -> {
-     *                  return h.toBuilder()
-     *                          .set(AUTHORIZATION, secret)
-     *                          .build();
-     *              })) {
-     *             // Both USER_AGENT and AUTHORIZATION will be set.
-     *             client.executeSomething(..);
-     *         }
-     *     }
-     * }
-     * }</pre>
-     *
-     * @see #withHttpHeaders(Consumer)
-     *
-     * @deprecated Use {@link #withHttpHeaders(Consumer)}.
-     */
-    @Deprecated
-    @MustBeClosed
-    public static SafeCloseable withHttpHeaders(
-            Function<? super HttpHeaders, ? extends HttpHeaders> headerManipulator) {
-        requireNonNull(headerManipulator, "headerManipulator");
-        return withContextCustomizer(ctx -> {
-            final HttpHeaders manipulatedHeaders = headerManipulator.apply(ctx.additionalRequestHeaders());
-            ctx.mutateAdditionalRequestHeaders(mutator -> mutator.add(manipulatedHeaders));
         });
     }
 

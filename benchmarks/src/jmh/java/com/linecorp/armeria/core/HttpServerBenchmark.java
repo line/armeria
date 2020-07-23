@@ -92,13 +92,13 @@ public class HttpServerBenchmark {
                 webClient.get("/empty")
                          .aggregate()
                          .handle((msg, t) -> {
-                              counters.decrementCurrentRequests();
-                              if (t != null) {
-                                  counters.incrementNumFailures();
-                              } else {
-                                  counters.incrementNumSuccesses();
-                              }
-                              return null;
-                          }));
+                             counters.decrementCurrentRequests();
+                             if (t != null) {
+                                 counters.incrementNumFailures();
+                             } else {
+                                 counters.incrementNumSuccesses();
+                             }
+                             return null;
+                         }));
     }
 }

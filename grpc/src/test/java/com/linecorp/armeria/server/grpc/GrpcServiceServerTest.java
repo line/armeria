@@ -135,6 +135,8 @@ class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
+    private static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
+
     private static final Key<StringValue> STRING_VALUE_KEY =
             ProtoUtils.keyForProto(StringValue.getDefaultInstance());
 
@@ -982,7 +984,7 @@ class GrpcServiceServerTest {
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
-                new byte[] { ArmeriaServerCall.TRAILERS_FRAME_HEADER },
+                new byte[] { TRAILERS_FRAME_HEADER },
                 Ints.toByteArray(serializedStatusHeader.length),
                 serializedStatusHeader);
         assertThat(response.content().array()).containsExactly(

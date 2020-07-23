@@ -128,7 +128,7 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
          * A {@link KeySelector} that returns a key consisted of remote host name, IP address, port number
          * and method name.
          *
-         * @deprecated Use {@link CircuitBreakerMapping#perHostAndMethod(Function)}.
+         * @deprecated Use {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
          */
         @Deprecated
         KeySelector<String> HOST_AND_METHOD =

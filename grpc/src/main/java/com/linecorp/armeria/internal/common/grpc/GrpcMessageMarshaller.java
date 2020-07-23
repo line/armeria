@@ -93,6 +93,7 @@ public final class GrpcMessageMarshaller<I, O> {
                 final PrototypeMarshaller<I> marshaller = (PrototypeMarshaller<I>) requestMarshaller;
                 return serializeProto(marshaller, (Message) message);
             default:
+                // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
@@ -143,6 +144,7 @@ public final class GrpcMessageMarshaller<I, O> {
                         (PrototypeMarshaller<O>) method.getResponseMarshaller();
                 return serializeProto(marshaller, (Message) message);
             default:
+                // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
@@ -206,7 +208,8 @@ public final class GrpcMessageMarshaller<I, O> {
             }
             return buf;
         } else {
-            final ByteBuf buf = alloc.buffer();
+            // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
+            final ByteBuf buf = alloc.compositeBuffer();
             boolean success = false;
             try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
                 @SuppressWarnings("unchecked")

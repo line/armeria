@@ -150,7 +150,7 @@ public abstract class AbstractHttpFileBuilder {
      * {@link HttpResponse}.
      */
     protected final HttpHeaders buildHeaders() {
-        return headers != null ? headers.build() : HttpHeaders.of();
+        return headers != null ? headers.removeAndThen(HttpHeaderNames.STATUS).build() : HttpHeaders.of();
     }
 
     private HttpHeadersBuilder headersBuilder() {

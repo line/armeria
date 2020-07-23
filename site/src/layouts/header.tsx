@@ -13,6 +13,7 @@ import React, { useState, useCallback, useLayoutEffect } from 'react';
 import StickyBox from 'react-sticky-box';
 
 import Logo from '../components/logo';
+import Mailchimp from '../components/mailchimp';
 
 import styles from './header.module.less';
 
@@ -160,6 +161,10 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
                   <OutboundLink href="https://twitter.com/armeria_project">
                     <TwitterOutlined />
                   </OutboundLink>
+                </div>
+                <div className={styles.sidebarNewsletter}>
+                  <p>Like what we&apos;re doing?</p>
+                  <Mailchimp />
                 </div>
                 {props.extraSidebarContent ? (
                   <>

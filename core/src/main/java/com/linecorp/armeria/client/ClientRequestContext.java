@@ -233,19 +233,6 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
-     *
-     * <p>Note that this method does not copy the {@link RequestLog} properties to the derived context.
-     */
-    @Override
-    default ClientRequestContext newDerivedContext(RequestId id,
-                                                   @Nullable HttpRequest req,
-                                                   @Nullable RpcRequest rpcReq) {
-        return newDerivedContext(id, req, rpcReq, endpoint());
-    }
-
-    /**
-     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
      * {@link RequestLog}.
      *
@@ -288,26 +275,26 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     long writeTimeoutMillis();
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeout(Duration writeTimeout);
 
     /**
      * Returns the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      */
     long responseTimeoutMillis();
 
@@ -321,7 +308,7 @@ public interface ClientRequestContext extends RequestContext {
      * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
      * the specified {@link TimeoutMode} and the specified {@code responseTimeoutMillis} since
      * the {@link Response} started or {@link Request} was fully sent.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
      * <tr><th>Timeout mode</th><th>description</th></tr>
@@ -359,7 +346,7 @@ public interface ClientRequestContext extends RequestContext {
      * Schedules the response timeout that is triggered when the {@link Response} is not
      * fully received within the specified amount of time from now.
      * Note that the specified {@code responseTimeoutMillis} must be positive.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      * This method is a shortcut for
      * {@code setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis)}.
      *
@@ -380,7 +367,7 @@ public interface ClientRequestContext extends RequestContext {
      * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
      * the specified {@link TimeoutMode} and the specified {@code responseTimeoutMillis} since
      * the {@link Response} started or {@link Request} was fully sent.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
      * <tr><th>Timeout mode</th><th>description</th></tr>
@@ -418,7 +405,7 @@ public interface ClientRequestContext extends RequestContext {
      * Schedules the response timeout that is triggered when the {@link Response} is not
      * fully received within the specified amount of time from now.
      * Note that the specified {@code responseTimeout} must be positive.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      * This method is a shortcut for {@code setResponseTimeout(TimeoutMode.SET_FROM_NOW, responseTimeout)}.
      *
      * <p>For example:
@@ -438,7 +425,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Returns {@link Response} timeout handler which is executed when
      * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
-     * or the default {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * or the default {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      */
     @Nullable
     Runnable responseTimeoutHandler();
@@ -461,7 +448,7 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the maximum length of the received {@link Response}.
-     * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
+     * This value is initially set from {@link ClientOptions#MAX_RESPONSE_LENGTH}.
      *
      * @return the maximum length of the response. {@code 0} if unlimited.
      *
@@ -471,7 +458,7 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Sets the maximum length of the received {@link Response}.
-     * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
+     * This value is initially set from {@link ClientOptions#MAX_RESPONSE_LENGTH}.
      * Specify {@code 0} to disable the limit of the length of a response.
      *
      * @see ContentTooLargeException
