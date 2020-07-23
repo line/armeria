@@ -20,6 +20,8 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.logging.RequestLog;
+
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 
@@ -48,13 +50,35 @@ interface PathMapping {
      * Returns the logger name.
      *
      * @return the logger name whose components are separated by a dot (.)
+     *
+     * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
+     *             {@link Route#pathPattern()}.
      */
+    @Deprecated
     String loggerName();
 
     /**
      * Returns the value of the {@link Tag} in a {@link Meter} of this {@link PathMapping}.
+     *
+     * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
+     *             {@link Route#pathPattern()}.
      */
+    @Deprecated
     String meterTag();
+
+    /**
+     * Returns the path pattern of this {@link Route}. The returned path pattern is different according to
+     * the value of {@link #pathType()}.
+     *
+     * <ul>
+     *   <li>{@linkplain RoutePathType#EXACT EXACT}: {@code "/foo" or "/foo/bar"}</li>
+     *   <li>{@linkplain RoutePathType#PREFIX PREFIX}: {@code "/foo/*"}</li>
+     *   <li>{@linkplain RoutePathType#PARAMETERIZED PARAMETERIZED}: {@code "/foo/:bar" or "/foo/:bar/:qux}</li>
+     *   <li>{@linkplain RoutePathType#REGEX REGEX}: {@code "/*&#42;/foo" }</li>
+     *   <li>{@linkplain RoutePathType#REGEX_WITH_PREFIX REGEX_WITH_PREFIX}: {@code "/foo/*&#42;/bar" }</li>
+     * </ul>
+     */
+    String pathPattern();
 
     /**
      * Returns the type of the path which was specified when this is created.

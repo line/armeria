@@ -25,10 +25,19 @@ import org.junit.jupiter.api.Test;
 class PrefixPathMappingTest {
 
     @Test
-    void loggerAndMetricName() throws Exception {
+    void loggerAndMetricName() {
         final PrefixPathMapping prefixPathMapping = new PrefixPathMapping("/foo/bar", true);
         assertThat(prefixPathMapping.loggerName()).isEqualTo("foo.bar");
         assertThat(prefixPathMapping.meterTag()).isEqualTo("prefix:/foo/bar/");
+    }
+
+    @Test
+    void pathPattern() {
+        final PrefixPathMapping prefixPathMapping1 = new PrefixPathMapping("/foo/bar", true);
+        assertThat(prefixPathMapping1.pathPattern()).isEqualTo("/foo/bar/*");
+
+        final PrefixPathMapping prefixPathMapping2 = new PrefixPathMapping("/foo/bar/", true);
+        assertThat(prefixPathMapping2.pathPattern()).isEqualTo("/foo/bar/*");
     }
 
     @Test

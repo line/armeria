@@ -258,7 +258,7 @@ public final class Routers {
                          values.size(), router.getClass().getSimpleName());
             for (V v : values) {
                 final Route route = routeResolver.apply(v);
-                logger.debug("meterTag: {}, complexity: {}", route.meterTag(), route.complexity());
+                logger.debug("pathPattern: {}, complexity: {}", route.pathPattern(), route.complexity());
             }
         }
         values.clear();

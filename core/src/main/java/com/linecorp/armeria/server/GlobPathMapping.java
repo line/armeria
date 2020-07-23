@@ -53,6 +53,7 @@ final class GlobPathMapping extends AbstractPathMapping {
     private final Pattern pattern;
     private final int numParams;
     private final Set<String> paramNames;
+    private final String pathPattern;
     private final String loggerName;
     private final String meterTag;
     private final String strVal;
@@ -76,6 +77,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         // Make the glob pattern as an absolute form to distinguish 'glob:foo' from 'exact:/foo'
         // when generating logger and metric names.
         final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
+        pathPattern = aGlob;
         loggerName = newLoggerName(aGlob);
         meterTag = GLOB + aGlob;
         paths = ImmutableList.of(pattern.pattern(), aGlob);
@@ -113,6 +115,11 @@ final class GlobPathMapping extends AbstractPathMapping {
     @Override
     public String meterTag() {
         return meterTag;
+    }
+
+    @Override
+    public String pathPattern() {
+        return pathPattern;
     }
 
     @Override

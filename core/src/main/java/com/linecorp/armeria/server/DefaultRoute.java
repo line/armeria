@@ -208,6 +208,11 @@ final class DefaultRoute implements Route {
     }
 
     @Override
+    public String pathPattern() {
+        return pathMapping.pathPattern();
+    }
+
+    @Override
     public RoutePathType pathType() {
         return pathMapping.pathType();
     }

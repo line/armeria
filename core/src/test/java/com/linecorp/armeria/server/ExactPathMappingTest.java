@@ -39,16 +39,22 @@ class ExactPathMappingTest {
     }
 
     @Test
-    void testLoggerNameEscaping() throws Exception {
+    void testLoggerNameEscaping() {
         assertThat(new ExactPathMapping("/foo/bar.txt").loggerName()).isEqualTo("foo.bar_txt");
         assertThat(new ExactPathMapping("/bar/b-a-z").loggerName()).isEqualTo("bar.b_a_z");
         assertThat(new ExactPathMapping("/bar/baz/").loggerName()).isEqualTo("bar.baz");
     }
 
     @Test
-    void loggerAndMetricName() throws Exception {
+    void loggerAndMetricName() {
         final ExactPathMapping exactPathMapping = new ExactPathMapping("/foo/bar");
         assertThat(exactPathMapping.loggerName()).isEqualTo("foo.bar");
         assertThat(exactPathMapping.meterTag()).isEqualTo("exact:/foo/bar");
+    }
+
+    @Test
+    void pathPattern() {
+        final ExactPathMapping exactPathMapping = new ExactPathMapping("/foo/bar");
+        assertThat(exactPathMapping.pathPattern()).isEqualTo("/foo/bar");
     }
 }

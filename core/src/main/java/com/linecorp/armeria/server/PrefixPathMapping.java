@@ -35,6 +35,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     private final String loggerName;
     private final String meterTag;
     private final List<String> paths;
+    private final String pathPattern;
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
@@ -49,6 +50,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
         meterTag = PREFIX + prefix;
         final String triePath = prefix + '*';
         paths = ImmutableList.of(prefix, triePath);
+        pathPattern = triePath;
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
@@ -78,6 +80,11 @@ final class PrefixPathMapping extends AbstractPathMapping {
     @Override
     public String meterTag() {
         return meterTag;
+    }
+
+    @Override
+    public String pathPattern() {
+        return pathPattern;
     }
 
     @Override

@@ -53,6 +53,11 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public String pathPattern() {
+        return "/*";
+    }
+
+    @Override
     public RoutePathType pathType() {
         return RoutePathType.PREFIX;
     }

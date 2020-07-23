@@ -35,6 +35,7 @@ final class RegexPathMapping extends AbstractPathMapping {
 
     private final Pattern regex;
     private final Set<String> paramNames;
+    private final String pathPattern;
     private final String loggerName;
     private final String meterTag;
     private final List<String> paths;
@@ -43,7 +44,8 @@ final class RegexPathMapping extends AbstractPathMapping {
         this.regex = requireNonNull(regex, "regex");
         paramNames = findParamNames(regex);
         loggerName = toLoggerName(regex);
-        meterTag = REGEX + regex.pattern();
+        pathPattern = regex.pattern();
+        meterTag = REGEX + pathPattern;
         paths = ImmutableList.of(regex.pattern());
     }
 
@@ -109,6 +111,11 @@ final class RegexPathMapping extends AbstractPathMapping {
     @Override
     public String meterTag() {
         return meterTag;
+    }
+
+    @Override
+    public String pathPattern() {
+        return pathPattern;
     }
 
     @Override
