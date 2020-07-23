@@ -14,28 +14,40 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.client.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.REFRESH_TOKEN;
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
+import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
+import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 
 /**
- * Implements Access Token Refresh request
- * as per <a href="https://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
+ * Implements Resource Owner Password Credentials Grant request
+ * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.3">[RFC6749], Section 4.3</a>.
  */
-public class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
+class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccessTokenRequest {
+
+    private static final String USERNAME = "username";
+    private static final String PASSWORD = "password";
+    private static final String PASSWORD_GRANT_TYPE = PASSWORD;
+
+    private final Supplier<? extends Map.Entry<String, String>> userCredentialsSupplier;
 
     /**
-     * Implements Client Credentials Grant request/response flow,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
+     * Implements Resource Owner Password Credentials Grant request/response flow,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.3">[RFC6749], Section 4.3</a>.
      *
      * @param accessTokenEndpoint A {@link WebClient} to facilitate an Access Token request. Must correspond to
      *                            the Access Token endpoint of the OAuth 2 system.
@@ -43,16 +55,20 @@ public class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
      *                                OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * @param userCredentialsSupplier A supplier of user credentials: "username" and "password" used to grant
+     *                                the Access Token.
      */
-    public RefreshAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
-                                     @Nullable ClientAuthorization clientAuthorization) {
+    ResourceOwnerPasswordCredentialsTokenRequest(
+            WebClient accessTokenEndpoint, String accessTokenEndpointPath,
+            @Nullable ClientAuthorization clientAuthorization,
+            Supplier<? extends Map.Entry<String, String>> userCredentialsSupplier) {
         super(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
+        this.userCredentialsSupplier = requireNonNull(userCredentialsSupplier, "userCredentialsSupplier");
     }
 
     /**
-     * Makes Access Token Refresh request using the given {@code refresh_token} and handles the response
-     * converting the result data to {@link OAuth2AccessToken}.
-     * @param refreshToken The Refresh Token issued to the client to re-new an Access Token.
+     * Makes Resource Owner Password Credentials Grant request and handles the response converting the result
+     * data to {@link OAuth2AccessToken}.
      * @param scope OPTIONAL. Scope to request for the token. A list of space-delimited,
      *              case-sensitive strings. The strings are defined by the authorization server.
      *              The authorization server MAY fully or partially ignore the scope requested by the
@@ -73,16 +89,19 @@ public class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    public CompletableFuture<OAuth2AccessToken> make(String refreshToken, @Nullable String scope) {
-
-        requireNonNull(refreshToken, REFRESH_TOKEN);
-        final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(3);
+    public CompletableFuture<OAuth2AccessToken> make(@Nullable String scope) {
+        final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(4);
 
         // populate request form data
         // MANDATORY grant_type
-        requestFormItems.put(GRANT_TYPE, REFRESH_TOKEN);
-        // MANDATORY refresh_token
-        requestFormItems.put(REFRESH_TOKEN, refreshToken);
+        requestFormItems.put(GRANT_TYPE, PASSWORD_GRANT_TYPE);
+        // MANDATORY user credentials
+        final Map.Entry<String, String> userCredentials =
+                requireNonNull(userCredentialsSupplier.get(), "userCredentials");
+        final String userName = requireNonNull(userCredentials.getKey(), USERNAME);
+        final String userPassword = requireNonNull(userCredentials.getValue(), PASSWORD);
+        requestFormItems.put(USERNAME, userName);
+        requestFormItems.put(PASSWORD, userPassword);
         // OPTIONAL scope
         if (scope != null) {
             requestFormItems.put(SCOPE, scope);
@@ -90,29 +109,5 @@ public class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
 
         // make actual access token request
         return executeWithParameters(requestFormItems);
-    }
-
-    /**
-     * Makes Access Token Refresh request using the given {@code refresh_token} and handles the response
-     * converting the result data to {@link OAuth2AccessToken}.
-     * @param accessTokenCapsule An {@link OAuth2AccessToken} of the original Access Token to be renewed.
-     *                           This Access Token capsule MUST contain the Refresh Token issued to the client
-     *                           to in order to re-new the Access Token. If the Refresh Token was not provided,
-     *                           The new Access Token can only be obtained via initiating another grant flow.
-     *                           This Access Token Refresh request will use {@code refresh_token} and
-     *                           {@code scope} fields from the {@link OAuth2AccessToken} to complete the
-     *                           Refresh request.
-     * @return A {@link CompletableFuture} carrying the target result as {@link OAuth2AccessToken}.
-     * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
-     *                               response payload contains the details of the error.
-     * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
-     *                                typically indicates that client authentication failed (e.g.: unknown
-     *                                client, no client authentication included, or unsupported authentication
-     *                                method).
-     * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
-     *                                       (JSON).
-     */
-    public CompletableFuture<OAuth2AccessToken> make(OAuth2AccessToken accessTokenCapsule) {
-        return make(requireNonNull(accessTokenCapsule.refreshToken()), accessTokenCapsule.scope());
     }
 }

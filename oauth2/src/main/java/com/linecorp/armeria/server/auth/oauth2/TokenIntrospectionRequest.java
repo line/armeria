@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.server.auth.oauth2;
 
 import java.util.Map;
 
@@ -22,12 +22,15 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.auth.oauth2.AbstractTokenOperationRequest;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 
 /**
  * Implements Token Introspection request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc7662#section-2">[RFC7662], Section 2</a>.
  */
-public class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAuth2TokenDescriptor> {
+class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAuth2TokenDescriptor> {
 
     /**
      * Implements Token Introspection request/response flow,
@@ -40,8 +43,8 @@ public class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAu
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    public TokenIntrospectionRequest(WebClient introspectionEndpoint, String introspectionEndpointPath,
-                                     @Nullable ClientAuthorization clientAuthorization) {
+    TokenIntrospectionRequest(WebClient introspectionEndpoint, String introspectionEndpointPath,
+                              @Nullable ClientAuthorization clientAuthorization) {
         super(introspectionEndpoint, introspectionEndpointPath, clientAuthorization);
     }
 

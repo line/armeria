@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.ACCESS_TOKEN;
+
 import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -31,12 +33,10 @@ import com.linecorp.armeria.client.WebClient;
  * and Token Revocation flow (<a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>).
  * @param <T> the type of the authorization result.
  */
-abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Request<T> {
+public abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Request<T> {
 
     private static final String TOKEN = "token";
     private static final String TOKEN_TYPE_HINT = "token_type_hint";
-    private static final String ACCESS_TOKEN = "access_token";
-    private static final String REFRESH_TOKEN = "refresh_token";
 
     /**
      * A common abstraction for the requests implementing various Token operations request/response flows,

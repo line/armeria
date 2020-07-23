@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a> and other relevant specifications.
  * @param <T> the type of the authorization result.
  */
-abstract class AbstractOAuth2Request<T> {
+public abstract class AbstractOAuth2Request<T> {
 
     private final WebClient endpoint;
     private final String endpointPath;

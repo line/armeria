@@ -33,7 +33,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
-import com.linecorp.armeria.common.auth.oauth2.RefreshAccessTokenRequest;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 import com.linecorp.armeria.common.util.Exceptions;

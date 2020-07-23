@@ -31,7 +31,6 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
-import com.linecorp.armeria.common.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.auth.Authorizer;
 
 /**

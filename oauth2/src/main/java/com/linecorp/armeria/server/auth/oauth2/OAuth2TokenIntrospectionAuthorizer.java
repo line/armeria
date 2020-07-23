@@ -31,7 +31,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
-import com.linecorp.armeria.common.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthFailureHandler;

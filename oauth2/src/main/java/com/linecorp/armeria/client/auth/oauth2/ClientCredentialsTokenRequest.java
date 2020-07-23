@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.client.auth.oauth2;
 
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
@@ -25,12 +25,17 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
+import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
+import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 
 /**
  * Implements Client Credentials Grant request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
  */
-public class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
+class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
     private static final String CLIENT_CREDENTIALS_GRANT_TYPE = "client_credentials";
 
@@ -45,7 +50,7 @@ public class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    public ClientCredentialsTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
+    ClientCredentialsTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
                                          ClientAuthorization clientAuthorization) {
         super(accessTokenEndpoint, accessTokenEndpointPath,
               // client authorization is MANDATORY for this type of grant

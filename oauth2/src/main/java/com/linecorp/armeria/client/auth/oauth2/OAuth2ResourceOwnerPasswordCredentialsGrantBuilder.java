@@ -25,9 +25,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.auth.oauth2.AbstractAccessTokenRequest;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
-import com.linecorp.armeria.common.auth.oauth2.ResourceOwnerPasswordCredentialsTokenRequest;
 
 /**
  * Builds {@link OAuth2ClientCredentialsGrant}.

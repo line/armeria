@@ -26,9 +26,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.auth.oauth2.ClientCredentialsTokenRequest;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
-import com.linecorp.armeria.common.auth.oauth2.RefreshAccessTokenRequest;
 
 /**
  * An implementation of OAuth 2.0 Client Credentials Grant flow to obtain Access Token,

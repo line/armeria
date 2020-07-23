@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.client.auth.oauth2;
 
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
 
@@ -24,12 +24,15 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.auth.oauth2.AbstractOAuth2Request;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
 
 /**
  * A common abstraction for the requests implementing various Access Token request/response flows,
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
  */
-public abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<OAuth2AccessToken> {
+abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<OAuth2AccessToken> {
 
     protected static final String GRANT_TYPE = "grant_type";
 

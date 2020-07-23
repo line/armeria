@@ -43,157 +43,158 @@ import com.linecorp.armeria.common.QueryParamsBuilder;
  */
 public final class ClientAuthorization {
 
-  private static final String DEFAULT_AUTHORIZATION_TYPE = "Basic";
-  private static final char AUTHORIZATION_SEPARATOR = ' ';
-  private static final char CREDENTIALS_SEPARATOR = ':';
+    private static final String DEFAULT_AUTHORIZATION_TYPE = "Basic";
+    private static final char AUTHORIZATION_SEPARATOR = ' ';
+    private static final char CREDENTIALS_SEPARATOR = ':';
 
-  private static final String CLIENT_ID = "client_id";
-  private static final String CLIENT_SECRET = "client_secret";
+    private static final String CLIENT_ID = "client_id";
+    private static final String CLIENT_SECRET = "client_secret";
 
-  private final String authorizationType;
-  @Nullable
-  private final Supplier<String> authorizationSupplier;
-  @Nullable
-  private final Supplier<? extends Map.Entry<String, String>> credentialsSupplier;
+    private final String authorizationType;
+    @Nullable
+    private final Supplier<String> authorizationSupplier;
+    @Nullable
+    private final Supplier<? extends Map.Entry<String, String>> credentialsSupplier;
 
-  /**
-   * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
-   * authorization type,
-   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
-   *
-   * @param authorizationSupplier A supplier of encoded client authorization token.
-   * @param authorizationType One of the registered HTTP authentication schemes as per
-   *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
-   *                          HTTP Authentication Scheme Registry</a>.
-   */
-  public static ClientAuthorization ofAuthorization(
-      Supplier<String> authorizationSupplier, String authorizationType) {
-    return new ClientAuthorization(requireNonNull(authorizationSupplier, "authorizationSupplier"),
-        null, requireNonNull(authorizationType, "authorizationType"));
-  }
-
-  /**
-   * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
-   * {@code Basic} authorization type,
-   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
-   *
-   * @param authorizationSupplier A supplier of encoded client authorization token.
-   */
-  public static ClientAuthorization ofBasicAuthorization(
-      Supplier<String> authorizationSupplier) {
-    return new ClientAuthorization(requireNonNull(authorizationSupplier, "authorizationSupplier"),
-        null, null);
-  }
-
-  /**
-   * Provides client authorization for the OAuth 2.0 requests based on client credentials and
-   * authorization type,
-   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
-   *
-   * @param credentialsSupplier A supplier of client credentials.
-   * @param authorizationType One of the registered HTTP authentication schemes as per
-   *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
-   *                          HTTP Authentication Scheme Registry</a>.
-   */
-  public static ClientAuthorization ofCredentials(
-      Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
-    return new ClientAuthorization(null,
-        requireNonNull(credentialsSupplier, "credentialsSupplier"),
-        requireNonNull(authorizationType, "authorizationType"));
-  }
-
-  /**
-   * Provides client authorization for the OAuth 2.0 requests based on client credentials and
-   * {@code Basic} authorization type,
-   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
-   *
-   * @param credentialsSupplier A supplier of client credentials.
-   */
-  public static ClientAuthorization ofCredentials(
-      Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
-    return new ClientAuthorization(null,
-        requireNonNull(credentialsSupplier, "credentialsSupplier"), null);
-  }
-
-  private ClientAuthorization(@Nullable Supplier<String> authorizationSupplier,
-      @Nullable Supplier<? extends Map.Entry<String, String>> credentialsSupplier,
-      @Nullable String authorizationType) {
-    if (authorizationSupplier == null && credentialsSupplier == null) {
-      throw new NullPointerException("authorizationSupplier && credentialsSupplier");
+    /**
+     * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
+     * authorization type,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *
+     * @param authorizationSupplier A supplier of encoded client authorization token.
+     * @param authorizationType One of the registered HTTP authentication schemes as per
+     *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
+     *                          HTTP Authentication Scheme Registry</a>.
+     */
+    public static ClientAuthorization ofAuthorization(
+            Supplier<String> authorizationSupplier, String authorizationType) {
+        return new ClientAuthorization(requireNonNull(authorizationSupplier, "authorizationSupplier"),
+                                       null, requireNonNull(authorizationType, "authorizationType"));
     }
-    this.authorizationSupplier = authorizationSupplier;
-    this.credentialsSupplier = credentialsSupplier;
-    this.authorizationType =
-        authorizationType == null ? DEFAULT_AUTHORIZATION_TYPE : authorizationType;
-  }
 
-  private String composeAuthorizationString() {
-    final String clientAuthorization;
-    if (authorizationSupplier != null) {
-      clientAuthorization = authorizationSupplier.get();
-    } else if (credentialsSupplier != null) {
-      final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
-      clientAuthorization = encodeClientCredentials(clientCredentials.getKey(), clientCredentials.getValue());
-    } else {
-      // we should not get here
-      throw new NullPointerException("authorizationSupplier && credentialsSupplier");
+    /**
+     * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
+     * {@code Basic} authorization type,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *
+     * @param authorizationSupplier A supplier of encoded client authorization token.
+     */
+    public static ClientAuthorization ofBasicAuthorization(
+            Supplier<String> authorizationSupplier) {
+        return new ClientAuthorization(requireNonNull(authorizationSupplier, "authorizationSupplier"),
+                                       null, null);
     }
-    return clientAuthorization;
-  }
 
-  /**
-   * Fetches client authorization token or client credentials from the supplier and composes client
-   * {@code Authorization} header value,
-   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
-   * <pre>{@code
-   * Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
-   * }</pre>.
-   *
-   * @return encoded client {@code Authorization} header value.
-   */
-  public String authorizationHeaderValue() {
-    return CaseUtil.firstUpperAllLowerCase(authorizationType) +
-           AUTHORIZATION_SEPARATOR + composeAuthorizationString();
-  }
-
-  /**
-   * Fetches client credentials from the supplier and composes required body parameters,
-   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
-   * <pre>{@code
-   * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
-   * }</pre>.
-   * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
-   */
-  public void setCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
-    requireNonNull(credentialsSupplier, "credentialsSupplier");
-    final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
-    formBuilder.add(CLIENT_ID, requireNonNull(clientCredentials.getKey(), CLIENT_ID));
-    final String clientSecret = clientCredentials.getValue();
-    if (clientSecret != null && !clientSecret.isEmpty()) {
-      formBuilder.add(CLIENT_SECRET, clientSecret);
+    /**
+     * Provides client authorization for the OAuth 2.0 requests based on client credentials and
+     * authorization type,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *
+     * @param credentialsSupplier A supplier of client credentials.
+     * @param authorizationType One of the registered HTTP authentication schemes as per
+     *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
+     *                          HTTP Authentication Scheme Registry</a>.
+     */
+    public static ClientAuthorization ofCredentials(
+            Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
+        return new ClientAuthorization(null,
+                                       requireNonNull(credentialsSupplier, "credentialsSupplier"),
+                                       requireNonNull(authorizationType, "authorizationType"));
     }
-  }
 
-  /**
-   * Fetches client credentials from the supplier and composes required body parameters,
-   * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
-   * <pre>{@code
-   * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
-   * }</pre>.
-   * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
-   *
-   * @return encoded client credentials request body parameters as a {@link String}.
-   */
-  public String credentialsBodyParameters() {
-    final QueryParamsBuilder formBuilder = QueryParams.builder();
-    setCredentialsAsBodyParameters(formBuilder);
-    return formBuilder.toQueryString();
-  }
+    /**
+     * Provides client authorization for the OAuth 2.0 requests based on client credentials and
+     * {@code Basic} authorization type,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *
+     * @param credentialsSupplier A supplier of client credentials.
+     */
+    public static ClientAuthorization ofCredentials(
+            Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
+        return new ClientAuthorization(null,
+                                       requireNonNull(credentialsSupplier, "credentialsSupplier"), null);
+    }
 
-  private static String encodeClientCredentials(String clientId, String clientSecret) {
-      return Base64.getEncoder()
-                   .encodeToString(
-                           (clientId + CREDENTIALS_SEPARATOR + clientSecret)
-                                 .getBytes(StandardCharsets.UTF_8));
-  }
+    private ClientAuthorization(@Nullable Supplier<String> authorizationSupplier,
+                                @Nullable Supplier<? extends Map.Entry<String, String>> credentialsSupplier,
+                                @Nullable String authorizationType) {
+        if (authorizationSupplier == null && credentialsSupplier == null) {
+            throw new NullPointerException("authorizationSupplier && credentialsSupplier");
+        }
+        this.authorizationSupplier = authorizationSupplier;
+        this.credentialsSupplier = credentialsSupplier;
+        this.authorizationType =
+                authorizationType == null ? DEFAULT_AUTHORIZATION_TYPE : authorizationType;
+    }
+
+    private String composeAuthorizationString() {
+        final String clientAuthorization;
+        if (authorizationSupplier != null) {
+            clientAuthorization = authorizationSupplier.get();
+        } else if (credentialsSupplier != null) {
+            final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
+            clientAuthorization = encodeClientCredentials(clientCredentials.getKey(),
+                                                          clientCredentials.getValue());
+        } else {
+            // we should not get here
+            throw new NullPointerException("authorizationSupplier && credentialsSupplier");
+        }
+        return clientAuthorization;
+    }
+
+    /**
+     * Fetches client authorization token or client credentials from the supplier and composes client
+     * {@code Authorization} header value,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
+     * <pre>{@code
+     * Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+     * }</pre>.
+     *
+     * @return encoded client {@code Authorization} header value.
+     */
+    public String authorizationHeaderValue() {
+        return CaseUtil.firstUpperAllLowerCase(authorizationType) +
+               AUTHORIZATION_SEPARATOR + composeAuthorizationString();
+    }
+
+    /**
+     * Fetches client credentials from the supplier and composes required body parameters,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
+     * <pre>{@code
+     * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
+     * }</pre>.
+     * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
+     */
+    public void setCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
+        requireNonNull(credentialsSupplier, "credentialsSupplier");
+        final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
+        formBuilder.add(CLIENT_ID, requireNonNull(clientCredentials.getKey(), CLIENT_ID));
+        final String clientSecret = clientCredentials.getValue();
+        if (clientSecret != null && !clientSecret.isEmpty()) {
+            formBuilder.add(CLIENT_SECRET, clientSecret);
+        }
+    }
+
+    /**
+     * Fetches client credentials from the supplier and composes required body parameters,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
+     * <pre>{@code
+     * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
+     * }</pre>.
+     * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
+     *
+     * @return encoded client credentials request body parameters as a {@link String}.
+     */
+    public String credentialsBodyParameters() {
+        final QueryParamsBuilder formBuilder = QueryParams.builder();
+        setCredentialsAsBodyParameters(formBuilder);
+        return formBuilder.toQueryString();
+    }
+
+    private static String encodeClientCredentials(String clientId, String clientSecret) {
+        return Base64.getEncoder()
+                     .encodeToString(
+                             (clientId + CREDENTIALS_SEPARATOR + clientSecret)
+                                     .getBytes(StandardCharsets.UTF_8));
+    }
 }
