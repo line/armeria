@@ -283,7 +283,7 @@ class ContentDispositionTest {
                                                    .build()
                                                    .toString())
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Charset should be UTF-8 or ISO-8859-1.");
+                .hasMessageContaining("Charset: UTF-16 (expected: UTF-8 or ISO-8859-1)");
     }
 
     @Test

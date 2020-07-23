@@ -120,7 +120,7 @@ class SpringServerMultipartTest {
                                           .content("Hello!")
                                           .build();
 
-        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/upload");
+        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/multipart/file");
         final HttpRequest request = Multipart.of(filePart).toHttpRequest(requestHeaders);
 
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
