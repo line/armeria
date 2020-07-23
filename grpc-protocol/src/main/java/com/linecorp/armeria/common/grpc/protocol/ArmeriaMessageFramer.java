@@ -125,6 +125,9 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             } else {
                 buf = writeUncompressed(message, webTrailers);
             }
+            if (webTrailers) {
+                return HttpData.wrap(buf).withEndOfStream();
+            }
             return HttpData.wrap(buf);
         } catch (IOException | RuntimeException e) {
             // IOException will not be thrown, since sink#deliverFrame doesn't throw.

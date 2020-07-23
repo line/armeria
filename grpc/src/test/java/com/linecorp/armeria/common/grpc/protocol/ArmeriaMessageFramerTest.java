@@ -83,6 +83,7 @@ class ArmeriaMessageFramerTest {
     void writeUncompressedTrailers() {
         final ByteBuf serialized = serializedTrailers();
         try (HttpData framed = framer.writePayload(serialized, true)) {
+            assertThat(framed.isEndOfStream()).isTrue();
             assertThat(framed.array()).isEqualTo(
                     GrpcTestUtil.uncompressedFrame(serializedTrailers(), UNCOMPRESSED_TRAILERS));
             assertThat(serialized.refCnt()).isEqualTo(0);
@@ -95,6 +96,7 @@ class ArmeriaMessageFramerTest {
         framer.setMessageCompression(true);
         final ByteBuf serialized = serializedTrailers();
         try (HttpData framed = framer.writePayload(serialized, true)) {
+            assertThat(framed.isEndOfStream()).isTrue();
             assertThat(framed.array()).isEqualTo(
                     GrpcTestUtil.compressedFrame(serializedTrailers(), COMPRESSED_TRAILERS));
             assertThat(serialized.refCnt()).isEqualTo(0);

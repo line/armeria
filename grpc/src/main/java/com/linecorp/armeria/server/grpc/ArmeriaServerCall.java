@@ -307,7 +307,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 // Normal trailers are not supported in grpc-web and must be encoded as a message.
                 final ByteBuf serialized = serializeTrailersAsMessage(ctx.alloc(), trailers);
-                if (res.tryWrite(messageFramer.writePayload(serialized, true).withEndOfStream())) {
+                if (res.tryWrite(messageFramer.writePayload(serialized, true))) {
                     res.close();
                 }
             } else {
