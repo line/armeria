@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
 
 import java.util.Map;
 
@@ -26,13 +26,13 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.auth.oauth2.AbstractOAuth2Request;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
-import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
+import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 
 /**
  * A common abstraction for the requests implementing various Access Token request/response flows,
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
  */
-abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<OAuth2AccessToken> {
+abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedOAuth2AccessToken> {
 
     protected static final String GRANT_TYPE = "grant_type";
 
@@ -54,14 +54,14 @@ abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<OAuth2Ac
 
     /**
      * Extracts data from Access Token OK response and converts it to the target
-     * type {@code AccessTokenCapsule}.
+     * type {@link GrantedOAuth2AccessToken}.
      */
     @Override
-    protected OAuth2AccessToken extractOkResults(AggregatedHttpResponse response,
-                                                 Map<String, String> requestData) {
+    protected GrantedOAuth2AccessToken extractOkResults(AggregatedHttpResponse response,
+                                                        Map<String, String> requestData) {
         // if scope was added to the request the response may not include the scope
         // in such case - use the requested scope for the token
         final String scope = requestData.get(SCOPE);
-        return OAuth2AccessToken.of(response.contentUtf8(), scope);
+        return GrantedOAuth2AccessToken.of(response.contentUtf8(), scope);
     }
 }

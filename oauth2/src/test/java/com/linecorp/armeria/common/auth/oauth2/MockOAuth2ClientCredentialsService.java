@@ -70,6 +70,6 @@ public class MockOAuth2ClientCredentialsService extends MockOAuth2Service {
 
         final String tokenId = clientTokens.iterator().next();
         final MockOAuth2AccessToken accessToken = requireNonNull(accessTokens().get(tokenId), tokenId);
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, accessToken.tokenCapsule().rawResponse());
+        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, accessToken.grantedToken().rawResponse());
     }
 }

@@ -31,8 +31,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
-import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -44,9 +44,9 @@ import com.linecorp.armeria.common.util.Exceptions;
 abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
 
     /**
-     * Holds a reference to the access token capsule.
+     * Holds a reference to the granted access token.
      */
-    private final AtomicReference<OAuth2AccessToken> tokenRef;
+    private final AtomicReference<GrantedOAuth2AccessToken> tokenRef;
 
     /**
      * Executes obtain and refresh token operations serially on a separate thread.
@@ -58,13 +58,13 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     private final Duration refreshBefore;
 
     @Nullable
-    private final Supplier<? extends OAuth2AccessToken> tokenSupplier;
+    private final Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier;
     @Nullable
-    private final Consumer<? super OAuth2AccessToken> tokenConsumer;
+    private final Consumer<? super GrantedOAuth2AccessToken> tokenConsumer;
 
     AbstractOAuth2AuthorizationGrant(RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-                                     @Nullable Supplier<? extends OAuth2AccessToken> tokenSupplier,
-                                     @Nullable Consumer<? super OAuth2AccessToken> tokenConsumer) {
+                                     @Nullable Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier,
+                                     @Nullable Consumer<? super GrantedOAuth2AccessToken> tokenConsumer) {
         tokenRef = new AtomicReference<>();
         serialExecutor = Executors.newSingleThreadExecutor();
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
@@ -75,8 +75,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
 
     /**
      * Obtains a new access token from the token end-point asynchronously.
-     * @return A {@link CompletableFuture} carrying the requested {@link OAuth2AccessToken} or an exception,
-     *         if the request failed.
+     * @return A {@link CompletableFuture} carrying the requested {@link GrantedOAuth2AccessToken} or an
+     *         exception, if the request failed.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -86,13 +86,13 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    protected abstract CompletableFuture<OAuth2AccessToken> obtainAccessTokenAsync(
-            @Nullable OAuth2AccessToken token);
+    protected abstract CompletableFuture<GrantedOAuth2AccessToken> obtainAccessTokenAsync(
+            @Nullable GrantedOAuth2AccessToken token);
 
     /**
      * Obtains a new access token from the token end-point.
      * Optionally stores access token to registered {@link Consumer} for longer term storage.
-     * @return an {@link OAuth2AccessToken} that contains requested access token.
+     * @return an {@link GrantedOAuth2AccessToken} that contains requested access token.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -102,8 +102,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    private OAuth2AccessToken obtainAccessToken() {
-        final OAuth2AccessToken token = obtainAccessTokenAsync(null).join();
+    private GrantedOAuth2AccessToken obtainAccessToken() {
+        final GrantedOAuth2AccessToken token = obtainAccessTokenAsync(null).join();
         tokenRef.set(token); // reset the token reference
         if (tokenConsumer != null) {
             tokenConsumer.accept(token); // store token to an optional storage (e.g. secret store)
@@ -115,8 +115,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Refreshes access token using refresh token provided with the previous access token response
      * asynchronously, otherwise, if no refresh token available, re-obtains a new access token from the token
      * end-point.
-     * @return A {@link CompletableFuture} carrying the requested {@link OAuth2AccessToken} or an exception,
-     *         if the request failed.
+     * @return A {@link CompletableFuture} carrying the requested {@link GrantedOAuth2AccessToken} or an
+     *         exception, if the request failed.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -126,7 +126,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    private CompletableFuture<OAuth2AccessToken> refreshAccessTokenAsync(OAuth2AccessToken token) {
+    private CompletableFuture<GrantedOAuth2AccessToken> refreshAccessTokenAsync(
+            GrantedOAuth2AccessToken token) {
         if (token.refreshToken() != null) {
             // try refreshing token if refresh token was previously provided
             return refreshRequest.make(token);
@@ -141,7 +142,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * If the refresh token request fails with {@link TokenRequestException}, tries to re-obtains a new access
      * token from the token end-point.
      * Optionally stores access token to registered {@link Consumer} for longer term storage.
-     * @return an {@link OAuth2AccessToken} that contains requested access token.
+     * @return an {@link GrantedOAuth2AccessToken} that contains requested access token.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -151,15 +152,15 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    private OAuth2AccessToken refreshAccessToken(Instant instant) {
+    private GrantedOAuth2AccessToken refreshAccessToken(Instant instant) {
         // after acquiring the lock, re-check if it's a valid token
-        final OAuth2AccessToken token = tokenRef.get();
+        final GrantedOAuth2AccessToken token = tokenRef.get();
         if (token.isValid(instant)) {
             // simply return a valid token
             return token;
         }
         // otherwise, refresh it
-        OAuth2AccessToken refreshedToken;
+        GrantedOAuth2AccessToken refreshedToken;
         try {
             refreshedToken = refreshAccessTokenAsync(token).join();
         } catch (CompletionException e) {
@@ -182,8 +183,9 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Refreshing of the token facilitated by a dedicated single-thread {@link ExecutorService} which makes sure
      * all token obtain and refresh requests executed serially.
      */
-    private CompletableFuture<OAuth2AccessToken> validateOrRefreshAccessTokenAsync(OAuth2AccessToken token,
-                                                                                   boolean reset) {
+    private CompletableFuture<GrantedOAuth2AccessToken> validateOrRefreshAccessTokenAsync(
+            GrantedOAuth2AccessToken token,
+            boolean reset) {
         // check if it's still valid
         final Instant instant = Instant.now().plus(refreshBefore);
         if (token.isValid(instant)) {
@@ -204,7 +206,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     /**
      * Validates access token and refreshes it if the token has expired or about to expire.
      */
-    private OAuth2AccessToken validateOrRefreshAccessToken(OAuth2AccessToken token, boolean reset) {
+    private GrantedOAuth2AccessToken validateOrRefreshAccessToken(GrantedOAuth2AccessToken token,
+                                                                  boolean reset) {
         // check if it's still valid
         final Instant instant = Instant.now().plus(refreshBefore);
         if (token.isValid(instant)) {
@@ -229,8 +232,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Validates access token and refreshes it if necessary.
      */
     @Override
-    public CompletionStage<OAuth2AccessToken> getAccessToken() {
-        final OAuth2AccessToken token1 = tokenRef.get();
+    public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
+        final GrantedOAuth2AccessToken token1 = tokenRef.get();
         if (token1 != null) {
             // token already present
             return validateOrRefreshAccessTokenAsync(token1, false);
@@ -240,7 +243,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         // try to obtain token serially using single-thread executor
         return CompletableFuture.supplyAsync(() -> {
             // re-check if the token already present
-            OAuth2AccessToken token2 = tokenRef.get();
+            GrantedOAuth2AccessToken token2 = tokenRef.get();
             if (token2 != null) {
                 // token already present
                 return validateOrRefreshAccessToken(token2, false);

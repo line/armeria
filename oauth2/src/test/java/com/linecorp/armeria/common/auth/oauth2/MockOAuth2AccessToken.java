@@ -30,7 +30,7 @@ public class MockOAuth2AccessToken {
     public static final OAuth2TokenDescriptor INACTIVE_TOKEN = OAuth2TokenDescriptor.of("{\"active\":false}");
 
     private final String accessToken;
-    private final OAuth2AccessToken tokenCapsule;
+    private final GrantedOAuth2AccessToken grantedToken;
     private final OAuth2TokenDescriptor tokenDescriptor;
 
     @SuppressWarnings("DynamicRegexReplaceableByCompiledPattern")
@@ -64,30 +64,30 @@ public class MockOAuth2AccessToken {
                                  @Nullable String refreshToken) {
         this.accessToken = accessToken;
         tokenDescriptor = descriptor;
-        final OAuth2AccessTokenBuilder tokenCapsuleBuilder =
-                new OAuth2AccessTokenBuilder(requireNonNull(accessToken, "accessToken"))
+        final GrantedOAuth2AccessTokenBuilder grantedTokenBuilder =
+                new GrantedOAuth2AccessTokenBuilder(requireNonNull(accessToken, "accessToken"))
                         .scope(requireNonNull(descriptor, "descriptor").scope())
                         .issuedAt(requireNonNull(descriptor.issuedAt(), "issuedAt"));
         final String tokenType = descriptor.tokenType();
         if (tokenType != null) {
-            tokenCapsuleBuilder.tokenType(tokenType);
+            grantedTokenBuilder.tokenType(tokenType);
         }
         final Duration expiresIn = descriptor.expiresIn();
         if (expiresIn != null) {
-            tokenCapsuleBuilder.expiresIn(expiresIn);
+            grantedTokenBuilder.expiresIn(expiresIn);
         }
         if (refreshToken != null) {
-            tokenCapsuleBuilder.refreshToken(refreshToken);
+            grantedTokenBuilder.refreshToken(refreshToken);
         }
-        tokenCapsule = tokenCapsuleBuilder.build();
+        grantedToken = grantedTokenBuilder.build();
     }
 
     public String accessToken() {
         return accessToken;
     }
 
-    public OAuth2AccessToken tokenCapsule() {
-        return tokenCapsule;
+    public GrantedOAuth2AccessToken grantedToken() {
+        return grantedToken;
     }
 
     public OAuth2TokenDescriptor tokenDescriptor() {

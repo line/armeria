@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashMap;
@@ -26,8 +26,8 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
-import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 
@@ -59,7 +59,7 @@ class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
     /**
      * Makes Client Credentials Grant request and handles the response converting the result data
-     * to {@link OAuth2AccessToken}.
+     * to {@link GrantedOAuth2AccessToken}.
      * @param scope OPTIONAL. Scope to request for the token. A list of space-delimited,
      *              case-sensitive strings. The strings are defined by the authorization server.
      *              The authorization server MAY fully or partially ignore the scope requested by the
@@ -70,7 +70,7 @@ class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      *              If the client omits the scope parameter when requesting authorization, the
      *              authorization server MUST either process the request using a pre-defined default
      *              value or fail the request indicating an invalid scope.
-     * @return A {@link CompletableFuture} carrying the target result as {@link OAuth2AccessToken}.
+     * @return A {@link CompletableFuture} carrying the target result as {@link GrantedOAuth2AccessToken}.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -80,7 +80,7 @@ class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    public CompletableFuture<OAuth2AccessToken> make(@Nullable String scope) {
+    public CompletableFuture<GrantedOAuth2AccessToken> make(@Nullable String scope) {
         final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(2);
 
         // populate request form data

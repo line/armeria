@@ -41,12 +41,12 @@ import com.linecorp.armeria.common.HttpHeaderNames;
  * Defines a structure of the Access Token Response, as per
  * <a href="https://tools.ietf.org/html/rfc6749#section-5.1">[RFC6749], Section 5.1</a>.
  */
-public class OAuth2AccessToken implements Serializable {
+public class GrantedOAuth2AccessToken implements Serializable {
 
     private static final long serialVersionUID = 8698118404098897958L;
 
     /**
-     * Creates a new {@link OAuth2AccessToken} based on the {@code JSON}-formatted raw response body and
+     * Creates a new {@link GrantedOAuth2AccessToken} based on the {@code JSON}-formatted raw response body and
      * optional raw formatted {@code scope} used to request the token.
      * @param rawResponse {@code JSON}-formatted raw response body.
      * @param requestScope OPTIONAL. A list of space-delimited, case-sensitive strings.
@@ -59,19 +59,19 @@ public class OAuth2AccessToken implements Serializable {
      *                     If the client omits the scope parameter when requesting authorization, the
      *                     authorization server MUST either process the request using a pre-defined default
      *                     value or fail the request indicating an invalid scope.
-     * @return A new instance of {@link OAuth2AccessToken}.
+     * @return A new instance of {@link GrantedOAuth2AccessToken}.
      */
-    public static OAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
-        return OAuth2AccessTokenBuilder.of(rawResponse, requestScope);
+    public static GrantedOAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
+        return GrantedOAuth2AccessTokenBuilder.of(rawResponse, requestScope);
     }
 
     /**
-     * Creates a new {@link OAuth2AccessTokenBuilder} to build a new {@link OAuth2AccessToken} and
+     * Creates a new {@link GrantedOAuth2AccessTokenBuilder} to build a new {@link GrantedOAuth2AccessToken} and
      * supplied it with a value of {@code access_token} Access Token response field.
-     * @return A new instance of {@link OAuth2AccessTokenBuilder}.
+     * @return A new instance of {@link GrantedOAuth2AccessTokenBuilder}.
      */
-    public static OAuth2AccessTokenBuilder builder(String accessToken) {
-        return new OAuth2AccessTokenBuilder(accessToken);
+    public static GrantedOAuth2AccessTokenBuilder builder(String accessToken) {
+        return new GrantedOAuth2AccessTokenBuilder(accessToken);
     }
 
     public static final String ACCESS_TOKEN = "access_token";
@@ -167,11 +167,11 @@ public class OAuth2AccessToken implements Serializable {
     @Nullable
     private transient String toString;
 
-    OAuth2AccessToken(String accessToken, @Nullable String tokenType,
-                      Instant issuedAt, @Nullable Duration expiresIn,
-                      @Nullable String refreshToken, @Nullable List<String> scopeList,
-                      @Nullable ImmutableMap<String, String> extras,
-                      @Nullable String rawResponse) {
+    GrantedOAuth2AccessToken(String accessToken, @Nullable String tokenType,
+                             Instant issuedAt, @Nullable Duration expiresIn,
+                             @Nullable String refreshToken, @Nullable List<String> scopeList,
+                             @Nullable ImmutableMap<String, String> extras,
+                             @Nullable String rawResponse) {
         // token fields
         this.accessToken = requireNonNull(accessToken, ACCESS_TOKEN);
         this.tokenType = tokenType;
@@ -325,9 +325,9 @@ public class OAuth2AccessToken implements Serializable {
     }
 
     /**
-     * {@code JSON}-formatted raw Token Introspection Response body. If the {@link OAuth2AccessToken} was not
-     * parsed out of the raw response body, this value calculated based on the other {@link OAuth2AccessToken}
-     * values.
+     * {@code JSON}-formatted raw Token Introspection Response body. If the {@link GrantedOAuth2AccessToken} was
+     * not parsed out of the raw response body, this value calculated based on the other
+     * {@link GrantedOAuth2AccessToken} values.
      */
     public String rawResponse() {
         if (rawResponse == null) {
@@ -354,10 +354,10 @@ public class OAuth2AccessToken implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof OAuth2AccessToken)) {
+        if (!(o instanceof GrantedOAuth2AccessToken)) {
             return false;
         }
-        final OAuth2AccessToken that = (OAuth2AccessToken) o;
+        final GrantedOAuth2AccessToken that = (GrantedOAuth2AccessToken) o;
         return Objects.equals(rawResponse(), that.rawResponse());
     }
 

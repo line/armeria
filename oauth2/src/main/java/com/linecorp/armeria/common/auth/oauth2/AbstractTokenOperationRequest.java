@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.ACCESS_TOKEN;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ACCESS_TOKEN;
 
 import java.util.LinkedHashMap;
 import java.util.Objects;

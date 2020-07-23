@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.ACCESS_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.EXPIRES_IN;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.ISSUED_AT;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.JSON;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.REFRESH_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.TOKEN_TYPE;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ACCESS_TOKEN;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.EXPIRES_IN;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ISSUED_AT;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.JSON;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.REFRESH_TOKEN;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.TOKEN_TYPE;
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
 import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 import static java.util.Objects.requireNonNull;
@@ -40,14 +40,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * Builds an instance of {@link OAuth2AccessToken}.
+ * Builds an instance of {@link GrantedOAuth2AccessToken}.
  */
-public class OAuth2AccessTokenBuilder {
+public class GrantedOAuth2AccessTokenBuilder {
 
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
 
-    static OAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
+    static GrantedOAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
 
         final LinkedHashMap<String, String> map;
         try {
@@ -56,8 +56,8 @@ public class OAuth2AccessTokenBuilder {
             throw new RuntimeException(e);
         }
 
-        final OAuth2AccessTokenBuilder builder =
-                new OAuth2AccessTokenBuilder(requireNonNull(map.remove(ACCESS_TOKEN), ACCESS_TOKEN));
+        final GrantedOAuth2AccessTokenBuilder builder =
+                new GrantedOAuth2AccessTokenBuilder(requireNonNull(map.remove(ACCESS_TOKEN), ACCESS_TOKEN));
 
         final String tokenType = map.remove(TOKEN_TYPE);
         if (tokenType != null) {
@@ -111,12 +111,12 @@ public class OAuth2AccessTokenBuilder {
     private String rawResponse;
 
     /**
-     * Constructs a new instance of {@link OAuth2AccessTokenBuilder} given the mandatory value
+     * Constructs a new instance of {@link GrantedOAuth2AccessTokenBuilder} given the mandatory value
      * {@code access_token} of the access token issued by the authorization server.
      * @param accessToken {@code access_token} Access Token response field,
      *                    REQUIRED. The access token issued by the authorization server.
      */
-    OAuth2AccessTokenBuilder(String accessToken) {
+    GrantedOAuth2AccessTokenBuilder(String accessToken) {
         this.accessToken = requireNonNull(accessToken, "accessToken");
     }
 
@@ -126,7 +126,7 @@ public class OAuth2AccessTokenBuilder {
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      * Value is case insensitive.
      */
-    public OAuth2AccessTokenBuilder tokenType(String tokenType) {
+    public GrantedOAuth2AccessTokenBuilder tokenType(String tokenType) {
         this.tokenType = requireNonNull(tokenType, "tokenType");
         return this;
     }
@@ -138,7 +138,7 @@ public class OAuth2AccessTokenBuilder {
      * the response was generated. If omitted, the authorization server SHOULD provide the expiration
      * time via other means or document the default value.
      */
-    public OAuth2AccessTokenBuilder expiresIn(Duration expiresIn) {
+    public GrantedOAuth2AccessTokenBuilder expiresIn(Duration expiresIn) {
         this.expiresIn = requireNonNull(expiresIn, "expiresIn");
         return this;
     }
@@ -148,7 +148,7 @@ public class OAuth2AccessTokenBuilder {
      * OPTIONAL. The value is NOT supplied with the Access Token response and calculated approximately using
      * {@code expires_in} field.
      */
-    public OAuth2AccessTokenBuilder issuedAt(Instant issuedAt) {
+    public GrantedOAuth2AccessTokenBuilder issuedAt(Instant issuedAt) {
         this.issuedAt = requireNonNull(issuedAt, "issuedAt");
         return this;
     }
@@ -159,7 +159,7 @@ public class OAuth2AccessTokenBuilder {
      * authorization grant as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
      */
-    public OAuth2AccessTokenBuilder refreshToken(String refreshToken) {
+    public GrantedOAuth2AccessTokenBuilder refreshToken(String refreshToken) {
         this.refreshToken = requireNonNull(refreshToken, "refreshToken");
         return this;
     }
@@ -168,7 +168,7 @@ public class OAuth2AccessTokenBuilder {
      * {@code scope} Access Token Response field,
      * OPTIONAL. An {@link Iterable} of individual scope values.
      */
-    public OAuth2AccessTokenBuilder scope(Iterable<String> scope) {
+    public GrantedOAuth2AccessTokenBuilder scope(Iterable<String> scope) {
         this.scope.addAll(requireNonNull(scope, "scope"));
         return this;
     }
@@ -177,7 +177,7 @@ public class OAuth2AccessTokenBuilder {
      * {@code scope} Access Token Response field,
      * OPTIONAL. An array of individual scope values.
      */
-    public OAuth2AccessTokenBuilder scope(String... scope) {
+    public GrantedOAuth2AccessTokenBuilder scope(String... scope) {
         this.scope.add(requireNonNull(scope, "scope"));
         return this;
     }
@@ -186,7 +186,7 @@ public class OAuth2AccessTokenBuilder {
      * A pair of extra system-specific token parameters included with Access Token Response,
      * OPTIONAL.
      */
-    public OAuth2AccessTokenBuilder extras(String key, String value) {
+    public GrantedOAuth2AccessTokenBuilder extras(String key, String value) {
         extras.put(key, value);
         return this;
     }
@@ -195,7 +195,7 @@ public class OAuth2AccessTokenBuilder {
      * A {@link Map} of extra system-specific token parameters included with Access Token Response,
      * OPTIONAL.
      */
-    public OAuth2AccessTokenBuilder extras(Map<String, String> extras) {
+    public GrantedOAuth2AccessTokenBuilder extras(Map<String, String> extras) {
         this.extras.putAll(extras);
         return this;
     }
@@ -205,23 +205,23 @@ public class OAuth2AccessTokenBuilder {
      * OPTIONAL.
      */
     @SuppressWarnings("UnstableApiUsage")
-    public OAuth2AccessTokenBuilder extras(
+    public GrantedOAuth2AccessTokenBuilder extras(
             Iterable<? extends Map.Entry<String, String>> extras) {
         this.extras.putAll(extras);
         return this;
     }
 
-    private OAuth2AccessTokenBuilder rawResponse(String rawResponse) {
+    private GrantedOAuth2AccessTokenBuilder rawResponse(String rawResponse) {
         this.rawResponse = requireNonNull(rawResponse, "rawResponse");
         return this;
     }
 
     /**
-     * Builds a new instance of {@link OAuth2AccessToken} based on the configured parameters.
+     * Builds a new instance of {@link GrantedOAuth2AccessToken} based on the configured parameters.
      */
-    public OAuth2AccessToken build() {
-        return new OAuth2AccessToken(accessToken, tokenType,
+    public GrantedOAuth2AccessToken build() {
+        return new GrantedOAuth2AccessToken(accessToken, tokenType,
                                       (issuedAt == null) ? Instant.now() : issuedAt, expiresIn,
-                                     refreshToken, scope.build(), extras.build(), rawResponse);
+                                            refreshToken, scope.build(), extras.build(), rawResponse);
     }
 }

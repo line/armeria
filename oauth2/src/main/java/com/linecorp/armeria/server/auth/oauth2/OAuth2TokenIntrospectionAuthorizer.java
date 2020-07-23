@@ -148,7 +148,7 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
             // just re-validate existing token
             return CompletableFuture.completedFuture(validateDescriptor(ctx, tokenDescriptor));
         }
-        // using OAuth2 introspection request to obtain the token introspection capsule
+        // using OAuth 2.0 introspection request to obtain the token descriptor
         return tokenIntrospectionRequest.make(accessToken).thenApply(descriptor -> {
             // first, authorize the new token descriptor
             if (!authorizeNewDescriptor(ctx, descriptor)) {

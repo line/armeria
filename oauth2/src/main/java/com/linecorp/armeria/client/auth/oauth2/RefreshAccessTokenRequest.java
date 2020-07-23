@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.REFRESH_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.REFRESH_TOKEN;
+import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashMap;
@@ -27,8 +27,8 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
-import com.linecorp.armeria.common.auth.oauth2.OAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 
@@ -56,7 +56,7 @@ class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
 
     /**
      * Makes Access Token Refresh request using the given {@code refresh_token} and handles the response
-     * converting the result data to {@link OAuth2AccessToken}.
+     * converting the result data to {@link GrantedOAuth2AccessToken}.
      * @param refreshToken The Refresh Token issued to the client to re-new an Access Token.
      * @param scope OPTIONAL. Scope to request for the token. A list of space-delimited,
      *              case-sensitive strings. The strings are defined by the authorization server.
@@ -68,7 +68,7 @@ class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
      *              If the client omits the scope parameter when requesting authorization, the
      *              authorization server MUST either process the request using a pre-defined default
      *              value or fail the request indicating an invalid scope.
-     * @return A {@link CompletableFuture} carrying the target result as {@link OAuth2AccessToken}.
+     * @return A {@link CompletableFuture} carrying the target result as {@link GrantedOAuth2AccessToken}.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -78,7 +78,7 @@ class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    public CompletableFuture<OAuth2AccessToken> make(String refreshToken, @Nullable String scope) {
+    public CompletableFuture<GrantedOAuth2AccessToken> make(String refreshToken, @Nullable String scope) {
 
         requireNonNull(refreshToken, REFRESH_TOKEN);
         final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(3);
@@ -99,15 +99,15 @@ class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
 
     /**
      * Makes Access Token Refresh request using the given {@code refresh_token} and handles the response
-     * converting the result data to {@link OAuth2AccessToken}.
-     * @param accessTokenCapsule An {@link OAuth2AccessToken} of the original Access Token to be renewed.
-     *                           This Access Token capsule MUST contain the Refresh Token issued to the client
-     *                           to in order to re-new the Access Token. If the Refresh Token was not provided,
-     *                           The new Access Token can only be obtained via initiating another grant flow.
-     *                           This Access Token Refresh request will use {@code refresh_token} and
-     *                           {@code scope} fields from the {@link OAuth2AccessToken} to complete the
-     *                           Refresh request.
-     * @return A {@link CompletableFuture} carrying the target result as {@link OAuth2AccessToken}.
+     * converting the result data to {@link GrantedOAuth2AccessToken}.
+     * @param accessToken An {@link GrantedOAuth2AccessToken} of the original Access Token to be renewed.
+     *                    This granted Access Token record MUST contain the Refresh Token issued to the client
+     *                    to in order to re-new the Access Token. If the Refresh Token was not provided,
+     *                    The new Access Token can only be obtained via initiating another grant flow.
+     *                    This Access Token Refresh request will use {@code refresh_token} and
+     *                    {@code scope} fields from the {@link GrantedOAuth2AccessToken} to complete the
+     *                    Refresh request.
+     * @return A {@link CompletableFuture} carrying the target result as {@link GrantedOAuth2AccessToken}.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -117,7 +117,7 @@ class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    public CompletableFuture<OAuth2AccessToken> make(OAuth2AccessToken accessTokenCapsule) {
-        return make(requireNonNull(accessTokenCapsule.refreshToken()), accessTokenCapsule.scope());
+    public CompletableFuture<GrantedOAuth2AccessToken> make(GrantedOAuth2AccessToken accessToken) {
+        return make(requireNonNull(accessToken.refreshToken()), accessToken.scope());
     }
 }

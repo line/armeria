@@ -65,8 +65,8 @@ public class TokenIntrospectionRequestTest {
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic " + SERVER_CREDENTIALS);
         final AggregatedHttpResponse response1 = client.execute(
-                requestHeaders1, "token=" + token.tokenCapsule().accessToken() +
-                                "&token_type_hint=access_token").aggregate().join();
+                requestHeaders1, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
         assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final OAuth2TokenDescriptor tokenDescriptor1 = OAuth2TokenDescriptor.of(response1.contentUtf8());
@@ -92,8 +92,8 @@ public class TokenIntrospectionRequestTest {
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
         final AggregatedHttpResponse response3 = client.execute(
-                requestHeaders3, "token=" + token.tokenCapsule().accessToken() +
-                                "&token_type_hint=access_token").aggregate().join();
+                requestHeaders3, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response3.status()).isEqualTo(HttpStatus.OK);
         assertThat(response3.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final OAuth2TokenDescriptor tokenDescriptor3 = OAuth2TokenDescriptor.of(response3.contentUtf8());
@@ -110,8 +110,8 @@ public class TokenIntrospectionRequestTest {
                 HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
                 HttpHeaderNames.ACCEPT, MediaType.JSON);
         final AggregatedHttpResponse response1 = client.execute(
-                requestHeaders1, "token=" + token.tokenCapsule().accessToken() +
-                                "&token_type_hint=access_token").aggregate().join();
+                requestHeaders1, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response1.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response1.headers())
                 .contains(new SimpleImmutableEntry<>(
@@ -123,8 +123,8 @@ public class TokenIntrospectionRequestTest {
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic");
         final AggregatedHttpResponse response2 = client.execute(
-                requestHeaders2, "token=" + token.tokenCapsule().accessToken() +
-                                "&token_type_hint=access_token").aggregate().join();
+                requestHeaders2, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response2.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response2.headers())
                 .contains(new SimpleImmutableEntry<>(
@@ -136,8 +136,8 @@ public class TokenIntrospectionRequestTest {
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic Zm9vOmJhcg=="); // foo:bar
         final AggregatedHttpResponse response3 = client.execute(
-                requestHeaders3, "token=" + token.tokenCapsule().accessToken() +
-                                "&token_type_hint=access_token").aggregate().join();
+                requestHeaders3, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response3.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response3.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response3.contentUtf8()).isEqualTo("{\"error\":\"invalid_client\"}");
