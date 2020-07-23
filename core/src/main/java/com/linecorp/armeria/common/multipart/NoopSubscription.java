@@ -17,11 +17,9 @@ package com.linecorp.armeria.common.multipart;
 
 import org.reactivestreams.Subscription;
 
-final class NoopSubscription implements Subscription {
+enum NoopSubscription implements Subscription {
 
-    static final NoopSubscription INSTANCE = new NoopSubscription();
-
-    private NoopSubscription() {}
+    INSTANCE;
 
     @Override
     public void request(long n) {}
