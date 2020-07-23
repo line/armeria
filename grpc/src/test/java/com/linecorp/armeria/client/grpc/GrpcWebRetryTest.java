@@ -112,8 +112,8 @@ class GrpcWebRetryTest {
                        .build(TestServiceBlockingStub.class);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final SimpleResponse result = client.unaryCall(SimpleRequest.newBuilder().build());
-            assertThat(result.getUsername()).isEqualTo("my name");
+            final Empty result = client.emptyCall(Empty.newBuilder().build());
+            assertThat(result).isEqualTo(Empty.getDefaultInstance());
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.children()).hasSize(3);
         }
