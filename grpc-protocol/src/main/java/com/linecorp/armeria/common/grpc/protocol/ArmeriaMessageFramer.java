@@ -110,9 +110,21 @@ public class ArmeriaMessageFramer implements AutoCloseable {
      * Writes out a payload message.
      *
      * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
-     * @param webTrailers tells whether the payload is web trailers
      *
      * @return an {@link HttpData} with the framed payload. Ownership is passed to caller.
+     */
+    public HttpData writePayload(ByteBuf message) {
+        return writePayload(message, false);
+    }
+
+    /**
+     * Writes out a payload message.
+     *
+     * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
+     * @param webTrailers tells whether the payload is web trailers
+     *
+     * @return an {@link HttpData} with the framed payload. Ownership is passed to caller. If the specified
+     *         {@code webTrailers} is {@code true}, {@link HttpData#isEndOfStream()} returns {@code true}.
      */
     public HttpData writePayload(ByteBuf message, boolean webTrailers) {
         verifyNotClosed();

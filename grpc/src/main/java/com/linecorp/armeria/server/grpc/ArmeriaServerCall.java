@@ -251,7 +251,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         try {
-            res.write(messageFramer.writePayload(marshaller.serializeResponse(message), false));
+            res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
             res.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     if (blockingExecutor != null) {

@@ -296,7 +296,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, message), null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
-            req.write(messageFramer.writePayload(serialized, false));
+            req.write(messageFramer.writePayload(serialized));
             req.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     try (SafeCloseable ignored = ctx.push()) {

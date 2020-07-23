@@ -62,7 +62,7 @@ class ArmeriaMessageFramerTest {
     @Test
     void writeUncompressed() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        try (HttpData framed = framer.writePayload(buf, false)) {
+        try (HttpData framed = framer.writePayload(buf)) {
             assertThat(framed.array()).isEqualTo(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
             assertThat(buf.refCnt()).isEqualTo(0);
         }
@@ -73,7 +73,7 @@ class ArmeriaMessageFramerTest {
         framer.setCompressor(ForwardingCompressor.forGrpc(new Gzip()));
         framer.setMessageCompression(true);
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        try (HttpData framed = framer.writePayload(buf, false)) {
+        try (HttpData framed = framer.writePayload(buf)) {
             assertThat(framed.array()).isEqualTo(GrpcTestUtil.compressedFrame(GrpcTestUtil.requestByteBuf()));
             assertThat(buf.refCnt()).isEqualTo(0);
         }
@@ -109,7 +109,7 @@ class ArmeriaMessageFramerTest {
         framer.setMessageCompression(true);
         final ByteBuf buf = GrpcTestUtil.protoByteBuf(SimpleRequest.getDefaultInstance());
         assertThat(buf.readableBytes()).isEqualTo(0);
-        try (HttpData framed = framer.writePayload(buf, false)) {
+        try (HttpData framed = framer.writePayload(buf)) {
             assertThat(framed.array()).isEqualTo(GrpcTestUtil.uncompressedFrame(
                     GrpcTestUtil.protoByteBuf(SimpleRequest.getDefaultInstance())));
             assertThat(buf.refCnt()).isEqualTo(0);
@@ -124,7 +124,7 @@ class ArmeriaMessageFramerTest {
                                                 .setBody(ByteString.copyFromUtf8(
                                                         Strings.repeat("a", 1024))))
                              .build();
-        assertThatThrownBy(() -> framer.writePayload(GrpcTestUtil.protoByteBuf(request), false))
+        assertThatThrownBy(() -> framer.writePayload(GrpcTestUtil.protoByteBuf(request)))
                 .isInstanceOf(ArmeriaStatusException.class);
     }
 
@@ -138,7 +138,7 @@ class ArmeriaMessageFramerTest {
                                                 .setBody(ByteString.copyFromUtf8(
                                                         Strings.repeat("a", 1024))))
                              .build();
-        try (HttpData framed = framer.writePayload(GrpcTestUtil.protoByteBuf(request), false)) {
+        try (HttpData framed = framer.writePayload(GrpcTestUtil.protoByteBuf(request))) {
             assertThat(framed.array()).isEqualTo(
                     GrpcTestUtil.compressedFrame(GrpcTestUtil.protoByteBuf(request)));
         }
@@ -156,7 +156,7 @@ class ArmeriaMessageFramerTest {
                              .setPayload(Payload.newBuilder()
                                                 .setBody(ByteString.copyFrom(payload)))
                              .build();
-        assertThatThrownBy(() -> framer.writePayload(GrpcTestUtil.protoByteBuf(request), false))
+        assertThatThrownBy(() -> framer.writePayload(GrpcTestUtil.protoByteBuf(request)))
                 .isInstanceOf(ArmeriaStatusException.class);
     }
 

@@ -191,7 +191,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             final HttpData frame;
             boolean success = false;
             try {
-                frame = framer.writePayload(content.byteBuf(), false);
+                frame = framer.writePayload(content.byteBuf());
                 success = true;
             } finally {
                 if (!success) {

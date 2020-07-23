@@ -75,7 +75,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                    .thenApply(responseMessage -> {
                        final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                                ctx.alloc(), Integer.MAX_VALUE);
-                       final HttpData framed = framer.writePayload(responseMessage, false);
+                       final HttpData framed = framer.writePayload(responseMessage);
                        return HttpResponse.of(
                                RESPONSE_HEADERS,
                                framed,
