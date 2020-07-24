@@ -78,7 +78,7 @@ public interface Route {
      * @return the logger name whose components are separated by a dot (.)
      *
      * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#pathPattern()}.
+     *             {@link Route#patternString()}.
      */
     @Deprecated
     String loggerName();
@@ -87,7 +87,7 @@ public interface Route {
      * Returns the value of the {@link Tag} in a {@link Meter} of this {@link Route}.
      *
      * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#pathPattern()}.
+     *             {@link Route#patternString()}.
      */
     @Deprecated
     String meterTag();
@@ -120,7 +120,7 @@ public interface Route {
      *   </li>
      * </ul>
      */
-    String pathPattern();
+    String patternString();
 
     /**
      * Returns the type of the path which was specified when this is created.

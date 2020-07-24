@@ -33,13 +33,13 @@ class RegexPathMappingTest {
     }
 
     @Test
-    void pathPattern() {
+    void patternString() {
         final RegexPathMapping regexPathMapping1 = new RegexPathMapping(Pattern.compile("foo/bar"));
-        assertThat(regexPathMapping1.pathPattern()).isEqualTo("foo/bar");
+        assertThat(regexPathMapping1.patternString()).isEqualTo("foo/bar");
 
         final RegexPathMapping regexPathMapping2 =
                 new RegexPathMapping(Pattern.compile("^/files/(?<fileName>.*)$"));
-        assertThat(regexPathMapping2.pathPattern()).isEqualTo("^/files/(?<fileName>.*)$");
+        assertThat(regexPathMapping2.patternString()).isEqualTo("^/files/(?<fileName>.*)$");
     }
 
     @Test

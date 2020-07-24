@@ -52,7 +52,7 @@ interface PathMapping {
      * @return the logger name whose components are separated by a dot (.)
      *
      * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#pathPattern()}.
+     *             {@link Route#patternString()}.
      */
     @Deprecated
     String loggerName();
@@ -61,7 +61,7 @@ interface PathMapping {
      * Returns the value of the {@link Tag} in a {@link Meter} of this {@link PathMapping}.
      *
      * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#pathPattern()}.
+     *             {@link Route#patternString()}.
      */
     @Deprecated
     String meterTag();
@@ -93,7 +93,7 @@ interface PathMapping {
      *   </li>
      * </ul>
      */
-    String pathPattern();
+    String patternString();
 
     /**
      * Returns the type of the path which was specified when this is created.

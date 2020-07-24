@@ -32,12 +32,12 @@ class PrefixPathMappingTest {
     }
 
     @Test
-    void pathPattern() {
+    void patternString() {
         final PrefixPathMapping prefixPathMapping1 = new PrefixPathMapping("/foo/bar", true);
-        assertThat(prefixPathMapping1.pathPattern()).isEqualTo("/foo/bar/*");
+        assertThat(prefixPathMapping1.patternString()).isEqualTo("/foo/bar/*");
 
         final PrefixPathMapping prefixPathMapping2 = new PrefixPathMapping("/foo/bar/", true);
-        assertThat(prefixPathMapping2.pathPattern()).isEqualTo("/foo/bar/*");
+        assertThat(prefixPathMapping2.patternString()).isEqualTo("/foo/bar/*");
     }
 
     @Test

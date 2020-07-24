@@ -53,7 +53,7 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String pathPattern() {
+    public String patternString() {
         return "/*";
     }
 

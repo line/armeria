@@ -53,8 +53,8 @@ class ExactPathMappingTest {
     }
 
     @Test
-    void pathPattern() {
+    void patternString() {
         final ExactPathMapping exactPathMapping = new ExactPathMapping("/foo/bar");
-        assertThat(exactPathMapping.pathPattern()).isEqualTo("/foo/bar");
+        assertThat(exactPathMapping.patternString()).isEqualTo("/foo/bar");
     }
 }

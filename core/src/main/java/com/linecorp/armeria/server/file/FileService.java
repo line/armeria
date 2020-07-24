@@ -170,13 +170,13 @@ public final class FileService extends AbstractHttpService {
                 meterIdPrefix = new MeterIdPrefix("armeria.server.file.vfsCache",
                                                   "hostnamePattern",
                                                   cfg.virtualHost().hostnamePattern(),
-                                                  "route", cfg.route().pathPattern(),
+                                                  "route", cfg.route().patternString(),
                                                   "vfs", config.vfs().meterTag());
             } else {
                 meterIdPrefix = new MeterIdPrefix("armeria.server.file.vfs.cache",
                                                   "hostname.pattern",
                                                   cfg.virtualHost().hostnamePattern(),
-                                                  "route", cfg.route().pathPattern(),
+                                                  "route", cfg.route().patternString(),
                                                   "vfs", config.vfs().meterTag());
             }
 

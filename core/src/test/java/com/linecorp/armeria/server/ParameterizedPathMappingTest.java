@@ -157,16 +157,16 @@ class ParameterizedPathMappingTest {
     }
 
     @Test
-    void pathPattern() {
+    void patternString() {
         final ParameterizedPathMapping pathMappingWithBrace = new ParameterizedPathMapping("/service/{value}");
-        assertThat(pathMappingWithBrace.pathPattern()).isEqualTo("/service/:value");
+        assertThat(pathMappingWithBrace.patternString()).isEqualTo("/service/:value");
 
         final ParameterizedPathMapping pathMappingWithColon = new ParameterizedPathMapping("/service/:value");
-        assertThat(pathMappingWithColon.pathPattern()).isEqualTo("/service/:value");
+        assertThat(pathMappingWithColon.patternString()).isEqualTo("/service/:value");
 
         final ParameterizedPathMapping pathMappingWithComplexPattern =
                 new ParameterizedPathMapping("/service/{value}/items/{value}/:itemId");
-        assertThat(pathMappingWithComplexPattern.pathPattern())
+        assertThat(pathMappingWithComplexPattern.patternString())
                 .isEqualTo("/service/:value/items/:value/:itemId");
     }
 }

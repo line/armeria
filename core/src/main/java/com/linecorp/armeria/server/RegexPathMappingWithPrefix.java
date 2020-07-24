@@ -45,14 +45,14 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
         this.mapping = mapping;
         regexAndPrefix = ImmutableList.of(mapping.paths().get(0), pathPrefix);
 
-        final String mappingPathPattern = mapping.pathPattern();
+        final String patternString = mapping.patternString();
         final String normalizedPathPrefix;
-        if (pathPrefix.endsWith("/") && mappingPathPattern.startsWith("/")) {
+        if (pathPrefix.endsWith("/") && patternString.startsWith("/")) {
             normalizedPathPrefix = pathPrefix.substring(0, pathPrefix.length() - 1);
         } else {
            normalizedPathPrefix = pathPrefix;
         }
-        pathPattern = normalizedPathPrefix + mappingPathPattern;
+        pathPattern = normalizedPathPrefix + patternString;
 
         loggerName = newLoggerName(pathPrefix) + '.' + mapping.loggerName();
         meterTag = PREFIX + pathPrefix + ',' + mapping.meterTag();
@@ -92,7 +92,7 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
     }
 
     @Override
-    public String pathPattern() {
+    public String patternString() {
         return pathPattern;
     }
 

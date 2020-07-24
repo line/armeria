@@ -72,7 +72,7 @@ final class ServiceRequestContextAdapter {
 
         @Override
         public String route() {
-            return ctx.config().route().pathPattern();
+            return ctx.config().route().patternString();
         }
 
         @Override

@@ -32,7 +32,7 @@ class CatchAllPathMappingTest {
     }
 
     @Test
-    void pathPattern() {
-        assertThat(Route.ofCatchAll().pathPattern()).isEqualTo("/*");
+    void patternString() {
+        assertThat(Route.ofCatchAll().patternString()).isEqualTo("/*");
     }
 }

@@ -83,7 +83,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String pathPattern() {
+    public String patternString() {
         return pathPattern;
     }
 
