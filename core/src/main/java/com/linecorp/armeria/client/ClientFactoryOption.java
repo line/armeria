@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AbstractOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -214,6 +215,9 @@ public final class ClientFactoryOption<T>
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
             define("METER_REGISTRY", Metrics.globalRegistry);
+
+    public static final ClientFactoryOption<MeterIdPrefix> DEFAULT_METER_ID_PREFIX =
+            define("DEFAULT_DNS_METER_ID_PREFIX", new MeterIdPrefix("armeria.client.dns.queries"));
 
     /**
      * The {@link ProxyConfig} which contains proxy related configuration.

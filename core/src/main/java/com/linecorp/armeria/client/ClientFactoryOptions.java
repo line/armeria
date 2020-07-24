@@ -26,6 +26,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -257,6 +258,13 @@ public final class ClientFactoryOptions
      */
     public MeterRegistry meterRegistry() {
         return get(ClientFactoryOption.METER_REGISTRY);
+    }
+
+    /**
+     * Returns the {@link MeterIdPrefix}.
+     */
+    public MeterIdPrefix meterIdPrefix() {
+        return get(ClientFactoryOption.DEFAULT_METER_ID_PREFIX);
     }
 
     /**
