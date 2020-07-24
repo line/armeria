@@ -74,8 +74,23 @@ interface PathMapping {
      *   <li>{@linkplain RoutePathType#EXACT EXACT}: {@code "/foo" or "/foo/bar"}</li>
      *   <li>{@linkplain RoutePathType#PREFIX PREFIX}: {@code "/foo/*"}</li>
      *   <li>{@linkplain RoutePathType#PARAMETERIZED PARAMETERIZED}: {@code "/foo/:bar" or "/foo/:bar/:qux}</li>
-     *   <li>{@linkplain RoutePathType#REGEX REGEX}: {@code "/*&#42;/foo" }</li>
-     *   <li>{@linkplain RoutePathType#REGEX_WITH_PREFIX REGEX_WITH_PREFIX}: {@code "/foo/*&#42;/bar" }</li>
+     *   <li>{@linkplain RoutePathType#REGEX REGEX} may have a glob pattern or a regular expression:
+     *     <ul>
+     *       <li><code>"/*&#42;/foo"</code> if the {@link Route} was created using
+     *           {@link RouteBuilder#glob(String)}</li>
+     *       <li>{@code "^/(?(.+)/)?foo$"} if the {@link Route} was created using
+     *           {@link RouteBuilder#regex(String)}</li>
+     *     </ul>
+     *   </li>
+     *   <li>{@linkplain RoutePathType#REGEX_WITH_PREFIX REGEX_WITH_PREFIX} may have a glob pattern or
+     *       a regular expression with a prefix:
+     *     <ul>
+     *       <li>{@code "/foo/bar/**"} if the {@link Route} was created using
+     *           {@code RouteBuilder.path("/foo/", "glob:/bar/**")}</li>
+     *       <li>{@code "/foo/(bar|baz)"} if the {@link Route} was created using
+     *           {@code RouteBuilder.path("/foo/", "regex:/(bar|baz)")}</li>
+     *     </ul>
+     *   </li>
      * </ul>
      */
     String pathPattern();

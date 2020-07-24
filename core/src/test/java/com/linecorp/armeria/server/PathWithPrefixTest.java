@@ -56,4 +56,16 @@ class PathWithPrefixTest {
         route = Route.builder().path("/foo/", "regex:/(foo|bar)").build();
         assertThat(route.meterTag()).isEqualTo("prefix:/foo/,regex:/(foo|bar)");
     }
+
+    @Test
+    void pathPattern() {
+        Route route = Route.builder().path("/foo/", "glob:/bar/**").build();
+        assertThat(route.pathPattern()).isEqualTo("/foo/bar/**");
+
+        route = Route.builder().path("/foo/", "glob:bar").build();
+        assertThat(route.pathPattern()).isEqualTo("/foo/**/bar");
+
+        route = Route.builder().path("/foo/", "regex:/(foo|bar)").build();
+        assertThat(route.pathPattern()).isEqualTo("/foo/(foo|bar)");
+    }
 }
