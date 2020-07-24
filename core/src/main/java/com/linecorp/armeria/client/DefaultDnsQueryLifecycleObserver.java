@@ -48,18 +48,27 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
      */
     DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry, DnsQuestion question, MeterIdPrefix prefix) {
         this.dnsQuestion = question;
-        success = meterRegistry.counter(prefix.name(), "result", "success", "question", question.name());
-        failure = meterRegistry.counter(prefix.name(), "result", "failure", "question", question.name());
-        dnsErrorCode = meterRegistry.counter(prefix.name(), "dns", "errorcodes", "question", question.name());
-        queryWritten = meterRegistry.counter(prefix.name(), question.name(), "written");
-        queryType = meterRegistry.counter(prefix.name(), question.type().name(), question.name());
-        protocolType = meterRegistry.counter(prefix.name(), "protocol", getProtocolType(question.type()),
-                                            "question", question.name());
+        success = meterRegistry.counter(prefix.name(),
+                prefix.withTags("name", question.name(), "result", "success",
+                        "question", question.name()).tags());
+        failure = meterRegistry.counter(prefix.name(),
+                prefix.withTags("name", question.name(), "result", "failure",
+                        "question", question.name()).tags());
+        dnsErrorCode = meterRegistry.counter(prefix.name(),
+                prefix.withTags("name", question.name(), "dns", "errorcodes",
+                        "question", question.name()).tags());
+        queryWritten = meterRegistry.counter(prefix.name(),
+                prefix.withTags("name", question.name(), "written", question.type().name()).tags());
+        queryType = meterRegistry.counter(prefix.name(),
+                prefix.withTags("name", question.name(),
+                        "type", question.type().name()).tags());
+        protocolType = meterRegistry.counter(prefix.name(),
+                        prefix.withTags("name", question.name(), "protocol", getProtocolType(question.type()),
+                        "question", question.name()).tags());
     }
 
     private static String getProtocolType(DnsRecordType type) {
-        if (DnsRecordType.OPT.equals(type) ||
-                DnsRecordType.IXFR.equals(type) ||
+        if (DnsRecordType.IXFR.equals(type) ||
                 DnsRecordType.AXFR.equals(type)) {
             return "tcp";
         }

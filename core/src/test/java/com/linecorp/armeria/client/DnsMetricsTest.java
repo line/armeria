@@ -13,32 +13,44 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.healthcheck;
+package com.linecorp.armeria.client;
 
 import java.util.concurrent.ExecutionException;
 
-import com.linecorp.armeria.client.WebClient;
+import org.junit.jupiter.api.Test;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeters;
 
-public class Test {
+public class DnsMetricsTest {
 
-    @org.junit.jupiter.api.Test
+    @Test
     void test() throws ExecutionException, InterruptedException {
+
+        final ClientFactory factory = ClientFactory.builder()
+                .meterIdPrefix(new MeterIdPrefix("armeria.dns.metrics.test"))
+                .build();
         final WebClient client = WebClient.builder("https://google.com")
+                .factory(factory)
                 .build();
         final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/maps")).aggregate().get();
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/about")).aggregate().get();
         System.out.println(response.headers());
-        final WebClient client1 = WebClient.builder("https://google.com").build();
-        final AggregatedHttpResponse response1 =
-                client1.execute(RequestHeaders.of(HttpMethod.GET, "/maps")).aggregate().get();
-        System.out.println(response1.headers());
 
-        final WebClient client2 = WebClient.builder("https://tesla.com").build();
+        final AggregatedHttpResponse response22 =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/maps")).aggregate().get();
+        System.out.println(response22.headers());
+
+        final WebClient client2 = WebClient.builder("https://tesla.com")
+                .factory(factory)
+                .build();
         final AggregatedHttpResponse response2 =
                 client2.execute(RequestHeaders.of(HttpMethod.GET, "/models")).aggregate().get();
-        System.out.println(response2.headers());
+        System.out.println("***************************************************");
+        System.out.println(MoreMeters.measureAll(factory.meterRegistry()));
+        System.out.println("***************************************************");
     }
 }

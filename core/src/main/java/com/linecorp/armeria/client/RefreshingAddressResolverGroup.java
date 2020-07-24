@@ -122,7 +122,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
         this.meterRegistry = meterRegistry;
-        meterIdPrefix = prefix == null ? new MeterIdPrefix("armeria.client.dns.queries") : prefix;
+        meterIdPrefix = prefix;
     }
 
     @VisibleForTesting
