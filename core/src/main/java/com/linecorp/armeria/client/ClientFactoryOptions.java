@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -183,6 +184,10 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
             ClientFactoryOption.define("PROXY_CONFIG_SELECTOR", ProxyConfigSelector.of(ProxyConfig.direct()));
+
+    public static final ClientFactoryOption<MeterIdPrefix> DEFAULT_METER_ID_PREFIX =
+            ClientFactoryOption.define("DEFAULT_DNS_METER_ID_PREFIX",
+                    new MeterIdPrefix("armeria.client.dns.queries"));
 
     // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
     @SuppressWarnings("deprecation")
@@ -445,5 +450,12 @@ public final class ClientFactoryOptions
      */
     public ProxyConfigSelector proxyConfigSelector() {
         return get(PROXY_CONFIG_SELECTOR);
+    }
+
+    /**
+     * Returns the {@link MeterIdPrefix}.
+     */
+    public MeterIdPrefix meterIdPrefix() {
+        return get(ClientFactoryOptions.DEFAULT_METER_ID_PREFIX);
     }
 }

@@ -35,8 +35,10 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.AddressResolver;
@@ -99,11 +101,15 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
+    private MeterRegistry meterRegistry;
+    private MeterIdPrefix meterIdPrefix;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                                    Backoff refreshBackoff,
-                                   @Nullable ResolvedAddressTypes resolvedAddressTypes) {
+                                   @Nullable ResolvedAddressTypes resolvedAddressTypes,
+                                   @Nullable MeterRegistry meterRegistry,
+                                   @Nullable MeterIdPrefix meterIdPrefix) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
@@ -115,6 +121,8 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         } else {
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
+        this.meterRegistry = meterRegistry;
+        this.meterIdPrefix = meterIdPrefix;
     }
 
     @VisibleForTesting
@@ -127,6 +135,8 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         assert executor instanceof EventLoop;
         final EventLoop eventLoop = (EventLoop) executor;
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
+        builder.dnsQueryLifecycleObserverFactory(
+                new DefaultDnsQueryLifecycleObserverFactory(meterRegistry, meterIdPrefix));
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
                                                                            queryTimeoutMillis);
