@@ -16,17 +16,17 @@
 package com.linecorp.armeria.client.proxy;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -117,24 +118,34 @@ class HAProxyClientIntegrationTest {
     }
 
     @Test
-    void testImplicitHAProxyWithoutRootContextFails() throws Exception {
+    void testImplicitHAProxyWithoutRootContextUsesDefault() throws Exception {
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
                                   .proxyConfig(ProxyConfig.haproxy())
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
-                                                 .factory(clientFactory)
-                                                 .decorator(LoggingClient.newDecorator())
-                                                 .build();
+            final AtomicReference<InetSocketAddress> srcAddressRef = new AtomicReference<>();
+            final WebClient webClient =
+                    WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                             .factory(clientFactory)
+                             .decorator(LoggingClient.newDecorator())
+                             .decorator((delegate, ctx, req) -> {
+                                 final HttpResponse response = delegate.execute(ctx, req);
+                                 await().atMost(10, TimeUnit.SECONDS).until(
+                                         () -> ctx.log().isAvailable(RequestLogProperty.SESSION));
+                                 srcAddressRef.set(ctx.localAddress());
+                                 return response;
+                             })
+                             .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
             final AggregatedHttpResponse response = responseFuture.join();
-            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                                    .hasRootCauseInstanceOf(NullPointerException.class);
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            final String expectedResponse =
+                    String.format("%s-%s", srcAddressRef.get(), backendServer.httpSocketAddress());
+            assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
         }
     }
 }

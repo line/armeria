@@ -336,7 +336,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT) {
+            // TODO: this can be improved
+            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT &&
+                poolKey.proxyConfig.proxyType() != ProxyType.HAPROXY) {
                 if (proxyDestinationAddress != null) {
                     // ProxyConnectionEvent was already triggered.
                     tryCompleteSessionPromise(ctx);

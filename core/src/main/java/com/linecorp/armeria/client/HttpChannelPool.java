@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
+import com.linecorp.armeria.client.proxy.HAProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.proxy.ProxyType;
@@ -178,6 +179,9 @@ final class HttpChannelPool implements AsyncCloseable {
                     proxyHandler = new HttpProxyHandler(proxyAddress, username, password);
                 }
                 break;
+            case HAPROXY:
+                ch.pipeline().addFirst(new HAProxyHandler((HAProxyConfig) proxyConfig));
+                return;
             default:
                 throw new Error(); // Should never reach here.
         }

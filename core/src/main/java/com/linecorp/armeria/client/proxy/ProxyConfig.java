@@ -120,6 +120,24 @@ public abstract class ProxyConfig {
     }
 
     /**
+     * TBU.
+     */
+    public static HAProxyConfig haproxy(InetSocketAddress srcAddress, InetSocketAddress destAddress) {
+        requireNonNull(srcAddress, "srcAddress");
+        checkArgument(!srcAddress.isUnresolved(), "srcAddress must be resolved");
+        requireNonNull(destAddress, "destAddress");
+        checkArgument(!destAddress.isUnresolved(), "destAddress must be resolved");
+        return new HAProxyConfig(srcAddress, destAddress);
+    }
+
+    /**
+     * TBU.
+     */
+    public static ProxyConfigSelector haproxy() {
+        return new HAProxyConfigSelector();
+    }
+
+    /**
      * Returns a {@code ProxyConfig} which signifies that a proxy is absent.
      */
     public static ProxyConfig direct() {

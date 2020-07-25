@@ -142,7 +142,7 @@ final class HttpClientDelegate implements HttpClient {
 
         final ProxyConfig proxyConfig;
         try {
-            final Endpoint endpoint = Endpoint.of(host, port);
+            final Endpoint endpoint = Endpoint.of(host, port).withIpAddr(ipAddr);
             proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
             requireNonNull(proxyConfig, "proxyConfig");
         } catch (Throwable t) {
