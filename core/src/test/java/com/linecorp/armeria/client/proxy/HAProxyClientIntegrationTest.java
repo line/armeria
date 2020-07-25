@@ -79,7 +79,7 @@ class HAProxyClientIntegrationTest {
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            final AggregatedHttpResponse response = responseFuture.join();
+            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
@@ -110,7 +110,7 @@ class HAProxyClientIntegrationTest {
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            final AggregatedHttpResponse response = responseFuture.join();
+            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
@@ -141,7 +141,7 @@ class HAProxyClientIntegrationTest {
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            final AggregatedHttpResponse response = responseFuture.join();
+            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse =
                     String.format("%s-%s", srcAddressRef.get(), backendServer.httpSocketAddress());

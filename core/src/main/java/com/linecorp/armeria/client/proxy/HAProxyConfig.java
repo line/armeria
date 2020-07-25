@@ -48,7 +48,7 @@ public final class HAProxyConfig extends ProxyConfig {
 
     @Override
     public InetSocketAddress proxyAddress() {
-        return null;
+        return destAddress;
     }
 
     @Override
