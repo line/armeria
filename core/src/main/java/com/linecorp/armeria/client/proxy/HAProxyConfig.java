@@ -64,13 +64,6 @@ public final class HAProxyConfig extends ProxyConfig {
         return srcAddress;
     }
 
-    /**
-     * TBU.
-     */
-    public InetSocketAddress destAddress() {
-        return destAddress;
-    }
-
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {

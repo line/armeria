@@ -64,6 +64,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
@@ -535,6 +536,9 @@ final class HttpChannelPool implements AsyncCloseable {
                     }
                 });
             } else {
+                if (future.cause() instanceof ProxyConnectException) {
+                    invokeProxyConnectFailed(desiredProtocol, key, future.cause());
+                }
                 promise.completeExceptionally(UnprocessedRequestException.of(future.cause()));
             }
         } catch (Exception e) {

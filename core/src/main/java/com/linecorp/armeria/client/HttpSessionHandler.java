@@ -349,9 +349,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
-        if (evt instanceof SessionProtocolNegotiationException) {
+        if (evt instanceof SessionProtocolNegotiationException ||
+            evt instanceof ProxyConnectException) {
             sessionTimeoutFuture.cancel(false);
-            sessionPromise.tryFailure((SessionProtocolNegotiationException) evt);
+            sessionPromise.tryFailure((Throwable) evt);
             ctx.close();
             return;
         }

@@ -27,21 +27,20 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 class HAProxyConfigSelector implements ProxyConfigSelector {
     @Override
     public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+        // use proxy information in context if available
         final ClientRequestContext clientCtx = ClientRequestContext.currentOrNull();
-        if (clientCtx == null || clientCtx.root() == null) {
-            assert endpoint.ipAddr() != null;
-            return new HAProxyConfig(new InetSocketAddress(endpoint.ipAddr(), endpoint.port()));
+        if (clientCtx != null && clientCtx.root() != null) {
+            final ServiceRequestContext serviceCtx = clientCtx.root();
+            assert serviceCtx != null;
+            final ProxiedAddresses proxiedAddresses = serviceCtx.proxiedAddresses();
+            if (!proxiedAddresses.destinationAddresses().isEmpty()) {
+                return new HAProxyConfig(proxiedAddresses.sourceAddress(),
+                                         proxiedAddresses.destinationAddresses().get(0));
+            }
         }
 
-        final ServiceRequestContext serviceCtx = clientCtx.root();
-        assert serviceCtx != null;
-        final ProxiedAddresses proxiedAddresses = serviceCtx.proxiedAddresses();
-        if (proxiedAddresses.destinationAddresses().isEmpty()) {
-            assert endpoint.ipAddr() != null;
-            return new HAProxyConfig(new InetSocketAddress(endpoint.ipAddr(), endpoint.port()));
-        }
-
-        return new HAProxyConfig(proxiedAddresses.sourceAddress(),
-                                 proxiedAddresses.destinationAddresses().get(0));
+        // otherwise use the endpoint information
+        assert endpoint.ipAddr() != null;
+        return new HAProxyConfig(new InetSocketAddress(endpoint.ipAddr(), endpoint.port()));
     }
 }

@@ -71,7 +71,8 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                     }
                 });
             } catch (RuntimeException e) {
-                ctx.fireExceptionCaught(new ProxyConnectException(e));
+                ctx.channel().eventLoop().execute(
+                        () -> ctx.pipeline().fireUserEventTriggered(new ProxyConnectException(e)));
                 ctx.close();
             } finally {
                 ctx.pipeline().remove(this);
@@ -85,7 +86,8 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
         final InetSocketAddress srcSocketAddress =
                 haProxyConfig.srcAddress() != null ? haProxyConfig.srcAddress()
                                                    : (InetSocketAddress) channel.localAddress();
-        final InetSocketAddress destSockAddress = haProxyConfig.destAddress();
+        final InetSocketAddress destSockAddress = haProxyConfig.proxyAddress();
+        assert destSockAddress != null;
 
         final InetAddress srcAddress = srcSocketAddress.getAddress();
         final InetAddress destAddress = destSockAddress.getAddress();
