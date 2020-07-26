@@ -131,13 +131,6 @@ public abstract class ProxyConfig {
     }
 
     /**
-     * TBU.
-     */
-    public static ProxyConfigSelector haproxy() {
-        return new HAProxyConfigSelector();
-    }
-
-    /**
      * Returns a {@code ProxyConfig} which signifies that a proxy is absent.
      */
     public static ProxyConfig direct() {

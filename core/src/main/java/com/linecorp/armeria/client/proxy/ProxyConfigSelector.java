@@ -72,6 +72,13 @@ public interface ProxyConfigSelector {
     }
 
     /**
+     * TBU.
+     */
+    static ProxyConfigSelector haproxy() {
+        return new HAProxyConfigSelector();
+    }
+
+    /**
      * Selects the {@link ProxyConfig} to use when connecting to a network
      * resource specified by the {@link SessionProtocol} and {@link Endpoint} parameter.
      *

@@ -23,6 +23,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -50,13 +51,33 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
+import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.handler.codec.haproxy.HAProxyMessage;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.ReferenceCountUtil;
+
 class HAProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
+    private static final DynamicBehaviorHandler DYNAMIC_HANDLER = new DynamicBehaviorHandler();
 
     @RegisterExtension
     static ServerExtension backendServer = new ServerExtension() {
@@ -71,6 +92,18 @@ class HAProxyClientIntegrationTest {
                                                          ctx.proxiedAddresses().destinationAddresses().get(0));
                 return HttpResponse.of(proxyString);
             });
+        }
+    };
+
+    @RegisterExtension
+    static NettyServerExtension http1Server = new NettyServerExtension() {
+        @Override
+        protected void configure(Channel ch) throws Exception {
+            ch.pipeline().addLast(new LoggingHandler(getClass()));
+            ch.pipeline().addLast(new HAProxyMessageDecoder());
+            ch.pipeline().addLast(new HttpServerCodec());
+            ch.pipeline().addLast(new HttpObjectAggregator(1024));
+            ch.pipeline().addLast(DYNAMIC_HANDLER);
         }
     };
 
@@ -116,7 +149,7 @@ class HAProxyClientIntegrationTest {
         try (SafeCloseable ignored = serviceRequestContext.push();
              ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfig.haproxy())
+                                  .proxyConfig(ProxyConfigSelector.haproxy())
                                   .tlsNoVerify()
                                   .useHttp2Preface(true)
                                   .build()) {
@@ -140,7 +173,7 @@ class HAProxyClientIntegrationTest {
     void testImplicitHAProxyWithoutRootContextUsesDefault() throws Exception {
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfig.haproxy())
+                                  .proxyConfig(ProxyConfigSelector.haproxy())
                                   .useHttp2Preface(true)
                                   .build()) {
 
@@ -202,7 +235,7 @@ class HAProxyClientIntegrationTest {
         }
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfig.haproxy())
+                                  .proxyConfig(ProxyConfigSelector.haproxy())
                                   .useHttp2Preface(true)
                                   .build()) {
 
@@ -217,8 +250,110 @@ class HAProxyClientIntegrationTest {
             assertThatThrownBy(() -> responseFuture.get(10, TimeUnit.SECONDS))
                     .isInstanceOf(ExecutionException.class)
                     .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(ConnectException.class)
-                    .hasRootCauseMessage("Connection refused");
+                    .hasRootCauseInstanceOf(ConnectException.class);
+        }
+    }
+
+    @Test
+    void testHttpProxyUpgradeRequestFailure() throws Exception {
+        final InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.2", 82);
+        final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.3", 83);
+        final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();
+        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+            if (msg instanceof HAProxyMessage) {
+                msgRef.set((HAProxyMessage) msg);
+                return;
+            }
+            final FullHttpRequest request = (FullHttpRequest) msg;
+            final DefaultFullHttpResponse response;
+            if ("h2c".equals(request.headers().get(HttpHeaderNames.UPGRADE))) {
+                // reject http2 upgrade requests
+                final HttpHeaders headers = new DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, "close");
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.NOT_IMPLEMENTED,
+                                                       Unpooled.EMPTY_BUFFER,
+                                                       headers,
+                                                       EmptyHttpHeaders.INSTANCE);
+            } else {
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.OK,
+                                                       Unpooled.copiedBuffer(strRepr(msgRef.get()),
+                                                                             StandardCharsets.US_ASCII));
+            }
+
+            ReferenceCountUtil.release(msg);
+            ctx.writeAndFlush(response);
+            ctx.close();
+        });
+
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.haproxy(srcAddr, destAddr))
+                                  .useHttp2Preface(false)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
+            assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
+        }
+    }
+
+    @Test
+    void testHttpProxyPrefaceFailure() throws Exception {
+        final InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.2", 82);
+        final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.3", 83);
+
+        final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();
+        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+            if (msg instanceof HAProxyMessage) {
+                msgRef.set((HAProxyMessage) msg);
+                return;
+            }
+            final FullHttpRequest request = (FullHttpRequest) msg;
+            final DefaultFullHttpResponse response;
+            if ("PRI".equals(request.method().name())) {
+                // reject http2 preface
+                final HttpHeaders headers = new DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, "close");
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.NOT_IMPLEMENTED,
+                                                       Unpooled.EMPTY_BUFFER,
+                                                       headers,
+                                                       EmptyHttpHeaders.INSTANCE);
+            } else {
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.OK,
+                                                       Unpooled.copiedBuffer(strRepr(msgRef.get()),
+                                                                             StandardCharsets.US_ASCII));
+            }
+
+            ReferenceCountUtil.release(msg);
+            ctx.writeAndFlush(response);
+            ctx.close();
+        });
+
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.haproxy(srcAddr, destAddr))
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
+            assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
         }
     }
 
@@ -230,5 +365,10 @@ class HAProxyClientIntegrationTest {
                     SessionProtocol.httpsValues().stream().map(p -> arguments(p, backendServer.httpsEndpoint()))
             );
         }
+    }
+
+    private static String strRepr(HAProxyMessage message) {
+        return String.format("%s-%s", new InetSocketAddress(message.sourceAddress(), message.sourcePort()),
+                             new InetSocketAddress(message.destinationAddress(), message.destinationPort()));
     }
 }

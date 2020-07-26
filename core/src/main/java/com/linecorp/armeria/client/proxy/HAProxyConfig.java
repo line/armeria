@@ -31,11 +31,12 @@ import com.google.common.base.MoreObjects;
 public final class HAProxyConfig extends ProxyConfig {
 
     @Nullable
-    private InetSocketAddress srcAddress;
+    private final InetSocketAddress srcAddress;
 
     private final InetSocketAddress destAddress;
 
     HAProxyConfig(InetSocketAddress destAddress) {
+        srcAddress = null;
         this.destAddress = destAddress;
     }
 
