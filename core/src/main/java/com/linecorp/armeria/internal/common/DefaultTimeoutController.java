@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -36,6 +37,16 @@ import io.netty.util.concurrent.EventExecutor;
  * Default {@link TimeoutController} implementation.
  */
 public class DefaultTimeoutController implements TimeoutController {
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultTimeoutController, CompletableFuture>
+            whenTimingOutUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(DefaultTimeoutController.class, CompletableFuture.class, "whenTimingOut");
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultTimeoutController, CompletableFuture>
+            whenTimedOutUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(DefaultTimeoutController.class, CompletableFuture.class, "whenTimedOut");
 
     enum State {
         INIT,
@@ -56,10 +67,12 @@ public class DefaultTimeoutController implements TimeoutController {
 
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
+    // Updated via whenTimingOutUpdater
     @Nullable
-    private CompletableFuture<Void> whenTimingOut;
+    private volatile CompletableFuture<Void> whenTimingOut;
+    // Updated via whenTimedOutUpdater
     @Nullable
-    private CompletableFuture<Void> whenTimedOut;
+    private volatile CompletableFuture<Void> whenTimedOut;
 
     /**
      * Creates a new instance with the specified {@link TimeoutTask} and {@link EventExecutor}.
@@ -246,17 +259,19 @@ public class DefaultTimeoutController implements TimeoutController {
 
     @Override
     public CompletableFuture<Void> whenTimingOut() {
-        if (whenTimingOut == null) {
-            whenTimingOut = new CompletableFuture<>();
+        if (whenTimingOut != null) {
+            return whenTimingOut;
         }
+        whenTimingOutUpdater.compareAndSet(this, null, new CompletableFuture<>());
         return whenTimingOut;
     }
 
     @Override
     public CompletableFuture<Void> whenTimedOut() {
-        if (whenTimedOut == null) {
-            whenTimedOut = new CompletableFuture<>();
+        if (whenTimedOut != null) {
+            return whenTimedOut;
         }
+        whenTimedOutUpdater.compareAndSet(this, null, new CompletableFuture<>());
         return whenTimedOut;
     }
 
@@ -271,12 +286,10 @@ public class DefaultTimeoutController implements TimeoutController {
 
     private void invokeTimeoutTask() {
         if (timeoutTask != null) {
-            if (whenTimingOut != null) {
+            if (!whenTimingOutUpdater.compareAndSet(this, null, UnmodifiableFuture.completedFuture(null))) {
                 if (timeoutTask.canSchedule()) {
                     whenTimingOut.complete(null);
                 }
-            } else {
-                whenTimingOut = UnmodifiableFuture.completedFuture(null);
             }
 
             // Set TIMED_OUT flag first to prevent duplicate execution
@@ -287,10 +300,8 @@ public class DefaultTimeoutController implements TimeoutController {
                 timeoutTask.run();
             }
 
-            if (whenTimedOut != null) {
+            if (!whenTimedOutUpdater.compareAndSet(this, null, UnmodifiableFuture.completedFuture(null))) {
                 whenTimedOut.complete(null);
-            } else {
-                whenTimedOut = UnmodifiableFuture.completedFuture(null);
             }
         }
     }

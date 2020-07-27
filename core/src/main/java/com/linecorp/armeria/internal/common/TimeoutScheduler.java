@@ -41,6 +41,7 @@ public final class TimeoutScheduler {
     private EventLoop eventLoop;
     @Nullable
     private TimeoutController timeoutController;
+
     @Nullable
     private CompletableFuture<Void> timingOutFuture;
     @Nullable
@@ -166,36 +167,34 @@ public final class TimeoutScheduler {
 
     public CompletableFuture<Void> whenTimingOut() {
         if (timeoutController == null) {
-            if (timingOutFuture == null) {
-                timingOutFuture = new CompletableFuture<>();
+            if (timingOutFuture != null) {
+                return timingOutFuture;
             }
-            return UnmodifiableFuture.wrap(timingOutFuture);
+            synchronized (this) {
+                if (timeoutController != null) {
+                    return UnmodifiableFuture.wrap(timeoutController.whenTimingOut());
+                }
+                timingOutFuture = new CompletableFuture<>();
+                return UnmodifiableFuture.wrap(timingOutFuture);
+            }
         }
-        if (timingOutFuture == null) {
-            return timingOutFuture = UnmodifiableFuture.wrap(timeoutController.whenTimingOut());
-        }
-        if (timingOutFuture instanceof UnmodifiableFuture) {
-            return timingOutFuture;
-        }
-
-        return timingOutFuture = UnmodifiableFuture.wrap(timingOutFuture);
+        return UnmodifiableFuture.wrap(timeoutController.whenTimingOut());
     }
 
     public CompletableFuture<Void> whenTimedOut() {
         if (timeoutController == null) {
-            if (timedOutFuture == null) {
-                timedOutFuture = new CompletableFuture<>();
+            if (timedOutFuture != null) {
+                return UnmodifiableFuture.wrap(timedOutFuture);
             }
-            return UnmodifiableFuture.wrap(timedOutFuture);
+            synchronized (this) {
+                if (timeoutController != null) {
+                    return UnmodifiableFuture.wrap(timeoutController.whenTimedOut());
+                }
+                timedOutFuture = new CompletableFuture<>();
+                return UnmodifiableFuture.wrap(timedOutFuture);
+            }
         }
-        if (timedOutFuture == null) {
-            return timedOutFuture = UnmodifiableFuture.wrap(timeoutController.whenTimedOut());
-        }
-        if (timedOutFuture instanceof UnmodifiableFuture) {
-            return timedOutFuture;
-        }
-
-        return timedOutFuture = UnmodifiableFuture.wrap(timedOutFuture);
+        return UnmodifiableFuture.wrap(timeoutController.whenTimedOut());
     }
 
     public void setTimeoutController(TimeoutController timeoutController, EventLoop eventLoop) {
@@ -203,14 +202,16 @@ public final class TimeoutScheduler {
         requireNonNull(eventLoop, "eventLoop");
         checkState(this.timeoutController == null, "timeoutController is set already.");
 
-        if (timingOutFuture != null) {
-            timeoutController.whenTimingOut().thenRun(() -> timingOutFuture.complete(null));
-        }
-        if (timedOutFuture != null) {
-            timeoutController.whenTimedOut().thenRun(() -> timedOutFuture.complete(null));
+        synchronized (this) {
+            this.timeoutController = timeoutController;
+            if (timingOutFuture != null) {
+                timeoutController.whenTimingOut().thenRun(() -> timingOutFuture.complete(null));
+            }
+            if (timedOutFuture != null) {
+                timeoutController.whenTimedOut().thenRun(() -> timedOutFuture.complete(null));
+            }
         }
 
-        this.timeoutController = timeoutController;
         this.eventLoop = eventLoop;
         final Consumer<TimeoutController> pendingTimeoutTask = this.pendingTimeoutTask;
         if (pendingTimeoutTask != null) {

@@ -103,12 +103,14 @@ class HttpClientResponseTimeoutTest {
                     return delegate.execute(ctx, req);
                 })
                 .build();
+
         await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get("/no-timeout")
-                                           .aggregate().join())
+            assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
+        });
 
+        await().untilAsserted(() -> {
             final CompletableFuture<Void> timeoutFuture = timeoutFutureRef.get();
             assertThat(timeoutFuture).isInstanceOf(UnmodifiableFuture.class);
             assertThat(timeoutFuture).isDone();

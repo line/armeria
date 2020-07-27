@@ -379,12 +379,13 @@ public interface RequestContext {
     boolean isTimedOut();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed when {@link RequestContext} is timing-out.
+     * Returns a {@link CompletableFuture} which is completed when {@link RequestContext} is about to
+     * get timed out.
      */
     CompletableFuture<Void> whenTimingOut();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed when {@link RequestContext} is timed-out
+     * Returns a {@link CompletableFuture} which is completed when {@link RequestContext} has been timed out
      * (e.g., when the corresponding request passes a deadline).
      * {@link #isTimedOut()} will always return {@code true} when the returned
      * {@link CompletableFuture} is completed.
