@@ -1,0 +1,28 @@
+@import '../../node_modules/antd/es/style/themes/default.less';
+
+:global(.ant-typography) {
+  .title {
+    margin-top: 0;
+    font-size: @font-size-base;
+
+    a {
+      color: inherit;
+    }
+  }
+
+  .author {
+    font-weight: normal;
+    font-size: 66%;
+    white-space: nowrap;
+  }
+
+  .link {
+    display: block;
+    margin: -0.4rem 0 0.75rem;
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: @link-color;
+    font-size: 87.5%;
+  }
+}
