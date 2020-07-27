@@ -414,14 +414,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
             @Override
             public void run() {
-                if (state != State.DONE) {
-                    final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
-                    if (requestTimeoutHandler != null) {
-                        requestTimeoutHandler.run();
-                    } else {
-                        failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
-                                       Http2Error.INTERNAL_ERROR, true);
-                    }
+                final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
+                if (requestTimeoutHandler != null) {
+                    requestTimeoutHandler.run();
+                } else {
+                    failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
+                                   Http2Error.INTERNAL_ERROR, true);
                 }
             }
         };

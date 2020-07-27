@@ -443,7 +443,10 @@ public interface ClientRequestContext extends RequestContext {
      * });
      * ...
      * }</pre>
+     *
+     * @deprecated Use {@link #whenTimingOut()} or {@link #whenTimedOut()}
      */
+    @Deprecated
     void setResponseTimeoutHandler(Runnable responseTimeoutHandler);
 
     /**

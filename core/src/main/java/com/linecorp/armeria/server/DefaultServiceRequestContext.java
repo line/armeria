@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -316,6 +317,16 @@ public final class DefaultServiceRequestContext
     @Override
     public boolean isTimedOut() {
         return timeoutScheduler.isTimedOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimingOut() {
+        return timeoutScheduler.whenTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimedOut() {
+        return timeoutScheduler.whenTimedOut();
     }
 
     @Override

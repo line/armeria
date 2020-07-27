@@ -18,10 +18,13 @@ package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
 
@@ -240,6 +243,50 @@ class DefaultTimeoutControllerTest {
     }
 
     @Test
+    void whenTimingOut() {
+        final DefaultTimeoutController timeoutController =
+                new DefaultTimeoutController(CommonPools.workerGroup().next());
+        final AtomicBoolean passed = new AtomicBoolean();
+        final TimeoutTask timeoutTask = new TimeoutTask() {
+            @Override
+            public boolean canSchedule() {
+                return true;
+            }
+
+            @Override
+            public void run() {
+                assertThat(timeoutController.whenTimingOut()).isDone();
+                assertThat(timeoutController.isTimedOut()).isTrue();
+                assertThat(timeoutController.whenTimedOut()).isNotDone();
+                passed.set(true);
+            }
+        };
+        timeoutController.setTimeoutTask(timeoutTask);
+
+        assertThat(timeoutController.isTimedOut()).isFalse();
+
+        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(2000).toNanos());
+        assertThat(timeoutController.state()).isEqualTo(State.SCHEDULED);
+
+        await().untilAsserted(() -> {
+                assertThat(timeoutController.state()).isEqualTo(State.TIMED_OUT);
+                assertThat(timeoutController.whenTimedOut()).isDone();
+        });
+        assertThat(passed).isTrue();
+    }
+
+    @Test
+    void whenTimedOut() {
+        final CompletableFuture<Void> timeoutFuture = timeoutController.whenTimedOut();
+        assertThat(timeoutFuture).isNotDone();
+        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
+        await().untilAsserted(() -> {
+            assertThat(timeoutFuture).isDone();
+            assertThat(timeoutController.isTimedOut()).isTrue();
+        });
+    }
+
+    @Test
     void disabledTimeoutTask() {
         final DefaultTimeoutController timeoutController = new DefaultTimeoutController(
                 new TimeoutTask() {
@@ -278,12 +325,12 @@ class DefaultTimeoutControllerTest {
             final State prevState = delegate.state();
             final boolean result = delegate.scheduleTimeoutNanos(timeoutNanos);
             if (result) {
-                // Previous: DISABLED
+                // Previous: INACTIVE
                 assertThat(prevState).isIn(State.INIT, State.INACTIVE);
                 // Transition to: SCHEDULE
                 assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
             } else {
-                // Previous: !DISABLED
+                // Previous: !INACTIVE
                 assertThat(prevState).isNotIn(State.INIT, State.INACTIVE);
                 // Transition to: No changes
                 assertThat(delegate.state()).isEqualTo(prevState);
@@ -374,6 +421,16 @@ class DefaultTimeoutControllerTest {
         @Override
         public boolean isTimedOut() {
             return delegate.isTimedOut();
+        }
+
+        @Override
+        public CompletableFuture<Void> whenTimingOut() {
+            return delegate.whenTimingOut();
+        }
+
+        @Override
+        public CompletableFuture<Void> whenTimedOut() {
+            return delegate.whenTimedOut();
         }
 
         @Override

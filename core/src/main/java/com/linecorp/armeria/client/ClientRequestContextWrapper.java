@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -153,5 +154,15 @@ public class ClientRequestContextWrapper
     @Override
     public boolean isTimedOut() {
         return delegate().isTimedOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimingOut() {
+        return delegate().whenTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimedOut() {
+        return delegate().whenTimedOut();
     }
 }

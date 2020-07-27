@@ -437,7 +437,10 @@ public interface ServiceRequestContext extends RequestContext {
      *   });
      *   ...
      * }</pre>
+     *
+     * @deprecated Use {@link #whenTimingOut()} or {@link #whenTimedOut()}.
      */
+    @Deprecated
     void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
 
     /**

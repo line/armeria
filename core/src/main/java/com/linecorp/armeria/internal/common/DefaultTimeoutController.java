@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -26,6 +27,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.math.LongMath;
+
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -49,9 +52,14 @@ public class DefaultTimeoutController implements TimeoutController {
     private long firstExecutionTimeNanos;
     private long lastExecutionTimeNanos;
 
+    private State state = State.INIT;
+
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
-    private State state = State.INIT;
+    @Nullable
+    private CompletableFuture<Void> whenTimingOut;
+    @Nullable
+    private CompletableFuture<Void> whenTimedOut;
 
     /**
      * Creates a new instance with the specified {@link TimeoutTask} and {@link EventExecutor}.
@@ -236,6 +244,22 @@ public class DefaultTimeoutController implements TimeoutController {
         return state == State.TIMED_OUT;
     }
 
+    @Override
+    public CompletableFuture<Void> whenTimingOut() {
+        if (whenTimingOut == null) {
+            whenTimingOut = new CompletableFuture<>();
+        }
+        return whenTimingOut;
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimedOut() {
+        if (whenTimedOut == null) {
+            whenTimedOut = new CompletableFuture<>();
+        }
+        return whenTimedOut;
+    }
+
     private void ensureInitialized() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
@@ -247,9 +271,27 @@ public class DefaultTimeoutController implements TimeoutController {
 
     private void invokeTimeoutTask() {
         if (timeoutTask != null) {
+            if (whenTimingOut != null) {
+                if (timeoutTask.canSchedule()) {
+                    whenTimingOut.complete(null);
+                }
+            } else {
+                whenTimingOut = UnmodifiableFuture.completedFuture(null);
+            }
+
             // Set TIMED_OUT flag first to prevent duplicate execution
             state = State.TIMED_OUT;
-            timeoutTask.run();
+
+            // The returned value of `canSchedule()` could be changed by the callbacks of `whenTimedOut`
+            if (timeoutTask.canSchedule()) {
+                timeoutTask.run();
+            }
+
+            if (whenTimedOut != null) {
+                whenTimedOut.complete(null);
+            } else {
+                whenTimedOut = UnmodifiableFuture.completedFuture(null);
+            }
         }
     }
 

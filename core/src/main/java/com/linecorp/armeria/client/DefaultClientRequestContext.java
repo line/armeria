@@ -598,6 +598,16 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public CompletableFuture<Void> whenTimingOut() {
+        return timeoutScheduler.whenTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimedOut() {
+        return timeoutScheduler.whenTimedOut();
+    }
+
+    @Override
     public String toString() {
         final Channel ch = channel();
         final RequestLogAccess parent = log().parent();

@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
@@ -146,6 +147,16 @@ public class ServiceRequestContextWrapper
     @Override
     public boolean isTimedOut() {
         return delegate().isTimedOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimingOut() {
+        return delegate().whenTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenTimedOut() {
+        return delegate().whenTimedOut();
     }
 
     @Override

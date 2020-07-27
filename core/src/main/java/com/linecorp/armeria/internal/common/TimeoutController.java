@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.Nullable;
 
 /**
@@ -79,6 +81,16 @@ public interface TimeoutController {
      *         {@code false} if the timeout is scheduled now or no timeout was scheduled previously.
      */
     boolean isTimedOut();
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when the current timeout is triggering.
+     */
+    CompletableFuture<Void> whenTimingOut();
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when the current timeout is triggered successfully.
+     */
+    CompletableFuture<Void> whenTimedOut();
 
     /**
      * Returns the start time of the initial timeout in nanoseconds

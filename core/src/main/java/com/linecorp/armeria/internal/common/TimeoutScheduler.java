@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -27,6 +28,7 @@ import javax.annotation.Nullable;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.channel.EventLoop;
 
@@ -39,6 +41,10 @@ public final class TimeoutScheduler {
     private EventLoop eventLoop;
     @Nullable
     private TimeoutController timeoutController;
+    @Nullable
+    private CompletableFuture<Void> timingOutFuture;
+    @Nullable
+    private CompletableFuture<Void> timedOutFuture;
 
     public TimeoutScheduler(long timeoutNanos) {
         this.timeoutNanos = timeoutNanos;
@@ -158,13 +164,54 @@ public final class TimeoutScheduler {
         return timeoutController.isTimedOut();
     }
 
+    public CompletableFuture<Void> whenTimingOut() {
+        if (timeoutController == null) {
+            if (timingOutFuture == null) {
+                timingOutFuture = new CompletableFuture<>();
+            }
+            return UnmodifiableFuture.wrap(timingOutFuture);
+        }
+        if (timingOutFuture == null) {
+            return timingOutFuture = UnmodifiableFuture.wrap(timeoutController.whenTimingOut());
+        }
+        if (timingOutFuture instanceof UnmodifiableFuture) {
+            return timingOutFuture;
+        }
+
+        return timingOutFuture = UnmodifiableFuture.wrap(timingOutFuture);
+    }
+
+    public CompletableFuture<Void> whenTimedOut() {
+        if (timeoutController == null) {
+            if (timedOutFuture == null) {
+                timedOutFuture = new CompletableFuture<>();
+            }
+            return UnmodifiableFuture.wrap(timedOutFuture);
+        }
+        if (timedOutFuture == null) {
+            return timedOutFuture = UnmodifiableFuture.wrap(timeoutController.whenTimedOut());
+        }
+        if (timedOutFuture instanceof UnmodifiableFuture) {
+            return timedOutFuture;
+        }
+
+        return timedOutFuture = UnmodifiableFuture.wrap(timedOutFuture);
+    }
+
     public void setTimeoutController(TimeoutController timeoutController, EventLoop eventLoop) {
         requireNonNull(timeoutController, "timeoutController");
         requireNonNull(eventLoop, "eventLoop");
         checkState(this.timeoutController == null, "timeoutController is set already.");
+
+        if (timingOutFuture != null) {
+            timeoutController.whenTimingOut().thenRun(() -> timingOutFuture.complete(null));
+        }
+        if (timedOutFuture != null) {
+            timeoutController.whenTimedOut().thenRun(() -> timedOutFuture.complete(null));
+        }
+
         this.timeoutController = timeoutController;
         this.eventLoop = eventLoop;
-
         final Consumer<TimeoutController> pendingTimeoutTask = this.pendingTimeoutTask;
         if (pendingTimeoutTask != null) {
             if (eventLoop.inEventLoop()) {
