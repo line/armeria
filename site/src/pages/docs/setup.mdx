@@ -28,14 +28,14 @@ the list of major Armeria artifacts which might interest you:
 | `armeria-brave`                             | Distributed tracing with Brave.                                                 |
 |                                             | See [Zipkin integration](/docs/advanced-zipkin).                                |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-dropwizard2`                       | Provides a Dropwizard Bundle around `armeria-jetty9`.                           |
+| `armeria-dropwizard2`                       | Provides a Dropwizard 2 Bundle around `armeria-jetty9`.                         |
 |                                             | See [Using Armeria with Dropwizard](/docs/advanced-dropwizard-integration).     |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-grpc`                              | gRPC client and server support.                                                 |
 |                                             | See [Running a gRPC service](/docs/server-grpc)                                 |
 |                                             | and [Calling a gRPC service](/docs/client-grpc).                                |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-jetty9`                            | Embedded Jetty Servlet container.                                               |
+| `armeria-jetty9`                            | Embedded Jetty 9 Servlet container.                                             |
 |                                             |  See [Embedding a servlet container](/docs/server-servlet).                     |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-kafka`                             | Enables sending access logs to Kafka                                            |
@@ -45,26 +45,26 @@ the list of major Armeria artifacts which might interest you:
 |                                             | See [Logging contextual information](/docs/advanced-logging).                   |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-retrofit2`                         | Allows using Armeria instead of OkHttp as transport layer                       |
-|                                             | when using Retrofit.                                                            |
+|                                             | when using Retrofit2.                                                           |
 |                                             | See [Retrofit integration](/docs/client-retrofit).                              |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-rxjava3`                           | RxJava plugin                                                                   |
+| `armeria-rxjava3`                           | RxJava 3 plugin                                                                 |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-saml`                              | SAML support                                                                    |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-spring-boot2-autoconfigure`        | Spring Boot integration                                                         |
+| `armeria-spring-boot2-autoconfigure`        | Spring Boot 2 integration                                                       |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-spring-boot2-webflux-autoconfigure`| Spring Boot WebFlux integration. See                                            |
+| `armeria-spring-boot2-webflux-autoconfigure`| Spring Boot 2 WebFlux integration. See                                          |
 |                                             | [Using Armeria with Spring WebFlux](/docs/advanced-spring-webflux-integration). |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-thrift0.13`                        | Thrift client and server support.                                               |
+| `armeria-thrift0.13`                        | Thrift 0.13 client and server support.                                          |
 |                                             | See [Running a Thrift service](/docs/server-thrift)                             |
 |                                             | and [Calling a Thrift service](/docs/client-thrift).                            |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-tomcat9`                           | Embedded Tomcat Servlet container.                                              |
+| `armeria-tomcat9`                           | Embedded Tomcat 9 Servlet container.                                            |
 |                                             |  See [Embedding a servlet container](/docs/server-servlet).                     |
 +---------------------------------------------+---------------------------------------------------------------------------------+
-| `armeria-zookeeper3`                        | ZooKeeper-based service discovery.                                              |
+| `armeria-zookeeper3`                        | ZooKeeper 3 based service discovery.                                            |
 |                                             | See [Service discovery with ZooKeeper](/docs/advanced-zookeeper).               |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 
@@ -95,11 +95,11 @@ You might want to use the following build file as a starting point when you set 
         'armeria-thrift0.13',
         'armeria-tomcat9',
         'armeria-zookeeper3'].each {
-            compile "com.linecorp.armeria:\${it}:${versions['com.linecorp.armeria:armeria-bom']}"
+            implementation "com.linecorp.armeria:\${it}:${versions['com.linecorp.armeria:armeria-bom']}"
         }\n
         // Logging
-        runtime 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
-        runtime 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
+        runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
+        runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
     }
     `}</CodeBlock>
   </TabPane>

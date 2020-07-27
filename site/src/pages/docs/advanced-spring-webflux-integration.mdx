@@ -20,7 +20,7 @@ with Armeria, you can leverage the following:
   interoperability with load balancers such as [HAProxy](https://www.haproxy.org/) and
   [AWS ELB](https://aws.amazon.com/elasticloadbalancing/)
 
-Armeria can be plugged in as the underlying HTTP server for a Spring WebFlux application by adding
+Armeria can be plugged in as the underlying HTTP server for a Spring Boot 2 WebFlux application by adding
 the following dependency:
 
 <Tabs>
@@ -36,7 +36,7 @@ the following dependency:
         }
     }\n
     dependencies {
-        compile 'com.linecorp.armeria:armeria-spring-boot2-webflux-starter'
+        implementation 'com.linecorp.armeria:armeria-spring-boot2-webflux-starter'
     }
     `}</CodeBlock>
   </TabPane>
