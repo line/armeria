@@ -67,7 +67,6 @@ public final class TimeoutScheduler {
         TIMED_OUT
     }
 
-
     private long timeoutNanos;
     private long firstExecutionTimeNanos;
 
