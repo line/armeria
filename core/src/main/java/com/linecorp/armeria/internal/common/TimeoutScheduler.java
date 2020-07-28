@@ -118,13 +118,11 @@ public final class TimeoutScheduler {
             timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, timeoutNanos, TimeUnit.NANOSECONDS);
         }
 
-        Runnable pendingTimeoutTask = this.pendingTimeoutTask;
-        if (pendingTimeoutTask != null) {
-            for (;;) {
-                if (pendingTimeoutTaskUpdater.compareAndSet(this, pendingTimeoutTask, null)) {
-                    break;
-                }
-                pendingTimeoutTask = this.pendingTimeoutTask;
+        Runnable pendingTimeoutTask;
+        for (;;) {
+            pendingTimeoutTask = this.pendingTimeoutTask;
+            if (pendingTimeoutTaskUpdater.compareAndSet(this, pendingTimeoutTask, null)) {
+                break;
             }
         }
 

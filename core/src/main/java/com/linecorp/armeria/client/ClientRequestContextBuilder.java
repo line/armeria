@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -141,7 +142,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             });
 
             try {
-                latch.await();
+                latch.await(1000, TimeUnit.MILLISECONDS);
             } catch (InterruptedException ignored) {
             }
         }
