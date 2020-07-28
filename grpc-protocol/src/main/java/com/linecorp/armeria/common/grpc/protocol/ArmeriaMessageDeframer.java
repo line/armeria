@@ -53,6 +53,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Base64;
 import java.util.Objects;
@@ -200,7 +201,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private final Listener listener;
     private final int maxMessageSizeBytes;
     private final ByteBufAllocator alloc;
-    private final boolean decodeBase64;
+    @Nullable
+    private final Base64Decoder base64Decoder;
 
     private int currentType = UNINITIALIED_TYPE;
 
@@ -228,9 +230,12 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         this.listener = requireNonNull(listener, "listener");
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
         this.alloc = requireNonNull(alloc, "alloc");
-        this.decodeBase64 = decodeBase64;
-
         unprocessed = new ArrayDeque<>();
+        if (decodeBase64) {
+            base64Decoder = new Base64Decoder();
+        } else {
+            base64Decoder = null;
+        }
     }
 
     /**
@@ -279,11 +284,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         if (dataLength != 0) {
             final ByteBuf buf = data.byteBuf();
             assert unprocessed != null;
-            if (decodeBase64) {
-                final ByteBuf decoded = Unpooled.wrappedBuffer(Base64.getDecoder().decode(buf.nioBuffer()));
-                buf.release();
-                unprocessed.add(decoded);
-                unprocessedBytes += decoded.readableBytes();
+            if (base64Decoder != null) {
+                base64Decoder.decode(buf);
             } else {
                 unprocessed.add(buf);
                 unprocessedBytes += dataLength;
@@ -316,6 +318,9 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     @Override
     public void close() {
+        if (base64Decoder != null) {
+            base64Decoder.close();
+        }
         if (unprocessed != null) {
             try {
                 unprocessed.forEach(ByteBuf::release);
@@ -644,6 +649,90 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                         String.format(
                                 "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
                                 debugString, maxMessageSize, count));
+            }
+        }
+    }
+
+    private final class Base64Decoder {
+
+        private static final byte PADDING = 0x3D;
+
+        @Nullable
+        private ByteBuf remainedBuf;
+
+        void decode(ByteBuf originalBuf) {
+            final ByteBuf buf;
+            if (remainedBuf != null) {
+                buf = Unpooled.wrappedBuffer(remainedBuf, originalBuf);
+                remainedBuf = null;
+            } else {
+                buf = originalBuf;
+            }
+
+            try {
+                addToUnprocessedDelimitingPadding(buf);
+                final int readableBytes = buf.readableBytes();
+                if (readableBytes == 0) {
+                    return;
+                }
+                final int remainder = readableBytes % 4;
+                if (remainder == 0) {
+                    decodeAndAddToUnprocessed(buf.nioBuffer());
+                    return;
+                }
+
+                if (readableBytes < 4) {
+                    remainedBuf = buf.copy(buf.readerIndex(), remainder);
+                    return;
+                }
+
+                final int length = readableBytes - remainder;
+                final ByteBuffer buffer = buf.nioBuffer(buf.readerIndex(), length);
+                decodeAndAddToUnprocessed(buffer);
+                buf.readerIndex(buf.readerIndex() + length);
+                remainedBuf = buf.copy(buf.readerIndex(), remainder);
+            } finally {
+                buf.release();
+            }
+        }
+
+        private void addToUnprocessedDelimitingPadding(ByteBuf buf) {
+            final int readableBytes = buf.readableBytes();
+            final int readerIndex = buf.readerIndex();
+            boolean paddingExist = false;
+            int lastAddedIndex = 0;
+            for (int i = 0; i < readableBytes; i++) {
+                final byte b = buf.getByte(readerIndex + i);
+                if (b == PADDING) {
+                    paddingExist = true;
+                } else if (paddingExist) {
+                    decodeAndAddToUnprocessed(buf, i - lastAddedIndex);
+                    paddingExist = false;
+                    lastAddedIndex = i;
+                }
+            }
+            if (paddingExist) {
+                decodeAndAddToUnprocessed(buf, readableBytes - lastAddedIndex);
+            }
+        }
+
+        private void decodeAndAddToUnprocessed(ByteBuf maybeWrappedBuffer, int length) {
+            final ByteBuffer buffer = maybeWrappedBuffer.nioBuffer(maybeWrappedBuffer.readerIndex(), length);
+            maybeWrappedBuffer.readerIndex(maybeWrappedBuffer.readerIndex() + length);
+            decodeAndAddToUnprocessed(buffer);
+        }
+
+        private void decodeAndAddToUnprocessed(ByteBuffer buffer) {
+            assert unprocessed != null;
+            final ByteBuf decoded = Unpooled.wrappedBuffer(Base64.getDecoder().decode(buffer));
+            unprocessed.add(decoded);
+            unprocessedBytes += decoded.readableBytes();
+        }
+
+        void close() {
+            if (remainedBuf != null) {
+                remainedBuf.release();
+                remainedBuf = null;
             }
         }
     }
