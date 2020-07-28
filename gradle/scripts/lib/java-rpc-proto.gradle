@@ -52,6 +52,14 @@ configure(projectsWithFlags('java')) {
                             artifact = artifactName
                         }
                     }
+
+                    if (project.ext.hasFlag('akka-grpc_2.12')) {
+                        def artifactName = "com.lightbend.akka.grpc:akka-grpc-codegen_2.12:${managedVersions['com.lightbend.akka.grpc:akka-grpc-runtime_2.12']}:"
+                        artifactName += isWindows ? "bat@bat" : "assembly@jar"
+                        akkaGrpc {
+                            artifact = artifactName
+                        }
+                    }
                 }
                 generateProtoTasks {
                     all()*.plugins {
@@ -71,6 +79,9 @@ configure(projectsWithFlags('java')) {
                             }
                             if (project.ext.hasFlag('kotlin-grpc') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
                                 kotlinGrpc {}
+                            }
+                            if (project.ext.hasFlag('akka-grpc_2.12') && managedVersions.containsKey('com.lightbend.akka.grpc:akka-grpc-runtime_2.12')) {
+                                akkaGrpc {}
                             }
                         }
                     }
