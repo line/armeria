@@ -71,9 +71,10 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                     }
                 });
             } catch (Exception e) {
-                ctx.channel().eventLoop().execute(
-                        () -> ctx.pipeline().fireUserEventTriggered(new ProxyConnectException(e)));
-                ctx.close();
+                ctx.channel().eventLoop().execute(() -> {
+                    ctx.pipeline().fireUserEventTriggered(new ProxyConnectException(e));
+                    ctx.close();
+                });
             } finally {
                 ctx.pipeline().remove(this);
             }
@@ -86,24 +87,22 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
         final InetSocketAddress srcSocketAddress =
                 haProxyConfig.sourceAddress() != null ? haProxyConfig.sourceAddress()
                                                       : (InetSocketAddress) channel.localAddress();
-        final InetSocketAddress destSockAddress = haProxyConfig.proxyAddress();
-        assert destSockAddress != null;
+        final InetSocketAddress destSocketAddress = haProxyConfig.proxyAddress();
+        assert destSocketAddress != null;
 
         final InetAddress srcAddress = srcSocketAddress.getAddress();
-        final InetAddress destAddress = destSockAddress.getAddress();
+        final InetAddress destAddress = destSocketAddress.getAddress();
 
         if (srcAddress instanceof Inet4Address && destAddress instanceof Inet4Address) {
             return new HAProxyMessage(V2, PROXY, TCP4,
-                                      srcAddress.getHostAddress(),
-                                      destAddress.getHostAddress(),
-                                      srcSocketAddress.getPort(), destSockAddress.getPort());
+                                      srcAddress.getHostAddress(), destAddress.getHostAddress(),
+                                      srcSocketAddress.getPort(), destSocketAddress.getPort());
         } else if (srcAddress instanceof Inet6Address && destAddress instanceof Inet6Address) {
             return new HAProxyMessage(V2, PROXY, TCP4,
-                                      srcAddress.getHostAddress(),
-                                      destAddress.getHostAddress(),
-                                      srcSocketAddress.getPort(), destSockAddress.getPort());
+                                      srcAddress.getHostAddress(), destAddress.getHostAddress(),
+                                      srcSocketAddress.getPort(), destSocketAddress.getPort());
         } else {
-            logger.warn("Incompatible PROXY address types. srcSocketAddress: {}, destSockAddress: {}",
+            logger.warn("Incompatible PROXY address types. srcAddress: {}, destAddress: {}",
                         srcAddress.getClass(), destAddress.getClass());
             throw new IllegalArgumentException("incompatible addresses: [" + srcAddress + '-' +
                                                destAddress + ']');
