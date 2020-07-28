@@ -36,8 +36,9 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
@@ -73,7 +74,7 @@ abstract class HttpResponseDecoder {
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
+                new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
@@ -138,8 +139,7 @@ abstract class HttpResponseDecoder {
         return disconnectWhenFinished;
     }
 
-    static final class HttpResponseWrapper
-            extends DefaultTimeoutController implements StreamWriter<HttpObject> {
+    static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
         enum State {
             WAIT_NON_INFORMATIONAL,
@@ -150,6 +150,9 @@ abstract class HttpResponseDecoder {
         private final DecodedHttpResponse delegate;
         @Nullable
         private final ClientRequestContext ctx;
+        @Nullable
+        private final TimeoutScheduler timeoutScheduler;
+
         private final long maxContentLength;
         private final long responseTimeoutMillis;
 
@@ -158,13 +161,16 @@ abstract class HttpResponseDecoder {
         private State state = State.WAIT_NON_INFORMATIONAL;
 
         HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
-                            EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
-            super(eventLoop);
+                            long responseTimeoutMillis, long maxContentLength) {
             this.delegate = delegate;
             this.ctx = ctx;
             this.maxContentLength = maxContentLength;
             this.responseTimeoutMillis = responseTimeoutMillis;
-            setTimeoutTask(newTimeoutTask());
+            if (ctx instanceof DefaultClientRequestContext) {
+                timeoutScheduler = ((DefaultClientRequestContext) ctx).timeoutScheduler();
+            } else {
+                timeoutScheduler = null;
+            }
         }
 
         CompletableFuture<Void> whenComplete() {
@@ -335,8 +341,10 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnNotTimedOut) {
 
-            if (!isTimedOut()) {
-                cancelTimeout();
+            if (timeoutScheduler == null || !timeoutScheduler.isTimedOut()) {
+                if (timeoutScheduler != null) {
+                    timeoutScheduler.clearTimeout(false);
+                }
                 // There's no timeout or the response has not been timed out.
                 actionOnNotTimedOut.accept(cause);
                 return;
@@ -368,8 +376,9 @@ abstract class HttpResponseDecoder {
         }
 
         void initTimeout() {
-            if (responseTimeoutMillis > 0) {
-                scheduleTimeoutNanos(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+            if (timeoutScheduler != null) {
+                timeoutScheduler.init(ctx.eventLoop(), newTimeoutTask(),
+                                      TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
             }
         }
 

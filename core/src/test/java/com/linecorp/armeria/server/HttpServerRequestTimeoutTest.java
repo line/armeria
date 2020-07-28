@@ -81,7 +81,7 @@ class HttpServerRequestTimeoutTest {
                   return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
               })
               .service("/streaming", (ctx, req) -> {
-                  timeoutFuture = ctx.whenTimedOut();
+                  timeoutFuture = ctx.whenRequestTimedOut();
                   return HttpResponse.streaming();
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->

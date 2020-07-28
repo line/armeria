@@ -22,57 +22,51 @@ import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
-import org.junit.jupiter.api.BeforeEach;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
-
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController.State;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
+import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.common.TimeoutScheduler.State;
+import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
+
+import io.netty.util.concurrent.EventExecutor;
 
 class DefaultTimeoutControllerTest {
 
-    static {
-        // call workerGroup early to avoid initializing contexts while testing
-        CommonPools.workerGroup();
-    }
+    private static final Logger logger = LoggerFactory.getLogger(DefaultTimeoutControllerTest.class);
 
-    StatusCheckedTaskTimeoutController timeoutController;
-    volatile boolean isTimedOut;
+    private static final EventExecutor eventExecutor = CommonPools.workerGroup().next();
 
-    @BeforeEach
-    void setUp() {
-        isTimedOut = false;
-        final TimeoutTask timeoutTask = new TimeoutTask() {
-            @Override
-            public boolean canSchedule() {
-                return true;
+    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+        @Override
+        public boolean canSchedule() {
+            return true;
+        }
+
+        @Override
+        public void run() {}
+    };
+
+    private static void executeInEventLoop(long initTimeoutNanos, Consumer<TimeoutScheduler> task) {
+        final AtomicBoolean completed = new AtomicBoolean();
+        eventExecutor.execute(() -> {
+            try {
+                final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
+                timeoutScheduler.init(eventExecutor, noopTimeoutTask, initTimeoutNanos);
+                task.accept(timeoutScheduler);
+                completed.set(true);
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
             }
-
-            @Override
-            public void run() {
-                isTimedOut = true;
-            }
-        };
-        timeoutController =
-                new StatusCheckedTaskTimeoutController(
-                        new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup().next()));
-    }
-
-    @Test
-    void shouldHaveTimeoutTask() {
-        final TimeoutController emptyTaskTimeoutController =
-                new DefaultTimeoutController(CommonPools.workerGroup().next());
-        assertThatThrownBy(() -> emptyTaskTimeoutController.extendTimeoutNanos(100))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("setTimeoutTask(timeoutTask) is not called yet");
+        });
+        await().untilTrue(completed);
     }
 
     @Test
@@ -81,374 +75,203 @@ class DefaultTimeoutControllerTest {
         final long adjustmentNanos = Duration.ofMillis(200).toNanos();
         final long tolerance = Duration.ofMillis(100).toNanos();
 
-        timeoutController.scheduleTimeoutNanos(initTimeoutNanos);
-        final long startTimeNanos = timeoutController.startTimeNanos();
+        executeInEventLoop(initTimeoutNanos, timeoutScheduler -> {
+            final long startTimeNanos = timeoutScheduler.startTimeNanos();
 
-        timeoutController.extendTimeoutNanos(adjustmentNanos);
-        final long passedNanos = System.nanoTime() - startTimeNanos;
-        assertThat(timeoutController.timeoutNanos()).isBetween(
-                initTimeoutNanos + adjustmentNanos - passedNanos - tolerance,
-                initTimeoutNanos + adjustmentNanos - passedNanos + tolerance);
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, adjustmentNanos);
+            final long passedNanos = System.nanoTime() - startTimeNanos;
+            assertThat(timeoutScheduler.timeoutNanos()).isBetween(
+                    initTimeoutNanos + adjustmentNanos - passedNanos - tolerance,
+                    initTimeoutNanos + adjustmentNanos - passedNanos + tolerance);
 
-        final long adjustmentNanos2 = Duration.ofMillis(-200).toNanos();
-        timeoutController.extendTimeoutNanos(adjustmentNanos2);
-        final long passedMillis2 = System.nanoTime() - startTimeNanos;
-        assertThat(timeoutController.timeoutNanos()).isBetween(
-                initTimeoutNanos + adjustmentNanos + adjustmentNanos2 - passedMillis2 - tolerance,
-                initTimeoutNanos + adjustmentNanos + adjustmentNanos2 - passedMillis2 + tolerance);
+            final long adjustmentNanos2 = Duration.ofMillis(-200).toNanos();
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, adjustmentNanos2);
+            final long passedMillis2 = System.nanoTime() - startTimeNanos;
+            assertThat(timeoutScheduler.timeoutNanos()).isBetween(
+                    initTimeoutNanos + adjustmentNanos + adjustmentNanos2 - passedMillis2 - tolerance,
+                    initTimeoutNanos + adjustmentNanos + adjustmentNanos2 - passedMillis2 + tolerance);
+        });
     }
 
     @Test
     void resetTimeout() {
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        timeoutController.resetTimeoutNanos(Duration.ofMillis(500).toNanos());
-        assertThat(timeoutController.timeoutNanos()).isEqualTo(Duration.ofMillis(500).toNanos());
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(500).toNanos());
+            assertTimeout(timeoutScheduler.timeoutNanos(), Duration.ofMillis(500).toNanos());
+        });
     }
 
     @Test
-    void resetTimeout_withoutInit() {
-        final Duration newTimeout = Duration.ofMillis(500);
-        timeoutController.resetTimeoutNanos(newTimeout.toNanos());
-        assertThat(timeoutController.timeoutNanos()).isEqualTo(newTimeout.toNanos());
-        assertThat((Object) timeoutController.timeoutFuture()).isNotNull();
+    void resetTimeout_zero() {
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            assertThatThrownBy(() -> {
+                timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, 0);
+            }).isInstanceOf(IllegalArgumentException.class)
+              .hasMessageContaining("timeoutNanos:");
+        });
     }
 
-    @Test
-    void resetTimout_multipleZero() {
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        timeoutController.resetTimeoutNanos(0);
-        timeoutController.resetTimeoutNanos(0);
+    void assertTimeout(long actualNanos, long expectedNanos) {
+        assertThat(actualNanos)
+                .isCloseTo(expectedNanos, Offset.offset(Duration.ofMillis(200).toNanos()));
     }
 
     @Test
     void resetTimout_multipleNonZero() {
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        timeoutController.resetTimeoutNanos(0);
-        timeoutController.resetTimeoutNanos(Duration.ofMillis(500).toNanos());
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(500).toNanos());
+        });
     }
 
     @Test
     void cancelTimeout_beforeDeadline() {
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        assertThat(timeoutController.cancelTimeout()).isTrue();
-        assertThat(isTimedOut).isFalse();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.clearTimeout();
+            assertThat(timeoutScheduler.isTimedOut()).isFalse();
+        });
     }
 
     @Test
     void cancelTimeout_afterDeadline() {
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(500).toNanos());
-        Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
-        assertThat(timeoutController.cancelTimeout()).isFalse();
-        assertThat(isTimedOut).isTrue();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.timeoutNow();
+            timeoutScheduler.clearTimeout();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+        });
     }
 
     @Test
     void cancelTimeout_byResetTimeoutZero() {
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        timeoutController.resetTimeoutNanos(0);
-        assertThat(timeoutController.timeoutNanos()).isEqualTo(0);
-        assertThat((Object) timeoutController.timeoutFuture()).isNull();
-    }
-
-    @Test
-    void scheduleTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
-        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.clearTimeout();
+            assertThat((Object) timeoutScheduler.timeoutFuture()).isNull();
+        });
     }
 
     @Test
     void scheduleTimeoutWhenTimedOut() {
-        assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
-    }
-
-    @Test
-    void extendTimeoutWhenDisabled() {
-        assertThat(timeoutController.extendTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.timeoutNow();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+        });
     }
 
     @Test
     void extendTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
-        assertThat(timeoutController.extendTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
+        executeInEventLoop(0, timeoutScheduler -> {
+            final long timeoutNanos = Duration.ofMillis(1000).toNanos();
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, timeoutNanos);
+            final long currentTimeoutNanos = timeoutScheduler.timeoutNanos();
+            assertTimeout(currentTimeoutNanos, timeoutNanos);
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, timeoutNanos);
+            assertTimeout(timeoutScheduler.timeoutNanos(), currentTimeoutNanos + timeoutNanos);
+        });
     }
 
     @Test
     void extendTimeoutWhenTimedOut() {
-        assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.extendTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
-    }
-
-    @Test
-    void resetTimeoutWhenDisabled() {
-        assertThat(timeoutController.resetTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
-    }
-
-    @Test
-    void resetTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
-        assertThat(timeoutController.resetTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
-    }
-
-    @Test
-    void resetTimeoutWhenTimedOut() {
-        assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.resetTimeoutNanos(Duration.ofMillis(1000).toNanos())).isFalse();
-    }
-
-    @Test
-    void cancelTimeoutWhenDisabled() {
-        assertThat(timeoutController.cancelTimeout()).isFalse();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.timeoutNow();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, Duration.ofMillis(1000).toNanos());
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+        });
     }
 
     @Test
     void cancelTimeoutWhenScheduled() {
-        assertThat(timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos())).isTrue();
-        assertThat(timeoutController.cancelTimeout()).isTrue();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.clearTimeout();
+        });
     }
 
     @Test
     void cancelTimeoutWhenTimedOut() {
-        assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.cancelTimeout()).isFalse();
-    }
-
-    @Test
-    void timeoutNowWhenDisabled() {
-        assertThat(timeoutController.timeoutNow()).isTrue();
-    }
-
-    @Test
-    void timeoutNowWhenScheduled() {
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        assertThat(timeoutController.timeoutNow()).isTrue();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.timeoutNow();
+            timeoutScheduler.clearTimeout();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+        });
     }
 
     @Test
     void timeoutNowWhenTimedOut() {
-        timeoutController.timeoutNow();
-        assertThat(timeoutController.timeoutNow()).isFalse();
-    }
-
-    @Test
-    void multipleTimeoutNow() {
-        assertThat(timeoutController.timeoutNow()).isTrue();
-        assertThat(timeoutController.timeoutNow()).isFalse();
-    }
-
-    @Test
-    void ignoreScheduledTimeoutAfterReset() {
-        timeoutController.resetTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        assertThat(timeoutController.scheduleTimeoutNanos(1)).isFalse();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.timeoutNow();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+            timeoutScheduler.timeoutNow();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+        });
     }
 
     @Test
     void whenTimingOut() {
-        final DefaultTimeoutController timeoutController =
-                new DefaultTimeoutController(CommonPools.workerGroup().next());
+        final AtomicReference<CompletableFuture<Void>> timeoutFutureRef = new AtomicReference<>();
+        final AtomicReference<TimeoutScheduler> timeoutSchedulerRef = new AtomicReference<>();
+        final AtomicBoolean completed = new AtomicBoolean();
         final AtomicBoolean passed = new AtomicBoolean();
-        final TimeoutTask timeoutTask = new TimeoutTask() {
-            @Override
-            public boolean canSchedule() {
-                return true;
-            }
+        eventExecutor.execute(() -> {
+            final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
+            final TimeoutTask timeoutTask = new TimeoutTask() {
+                @Override
+                public boolean canSchedule() {
+                    return true;
+                }
 
-            @Override
-            public void run() {
-                assertThat(timeoutController.whenTimingOut()).isDone();
-                assertThat(timeoutController.isTimedOut()).isTrue();
-                assertThat(timeoutController.whenTimedOut()).isNotDone();
-                passed.set(true);
-            }
-        };
-        timeoutController.setTimeoutTask(timeoutTask);
+                @Override
+                public void run() {
+                    assertThat(timeoutScheduler.whenTimingOut()).isDone();
+                    assertThat(timeoutScheduler.isTimedOut()).isTrue();
+                    assertThat(timeoutScheduler.whenTimedOut()).isNotDone();
+                    passed.set(true);
+                }
+            };
+            timeoutScheduler.init(eventExecutor, timeoutTask, 0);
 
-        assertThat(timeoutController.isTimedOut()).isFalse();
+            assertThat(timeoutScheduler.isTimedOut()).isFalse();
 
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(2000).toNanos());
-        assertThat(timeoutController.state()).isEqualTo(State.SCHEDULED);
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            assertThat(timeoutScheduler.state()).isEqualTo(State.SCHEDULED);
 
-        await().untilAsserted(() -> {
-                assertThat(timeoutController.state()).isEqualTo(State.TIMED_OUT);
-                assertThat(timeoutController.whenTimedOut()).isDone();
+            timeoutSchedulerRef.set(timeoutScheduler);
+            timeoutFutureRef.set(timeoutScheduler.whenTimedOut());
+            completed.set(true);
         });
-        assertThat(passed).isTrue();
+
+        await().untilTrue(passed);
+        await().untilTrue(completed);
+        timeoutFutureRef.get().join();
+        assertThat(timeoutSchedulerRef.get().state()).isEqualTo(State.TIMED_OUT);
     }
 
     @Test
     void whenTimedOut() {
-        final CompletableFuture<Void> timeoutFuture = timeoutController.whenTimedOut();
-        assertThat(timeoutFuture).isNotDone();
-        timeoutController.scheduleTimeoutNanos(Duration.ofMillis(1000).toNanos());
-        await().untilAsserted(() -> {
-            assertThat(timeoutFuture).isDone();
-            assertThat(timeoutController.isTimedOut()).isTrue();
+        final AtomicReference<CompletableFuture<Void>> timeoutFutureRef = new AtomicReference<>();
+        executeInEventLoop(0, timeoutScheduler -> {
+            final CompletableFuture<Void> timeoutFuture = timeoutScheduler.whenTimedOut();
+            assertThat(timeoutFuture).isNotDone();
+            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutFutureRef.set(timeoutFuture);
         });
+        timeoutFutureRef.get().join();
     }
 
     @Test
-    void disabledTimeoutTask() {
-        final DefaultTimeoutController timeoutController = new DefaultTimeoutController(
-                new TimeoutTask() {
-
-                    @Override
-                    public boolean canSchedule() {
-                        return false;
-                    }
-
-                    @Override
-                    public void run() {
-                        throw new Error("Should not reach here");
-                    }
-                },
-                CommonPools.workerGroup().next());
-
-        assertThat(timeoutController.scheduleTimeoutNanos(1000)).isFalse();
-        assertThat(timeoutController.extendTimeoutNanos(2000)).isFalse();
-        assertThat(timeoutController.resetTimeoutNanos(3000)).isFalse();
-        assertThat(timeoutController.timeoutNow()).isFalse();
-        assertThat(timeoutController.cancelTimeout()).isFalse();
-    }
-
-    private static class StatusCheckedTaskTimeoutController implements TimeoutController {
-
-        private final DefaultTimeoutController delegate;
-
-        StatusCheckedTaskTimeoutController(DefaultTimeoutController delegate) {
-            // Assume the timeout task could be scheduled always
-            assertThat(delegate.timeoutTask().canSchedule()).isTrue();
-            this.delegate = delegate;
-        }
-
-        @Override
-        public boolean scheduleTimeoutNanos(long timeoutNanos) {
-            final State prevState = delegate.state();
-            final boolean result = delegate.scheduleTimeoutNanos(timeoutNanos);
-            if (result) {
-                // Previous: INACTIVE
-                assertThat(prevState).isIn(State.INIT, State.INACTIVE);
-                // Transition to: SCHEDULE
-                assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
-            } else {
-                // Previous: !INACTIVE
-                assertThat(prevState).isNotIn(State.INIT, State.INACTIVE);
-                // Transition to: No changes
-                assertThat(delegate.state()).isEqualTo(prevState);
-            }
-            return result;
-        }
-
-        @Override
-        public boolean extendTimeoutNanos(long adjustmentNanos) {
-            final State prevState = delegate.state();
-            final boolean result = delegate.extendTimeoutNanos(adjustmentNanos);
-            if (result) {
-                // Previous: SCHEDULE
-                assertThat(prevState).isEqualTo(State.SCHEDULED);
-                // Transition to: SCHEDULE
-                assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
-            } else {
-                // Previous: !SCHEDULE
-                assertThat(prevState).isNotEqualTo(State.SCHEDULED);
-                // Transition to:
-                if (prevState == State.INIT) {
-                    assertThat(delegate.state()).isEqualTo(State.INACTIVE);
-                } else {
-                    assertThat(delegate.state()).isEqualTo(prevState);
-                }
-            }
-            return result;
-        }
-
-        @Override
-        public boolean resetTimeoutNanos(long newTimeoutNanos) {
-            final State prevState = delegate.state();
-            final boolean result = delegate.resetTimeoutNanos(newTimeoutNanos);
-            if (result) {
-                // Previous: SCHEDULED
-                assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
-                // Transition to: SCHEDULE or DISABLED
-                if (newTimeoutNanos > 0) {
-                    assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
-                } else {
-                    assertThat(delegate.state()).isEqualTo(State.INACTIVE);
-                }
-            } else {
-                // Previous: TIMED_OUT
-                assertThat(prevState).isEqualTo(State.TIMED_OUT);
-                // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
-            }
-            return result;
-        }
-
-        @Override
-        public boolean timeoutNow() {
-            final State prevState = delegate.state();
-            final boolean result = delegate.timeoutNow();
-            if (result) {
-                // Previous: !TIMED_OUT
-                assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
-                // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
-            } else {
-                // Previous: TIMED_OUT
-                assertThat(prevState).isEqualTo(State.TIMED_OUT);
-                // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
-            }
-            return result;
-        }
-
-        @Override
-        public boolean cancelTimeout() {
-            final State prevState = delegate.state();
-            final boolean canceled = delegate.cancelTimeout();
-            if (canceled) {
-                // Previous: SCHEDULED
-                assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
-                // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(State.INACTIVE);
-            } else {
-                // Previous: !SCHEDULED
-                assertThat(prevState).isNotEqualTo(State.SCHEDULED);
-                // Transition to: No changes
-                assertThat(delegate.state()).isEqualTo(prevState);
-            }
-            return canceled;
-        }
-
-        @Override
-        public boolean isTimedOut() {
-            return delegate.isTimedOut();
-        }
-
-        @Override
-        public CompletableFuture<Void> whenTimingOut() {
-            return delegate.whenTimingOut();
-        }
-
-        @Override
-        public CompletableFuture<Void> whenTimedOut() {
-            return delegate.whenTimedOut();
-        }
-
-        @Override
-        public Long startTimeNanos() {
-            return delegate.startTimeNanos();
-        }
-
-        long timeoutNanos() {
-            return delegate.timeoutNanos();
-        }
-
-        @Nullable
-        public ScheduledFuture<?> timeoutFuture() {
-            return delegate.timeoutFuture();
-        }
-
-        public State state() {
-            return delegate.state();
-        }
+    void pendingTimeout() {
+        final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(1000);
+        timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, 1000);
+        assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(2000);
+        timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, 1000);
+        assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(1000);
+        timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_START, 3000);
+        assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(3000);
     }
 }

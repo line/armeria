@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -426,7 +427,10 @@ public interface ClientRequestContext extends RequestContext {
      * Returns {@link Response} timeout handler which is executed when
      * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
      * or the default {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
+     *
+     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
      */
+    @Deprecated
     @Nullable
     Runnable responseTimeoutHandler();
 
@@ -444,10 +448,24 @@ public interface ClientRequestContext extends RequestContext {
      * ...
      * }</pre>
      *
-     * @deprecated Use {@link #whenTimingOut()} or {@link #whenTimedOut()}
+     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
      */
     @Deprecated
     void setResponseTimeoutHandler(Runnable responseTimeoutHandler);
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} is about to
+     * get timed out.
+     */
+    CompletableFuture<Void> whenResponseTimingOut();
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} has been
+     * timed out (e.g., when the corresponding request passes a deadline).
+     * {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed.
+     */
+    CompletableFuture<Void> whenResponseTimedOut();
 
     /**
      * Returns the maximum length of the received {@link Response}.

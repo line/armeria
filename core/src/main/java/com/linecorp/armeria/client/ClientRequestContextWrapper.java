@@ -157,12 +157,12 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public CompletableFuture<Void> whenTimingOut() {
-        return delegate().whenTimingOut();
+    public CompletableFuture<Void> whenResponseTimingOut() {
+        return delegate().whenResponseTimingOut();
     }
 
     @Override
-    public CompletableFuture<Void> whenTimedOut() {
-        return delegate().whenTimedOut();
+    public CompletableFuture<Void> whenResponseTimedOut() {
+        return delegate().whenResponseTimedOut();
     }
 }

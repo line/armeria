@@ -140,6 +140,16 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public CompletableFuture<Void> whenRequestTimingOut() {
+        return delegate().whenRequestTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenRequestTimedOut() {
+        return delegate().whenRequestTimedOut();
+    }
+
+    @Override
     public void timeoutNow() {
         delegate().timeoutNow();
     }
@@ -147,16 +157,6 @@ public class ServiceRequestContextWrapper
     @Override
     public boolean isTimedOut() {
         return delegate().isTimedOut();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenTimingOut() {
-        return delegate().whenTimingOut();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenTimedOut() {
-        return delegate().whenTimedOut();
     }
 
     @Override

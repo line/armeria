@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -417,7 +418,10 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns {@link Request} timeout handler which is executed when
      * receiving the current {@link Request} and sending the corresponding {@link Response}
      * is not completely received within the allowed {@link #requestTimeoutMillis()}.
+     *
+     * @deprecated Use {@link #whenRequestTimingOut()} or {@link #whenRequestTimedOut()}
      */
+    @Deprecated
     @Nullable
     Runnable requestTimeoutHandler();
 
@@ -438,10 +442,24 @@ public interface ServiceRequestContext extends RequestContext {
      *   ...
      * }</pre>
      *
-     * @deprecated Use {@link #whenTimingOut()} or {@link #whenTimedOut()}.
+     * @deprecated Use {@link #whenRequestTimingOut()} or {@link #whenRequestTimedOut()}.
      */
     @Deprecated
     void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} is about to
+     * get timed out.
+     */
+    CompletableFuture<Void> whenRequestTimingOut();
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} has been
+     * timed out (e.g., when the corresponding request passes a deadline).
+     * {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed.
+     */
+    CompletableFuture<Void> whenRequestTimedOut();
 
     /**
      * Returns the maximum length of the current {@link Request}.

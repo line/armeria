@@ -21,12 +21,15 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -35,8 +38,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
+import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -78,11 +81,13 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     /**
      * A timeout controller that has been timed-out.
      */
-    private static final DefaultTimeoutController noopTimedOutController =
-            new DefaultTimeoutController(noopTimeoutTask, ImmediateEventExecutor.INSTANCE);
+    private static final TimeoutScheduler noopTimedOutScheduler = new TimeoutScheduler(0);
 
     static {
-        noopTimedOutController.timeoutNow();
+        ImmediateEventExecutor.INSTANCE.execute(() -> {
+            noopTimedOutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
+            noopTimedOutScheduler.timeoutNow();
+        });
     }
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
@@ -228,21 +233,31 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
-        final DefaultTimeoutController timeoutController;
+        final TimeoutScheduler timeoutScheduler;
         if (timedOut()) {
-            timeoutController = noopTimedOutController;
+            timeoutScheduler = noopTimedOutScheduler;
         } else {
-            timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
+            timeoutScheduler = new TimeoutScheduler(0);
+            final CountDownLatch latch = new CountDownLatch(1);
+            eventLoop().execute(() -> {
+                timeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                latch.countDown();
+            });
+
+            try {
+                latch.await(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ignored) {
+            }
         }
 
         // Build the context with the properties set by a user and the fake objects.
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, req, sslSession(), proxiedAddresses, clientAddress,
+                timeoutScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
-
-        ctx.setRequestTimeoutController(timeoutController);
+                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
+                HttpHeaders.of(), HttpHeaders.of());
 
         return ctx;
     }

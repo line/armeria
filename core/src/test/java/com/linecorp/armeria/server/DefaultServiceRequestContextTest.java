@@ -23,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -135,7 +136,7 @@ class DefaultServiceRequestContextTest {
 
         ctx.eventLoop().execute(() -> {
             ctx.setRequestTimeoutMillis(2000);
-            assertThat(ctx.requestTimeoutMillis()).isEqualTo(2000);
+            assertThat(ctx.requestTimeoutMillis()).isCloseTo(2000, Offset.offset(200L));
             ctx.clearRequestTimeout();
             assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
             finished.set(true);

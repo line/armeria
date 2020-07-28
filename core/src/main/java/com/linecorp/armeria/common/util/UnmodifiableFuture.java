@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
  * </ul>
  * Also, {@link #cancel(boolean)} will do nothing but returning whether cancelled or not.
  */
-public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
+public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
 
     private static final UnmodifiableFuture<?> NIL;
     private static final UnmodifiableFuture<Boolean> TRUE;
@@ -103,7 +103,7 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         return unmodifiable;
     }
 
-    private UnmodifiableFuture() {}
+    protected UnmodifiableFuture() {}
 
     /**
      * Throws an {@link UnsupportedOperationException}.
@@ -113,7 +113,7 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         throw new UnsupportedOperationException();
     }
 
-    private void doComplete(@Nullable T value) {
+    protected final void doComplete(@Nullable T value) {
         super.complete(value);
     }
 
@@ -125,7 +125,7 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         throw new UnsupportedOperationException();
     }
 
-    private void doCompleteExceptionally(Throwable cause) {
+    protected final void doCompleteExceptionally(Throwable cause) {
         super.completeExceptionally(cause);
     }
 

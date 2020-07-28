@@ -54,7 +54,6 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -137,14 +136,15 @@ public final class DefaultServiceRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
-             sslSession, proxiedAddresses, clientAddress, requestStartTimeNanos, requestStartTimeMicros,
-             HttpHeaders.of(), HttpHeaders.of());
+             sslSession, proxiedAddresses, clientAddress, /* timeoutScheduler */ null,
+             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
-    private DefaultServiceRequestContext(
+    DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            @Nullable TimeoutScheduler timeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
@@ -157,7 +157,12 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+        if (timeoutScheduler != null) {
+            this.timeoutScheduler = timeoutScheduler;
+        } else {
+            this.timeoutScheduler =
+                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+        }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -309,6 +314,10 @@ public final class DefaultServiceRequestContext
         this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
     }
 
+    TimeoutScheduler timeoutScheduler() {
+        return timeoutScheduler;
+    }
+
     @Override
     public void timeoutNow() {
         timeoutScheduler.timeoutNow();
@@ -320,12 +329,12 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public CompletableFuture<Void> whenTimingOut() {
+    public CompletableFuture<Void> whenRequestTimingOut() {
         return timeoutScheduler.whenTimingOut();
     }
 
     @Override
-    public CompletableFuture<Void> whenTimedOut() {
+    public CompletableFuture<Void> whenRequestTimedOut() {
         return timeoutScheduler.whenTimedOut();
     }
 
@@ -421,17 +430,6 @@ public final class DefaultServiceRequestContext
     @Override
     public RequestLogBuilder logBuilder() {
         return log;
-    }
-
-    /**
-     * Sets the {@code requestTimeoutController} that is set to a new timeout when
-     * the {@linkplain #requestTimeoutMillis()} request timeout} of the request is changed.
-     *
-     * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
-     * a timeout task when a user updates the request timeout configuration.
-     */
-    void setRequestTimeoutController(TimeoutController requestTimeoutController) {
-        timeoutScheduler.setTimeoutController(requestTimeoutController, ch.eventLoop());
     }
 
     @Override

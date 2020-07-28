@@ -58,7 +58,6 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -88,7 +87,6 @@ public final class DefaultClientRequestContext
     private boolean initialized;
     @Nullable
     private EventLoop eventLoop;
-    private final ClientOptions options;
     @Nullable
     private EndpointGroup endpointGroup;
     @Nullable
@@ -100,6 +98,7 @@ public final class DefaultClientRequestContext
     @Nullable
     private final ServiceRequestContext root;
 
+    private final ClientOptions options;
     private final RequestLogBuilder log;
     private final TimeoutScheduler timeoutScheduler;
 
@@ -138,9 +137,10 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            TimeoutScheduler timeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(), timeoutScheduler,
              requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -163,7 +163,8 @@ public final class DefaultClientRequestContext
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             id, method, path, query, fragment, options, req, rpcReq,
+             serviceRequestContext(), /* timeoutScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -172,7 +173,7 @@ public final class DefaultClientRequestContext
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext root,
+            @Nullable ServiceRequestContext root, @Nullable TimeoutScheduler timeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
@@ -183,8 +184,13 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
 
+        if (timeoutScheduler == null) {
+            this.timeoutScheduler =
+                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
+        } else {
+            this.timeoutScheduler = timeoutScheduler;
+        }
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.get(ClientOptions.HTTP_HEADERS);
@@ -522,17 +528,6 @@ public final class DefaultClientRequestContext
         this.responseTimeoutHandler = requireNonNull(responseTimeoutHandler, "responseTimeoutHandler");
     }
 
-    /**
-     * Sets the {@code responseTimeoutController} that is set to a new timeout when
-     * the {@linkplain #responseTimeoutMillis()} response timeout} setting is changed.
-     *
-     * <p>Note: This method is meant for internal use by client-side protocol implementation to reschedule
-     * a timeout task when a user updates the response timeout configuration.
-     */
-    void setResponseTimeoutController(TimeoutController responseTimeoutController) {
-        timeoutScheduler.setTimeoutController(responseTimeoutController, eventLoop());
-    }
-
     @Override
     public long maxResponseLength() {
         return maxResponseLength;
@@ -587,6 +582,10 @@ public final class DefaultClientRequestContext
         return log;
     }
 
+    TimeoutScheduler timeoutScheduler() {
+        return timeoutScheduler;
+    }
+
     @Override
     public void timeoutNow() {
         timeoutScheduler.timeoutNow();
@@ -598,12 +597,12 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public CompletableFuture<Void> whenTimingOut() {
+    public CompletableFuture<Void> whenResponseTimingOut() {
         return timeoutScheduler.whenTimingOut();
     }
 
     @Override
-    public CompletableFuture<Void> whenTimedOut() {
+    public CompletableFuture<Void> whenResponseTimedOut() {
         return timeoutScheduler.whenTimedOut();
     }
 

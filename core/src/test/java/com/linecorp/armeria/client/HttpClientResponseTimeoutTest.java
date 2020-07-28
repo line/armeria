@@ -99,7 +99,7 @@ class HttpClientResponseTimeoutTest {
                 .builder(server.httpUri())
                 .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(1000L))
                 .decorator((delegate, ctx, req) -> {
-                    timeoutFutureRef.set(ctx.whenTimedOut());
+                    timeoutFutureRef.set(ctx.whenResponseTimedOut());
                     return delegate.execute(ctx, req);
                 })
                 .build();
