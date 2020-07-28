@@ -336,9 +336,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            // TODO: this can be improved
-            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT &&
-                poolKey.proxyConfig.proxyType() != ProxyType.HAPROXY) {
+            if (isTunnelingProxy(poolKey.proxyConfig.proxyType())) {
                 if (proxyDestinationAddress != null) {
                     // ProxyConnectionEvent was already triggered.
                     tryCompleteSessionPromise(ctx);
@@ -448,5 +446,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (previousCause != null && logger.isWarnEnabled()) {
             logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
         }
+    }
+
+    private static boolean isTunnelingProxy(ProxyType proxyType) {
+        return proxyType != ProxyType.DIRECT && proxyType != ProxyType.HAPROXY;
     }
 }

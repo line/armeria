@@ -120,14 +120,18 @@ public abstract class ProxyConfig {
     }
 
     /**
-     * TBU.
+     * Creates a {@code ProxyConfig} configuration for HAProxy protocol.
+     *
+     * @param sourceAddress the source address
+     * @param destinationAddress the destination address
      */
-    public static HAProxyConfig haproxy(InetSocketAddress srcAddress, InetSocketAddress destAddress) {
-        requireNonNull(srcAddress, "srcAddress");
-        checkArgument(!srcAddress.isUnresolved(), "srcAddress must be resolved");
-        requireNonNull(destAddress, "destAddress");
-        checkArgument(!destAddress.isUnresolved(), "destAddress must be resolved");
-        return new HAProxyConfig(srcAddress, destAddress);
+    public static HAProxyConfig haproxy(
+            InetSocketAddress sourceAddress, InetSocketAddress destinationAddress) {
+        requireNonNull(sourceAddress, "sourceAddress");
+        checkArgument(!sourceAddress.isUnresolved(), "sourceAddress must be resolved");
+        requireNonNull(destinationAddress, "destinationAddress");
+        checkArgument(!destinationAddress.isUnresolved(), "destinationAddress must be resolved");
+        return new HAProxyConfig(sourceAddress, destinationAddress);
     }
 
     /**

@@ -66,11 +66,11 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                     if (f0.isSuccess()) {
                         ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                     } else {
-                        ctx.fireExceptionCaught(new ProxyConnectException(f.cause()));
+                        ctx.fireExceptionCaught(new ProxyConnectException(f0.cause()));
                         ctx.close();
                     }
                 });
-            } catch (RuntimeException e) {
+            } catch (Exception e) {
                 ctx.channel().eventLoop().execute(
                         () -> ctx.pipeline().fireUserEventTriggered(new ProxyConnectException(e)));
                 ctx.close();
@@ -84,8 +84,8 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
     private static HAProxyMessage createMessage(HAProxyConfig haProxyConfig,
                                                 Channel channel) throws ProxyConnectException {
         final InetSocketAddress srcSocketAddress =
-                haProxyConfig.srcAddress() != null ? haProxyConfig.srcAddress()
-                                                   : (InetSocketAddress) channel.localAddress();
+                haProxyConfig.sourceAddress() != null ? haProxyConfig.sourceAddress()
+                                                      : (InetSocketAddress) channel.localAddress();
         final InetSocketAddress destSockAddress = haProxyConfig.proxyAddress();
         assert destSockAddress != null;
 
@@ -105,7 +105,8 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
         } else {
             logger.warn("Incompatible PROXY address types. srcSocketAddress: {}, destSockAddress: {}",
                         srcAddress.getClass(), destAddress.getClass());
-            throw new IllegalArgumentException("incompatible addresses");
+            throw new IllegalArgumentException("incompatible addresses: [" + srcAddress + '-' +
+                                               destAddress + ']');
         }
     }
 }

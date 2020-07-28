@@ -42,7 +42,7 @@ public class HAProxyConfigSelectorTest {
         assertThat(proxyConfig.proxyAddress()).isNotNull();
         assertThat(proxyConfig.proxyAddress().getHostString()).isEqualTo(endpoint.ipAddr());
         assertThat(proxyConfig.proxyAddress().getPort()).isEqualTo(endpoint.port());
-        assertThat(proxyConfig.srcAddress()).isNull();
+        assertThat(proxyConfig.sourceAddress()).isNull();
     }
 
     @Test
@@ -56,7 +56,7 @@ public class HAProxyConfigSelectorTest {
             assertThat(proxyConfig.proxyAddress()).isNotNull();
             assertThat(proxyConfig.proxyAddress().getHostString()).isEqualTo(endpoint.ipAddr());
             assertThat(proxyConfig.proxyAddress().getPort()).isEqualTo(endpoint.port());
-            assertThat(proxyConfig.srcAddress()).isNull();
+            assertThat(proxyConfig.sourceAddress()).isNull();
         }
     }
 
@@ -74,7 +74,7 @@ public class HAProxyConfigSelectorTest {
                 final HAProxyConfigSelector selector = new HAProxyConfigSelector();
                 final Endpoint endpoint = Endpoint.of("some.host", 83).withIpAddr("127.0.0.3");
                 final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
-                assertThat(proxyConfig.srcAddress()).isNull();
+                assertThat(proxyConfig.sourceAddress()).isNull();
                 assertThat(proxyConfig.proxyAddress()).isNotNull();
                 assertThat(proxyConfig.proxyAddress().getHostString()).isEqualTo(endpoint.ipAddr());
                 assertThat(proxyConfig.proxyAddress().getPort()).isEqualTo(endpoint.port());
@@ -97,9 +97,9 @@ public class HAProxyConfigSelectorTest {
                 final HAProxyConfigSelector selector = new HAProxyConfigSelector();
                 final Endpoint endpoint = Endpoint.of("some.host", 83).withIpAddr("127.0.0.3");
                 final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
-                assertThat(proxyConfig.srcAddress()).isNotNull();
+                assertThat(proxyConfig.sourceAddress()).isNotNull();
                 assertThat(proxyConfig.proxyAddress()).isNotNull();
-                assertThat(proxiedAddresses.sourceAddress()).isEqualTo(proxyConfig.srcAddress());
+                assertThat(proxiedAddresses.sourceAddress()).isEqualTo(proxyConfig.sourceAddress());
                 assertThat(proxiedAddresses.destinationAddresses()).containsExactly(proxyConfig.proxyAddress());
             }
         }
@@ -121,9 +121,9 @@ public class HAProxyConfigSelectorTest {
                 final HAProxyConfigSelector selector = new HAProxyConfigSelector();
                 final Endpoint endpoint = Endpoint.of("some.host", 84).withIpAddr("127.0.0.4");
                 final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
-                assertThat(proxyConfig.srcAddress()).isNotNull();
+                assertThat(proxyConfig.sourceAddress()).isNotNull();
                 assertThat(proxyConfig.proxyAddress()).isNotNull();
-                assertThat(proxiedAddresses.sourceAddress()).isEqualTo(proxyConfig.srcAddress());
+                assertThat(proxiedAddresses.sourceAddress()).isEqualTo(proxyConfig.sourceAddress());
                 assertThat(proxiedAddresses.destinationAddresses()).startsWith(proxyConfig.proxyAddress());
             }
         }

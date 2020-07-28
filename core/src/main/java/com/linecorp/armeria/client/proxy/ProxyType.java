@@ -42,7 +42,7 @@ public enum ProxyType {
     CONNECT,
 
     /**
-     * HAPROXY proxy protocol.
+     * HAPROXY protocol.
      */
     HAPROXY,
 }

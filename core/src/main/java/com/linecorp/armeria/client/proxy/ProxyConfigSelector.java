@@ -25,6 +25,7 @@ import java.net.SocketAddress;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Selects the {@link ProxyConfig} to use when connecting to a network
@@ -72,7 +73,11 @@ public interface ProxyConfigSelector {
     }
 
     /**
-     * TBU.
+     * Returns a {@link ProxyConfigSelector} which selects a {@link HAProxyConfig} with the following rules.
+     * <ol>
+     *     <li>Fills proxy information from the {@link ServiceRequestContext} if available</li>
+     *     <li>Uses the current connection otherwise</li>
+     * </ol>
      */
     static ProxyConfigSelector haproxy() {
         return new HAProxyConfigSelector();

@@ -223,7 +223,7 @@ class HAProxyClientIntegrationTest {
                     .isInstanceOf(ExecutionException.class)
                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                     .hasRootCauseInstanceOf(IllegalArgumentException.class)
-                    .hasRootCauseMessage("incompatible addresses");
+                    .hasRootCauseMessage("incompatible addresses: [/127.0.0.1-/0:0:0:0:0:0:0:1]");
         }
     }
 

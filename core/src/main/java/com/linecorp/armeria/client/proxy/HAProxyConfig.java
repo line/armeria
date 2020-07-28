@@ -26,30 +26,33 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * HAPROXY proxy configuration.
+ * HAPROXY configuration.
  */
 public final class HAProxyConfig extends ProxyConfig {
 
     @Nullable
-    private final InetSocketAddress srcAddress;
+    private final InetSocketAddress sourceAddress;
 
-    private final InetSocketAddress destAddress;
+    private final InetSocketAddress destinationAddress;
 
-    HAProxyConfig(InetSocketAddress destAddress) {
-        srcAddress = null;
-        this.destAddress = destAddress;
+    HAProxyConfig(InetSocketAddress destinationAddress) {
+        sourceAddress = null;
+        this.destinationAddress = destinationAddress;
     }
 
-    HAProxyConfig(InetSocketAddress srcAddress, InetSocketAddress destAddress) {
-        checkArgument(srcAddress.getAddress().getClass() == destAddress.getAddress().getClass(),
-                      "srcAddress and destAddress should be the same type");
-        this.srcAddress = srcAddress;
-        this.destAddress = destAddress;
+    HAProxyConfig(InetSocketAddress sourceAddress, InetSocketAddress destinationAddress) {
+        checkArgument(sourceAddress.getAddress().getClass() == destinationAddress.getAddress().getClass(),
+                      "sourceAddress and destinationAddress should be the same type");
+        this.sourceAddress = sourceAddress;
+        this.destinationAddress = destinationAddress;
     }
 
+    /**
+     * Represents the destination address for the HAProxy protocol.
+     */
     @Override
     public InetSocketAddress proxyAddress() {
-        return destAddress;
+        return destinationAddress;
     }
 
     @Override
@@ -58,11 +61,12 @@ public final class HAProxyConfig extends ProxyConfig {
     }
 
     /**
-     * TBU.
+     * Represents the source address. The local connection address will be used
+     * if this value is {@code null}.
      */
     @Nullable
-    public InetSocketAddress srcAddress() {
-        return srcAddress;
+    public InetSocketAddress sourceAddress() {
+        return sourceAddress;
     }
 
     @Override
@@ -74,21 +78,21 @@ public final class HAProxyConfig extends ProxyConfig {
             return false;
         }
         final HAProxyConfig that = (HAProxyConfig) o;
-        return Objects.equals(srcAddress, that.srcAddress) &&
-               destAddress == that.destAddress;
+        return Objects.equals(sourceAddress, that.sourceAddress) &&
+               destinationAddress.equals(that.destinationAddress);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(srcAddress, destAddress);
+        return Objects.hash(sourceAddress, destinationAddress);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("proxyType", proxyType())
-                          .add("srcAddress", srcAddress)
-                          .add("destAddress", destAddress)
+                          .add("sourceAddress", sourceAddress)
+                          .add("destinationAddress", destinationAddress)
                           .omitNullValues()
                           .toString();
     }
