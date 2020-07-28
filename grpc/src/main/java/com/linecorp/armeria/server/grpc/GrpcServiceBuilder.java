@@ -261,6 +261,9 @@ public final class GrpcServiceBuilder {
      * reference as what was passed to the service stub - a message with the same contents will not
      * work. If {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)} is not called, the memory
      * will be leaked.
+     *
+     * <p>Note that this isn't working if the payloads are compressed or the {@link SerializationFormat} is
+     * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeWrapRequestBuffers) {
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;

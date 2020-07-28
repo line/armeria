@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -58,21 +57,6 @@ class GrpcWebRetryTest {
 
     private static final AtomicInteger retryCounter = new AtomicInteger();
 
-    private static final RetryRuleWithContent<HttpResponse> ruleWithContent =
-            RetryRuleWithContent.<HttpResponse>builder()
-                    .onResponseHeaders((ctx, headers) -> {
-                        // Trailers may be sent together with response headers, with no message in the body.
-                        final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
-                        return grpcStatus != null && grpcStatus != 0;
-                    })
-                    .onResponse((ctx, res) -> {
-                        final CompletableFuture<HttpHeaders> future =
-                                GrpcWebUtil.aggregateAndParseTrailers(ctx, res);
-                        return future.thenApply(trailers -> trailers != null && trailers.getInt(
-                                GrpcHeaderNames.GRPC_STATUS, -1) != 0);
-                    })
-                    .thenBackoff();
-
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -84,9 +68,24 @@ class GrpcWebRetryTest {
         }
     };
 
+    RetryRuleWithContent<HttpResponse> ruleWithContent;
+
     @BeforeEach
     void setUp() {
         retryCounter.set(0);
+        ruleWithContent =
+                RetryRuleWithContent.<HttpResponse>builder()
+                        .onResponseHeaders((ctx, headers) -> {
+                            // Trailers may be sent together with response headers, with no message in the body.
+                            final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
+                            return grpcStatus != null && grpcStatus != 0;
+                        })
+                        .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
+                            final HttpHeaders trailers =
+                                    GrpcWebUtil.parseTrailers(ctx, aggregatedRes.content());
+                            return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
+                        }))
+                        .thenBackoff();
     }
 
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
@@ -125,7 +124,8 @@ class GrpcWebRetryTest {
         @Override
         public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
             return GrpcSerializationFormats.values().stream()
-                                           .filter(GrpcSerializationFormats::isGrpcWeb)
+                                           .filter(format -> GrpcSerializationFormats.isGrpcWeb(format) &&
+                                                             !GrpcSerializationFormats.isGrpcWebText(format))
                                            .map(Arguments::of);
         }
     }
