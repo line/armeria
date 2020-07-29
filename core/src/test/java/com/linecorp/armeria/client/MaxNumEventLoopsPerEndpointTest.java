@@ -267,28 +267,29 @@ class MaxNumEventLoopsPerEndpointTest {
         // endpointA
 
         final EventLoop firstEventLoopA = acquireEntry(s, endpointA).get();
-        acquireEntries(1, s, endpointA);
+        acquireEntries(1, s, endpointA, firstEventLoopA);
         // After one circle, the next event loop is the first one.
         assertThat(firstEventLoopA).isSameAs(acquireEntry(s, endpointA).get());
 
         // endpointB
 
         final EventLoop firstEventLoopB = acquireEntry(s, endpointB).get();
-        acquireEntries(2, s, endpointB);
+        acquireEntries(2, s, endpointB, firstEventLoopB);
         // After one circle, the next event loop is the first one.
         assertThat(firstEventLoopB).isSameAs(acquireEntry(s, endpointB).get());
 
         // endpointC
 
         final EventLoop firstEventLoopC = acquireEntry(s, endpointC).get();
-        acquireEntries(4, s, endpointC);
+        acquireEntries(4, s, endpointC, firstEventLoopC);
         // After one circle, the next event loop is the first one.
         assertThat(firstEventLoopC).isSameAs(acquireEntry(s, endpointC).get());
     }
 
-    private static void acquireEntries(int times, DefaultEventLoopScheduler s, Endpoint endpoint) {
+    private static void acquireEntries(int times, DefaultEventLoopScheduler s, Endpoint endpoint,
+                                       EventLoop firstEventLoop) {
         for (int i = 0; i < times; i++) {
-            acquireEntry(s, endpoint);
+            assertThat(acquireEntry(s, endpoint).get()).isNotSameAs(firstEventLoop);
         }
     }
 }
