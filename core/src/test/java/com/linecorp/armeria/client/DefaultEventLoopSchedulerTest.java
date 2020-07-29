@@ -248,6 +248,19 @@ class DefaultEventLoopSchedulerTest {
     }
 
     @Test
+    void acquisitionStartIndexIsRandomUnderEventLoopSize() {
+        final List<Integer> startIndices = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            final DefaultEventLoopScheduler s =
+                    // Create DefaultEventLoopScheduler with the default maxNumEventLoops values.
+                    new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of());
+            startIndices.add(s.acquisitionStartIndex(1));
+        }
+        assertThat(startIndices).contains(0, 1, 2);
+        assertThat(startIndices).doesNotContain(3);
+    }
+
+    @Test
     void stressTest() {
         final EventLoopGroup group = new DefaultEventLoopGroup(1024);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE,
@@ -264,19 +277,6 @@ class DefaultEventLoopSchedulerTest {
             assertThat(e.activeRequests()).withFailMessage("All entries must have 0 activeRequests.").isZero();
         }
         assertThat(entries.get(0).id()).isZero();
-    }
-
-    @Test
-    void acquisitionStartIndexIsRandomUnderEventLoopSize() {
-        final List<Integer> startIndices = new ArrayList<>();
-        for (int i = 0; i < 30; i++) {
-            final DefaultEventLoopScheduler s =
-                    // Create DefaultEventLoopScheduler with the default maxNumEventLoops values.
-                    new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of());
-            startIndices.add(s.acquisitionStartIndex(1));
-        }
-        assertThat(startIndices).contains(0, 1, 2);
-        assertThat(startIndices).doesNotContain(3);
     }
 
     private static void stressTest(DefaultEventLoopScheduler s, List<AbstractEventLoopEntry> acquiredEntries,
