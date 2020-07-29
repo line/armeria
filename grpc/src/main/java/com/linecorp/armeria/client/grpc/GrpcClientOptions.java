@@ -79,8 +79,7 @@ public final class GrpcClientOptions {
      * will be leaked.
      *
      * <p>Note that this has no effect if the payloads are compressed or the {@link SerializationFormat} is
-     * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}, so you should not call
-     * {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)} in that case.
+     * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public static final ClientOption<Boolean> UNSAFE_WRAP_RESPONSE_BUFFERS =
             ClientOption.define("GRPC_UNSAFE_WRAP_RESPONSE_BUFFERS", false);

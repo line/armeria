@@ -76,8 +76,10 @@ public class LargePayloadBenchmark {
                             responseObserver.onNext(value);
                         } finally {
                             if (wrapBuffer) {
-                                GrpcUnsafeBufferUtil.releaseBuffer(value,
-                                                                   ServiceRequestContext.current());
+                                final boolean released =
+                                        GrpcUnsafeBufferUtil.releaseBuffer(value,
+                                                                           ServiceRequestContext.current());
+                                assert released;
                             }
                         }
                     }

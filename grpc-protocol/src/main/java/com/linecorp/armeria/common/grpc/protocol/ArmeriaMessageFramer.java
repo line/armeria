@@ -143,14 +143,16 @@ public class ArmeriaMessageFramer implements AutoCloseable {
 
             final ByteBuf maybeEncodedBuf;
             if (encodeBase64) {
-                final ByteBuf base64Encoded = Base64.encode(buf);
-                buf.release();
-                final int length = base64Encoded.readableBytes();
+                try {
+                    maybeEncodedBuf = Base64.encode(buf);
+                } finally {
+                    buf.release();
+                }
+                final int length = maybeEncodedBuf.readableBytes();
                 if (maxOutboundMessageSize >= 0 && length > maxOutboundMessageSize) {
-                    base64Encoded.release();
+                    maybeEncodedBuf.release();
                     throw newMessageTooLargeException(length);
                 }
-                maybeEncodedBuf = base64Encoded;
             } else {
                 maybeEncodedBuf = buf;
             }

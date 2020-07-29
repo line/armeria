@@ -359,7 +359,7 @@ class GrpcClientTest {
                     assertThat(value).isEqualTo(goldenResponse);
                     final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get(value);
                     assertThat(buf.refCnt()).isNotZero();
-                    GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
+                    assertThat(GrpcUnsafeBufferUtil.releaseBuffer(value, ctx)).isTrue();
                     assertThat(buf.refCnt()).isZero();
                 } catch (Throwable t) {
                     resultQueue.add(t);

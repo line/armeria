@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.unsafe.grpc;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.util.IdentityHashMap;
+
+import javax.annotation.CheckReturnValue;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
@@ -57,16 +57,24 @@ public final class GrpcUnsafeBufferUtil {
 
     /**
      * Releases the {@link ByteBuf} backing the specified {@link Message}.
+     *
+     * @return {@code true} if and only if the reference count of the stored {@link ByteBuf} became {@code 0}.
+     *         This will return {@code false} if the reference count does not become {@code 0} or,
+     *         {@link #storeBuffer(ByteBuf, Object, RequestContext)} has not been called for the specified
+     *         message and {@link RequestContext}.
      */
-    public static void releaseBuffer(Object message, RequestContext ctx) {
+    @CheckReturnValue
+    public static boolean releaseBuffer(Object message, RequestContext ctx) {
         final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
-        checkState(buffers != null,
-                   "Releasing buffer even though storeBuffer has not been called.");
+        if (buffers == null) {
+            return false;
+        }
         final ByteBuf removed = buffers.remove(message);
         if (removed == null) {
-            throw new IllegalArgumentException("The provided message does not have a stored buffer.");
+            return false;
         }
-        removed.release();
+
+        return removed.release();
     }
 
     private GrpcUnsafeBufferUtil() {}

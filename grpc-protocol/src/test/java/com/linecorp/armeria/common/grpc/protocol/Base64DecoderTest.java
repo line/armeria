@@ -35,7 +35,7 @@ class Base64DecoderTest {
     private static final ByteBuf[] EMPTY_BYTE_BUF = new ByteBuf[0];
 
     @Test
-    void aaa() {
+    void decodeConcatenatedBufsWithPadding() {
         final String str = "abcd"; // YWJjZA==
         final ByteBuf buf = Unpooled.wrappedBuffer(str.getBytes());
         final ByteBuf encoded1 = Base64.encode(buf);
