@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -144,6 +145,13 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return isCancelled();
+    }
+
+    /**
+     * Completes this {@link CompletableFuture} with a {@link CancellationException}, unless already completed.
+     */
+    protected boolean doCancel(boolean mayInterruptIfRunning) {
+        return super.cancel(mayInterruptIfRunning);
     }
 
     /**

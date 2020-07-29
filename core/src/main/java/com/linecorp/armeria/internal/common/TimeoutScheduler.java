@@ -113,10 +113,13 @@ public final class TimeoutScheduler {
             timeoutNanos = initialTimeoutNanos;
         }
 
-        ensureInitialized();
+        firstExecutionTimeNanos = System.nanoTime();
+
         if (timeoutNanos != 0) {
             state = State.SCHEDULED;
             timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, timeoutNanos, TimeUnit.NANOSECONDS);
+        } else {
+            state = State.INACTIVE;
         }
 
         Runnable pendingTimeoutTask;
@@ -335,11 +338,17 @@ public final class TimeoutScheduler {
     private void addPendingTimeoutTask(Runnable pendingTimeoutTask) {
         if (!pendingTimeoutTaskUpdater.compareAndSet(this, null, pendingTimeoutTask)) {
             for (;;) {
+                if (initialized) {
+                    eventLoop.execute(pendingTimeoutTask);
+                    break;
+                }
+
                 final Runnable pendingTask = this.pendingTimeoutTask;
                 final Runnable newPendingTask = () -> {
                     pendingTask.run();
                     pendingTimeoutTask.run();
                 };
+
                 if (pendingTimeoutTaskUpdater.compareAndSet(this, pendingTask, newPendingTask)) {
                     break;
                 }
@@ -400,30 +409,38 @@ public final class TimeoutScheduler {
     }
 
     public CompletableFuture<Void> whenTimingOut() {
+        final TimeoutFuture whenTimingOut = this.whenTimingOut;
         if (whenTimingOut != null) {
             return whenTimingOut;
         }
-        whenTimingOutUpdater.compareAndSet(this, null, new TimeoutFuture());
-        return whenTimingOut;
+
+        final TimeoutFuture timeoutFuture = new TimeoutFuture();
+        if (whenTimingOutUpdater.compareAndSet(this, null, timeoutFuture)) {
+            return timeoutFuture;
+        } else {
+            return this.whenTimingOut;
+        }
     }
 
     public CompletableFuture<Void> whenTimedOut() {
+        final TimeoutFuture whenTimedOut = this.whenTimedOut;
         if (whenTimedOut != null) {
             return whenTimedOut;
         }
-        whenTimedOutUpdater.compareAndSet(this, null, new TimeoutFuture());
-        return whenTimedOut;
-    }
 
-    private void ensureInitialized() {
-        checkState(timeoutTask != null,
-                   "init(eventLoop, timeoutTask) is not called yet.");
-        if (state == State.INIT) {
-            state = State.INACTIVE;
-            firstExecutionTimeNanos = System.nanoTime();
+        final TimeoutFuture timeoutFuture = new TimeoutFuture();
+        if (whenTimedOutUpdater.compareAndSet(this, null, timeoutFuture)) {
+            return timeoutFuture;
+        } else {
+            return this.whenTimedOut;
         }
     }
 
+    private void ensureInitialized() {
+        checkState(state != State.INIT, "init(eventLoop, timeoutTask) is not called yet.");
+    }
+
+    @Nullable
     public Long startTimeNanos() {
         return state != State.INIT ? firstExecutionTimeNanos : null;
     }
