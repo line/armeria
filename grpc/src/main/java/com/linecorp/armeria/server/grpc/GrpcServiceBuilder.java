@@ -65,9 +65,7 @@ import io.grpc.protobuf.services.ProtoReflectionService;
 public final class GrpcServiceBuilder {
 
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
-            ImmutableSet.of(GrpcSerializationFormats.PROTO,
-                            GrpcSerializationFormats.PROTO_WEB,
-                            GrpcSerializationFormats.PROTO_WEB_TEXT);
+            GrpcSerializationFormats.values();
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 
@@ -162,16 +160,16 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to supporting binary
-     * protobuf formats. Enabling JSON can be useful, e.g., when migrating existing JSON services to gRPC.
+     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to support
+     * all {@link GrpcSerializationFormats#values()}.
      */
     public GrpcServiceBuilder supportedSerializationFormats(SerializationFormat... formats) {
         return supportedSerializationFormats(ImmutableSet.copyOf(requireNonNull(formats, "formats")));
     }
 
     /**
-     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to supporting binary
-     * protobuf formats.
+     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to support
+     * all {@link GrpcSerializationFormats#values()}.
      */
     public GrpcServiceBuilder supportedSerializationFormats(Iterable<SerializationFormat> formats) {
         requireNonNull(formats, "formats");
