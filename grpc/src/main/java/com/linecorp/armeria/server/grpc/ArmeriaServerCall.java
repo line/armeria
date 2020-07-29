@@ -373,10 +373,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
         }
 
-        final boolean webText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
 
         try {
-            request = marshaller.deserializeRequest(message, webText);
+            request = marshaller.deserializeRequest(message, grpcWebText);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -385,7 +385,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
         }
 
-        if (unsafeWrapRequestBuffers && buf != null && !webText) {
+        if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
             GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
         }
 

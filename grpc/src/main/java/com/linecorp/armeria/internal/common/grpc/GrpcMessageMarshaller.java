@@ -106,7 +106,7 @@ public final class GrpcMessageMarshaller<I, O> {
         }
     }
 
-    public I deserializeRequest(DeframedMessage message, boolean webText) throws IOException {
+    public I deserializeRequest(DeframedMessage message, boolean grpcWebText) throws IOException {
         InputStream messageStream = message.stream();
         final ByteBuf buf = message.buf();
         if (buf != null) {
@@ -124,7 +124,7 @@ public final class GrpcMessageMarshaller<I, O> {
                         break;
                 }
             } finally {
-                if (!unsafeWrapDeserializedBuffer || webText) {
+                if (!unsafeWrapDeserializedBuffer || grpcWebText) {
                     buf.release();
                 }
             }
@@ -158,7 +158,7 @@ public final class GrpcMessageMarshaller<I, O> {
         }
     }
 
-    public O deserializeResponse(DeframedMessage message, boolean webText) throws IOException {
+    public O deserializeResponse(DeframedMessage message, boolean grpcWebText) throws IOException {
         InputStream messageStream = message.stream();
         final ByteBuf buf = message.buf();
         if (buf != null) {
@@ -177,7 +177,7 @@ public final class GrpcMessageMarshaller<I, O> {
                         break;
                 }
             } finally {
-                if (!unsafeWrapDeserializedBuffer || webText) {
+                if (!unsafeWrapDeserializedBuffer || grpcWebText) {
                     buf.release();
                 }
             }

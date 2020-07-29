@@ -161,9 +161,7 @@ class GrpcDocServiceTest {
                                     .build())),
                 new ServiceEntry(RECONNECT_SERVICE_DESCRIPTOR, ImmutableList.of(
                         EndpointInfo.builder("*", "/armeria.grpc.testing.ReconnectService/")
-                                    .availableFormats(GrpcSerializationFormats.PROTO,
-                                                      GrpcSerializationFormats.PROTO_WEB,
-                                                      GrpcSerializationFormats.PROTO_WEB_TEXT)
+                                    .availableFormats(GrpcSerializationFormats.values())
                                     .build())));
         final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(
                 entries, unifyFilter((plugin, service, method) -> true,

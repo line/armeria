@@ -346,7 +346,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                 if (trailers == null) {
                     // Malformed trailers.
-                    close(Status.INTERNAL.withDescription("grpc-web trailers malformed: " +
+                    close(Status.INTERNAL.withDescription(serializationFormat.uriText() +
+                                                          " trailers malformed: " +
                                                           buf.toString(StandardCharsets.UTF_8)),
                           new Metadata());
                 } else {
@@ -359,14 +360,14 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
 
         try {
-            final boolean webText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-            final O msg = marshaller.deserializeResponse(message, webText);
+            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+            final O msg = marshaller.deserializeResponse(message, grpcWebText);
             if (firstResponse == null) {
                 firstResponse = msg;
             }
 
             final ByteBuf buf = message.buf();
-            if (unsafeWrapResponseBuffers && buf != null && !webText) {
+            if (unsafeWrapResponseBuffers && buf != null && !grpcWebText) {
                 GrpcUnsafeBufferUtil.storeBuffer(buf, msg, ctx);
             }
 
