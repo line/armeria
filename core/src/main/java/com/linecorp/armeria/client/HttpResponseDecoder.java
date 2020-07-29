@@ -150,8 +150,6 @@ abstract class HttpResponseDecoder {
         private final DecodedHttpResponse delegate;
         @Nullable
         private final ClientRequestContext ctx;
-        @Nullable
-        private final TimeoutScheduler timeoutScheduler;
 
         private final long maxContentLength;
         private final long responseTimeoutMillis;
@@ -166,11 +164,6 @@ abstract class HttpResponseDecoder {
             this.ctx = ctx;
             this.maxContentLength = maxContentLength;
             this.responseTimeoutMillis = responseTimeoutMillis;
-            if (ctx instanceof DefaultClientRequestContext) {
-                timeoutScheduler = ((DefaultClientRequestContext) ctx).timeoutScheduler();
-            } else {
-                timeoutScheduler = null;
-            }
         }
 
         CompletableFuture<Void> whenComplete() {
@@ -341,9 +334,14 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnNotTimedOut) {
 
-            if (timeoutScheduler == null || !timeoutScheduler.isTimedOut()) {
-                if (timeoutScheduler != null) {
-                    timeoutScheduler.clearTimeout(false);
+            TimeoutScheduler responseTimeoutScheduler = null;
+            if (ctx instanceof DefaultClientRequestContext) {
+                responseTimeoutScheduler = ((DefaultClientRequestContext) ctx).responseTimeoutScheduler();
+            }
+
+            if (responseTimeoutScheduler == null || !responseTimeoutScheduler.isTimedOut()) {
+                if (responseTimeoutScheduler != null) {
+                    responseTimeoutScheduler.clearTimeout(false);
                 }
                 // There's no timeout or the response has not been timed out.
                 actionOnNotTimedOut.accept(cause);
@@ -376,8 +374,10 @@ abstract class HttpResponseDecoder {
         }
 
         void initTimeout() {
-            if (timeoutScheduler != null) {
-                timeoutScheduler.init(ctx.eventLoop(), newTimeoutTask(),
+            if (ctx instanceof DefaultClientRequestContext) {
+                final TimeoutScheduler responseTimeoutScheduler =
+                        ((DefaultClientRequestContext) ctx).responseTimeoutScheduler();
+                responseTimeoutScheduler.init(ctx.eventLoop(), newTimeoutTask(),
                                       TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
             }
         }
@@ -391,16 +391,11 @@ abstract class HttpResponseDecoder {
 
                 @Override
                 public void run() {
-                    final Runnable responseTimeoutHandler = ctx != null ? ctx.responseTimeoutHandler() : null;
-                    if (responseTimeoutHandler != null) {
-                        responseTimeoutHandler.run();
-                    } else {
-                        final ResponseTimeoutException cause = ResponseTimeoutException.get();
-                        delegate.close(cause);
-                        if (ctx != null) {
-                            ctx.request().abort(cause);
-                            ctx.logBuilder().endResponse(cause);
-                        }
+                    final ResponseTimeoutException cause = ResponseTimeoutException.get();
+                    delegate.close(cause);
+                    if (ctx != null) {
+                        ctx.request().abort(cause);
+                        ctx.logBuilder().endResponse(cause);
                     }
                 }
             };

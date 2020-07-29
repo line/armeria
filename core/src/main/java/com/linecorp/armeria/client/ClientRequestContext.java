@@ -432,7 +432,9 @@ public interface ClientRequestContext extends RequestContext {
      */
     @Deprecated
     @Nullable
-    Runnable responseTimeoutHandler();
+    default Runnable responseTimeoutHandler() {
+        return null;
+    }
 
     /**
      * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must abort
@@ -451,7 +453,9 @@ public interface ClientRequestContext extends RequestContext {
      * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
      */
     @Deprecated
-    void setResponseTimeoutHandler(Runnable responseTimeoutHandler);
+    default void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
+        whenResponseTimingOut().thenRun(responseTimeoutHandler);
+    }
 
     /**
      * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} is about to

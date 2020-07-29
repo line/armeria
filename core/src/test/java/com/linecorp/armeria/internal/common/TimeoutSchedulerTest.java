@@ -28,8 +28,6 @@ import java.util.function.Consumer;
 
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -38,9 +36,7 @@ import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 
 import io.netty.util.concurrent.EventExecutor;
 
-class DefaultTimeoutControllerTest {
-
-    private static final Logger logger = LoggerFactory.getLogger(DefaultTimeoutControllerTest.class);
+class TimeoutSchedulerTest {
 
     private static final EventExecutor eventExecutor = CommonPools.workerGroup().next();
 

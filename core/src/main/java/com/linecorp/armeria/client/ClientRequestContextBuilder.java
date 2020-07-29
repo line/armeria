@@ -59,16 +59,13 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     };
 
     /**
-     * A timeout controller that has been timed-out.
+     * A timeout scheduler that has been timed-out.
      */
-    private static final TimeoutScheduler noopTimedOutScheduler =
-            new TimeoutScheduler(0);
+    private static final TimeoutScheduler noopResponseTimeoutScheduler = new TimeoutScheduler(0);
 
     static {
-        ImmediateEventExecutor.INSTANCE.execute(() -> {
-            noopTimedOutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
-            noopTimedOutScheduler.timeoutNow();
-        });
+        noopResponseTimeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
+        noopResponseTimeoutScheduler.timeoutNow();
     }
 
     @Nullable
@@ -130,14 +127,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             endpoint = Endpoint.parse(authority());
         }
 
-        final TimeoutScheduler timeoutScheduler;
+        final TimeoutScheduler responseTimeoutScheduler;
         if (timedOut()) {
-            timeoutScheduler = noopTimedOutScheduler;
+            responseTimeoutScheduler = noopResponseTimeoutScheduler;
         } else {
-            timeoutScheduler = new TimeoutScheduler(0);
+            responseTimeoutScheduler = new TimeoutScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                timeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                responseTimeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
                 latch.countDown();
             });
 
@@ -150,7 +147,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
                 id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
-                timeoutScheduler,
+                responseTimeoutScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 

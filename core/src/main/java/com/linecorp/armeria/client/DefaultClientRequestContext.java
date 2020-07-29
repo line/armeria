@@ -100,7 +100,7 @@ public final class DefaultClientRequestContext
 
     private final ClientOptions options;
     private final RequestLogBuilder log;
-    private final TimeoutScheduler timeoutScheduler;
+    private final TimeoutScheduler responseTimeoutScheduler;
 
     private long writeTimeoutMillis;
     @Nullable
@@ -137,11 +137,11 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            TimeoutScheduler timeoutScheduler,
+            TimeoutScheduler responseTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(), timeoutScheduler,
-             requestStartTimeNanos, requestStartTimeMicros);
+             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             responseTimeoutScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -164,7 +164,7 @@ public final class DefaultClientRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq,
-             serviceRequestContext(), /* timeoutScheduler */ null,
+             serviceRequestContext(), /* responseTimeoutScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -173,7 +173,7 @@ public final class DefaultClientRequestContext
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext root, @Nullable TimeoutScheduler timeoutScheduler,
+            @Nullable ServiceRequestContext root, @Nullable TimeoutScheduler responseTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
@@ -185,11 +185,11 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
-        if (timeoutScheduler == null) {
-            this.timeoutScheduler =
+        if (responseTimeoutScheduler == null) {
+            this.responseTimeoutScheduler =
                     new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
         } else {
-            this.timeoutScheduler = timeoutScheduler;
+            this.responseTimeoutScheduler = responseTimeoutScheduler;
         }
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
@@ -370,7 +370,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+        responseTimeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
@@ -497,35 +497,24 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
+        return TimeUnit.NANOSECONDS.toMillis(responseTimeoutScheduler.timeoutNanos());
     }
 
     @Override
     public void clearResponseTimeout() {
-        timeoutScheduler.clearTimeout();
+        responseTimeoutScheduler.clearTimeout();
     }
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                 TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
     }
 
     @Override
     public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         requireNonNull(responseTimeout, "responseTimeout").toNanos());
-    }
-
-    @Override
-    @Nullable
-    public Runnable responseTimeoutHandler() {
-        return responseTimeoutHandler;
-    }
-
-    @Override
-    public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
-        this.responseTimeoutHandler = requireNonNull(responseTimeoutHandler, "responseTimeoutHandler");
+        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                 requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override
@@ -582,28 +571,28 @@ public final class DefaultClientRequestContext
         return log;
     }
 
-    TimeoutScheduler timeoutScheduler() {
-        return timeoutScheduler;
+    TimeoutScheduler responseTimeoutScheduler() {
+        return responseTimeoutScheduler;
     }
 
     @Override
     public void timeoutNow() {
-        timeoutScheduler.timeoutNow();
+        responseTimeoutScheduler.timeoutNow();
     }
 
     @Override
     public boolean isTimedOut() {
-        return timeoutScheduler.isTimedOut();
+        return responseTimeoutScheduler.isTimedOut();
     }
 
     @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
-        return timeoutScheduler.whenTimingOut();
+        return responseTimeoutScheduler.whenTimingOut();
     }
 
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
-        return timeoutScheduler.whenTimedOut();
+        return responseTimeoutScheduler.whenTimedOut();
     }
 
     @Override

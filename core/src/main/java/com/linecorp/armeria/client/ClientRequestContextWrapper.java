@@ -106,17 +106,6 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    @Nullable
-    public Runnable responseTimeoutHandler() {
-        return delegate().responseTimeoutHandler();
-    }
-
-    @Override
-    public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
-        delegate().setResponseTimeoutHandler(responseTimeoutHandler);
-    }
-
-    @Override
     public long maxResponseLength() {
         return delegate().maxResponseLength();
     }

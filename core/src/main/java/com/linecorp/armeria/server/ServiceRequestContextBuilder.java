@@ -79,15 +79,13 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     };
 
     /**
-     * A timeout controller that has been timed-out.
+     * A timeout scheduler that has been timed-out.
      */
-    private static final TimeoutScheduler noopTimedOutScheduler = new TimeoutScheduler(0);
+    private static final TimeoutScheduler noopRequestTimeoutScheduler = new TimeoutScheduler(0);
 
     static {
-        ImmediateEventExecutor.INSTANCE.execute(() -> {
-            noopTimedOutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
-            noopTimedOutScheduler.timeoutNow();
-        });
+        noopRequestTimeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
+        noopRequestTimeoutScheduler.timeoutNow();
     }
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
@@ -233,14 +231,14 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
-        final TimeoutScheduler timeoutScheduler;
+        final TimeoutScheduler requestTimeoutScheduler;
         if (timedOut()) {
-            timeoutScheduler = noopTimedOutScheduler;
+            requestTimeoutScheduler = noopRequestTimeoutScheduler;
         } else {
-            timeoutScheduler = new TimeoutScheduler(0);
+            requestTimeoutScheduler = new TimeoutScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                timeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                requestTimeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
                 latch.countDown();
             });
 
@@ -251,15 +249,13 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
 
         // Build the context with the properties set by a user and the fake objects.
-        final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
+        return new DefaultServiceRequestContext(
                 serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, req, sslSession(), proxiedAddresses, clientAddress,
-                timeoutScheduler,
+                requestTimeoutScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
                 HttpHeaders.of(), HttpHeaders.of());
-
-        return ctx;
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {

@@ -423,7 +423,9 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @Deprecated
     @Nullable
-    Runnable requestTimeoutHandler();
+    default Runnable requestTimeoutHandler() {
+        return null;
+    }
 
     /**
      * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
@@ -445,7 +447,9 @@ public interface ServiceRequestContext extends RequestContext {
      * @deprecated Use {@link #whenRequestTimingOut()} or {@link #whenRequestTimedOut()}.
      */
     @Deprecated
-    void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
+    default void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
+        whenRequestTimingOut().thenRun(requestTimeoutHandler);
+    }
 
     /**
      * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} is about to

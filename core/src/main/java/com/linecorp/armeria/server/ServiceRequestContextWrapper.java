@@ -128,17 +128,6 @@ public class ServiceRequestContextWrapper
         delegate().setRequestTimeout(mode, requestTimeout);
     }
 
-    @Nullable
-    @Override
-    public Runnable requestTimeoutHandler() {
-        return delegate().requestTimeoutHandler();
-    }
-
-    @Override
-    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
-        delegate().setRequestTimeoutHandler(requestTimeoutHandler);
-    }
-
     @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
         return delegate().whenRequestTimingOut();

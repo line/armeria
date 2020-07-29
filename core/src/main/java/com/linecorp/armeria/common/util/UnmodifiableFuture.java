@@ -113,7 +113,10 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         throw new UnsupportedOperationException();
     }
 
-    protected final void doComplete(@Nullable T value) {
+    /**
+     * Completes with a non-exceptional @{code value}, unless already completed.
+     */
+    protected void doComplete(@Nullable T value) {
         super.complete(value);
     }
 
@@ -125,7 +128,10 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         throw new UnsupportedOperationException();
     }
 
-    protected final void doCompleteExceptionally(Throwable cause) {
+    /**
+     * Completes with the specified {@link Throwable}, unless already completed.
+     */
+    protected void doCompleteExceptionally(Throwable cause) {
         super.completeExceptionally(cause);
     }
 

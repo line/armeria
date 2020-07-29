@@ -84,7 +84,7 @@ public final class DefaultServiceRequestContext
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
-    private final TimeoutScheduler timeoutScheduler;
+    private final TimeoutScheduler requestTimeoutScheduler;
     @Nullable
     private final SSLSession sslSession;
 
@@ -136,7 +136,7 @@ public final class DefaultServiceRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
-             sslSession, proxiedAddresses, clientAddress, /* timeoutScheduler */ null,
+             sslSession, proxiedAddresses, clientAddress, /* requestTimeoutScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
@@ -144,7 +144,7 @@ public final class DefaultServiceRequestContext
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            @Nullable TimeoutScheduler timeoutScheduler,
+            @Nullable TimeoutScheduler requestTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
@@ -157,10 +157,10 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        if (timeoutScheduler != null) {
-            this.timeoutScheduler = timeoutScheduler;
+        if (requestTimeoutScheduler != null) {
+            this.requestTimeoutScheduler = requestTimeoutScheduler;
         } else {
-            this.timeoutScheduler =
+            this.requestTimeoutScheduler =
                     new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
         }
         this.sslSession = sslSession;
@@ -283,59 +283,48 @@ public final class DefaultServiceRequestContext
 
     @Override
     public long requestTimeoutMillis() {
-        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
+        return TimeUnit.NANOSECONDS.toMillis(requestTimeoutScheduler.timeoutNanos());
     }
 
     @Override
     public void clearRequestTimeout() {
-        timeoutScheduler.clearTimeout();
+        requestTimeoutScheduler.clearTimeout();
     }
 
     @Override
     public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
+        requestTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
     }
 
     @Override
     public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         requireNonNull(requestTimeout, "requestTimeout").toNanos());
+        requestTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                requireNonNull(requestTimeout, "requestTimeout").toNanos());
     }
 
-    @Nullable
-    @Override
-    public Runnable requestTimeoutHandler() {
-        return requestTimeoutHandler;
-    }
-
-    @Override
-    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
-        this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
-    }
-
-    TimeoutScheduler timeoutScheduler() {
-        return timeoutScheduler;
+    TimeoutScheduler requestTimeoutScheduler() {
+        return requestTimeoutScheduler;
     }
 
     @Override
     public void timeoutNow() {
-        timeoutScheduler.timeoutNow();
+        requestTimeoutScheduler.timeoutNow();
     }
 
     @Override
     public boolean isTimedOut() {
-        return timeoutScheduler.isTimedOut();
+        return requestTimeoutScheduler.isTimedOut();
     }
 
     @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
-        return timeoutScheduler.whenTimingOut();
+        return requestTimeoutScheduler.whenTimingOut();
     }
 
     @Override
     public CompletableFuture<Void> whenRequestTimedOut() {
-        return timeoutScheduler.whenTimedOut();
+        return requestTimeoutScheduler.whenTimedOut();
     }
 
     @Override
