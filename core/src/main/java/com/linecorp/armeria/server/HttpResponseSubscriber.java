@@ -110,7 +110,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             return;
         }
 
-        // Schedule the initial request timeout with the timeoutNanos in TimeoutScheduler
+        // Schedule the initial request timeout with the timeoutNanos in the TimeoutScheduler
         reqCtx.requestTimeoutScheduler().init(reqCtx.eventLoop(), newTimeoutTask(), 0);
 
         // Start consuming.

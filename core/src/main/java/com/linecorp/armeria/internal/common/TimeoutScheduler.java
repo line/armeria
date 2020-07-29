@@ -173,12 +173,12 @@ public final class TimeoutScheduler {
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
         assert timeoutFuture != null;
 
-        final boolean canceled = timeoutFuture.cancel(false);
+        final boolean cancelled = timeoutFuture.cancel(false);
         this.timeoutFuture = null;
-        if (canceled) {
+        if (cancelled) {
             state = State.INACTIVE;
         }
-        return canceled;
+        return cancelled;
     }
 
     public void setTimeoutNanos(TimeoutMode mode, long timeoutNanos) {
@@ -250,9 +250,7 @@ public final class TimeoutScheduler {
         }
 
         state = State.SCHEDULED;
-        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask,
-                                           LongMath.saturatedAdd(timeoutNanos, adjustmentNanos),
-                                           TimeUnit.NANOSECONDS);
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, this.timeoutNanos, TimeUnit.NANOSECONDS);
         return true;
     }
 

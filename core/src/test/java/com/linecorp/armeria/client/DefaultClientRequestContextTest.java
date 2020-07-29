@@ -217,9 +217,7 @@ class DefaultClientRequestContextTest {
                         HttpMethod.POST, "/foo",
                         HttpHeaderNames.SCHEME, "http",
                         HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null,
-                new TimeoutScheduler(0),
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                null, new TimeoutScheduler(0), System.nanoTime(), SystemInfo.currentTimeMicros());
         ctx.init(Endpoint.of("example.com", 8080));
         return ctx;
     }
@@ -319,7 +317,7 @@ class DefaultClientRequestContextTest {
 
         ctx.eventLoop().execute(() -> {
             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
-            assertThat(ctx.responseTimeoutMillis()).isCloseTo(1000, Offset.offset(2000L));
+            assertThat(ctx.responseTimeoutMillis()).isCloseTo(1000, Offset.offset(200L));
             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
             assertThat(ctx.responseTimeoutMillis()).isCloseTo(2000, Offset.offset(200L));
             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 0);

@@ -103,6 +103,9 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         return unmodifiable;
     }
 
+    /**
+     * Creates a new {@link UnmodifiableFuture}.
+     */
     protected UnmodifiableFuture() {}
 
     /**
