@@ -253,9 +253,9 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   // Generate some properties required for rendering.
   const pageTitle = `${props.pageTitle} — ${props.pageTitleSuffix}`;
   const pageDescription = currentMdxNode?.excerpt
-    ?.replaceAll(/\w+:\/\//g, '')
-    .replaceAll(/\s+(\W)/g, '$1')
-    .replaceAll(/(?:\s|\r|\n)+/g, ' ');
+    ?.replace(/\w+:\/\//g, '')
+    .replace(/\s+(\W)/g, '$1')
+    .replace(/(?:\s|\r|\n)+/g, ' ');
   const relpath = pagePath(props.location).substring(1);
   const githubHref = props.noEdit
     ? undefined
