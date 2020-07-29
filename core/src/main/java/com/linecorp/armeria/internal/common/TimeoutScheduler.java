@@ -101,10 +101,13 @@ public final class TimeoutScheduler {
 
     /**
      * Initializes this {@link TimeoutScheduler}.
-     * Note that this method should be called in the specified {@link EventLoop}.
+     * Note that this method should be called in the specified {@link EventLoop}
+     * to initialize this scheduler synchronously
      */
     public void init(EventExecutor eventLoop, TimeoutTask timeoutTask, long initialTimeoutNanos) {
-        assert eventLoop.inEventLoop();
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> init(eventLoop, timeoutTask, initialTimeoutNanos));
+        }
 
         this.eventLoop = eventLoop;
         this.timeoutTask = timeoutTask;
