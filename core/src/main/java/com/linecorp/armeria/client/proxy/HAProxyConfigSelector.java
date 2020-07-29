@@ -24,7 +24,13 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-class HAProxyConfigSelector implements ProxyConfigSelector {
+final class HAProxyConfigSelector implements ProxyConfigSelector {
+
+    private HAProxyConfigSelector() {
+    }
+
+    static final HAProxyConfigSelector INSTANCE = new HAProxyConfigSelector();
+
     @Override
     public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
         // use proxy information in context if available

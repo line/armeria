@@ -34,9 +34,10 @@ import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 public class HAProxyConfigSelectorTest {
+    final ProxyConfigSelector selector = ProxyConfigSelector.haproxy();
+
     @Test
     void testEndpointUsedWhenNoContext() {
-        final HAProxyConfigSelector selector = new HAProxyConfigSelector();
         final Endpoint endpoint = Endpoint.of("some.host", 80).withIpAddr("127.0.0.1");
         final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
         assertThat(proxyConfig.proxyAddress()).isNotNull();
@@ -50,7 +51,6 @@ public class HAProxyConfigSelectorTest {
         final ClientRequestContext clientCtx =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
         try (SafeCloseable ignored = clientCtx.push()) {
-            final HAProxyConfigSelector selector = new HAProxyConfigSelector();
             final Endpoint endpoint = Endpoint.of("some.host", 80).withIpAddr("127.0.0.1");
             final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
             assertThat(proxyConfig.proxyAddress()).isNotNull();
@@ -71,7 +71,6 @@ public class HAProxyConfigSelectorTest {
         try (SafeCloseable ignored = serviceCtx.push()) {
             final ClientRequestContext clientCtx = ClientRequestContext.builder(req).build();
             try (SafeCloseable ignored2 = clientCtx.push()) {
-                final HAProxyConfigSelector selector = new HAProxyConfigSelector();
                 final Endpoint endpoint = Endpoint.of("some.host", 83).withIpAddr("127.0.0.3");
                 final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
                 assertThat(proxyConfig.sourceAddress()).isNull();
@@ -94,7 +93,6 @@ public class HAProxyConfigSelectorTest {
         try (SafeCloseable ignored = serviceCtx.push()) {
             final ClientRequestContext clientCtx = ClientRequestContext.builder(req).build();
             try (SafeCloseable ignored2 = clientCtx.push()) {
-                final HAProxyConfigSelector selector = new HAProxyConfigSelector();
                 final Endpoint endpoint = Endpoint.of("some.host", 83).withIpAddr("127.0.0.3");
                 final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
                 assertThat(proxyConfig.sourceAddress()).isNotNull();
@@ -118,7 +116,6 @@ public class HAProxyConfigSelectorTest {
         try (SafeCloseable ignored = serviceCtx.push()) {
             final ClientRequestContext clientCtx = ClientRequestContext.builder(req).build();
             try (SafeCloseable ignored2 = clientCtx.push()) {
-                final HAProxyConfigSelector selector = new HAProxyConfigSelector();
                 final Endpoint endpoint = Endpoint.of("some.host", 84).withIpAddr("127.0.0.4");
                 final HAProxyConfig proxyConfig = (HAProxyConfig) selector.select(HTTP, endpoint);
                 assertThat(proxyConfig.sourceAddress()).isNotNull();

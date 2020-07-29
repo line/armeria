@@ -80,7 +80,7 @@ public interface ProxyConfigSelector {
      * </ol>
      */
     static ProxyConfigSelector haproxy() {
-        return new HAProxyConfigSelector();
+        return HAProxyConfigSelector.INSTANCE;
     }
 
     /**

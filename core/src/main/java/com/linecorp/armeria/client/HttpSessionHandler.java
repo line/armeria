@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
-import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -336,7 +335,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (isTunnelingProxy(poolKey.proxyConfig.proxyType())) {
+            if (poolKey.proxyConfig.proxyType().isTunnel()) {
                 if (proxyDestinationAddress != null) {
                     // ProxyConnectionEvent was already triggered.
                     tryCompleteSessionPromise(ctx);
@@ -446,9 +445,5 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (previousCause != null && logger.isWarnEnabled()) {
             logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
         }
-    }
-
-    private static boolean isTunnelingProxy(ProxyType proxyType) {
-        return proxyType != ProxyType.DIRECT && proxyType != ProxyType.HAPROXY;
     }
 }

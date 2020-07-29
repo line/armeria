@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * HAPROXY configuration.
+ * <a href="http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">HAPROXY configuration.</a>
  */
 public final class HAProxyConfig extends ProxyConfig {
 

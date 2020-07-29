@@ -73,6 +73,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.util.ReferenceCountUtil;
 
 class HAProxyClientIntegrationTest {
@@ -222,7 +223,7 @@ class HAProxyClientIntegrationTest {
             assertThatThrownBy(() -> responseFuture.get(10, TimeUnit.SECONDS))
                     .isInstanceOf(ExecutionException.class)
                     .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                    .hasRootCauseInstanceOf(ProxyConnectException.class)
                     .hasRootCauseMessage("incompatible addresses: [/127.0.0.1-/0:0:0:0:0:0:0:1]");
         }
     }

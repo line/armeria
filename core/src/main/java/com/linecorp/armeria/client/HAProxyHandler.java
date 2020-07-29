@@ -39,7 +39,7 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageEncoder;
 import io.netty.handler.proxy.ProxyConnectException;
 
-class HAProxyHandler extends ChannelOutboundHandlerAdapter {
+final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(HAProxyHandler.class);
 
     private final HAProxyConfig haProxyConfig;
@@ -66,13 +66,13 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                     if (f0.isSuccess()) {
                         ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                     } else {
-                        ctx.fireExceptionCaught(new ProxyConnectException(f0.cause()));
+                        ctx.fireExceptionCaught(wrapException(f0.cause()));
                         ctx.close();
                     }
                 });
             } catch (Exception e) {
                 ctx.channel().eventLoop().execute(() -> {
-                    ctx.pipeline().fireUserEventTriggered(new ProxyConnectException(e));
+                    ctx.pipeline().fireUserEventTriggered(wrapException(e));
                     ctx.close();
                 });
             } finally {
@@ -80,6 +80,13 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
             }
         });
         super.connect(ctx, remoteAddress, localAddress, promise);
+    }
+
+    ProxyConnectException wrapException(Throwable e) {
+        if (e instanceof ProxyConnectException) {
+            return (ProxyConnectException) e;
+        }
+        return new ProxyConnectException(e);
     }
 
     private static HAProxyMessage createMessage(HAProxyConfig haProxyConfig,
@@ -104,8 +111,8 @@ class HAProxyHandler extends ChannelOutboundHandlerAdapter {
         } else {
             logger.warn("Incompatible PROXY address types. srcAddress: {}, destAddress: {}",
                         srcAddress.getClass(), destAddress.getClass());
-            throw new IllegalArgumentException("incompatible addresses: [" + srcAddress + '-' +
-                                               destAddress + ']');
+            throw new ProxyConnectException("incompatible addresses: [" + srcAddress + '-' +
+                                            destAddress + ']');
         }
     }
 }

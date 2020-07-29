@@ -24,25 +24,38 @@ public enum ProxyType {
     /**
      * Proxy is absent.
      */
-    DIRECT,
+    DIRECT(false),
 
     /**
      * SOCKS4 proxy protocol.
      */
-    SOCKS4,
+    SOCKS4(true),
 
     /**
      * SOCKS5 proxy protocol.
      */
-    SOCKS5,
+    SOCKS5(true),
 
     /**
      * CONNECT proxy protocol.
      */
-    CONNECT,
+    CONNECT(true),
 
     /**
      * HAPROXY protocol.
      */
-    HAPROXY,
+    HAPROXY(false);
+
+    private final boolean isTunnel;
+
+    ProxyType(boolean isTunnel) {
+        this.isTunnel = isTunnel;
+    }
+
+    /**
+     * Indicates whether this proxy is a tunneling proxy.
+     */
+    public boolean isTunnel() {
+        return isTunnel;
+    }
 }
