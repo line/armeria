@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil;
 
@@ -75,6 +76,9 @@ public final class GrpcWebUtil {
      *                })))
      *        .build(MyGrpcStub.class);
      * }</pre>
+     *
+     * @throws RequestLogAvailabilityException if the specified {@link RequestLogProperty#SCHEME} is not
+     *                                         available yet.
      */
     @Nullable
     public static HttpHeaders parseTrailers(ClientRequestContext ctx, HttpData response) {

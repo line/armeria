@@ -78,8 +78,9 @@ public final class GrpcClientOptions {
      * work. If {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)} is not called, the memory
      * will be leaked.
      *
-     * <p>Note that this isn't working if the payloads are compressed or the {@link SerializationFormat} is
-     * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}.
+     * <p>Note that this has no effect if the payloads are compressed or the {@link SerializationFormat} is
+     * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}, so you should not call
+     * {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)} in that case.
      */
     public static final ClientOption<Boolean> UNSAFE_WRAP_RESPONSE_BUFFERS =
             ClientOption.define("GRPC_UNSAFE_WRAP_RESPONSE_BUFFERS", false);

@@ -86,13 +86,15 @@ final class Base64Decoder implements ByteProcessor {
     ByteBuf decode(ByteBuf src) {
         final ByteBuf dest = allocator.buffer(decodedBufferSize(src.readableBytes()));
         this.dest = dest;
+        boolean success = false;
         try {
             src.forEachByte(this);
+            success = true;
             return dest;
-        } catch (Throwable t) {
-            dest.release();
-            throw t;
         } finally {
+            if (!success) {
+                dest.release();
+            }
             src.release();
         }
     }

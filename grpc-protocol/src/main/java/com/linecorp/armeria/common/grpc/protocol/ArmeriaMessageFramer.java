@@ -52,8 +52,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.Base64;
 
 import javax.annotation.Nullable;
 
@@ -68,7 +66,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.base64.Base64;
 
 /**
  * A framer of messages for transport with the gRPC wire protocol. See
@@ -145,20 +143,19 @@ public class ArmeriaMessageFramer implements AutoCloseable {
 
             final ByteBuf maybeEncodedBuf;
             if (encodeBase64) {
-                final ByteBuffer base64Encoded = Base64.getEncoder().encode(buf.nioBuffer());
+                final ByteBuf base64Encoded = Base64.encode(buf);
                 buf.release();
-                if (maxOutboundMessageSize >= 0 && base64Encoded.remaining() > maxOutboundMessageSize) {
-                    throw newMessageTooLargeException(base64Encoded.remaining());
+                final int length = base64Encoded.readableBytes();
+                if (maxOutboundMessageSize >= 0 && length > maxOutboundMessageSize) {
+                    base64Encoded.release();
+                    throw newMessageTooLargeException(length);
                 }
-                maybeEncodedBuf = Unpooled.wrappedBuffer(base64Encoded);
+                maybeEncodedBuf = base64Encoded;
             } else {
                 maybeEncodedBuf = buf;
             }
 
-            if (webTrailers) {
-                return HttpData.wrap(maybeEncodedBuf).withEndOfStream();
-            }
-            return HttpData.wrap(maybeEncodedBuf);
+            return HttpData.wrap(maybeEncodedBuf).withEndOfStream(webTrailers);
         } catch (IOException | RuntimeException e) {
             // IOException will not be thrown, since sink#deliverFrame doesn't throw.
             throw new ArmeriaStatusException(
