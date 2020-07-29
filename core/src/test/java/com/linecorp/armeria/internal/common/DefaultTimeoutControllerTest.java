@@ -57,14 +57,10 @@ class DefaultTimeoutControllerTest {
     private static void executeInEventLoop(long initTimeoutNanos, Consumer<TimeoutScheduler> task) {
         final AtomicBoolean completed = new AtomicBoolean();
         eventExecutor.execute(() -> {
-            try {
-                final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
-                timeoutScheduler.init(eventExecutor, noopTimeoutTask, initTimeoutNanos);
-                task.accept(timeoutScheduler);
-                completed.set(true);
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-            }
+            final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, initTimeoutNanos);
+            task.accept(timeoutScheduler);
+            completed.set(true);
         });
         await().untilTrue(completed);
     }
