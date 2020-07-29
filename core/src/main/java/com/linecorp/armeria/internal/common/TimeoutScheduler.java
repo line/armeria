@@ -33,7 +33,6 @@ import com.google.common.math.LongMath;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
 public final class TimeoutScheduler {
@@ -101,12 +100,11 @@ public final class TimeoutScheduler {
 
     /**
      * Initializes this {@link TimeoutScheduler}.
-     * Note that this method should be called in the specified {@link EventLoop}
-     * to initialize this scheduler synchronously
      */
     public void init(EventExecutor eventLoop, TimeoutTask timeoutTask, long initialTimeoutNanos) {
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> init(eventLoop, timeoutTask, initialTimeoutNanos));
+            return;
         }
 
         this.eventLoop = eventLoop;

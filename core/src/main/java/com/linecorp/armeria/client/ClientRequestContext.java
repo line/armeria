@@ -464,7 +464,7 @@ public interface ClientRequestContext extends RequestContext {
     CompletableFuture<Void> whenResponseTimingOut();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} has been
+     * Returns a {@link CompletableFuture} which is completed after {@link ClientRequestContext} has been
      * timed out (e.g., when the corresponding request passes a deadline).
      * {@link #isTimedOut()} will always return {@code true} when the returned
      * {@link CompletableFuture} is completed.

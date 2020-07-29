@@ -458,7 +458,7 @@ public interface ServiceRequestContext extends RequestContext {
     CompletableFuture<Void> whenRequestTimingOut();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} has been
+     * Returns a {@link CompletableFuture} which is completed after {@link ServiceRequestContext} has been
      * timed out (e.g., when the corresponding request passes a deadline).
      * {@link #isTimedOut()} will always return {@code true} when the returned
      * {@link CompletableFuture} is completed.
