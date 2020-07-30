@@ -47,7 +47,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
      */
     override suspend fun blockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
         try { // Simulate a blocking API call.
-            Thread.sleep(10)
+            Thread.sleep(3000)
         } catch (ignored: Exception) { // Do nothing.
         }
         // Make sure that current thread is request context aware
