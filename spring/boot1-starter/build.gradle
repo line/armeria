@@ -16,7 +16,12 @@ dependencies {
             version {
                 strictly SPRING_BOOT_VERSION
             }
-            because 'boot1-autoconfigure downgrades this version'
+        }
+
+        api("org.springframework.boot:spring-boot-autoconfigure") {
+            version {
+                strictly SPRING_BOOT_VERSION
+            }
         }
     }
 }

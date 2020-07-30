@@ -32,6 +32,12 @@ dependencies {
             strictly SPRING_BOOT_VERSION
         }
     }
+    api("org.springframework.boot:spring-boot-autoconfigure") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly SPRING_BOOT_VERSION
+        }
+    }
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor") {
         version {
             // Will fail the build if the override doesn't work
@@ -75,4 +81,10 @@ tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.com
 // Disable checkstyle because it's checked by ':spring:boot2-autoconfigure'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
+}
+
+// Graceful shutdown is supported only on Spring Boot 2
+// because Spring Boot 1 cannot convert a String to a Duration.
+test {
+    exclude '**/ArmeriaGracefulShutdownConfigurationTest*'
 }
