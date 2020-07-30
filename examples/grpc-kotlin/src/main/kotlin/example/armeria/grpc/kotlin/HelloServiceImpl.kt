@@ -56,7 +56,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
     }
 
     /**
-     * Sends a [HelloReply] with a small amount of blocking time using `blockingTaskExecutor`.
+     * Sends a [HelloReply] with a small amount of blocking time using `ArmeriaBlockingContext`.
      *
      * @see [Blocking service implementation](https://armeria.dev/docs/server-grpc#blocking-service-implementation)
      */
