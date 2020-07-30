@@ -18,7 +18,7 @@ cglib:
 
 # Akka is used only for testing in it:grpcweb module.
 ch.megard:
-  akka-http-cors_2.12: { version: '1.0.0' }
+  akka-http-cors_2.13: { version: '1.0.0' }
 
 ch.qos.logback:
   logback-classic:
@@ -121,7 +121,7 @@ com.google.protobuf:
 
 # Akka is used only for testing in it:grpcweb module.
 com.lightbend.akka.grpc:
-  akka-grpc-runtime_2.12: { version: '1.0.1' }
+  akka-grpc-runtime_2.13: { version: '1.0.1' }
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
@@ -157,9 +157,9 @@ com.thesamet.scalapb:
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
-  akka-actor-typed_2.12: { version: &TYPESAFE_AKKA_VERSION '2.6.8' }
-  akka-discovery_2.12: { version: *TYPESAFE_AKKA_VERSION }
-  akka-stream_2.12: { version: *TYPESAFE_AKKA_VERSION }
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.8' }
+  akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
+  akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
