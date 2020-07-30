@@ -76,7 +76,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
       pageDescription={
         'Armeria is your go-to microservice framework for any situation. ' +
         'You can build any type of microservice leveraging your favorite technologies, ' +
-        'including gRPC, Thrift, Kotlin, Retrofit,Reactive Streams, Spring Boot and Dropwizard. ' +
+        'including gRPC, Thrift, Kotlin, Retrofit, Reactive Streams, Spring Boot and Dropwizard. ' +
         'Brought to you by the creator of Netty and his colleagues at LINE.'
       }
       contentClassName={styles.wrapper}
