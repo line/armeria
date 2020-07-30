@@ -58,9 +58,8 @@ class Base64DecoderTest {
     void decodeEachByteSeparately(String expected, String encoded) {
         final ByteBuf buf = Unpooled.wrappedBuffer(encoded.getBytes());
         final Base64Decoder base64Decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
-        final int readableBytes = buf.readableBytes();
         final List<ByteBuf> bufs = new ArrayList<>();
-        for (int i = 0; i < readableBytes; i++) {
+        while (buf.isReadable()) {
             bufs.add(base64Decoder.decode(buf.readRetainedSlice(1)));
         }
         buf.release();
