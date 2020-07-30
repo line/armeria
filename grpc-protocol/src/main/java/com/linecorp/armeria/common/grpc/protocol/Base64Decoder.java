@@ -34,8 +34,6 @@
  */
 package com.linecorp.armeria.common.grpc.protocol;
 
-import java.util.Base64;
-
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
@@ -43,8 +41,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ByteProcessor;
 
 /**
- * A stateful Base64decoder. Unlike {@link Base64#getDecoder()}, this decoder does not end when it meets
- * padding('='), but continues to decode until the end of the {@link ByteBuf} given by
+ * A stateful Base64decoder. Unlike {@link io.netty.handler.codec.base64.Base64Decoder}, this decoder does
+ * not end when it meets padding('='), but continues to decode until the end of the {@link ByteBuf} given by
  * {@link #decode(ByteBuf)}. If the {@link ByteBuf} does not have necessary 4 bytes to decode as 3 bytes,
  * it stores the remained bytes and prepend them to the next {@link #decode(ByteBuf)} and decode together.
  */
@@ -125,15 +123,9 @@ final class Base64Decoder implements ByteProcessor {
     @Override
     public boolean process(byte value) throws Exception {
         final byte decodedByte = DECODABET[value & 0xFF];
-        if (decodedByte < WHITE_SPACE_ENC) {
+        if (decodedByte <= WHITE_SPACE_ENC) {
             throw new IllegalArgumentException(
                     "invalid Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
-        }
-
-        // White space, Equals sign or better
-        if (decodedByte < EQUALS_SIGN_ENC) {
-            // Ignore the white space.
-            return true;
         }
 
         // Equals sign or better

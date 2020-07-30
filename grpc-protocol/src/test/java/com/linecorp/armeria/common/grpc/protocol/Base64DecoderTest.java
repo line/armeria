@@ -18,10 +18,6 @@ package com.linecorp.armeria.common.grpc.protocol;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
@@ -49,33 +45,20 @@ class Base64DecoderTest {
     }
 
     @Test
-    void decodeMultipleEncodedBytes() {
-        final String str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz1234567890";
-        final byte[] bytes = str.getBytes();
-        final List<ByteBuf> fragments = fragmentRandomly(bytes);
-        final int half = fragments.size() / 2;
-        final ByteBuf first =
-                Unpooled.wrappedBuffer(fragments.subList(0, half).toArray(EMPTY_BYTE_BUF));
-        final ByteBuf second =
-                Unpooled.wrappedBuffer(fragments.subList(half, fragments.size()).toArray(EMPTY_BYTE_BUF));
+    void decodeFragments() {
+        final String str = "abcd"; // YWJjZA==
+        final ByteBuf buf = Unpooled.wrappedBuffer(str.getBytes());
+        final ByteBuf encoded1 = Base64.encode(buf);
+        buf.readerIndex(0);
+        final ByteBuf encoded2 = Base64.encode(buf);
+        final ByteBuf concatenated = Unpooled.wrappedBuffer(encoded1, encoded2); // YWJjZA==YWJjZA==
         final Base64Decoder base64Decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
-        final ByteBuf decodedFirst = base64Decoder.decode(first);
-        final ByteBuf decodedSecond = base64Decoder.decode(second);
+        final ByteBuf decodedFirst = base64Decoder.decode(concatenated.retainedSlice(0, 5)); // YWJjZ
+        final ByteBuf decodedSecond = base64Decoder.decode(concatenated.retainedSlice(5, 11)); // A==YWJjZA==
         assertThat(Unpooled.wrappedBuffer(decodedFirst, decodedSecond).toString(Charset.defaultCharset()))
-                .isEqualTo(str);
+                .isEqualTo("abcdabcd");
+        concatenated.release();
         decodedFirst.release();
         decodedSecond.release();
-    }
-
-    private static List<ByteBuf> fragmentRandomly(byte[] bytes) {
-        final List<ByteBuf> fragments = new ArrayList<>();
-        for (int i = 0; i < bytes.length;) {
-            final int to = Math.min(bytes.length,
-                                    new Random().nextInt(5) + 1 + i); // One byte is selected at least.
-            final ByteBuf encoded = Base64.encode(Unpooled.wrappedBuffer(Arrays.copyOfRange(bytes, i, to)));
-            fragments.add(encoded);
-            i = to;
-        }
-        return fragments;
     }
 }
