@@ -47,7 +47,22 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
      */
     override suspend fun blockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
         try { // Simulate a blocking API call.
-            Thread.sleep(3000)
+            Thread.sleep(10)
+        } catch (ignored: Exception) { // Do nothing.
+        }
+        // Make sure that current thread is request context aware
+        ServiceRequestContext.current()
+        buildReply(toMessage(request.name))
+    }
+
+    /**
+     * Sends a [HelloReply] with a small amount of blocking time using `blockingTaskExecutor`.
+     *
+     * @see [Blocking service implementation](https://armeria.dev/docs/server-grpc#blocking-service-implementation)
+     */
+    override suspend fun shortBlockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
+        try { // Simulate a blocking API call.
+            Thread.sleep(10)
         } catch (ignored: Exception) { // Do nothing.
         }
         // Make sure that current thread is request context aware

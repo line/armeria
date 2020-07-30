@@ -304,11 +304,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             return;
         }
 
-        if (isStalled()) {
-            close();
-        } else {
-            closeWhenComplete = true;
-        }
+        closeWhenComplete = true;
     }
 
     /**
@@ -324,7 +320,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 unprocessed = null;
             }
 
-            if (endOfStream) {
+            if (closeWhenComplete || endOfStream) {
                 listener.endOfStream();
             }
         }

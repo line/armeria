@@ -8,6 +8,7 @@ import example.armeria.grpc.kotlin.Hello.HelloRequest
 import example.armeria.grpc.kotlin.HelloServiceGrpcKt.HelloServiceCoroutineStub
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -49,6 +50,23 @@ class HelloServiceTest {
             assertThat(helloService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build()).message)
                 .isEqualTo("Hello, Armeria!")
             assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3)
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("uris")
+    fun parallelReplyFromServerSideBlockingCall(uri: String) {
+        runBlocking {
+            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
+            repeat(30) {
+                launch {
+                    val message = helloService.shortBlockingHello(
+                        HelloRequest.newBuilder().setName("$it Armeria").build()
+                    ).message
+                    assertThat(message).isEqualTo("Hello, $it Armeria!")
+                }
+            }
+
         }
     }
 

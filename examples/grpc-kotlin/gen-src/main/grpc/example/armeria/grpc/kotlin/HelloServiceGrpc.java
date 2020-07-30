@@ -121,6 +121,37 @@ public final class HelloServiceGrpc {
   }
 
   private static volatile io.grpc.MethodDescriptor<example.armeria.grpc.kotlin.Hello.HelloRequest,
+      example.armeria.grpc.kotlin.Hello.HelloReply> getShortBlockingHelloMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ShortBlockingHello",
+      requestType = example.armeria.grpc.kotlin.Hello.HelloRequest.class,
+      responseType = example.armeria.grpc.kotlin.Hello.HelloReply.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<example.armeria.grpc.kotlin.Hello.HelloRequest,
+      example.armeria.grpc.kotlin.Hello.HelloReply> getShortBlockingHelloMethod() {
+    io.grpc.MethodDescriptor<example.armeria.grpc.kotlin.Hello.HelloRequest, example.armeria.grpc.kotlin.Hello.HelloReply> getShortBlockingHelloMethod;
+    if ((getShortBlockingHelloMethod = HelloServiceGrpc.getShortBlockingHelloMethod) == null) {
+      synchronized (HelloServiceGrpc.class) {
+        if ((getShortBlockingHelloMethod = HelloServiceGrpc.getShortBlockingHelloMethod) == null) {
+          HelloServiceGrpc.getShortBlockingHelloMethod = getShortBlockingHelloMethod =
+              io.grpc.MethodDescriptor.<example.armeria.grpc.kotlin.Hello.HelloRequest, example.armeria.grpc.kotlin.Hello.HelloReply>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ShortBlockingHello"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  example.armeria.grpc.kotlin.Hello.HelloRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  example.armeria.grpc.kotlin.Hello.HelloReply.getDefaultInstance()))
+              .setSchemaDescriptor(new HelloServiceMethodDescriptorSupplier("ShortBlockingHello"))
+              .build();
+        }
+      }
+    }
+    return getShortBlockingHelloMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<example.armeria.grpc.kotlin.Hello.HelloRequest,
       example.armeria.grpc.kotlin.Hello.HelloReply> getLotsOfRepliesMethod;
 
   @io.grpc.stub.annotations.RpcMethod(
@@ -284,6 +315,13 @@ public final class HelloServiceGrpc {
 
     /**
      */
+    public void shortBlockingHello(example.armeria.grpc.kotlin.Hello.HelloRequest request,
+        io.grpc.stub.StreamObserver<example.armeria.grpc.kotlin.Hello.HelloReply> responseObserver) {
+      asyncUnimplementedUnaryCall(getShortBlockingHelloMethod(), responseObserver);
+    }
+
+    /**
+     */
     public void lotsOfReplies(example.armeria.grpc.kotlin.Hello.HelloRequest request,
         io.grpc.stub.StreamObserver<example.armeria.grpc.kotlin.Hello.HelloReply> responseObserver) {
       asyncUnimplementedUnaryCall(getLotsOfRepliesMethod(), responseObserver);
@@ -326,6 +364,13 @@ public final class HelloServiceGrpc {
                 example.armeria.grpc.kotlin.Hello.HelloRequest,
                 example.armeria.grpc.kotlin.Hello.HelloReply>(
                   this, METHODID_BLOCKING_HELLO)))
+          .addMethod(
+            getShortBlockingHelloMethod(),
+            asyncUnaryCall(
+              new MethodHandlers<
+                example.armeria.grpc.kotlin.Hello.HelloRequest,
+                example.armeria.grpc.kotlin.Hello.HelloReply>(
+                  this, METHODID_SHORT_BLOCKING_HELLO)))
           .addMethod(
             getLotsOfRepliesMethod(),
             asyncServerStreamingCall(
@@ -391,6 +436,14 @@ public final class HelloServiceGrpc {
 
     /**
      */
+    public void shortBlockingHello(example.armeria.grpc.kotlin.Hello.HelloRequest request,
+        io.grpc.stub.StreamObserver<example.armeria.grpc.kotlin.Hello.HelloReply> responseObserver) {
+      asyncUnaryCall(
+          getChannel().newCall(getShortBlockingHelloMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void lotsOfReplies(example.armeria.grpc.kotlin.Hello.HelloRequest request,
         io.grpc.stub.StreamObserver<example.armeria.grpc.kotlin.Hello.HelloReply> responseObserver) {
       asyncServerStreamingCall(
@@ -451,6 +504,13 @@ public final class HelloServiceGrpc {
 
     /**
      */
+    public example.armeria.grpc.kotlin.Hello.HelloReply shortBlockingHello(example.armeria.grpc.kotlin.Hello.HelloRequest request) {
+      return blockingUnaryCall(
+          getChannel(), getShortBlockingHelloMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
     public java.util.Iterator<example.armeria.grpc.kotlin.Hello.HelloReply> lotsOfReplies(
         example.armeria.grpc.kotlin.Hello.HelloRequest request) {
       return blockingServerStreamingCall(
@@ -495,14 +555,23 @@ public final class HelloServiceGrpc {
       return futureUnaryCall(
           getChannel().newCall(getBlockingHelloMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<example.armeria.grpc.kotlin.Hello.HelloReply> shortBlockingHello(
+        example.armeria.grpc.kotlin.Hello.HelloRequest request) {
+      return futureUnaryCall(
+          getChannel().newCall(getShortBlockingHelloMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_HELLO = 0;
   private static final int METHODID_LAZY_HELLO = 1;
   private static final int METHODID_BLOCKING_HELLO = 2;
-  private static final int METHODID_LOTS_OF_REPLIES = 3;
-  private static final int METHODID_LOTS_OF_GREETINGS = 4;
-  private static final int METHODID_BIDI_HELLO = 5;
+  private static final int METHODID_SHORT_BLOCKING_HELLO = 3;
+  private static final int METHODID_LOTS_OF_REPLIES = 4;
+  private static final int METHODID_LOTS_OF_GREETINGS = 5;
+  private static final int METHODID_BIDI_HELLO = 6;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -531,6 +600,10 @@ public final class HelloServiceGrpc {
           break;
         case METHODID_BLOCKING_HELLO:
           serviceImpl.blockingHello((example.armeria.grpc.kotlin.Hello.HelloRequest) request,
+              (io.grpc.stub.StreamObserver<example.armeria.grpc.kotlin.Hello.HelloReply>) responseObserver);
+          break;
+        case METHODID_SHORT_BLOCKING_HELLO:
+          serviceImpl.shortBlockingHello((example.armeria.grpc.kotlin.Hello.HelloRequest) request,
               (io.grpc.stub.StreamObserver<example.armeria.grpc.kotlin.Hello.HelloReply>) responseObserver);
           break;
         case METHODID_LOTS_OF_REPLIES:
@@ -607,6 +680,7 @@ public final class HelloServiceGrpc {
               .addMethod(getHelloMethod())
               .addMethod(getLazyHelloMethod())
               .addMethod(getBlockingHelloMethod())
+              .addMethod(getShortBlockingHelloMethod())
               .addMethod(getLotsOfRepliesMethod())
               .addMethod(getLotsOfGreetingsMethod())
               .addMethod(getBidiHelloMethod())
