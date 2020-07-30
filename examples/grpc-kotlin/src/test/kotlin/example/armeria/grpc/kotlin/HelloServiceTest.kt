@@ -66,7 +66,6 @@ class HelloServiceTest {
                     assertThat(message).isEqualTo("Hello, $it Armeria!")
                 }
             }
-
         }
     }
 
