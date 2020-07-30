@@ -85,6 +85,6 @@ tasks.withType(Checkstyle) {
 
 // Graceful shutdown is supported only on Spring Boot 2
 // because Spring Boot 1 cannot convert a String to a Duration.
-test {
+tasks.withType(Test) {
     exclude '**/ArmeriaGracefulShutdownConfigurationTest*'
 }
