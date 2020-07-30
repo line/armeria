@@ -408,6 +408,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             @Override
             public void run() {
+                // This method will be invoked only when `canSchedule()` returns true.
+                assert state != State.DONE;
+
                 failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
                                Http2Error.INTERNAL_ERROR, true);
             }

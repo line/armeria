@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
@@ -151,17 +150,19 @@ public final class TimeoutScheduler {
 
         if (initialized) {
             if (eventLoop.inEventLoop()) {
-                unsafeClearTimeout(resetTimeout);
+                clearTimeout0(resetTimeout);
             } else {
-                eventLoop.execute(() -> unsafeClearTimeout(resetTimeout));
+                eventLoop.execute(() -> clearTimeout0(resetTimeout));
             }
         } else {
             setPendingTimeoutNanos(0);
-            addPendingTimeoutTask(() -> unsafeClearTimeout(resetTimeout));
+            addPendingTimeoutTask(() -> clearTimeout0(resetTimeout));
         }
     }
 
-    private boolean unsafeClearTimeout(boolean resetTimeout) {
+    private boolean clearTimeout0(boolean resetTimeout) {
+        assert eventLoop.inEventLoop();
+
         switch (state) {
             case INIT:
             case INACTIVE:
@@ -221,18 +222,19 @@ public final class TimeoutScheduler {
 
         if (initialized) {
             if (eventLoop.inEventLoop()) {
-                unsafeExtendTimeoutNanos(adjustmentNanos);
+                extendTimeoutNanos0(adjustmentNanos);
             } else {
-                eventLoop.execute(() -> unsafeExtendTimeoutNanos(adjustmentNanos));
+                eventLoop.execute(() -> extendTimeoutNanos0(adjustmentNanos));
             }
         } else {
             addPendingTimeoutNanos(adjustmentNanos);
-            addPendingTimeoutTask(() -> unsafeExtendTimeoutNanos(adjustmentNanos));
+            addPendingTimeoutTask(() -> extendTimeoutNanos0(adjustmentNanos));
         }
     }
 
-    private boolean unsafeExtendTimeoutNanos(long adjustmentNanos) {
-        ensureInitialized();
+    private boolean extendTimeoutNanos0(long adjustmentNanos) {
+        assert eventLoop.inEventLoop();
+
         if (state != State.SCHEDULED || !timeoutTask.canSchedule()) {
             return false;
         }
@@ -243,7 +245,7 @@ public final class TimeoutScheduler {
 
         final long timeoutNanos = this.timeoutNanos;
         // Cancel the previously scheduled timeout, if exists.
-        unsafeClearTimeout(true);
+        clearTimeout0(true);
 
         this.timeoutNanos = LongMath.saturatedAdd(timeoutNanos, adjustmentNanos);
 
@@ -262,9 +264,9 @@ public final class TimeoutScheduler {
 
         if (initialized) {
             if (eventLoop.inEventLoop()) {
-                unsafeSetTimeoutNanosFromNow(timeoutNanos);
+                setTimeoutNanosFromNow0(timeoutNanos);
             } else {
-                eventLoop.execute(() -> unsafeSetTimeoutNanosFromNow(timeoutNanos));
+                eventLoop.execute(() -> setTimeoutNanosFromNow0(timeoutNanos));
             }
         } else {
             final long startTimeNanos = System.nanoTime();
@@ -272,19 +274,20 @@ public final class TimeoutScheduler {
             addPendingTimeoutTask(() -> {
                 final long passedTimeNanos0 = System.nanoTime() - startTimeNanos;
                 final long timeoutNanos0 = Math.max(1, timeoutNanos - passedTimeNanos0);
-                unsafeSetTimeoutNanosFromNow(timeoutNanos0);
+                setTimeoutNanosFromNow0(timeoutNanos0);
             });
         }
     }
 
-    private boolean unsafeSetTimeoutNanosFromNow(long newTimeoutNanos) {
-        ensureInitialized();
+    private boolean setTimeoutNanosFromNow0(long newTimeoutNanos) {
+        assert eventLoop.inEventLoop();
+
         if (state == State.TIMED_OUT || !timeoutTask.canSchedule()) {
             return false;
         }
 
         // Cancel the previously scheduled timeout, if exists.
-        unsafeClearTimeout(true);
+        clearTimeout0(true);
 
         final long passedTimeNanos = System.nanoTime() - firstExecutionTimeNanos;
         timeoutNanos = LongMath.saturatedAdd(newTimeoutNanos, passedTimeNanos);
@@ -301,18 +304,17 @@ public final class TimeoutScheduler {
     public void timeoutNow() {
         if (initialized) {
             if (eventLoop.inEventLoop()) {
-                unsafeTimeoutNow();
+                timeoutNow0();
             } else {
-                eventLoop.execute(this::unsafeTimeoutNow);
+                eventLoop.execute(this::timeoutNow0);
             }
         } else {
-            addPendingTimeoutTask(this::unsafeTimeoutNow);
+            addPendingTimeoutTask(this::timeoutNow0);
         }
     }
 
-    private void unsafeTimeoutNow() {
-        checkState(timeoutTask != null,
-                   "init(eventLoop, timeoutTask) is not called yet.");
+    private void timeoutNow0() {
+        assert eventLoop.inEventLoop();
 
         if (!timeoutTask.canSchedule()) {
             return;
@@ -326,7 +328,7 @@ public final class TimeoutScheduler {
                 invokeTimeoutTask();
                 return;
             case SCHEDULED:
-                if (unsafeClearTimeout(false)) {
+                if (clearTimeout0(false)) {
                     invokeTimeoutTask();
                 }
                 return;
@@ -434,10 +436,6 @@ public final class TimeoutScheduler {
         } else {
             return this.whenTimedOut;
         }
-    }
-
-    private void ensureInitialized() {
-        checkState(state != State.INIT, "init(eventLoop, timeoutTask) is not called yet.");
     }
 
     @Nullable
