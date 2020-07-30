@@ -186,7 +186,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             CompletableFuture<HttpResponse> res) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
+                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
             final HttpData content = clientRequest.content();
             final HttpData frame;
             boolean success = false;
@@ -282,7 +282,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                 },
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
-                ctx.alloc())) {
+                ctx.alloc(), false)) {
             deframer.request(1);
             deframer.deframe(grpcResponse.content(), true);
         }

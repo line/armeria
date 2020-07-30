@@ -81,7 +81,8 @@ class GrpcWebRetryTest {
                             return grpcStatus != null && grpcStatus != 0;
                         })
                         .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
-                            final HttpHeaders trailers = GrpcWebUtil.parseTrailers(aggregatedRes.content());
+                            final HttpHeaders trailers =
+                                    GrpcWebUtil.parseTrailers(ctx, aggregatedRes.content());
                             return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
                         }))
                         .thenBackoff();
@@ -123,7 +124,8 @@ class GrpcWebRetryTest {
         @Override
         public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
             return GrpcSerializationFormats.values().stream()
-                                           .filter(GrpcSerializationFormats::isGrpcWeb)
+                                           .filter(format -> GrpcSerializationFormats.isGrpcWeb(format) &&
+                                                             !GrpcSerializationFormats.isGrpcWebText(format))
                                            .map(Arguments::of);
         }
     }

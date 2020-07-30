@@ -104,11 +104,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final CompressorRegistry compressorRegistry;
     private final HttpStreamReader responseReader;
+    private final SerializationFormat serializationFormat;
     private final boolean unsafeWrapResponseBuffers;
     @Nullable
     private final Executor executor;
     private final String advertisedEncodingsHeader;
-    private final boolean isGrpcWeb;
 
     // Effectively final, only set once during start()
     @Nullable
@@ -142,16 +142,17 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.method = method;
         this.callOptions = callOptions;
         this.compressorRegistry = compressorRegistry;
+        this.serializationFormat = serializationFormat;
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
-        isGrpcWeb = GrpcSerializationFormats.isGrpcWeb(serializationFormat);
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(
                 ctx.alloc(), serializationFormat, method, jsonMarshaller,
                 unsafeWrapResponseBuffers);
         responseReader = new HttpStreamReader(
                 decompressorRegistry,
-                new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc()),
+                new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc(), grpcWebText),
                 this);
         executor = callOptions.getExecutor();
 
@@ -319,7 +320,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void messageRead(DeframedMessage message) {
-        if (isGrpcWeb && message.type() >> 7 == 1) {
+        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
             // grpc-web trailers
             final ByteBuf messageBuf = message.buf();
             final ByteBuf buf;
@@ -345,7 +346,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                 if (trailers == null) {
                     // Malformed trailers.
-                    close(Status.INTERNAL.withDescription("grpc-web trailers malformed: " +
+                    close(Status.INTERNAL.withDescription(serializationFormat.uriText() +
+                                                          " trailers malformed: " +
                                                           buf.toString(StandardCharsets.UTF_8)),
                           new Metadata());
                 } else {
@@ -358,13 +360,14 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
 
         try {
-            final O msg = marshaller.deserializeResponse(message);
+            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+            final O msg = marshaller.deserializeResponse(message, grpcWebText);
             if (firstResponse == null) {
                 firstResponse = msg;
             }
 
             final ByteBuf buf = message.buf();
-            if (unsafeWrapResponseBuffers && buf != null) {
+            if (unsafeWrapResponseBuffers && buf != null && !grpcWebText) {
                 GrpcUnsafeBufferUtil.storeBuffer(buf, msg, ctx);
             }
 

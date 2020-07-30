@@ -199,6 +199,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private final Listener listener;
     private final int maxMessageSizeBytes;
     private final ByteBufAllocator alloc;
+    @Nullable
+    private final Base64Decoder base64Decoder;
 
     private int currentType = UNINITIALIED_TYPE;
 
@@ -222,12 +224,16 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     public ArmeriaMessageDeframer(Listener listener,
                                   int maxMessageSizeBytes,
-                                  ByteBufAllocator alloc) {
+                                  ByteBufAllocator alloc, boolean decodeBase64) {
         this.listener = requireNonNull(listener, "listener");
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
         this.alloc = requireNonNull(alloc, "alloc");
-
         unprocessed = new ArrayDeque<>();
+        if (decodeBase64) {
+            base64Decoder = new Base64Decoder(alloc);
+        } else {
+            base64Decoder = null;
+        }
     }
 
     /**
@@ -274,10 +280,15 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         final int dataLength = data.length();
         if (dataLength != 0) {
-            final ByteBuf buf = data.byteBuf();
+            final ByteBuf buf;
             assert unprocessed != null;
+            if (base64Decoder != null) {
+                buf = base64Decoder.decode(data.byteBuf());
+            } else {
+                buf = data.byteBuf();
+            }
             unprocessed.add(buf);
-            unprocessedBytes += dataLength;
+            unprocessedBytes += buf.readableBytes();
         }
 
         // Indicate that all of the data for this stream has been received.
@@ -632,8 +643,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 throw new ArmeriaStatusException(
                         StatusCodes.RESOURCE_EXHAUSTED,
                         String.format(
-                        "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
-                        debugString, maxMessageSize, count));
+                                "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
+                                debugString, maxMessageSize, count));
             }
         }
     }
