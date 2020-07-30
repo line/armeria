@@ -43,7 +43,6 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
