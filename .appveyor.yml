@@ -43,7 +43,7 @@ cache:
   - "%USERPROFILE%\\.gradle\\caches\\package-lists"
   - "%USERPROFILE%\\.gradle\\caches\\sphinx-binary"
 
-notifications:
-  - provider: Slack
-    incoming_webhook:
-      secure: uDUySAYLk8RjAL6ZAWd9K/hP9rV1/yYPz26CybZOPFZB7Le4v7/x2byv3HkwEJtxAYFi0RjeVJG4UF9oZfyqfbnyOW4vGZ3KYUJBT1EidEE=
+#notifications:
+#  - provider: Slack
+#    incoming_webhook:
+#      secure: uDUySAYLk8RjAL6ZAWd9K/hP9rV1/yYPz26CybZOPFZB7Le4v7/x2byv3HkwEJtxAYFi0RjeVJG4UF9oZfyqfbnyOW4vGZ3KYUJBT1EidEE=
