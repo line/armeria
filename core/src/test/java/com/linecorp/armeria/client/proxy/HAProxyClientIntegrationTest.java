@@ -73,7 +73,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.util.ReferenceCountUtil;
 
 class HAProxyClientIntegrationTest {
@@ -110,18 +109,19 @@ class HAProxyClientIntegrationTest {
 
     @ParameterizedTest
     @ArgumentsSource(ProtocolEndpointProvider.class)
-    void testExplicitHAProxy(SessionProtocol sessionProtocol, Endpoint endpoint) throws Exception {
+    void testExplicitHAProxy(SessionProtocol sessionProtocol, InetSocketAddress proxyAddr) throws Exception {
         final InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.2", 82);
         final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.3", 83);
+        final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
 
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfig.haproxy(srcAddr, destAddr))
+                                  .proxyConfig(ProxyConfig.haproxy(proxyAddr, srcAddr))
                                   .tlsNoVerify()
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(sessionProtocol, endpoint)
+            final WebClient webClient = WebClient.builder(sessionProtocol, destEndpoint)
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
@@ -130,32 +130,34 @@ class HAProxyClientIntegrationTest {
 
             final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
+            final String expectedResponse = String.format("%s-%s", srcAddr,
+                                                          destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
         }
     }
 
     @ParameterizedTest
     @ArgumentsSource(ProtocolEndpointProvider.class)
-    void testImplicitHAProxyUsesRootContextIfAvailable(
-            SessionProtocol sessionProtocol, Endpoint endpoint) throws Exception {
+    void testSourceAddrFromRootContextIfAvailable(
+            SessionProtocol sessionProtocol, InetSocketAddress proxyAddr) throws Exception {
         final InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.2", 82);
         final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.3", 83);
+        final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
 
         final ServiceRequestContext serviceRequestContext =
                 ServiceRequestContext.builder(
                         HttpRequest.of(HttpMethod.GET, "/"))
-                                     .proxiedAddresses(ProxiedAddresses.of(srcAddr, destAddr)).build();
+                                     .proxiedAddresses(ProxiedAddresses.of(srcAddr)).build();
 
         try (SafeCloseable ignored = serviceRequestContext.push();
              ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfigSelector.haproxy())
+                                  .proxyConfig(ProxyConfig.haproxy(proxyAddr))
                                   .tlsNoVerify()
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(sessionProtocol, endpoint)
+            final WebClient webClient = WebClient.builder(sessionProtocol, destEndpoint)
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
@@ -164,6 +166,8 @@ class HAProxyClientIntegrationTest {
 
             final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(destEndpoint.ipAddr()).isNotNull();
+
             final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
         }
@@ -171,16 +175,20 @@ class HAProxyClientIntegrationTest {
 
     @ParameterizedTest
     @ArgumentsSource(ProtocolEndpointProvider.class)
-    void testImplicitHAProxyWithoutRootContextUsesDefault() throws Exception {
+    void testImplicitHAProxyWithoutRootContextUsesDefault(
+            SessionProtocol sessionProtocol, InetSocketAddress proxyAddr) throws Exception {
+        final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.3", 83);
+        final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfigSelector.haproxy())
+                                  .proxyConfig(ProxyConfig.haproxy(proxyAddr))
+                                  .tlsNoVerify()
                                   .useHttp2Preface(true)
                                   .build()) {
 
             final AtomicReference<InetSocketAddress> srcAddressRef = new AtomicReference<>();
             final WebClient webClient =
-                    WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                    WebClient.builder(sessionProtocol, destEndpoint)
                              .factory(clientFactory)
                              .decorator(LoggingClient.newDecorator())
                              .decorator((delegate, ctx, req) -> {
@@ -196,35 +204,35 @@ class HAProxyClientIntegrationTest {
 
             final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            final String expectedResponse =
-                    String.format("%s-%s", srcAddressRef.get(), backendServer.httpSocketAddress());
+            final String expectedResponse = String.format("%s-%s", srcAddressRef.get(), destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
         }
     }
 
     @ParameterizedTest
     @ArgumentsSource(ProtocolEndpointProvider.class)
-    void testDifferentIpFamilyFailure() throws Exception {
-        // in practice, this scenario shouldn't be possible
+    void testDifferentIpFamily(SessionProtocol sessionProtocol, InetSocketAddress proxyAddr) throws Exception {
+        final InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.2", 82);
         final InetSocketAddress destAddr = new InetSocketAddress("0:0:0:0:0:0:0:1", 83);
+        final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig((protocol, ignored) -> new HAProxyConfig(destAddr))
+                                  .proxyConfig(ProxyConfig.haproxy(proxyAddr, srcAddr))
+                                  .tlsNoVerify()
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(SessionProtocol.H2C, backendServer.httpEndpoint())
+            final WebClient webClient = WebClient.builder(sessionProtocol, destEndpoint)
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            assertThatThrownBy(() -> responseFuture.get(10, TimeUnit.SECONDS))
-                    .isInstanceOf(ExecutionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(ProxyConnectException.class)
-                    .hasRootCauseMessage("incompatible addresses: [/127.0.0.1-/0:0:0:0:0:0:0:1]");
+            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
+            assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
         }
     }
 
@@ -236,12 +244,11 @@ class HAProxyClientIntegrationTest {
         }
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfigSelector.haproxy())
+                                  .proxyConfig(ProxyConfig.haproxy(new InetSocketAddress(unusedPort)))
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(SessionProtocol.H1C,
-                                                          backendServer.httpEndpoint().withPort(unusedPort))
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
@@ -258,7 +265,12 @@ class HAProxyClientIntegrationTest {
     @Test
     void testHttpProxyUpgradeRequestFailure() throws Exception {
         final InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.2", 82);
-        final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.3", 83);
+        final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.2", 82);
+        final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
+        final Endpoint proxyEndpoint = http1Server.endpoint();
+        assert proxyEndpoint.ipAddr() != null;
+        final InetSocketAddress proxyAddr = new InetSocketAddress(proxyEndpoint.ipAddr(), proxyEndpoint.port());
+
         final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
             if (msg instanceof HAProxyMessage) {
@@ -289,11 +301,11 @@ class HAProxyClientIntegrationTest {
 
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfig.haproxy(srcAddr, destAddr))
+                                  .proxyConfig(ProxyConfig.haproxy(proxyAddr, srcAddr))
                                   .useHttp2Preface(false)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
+            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, destEndpoint)
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
@@ -309,7 +321,11 @@ class HAProxyClientIntegrationTest {
     @Test
     void testHttpProxyPrefaceFailure() throws Exception {
         final InetSocketAddress srcAddr = new InetSocketAddress("127.0.0.2", 82);
-        final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.3", 83);
+        final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.2", 82);
+        final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
+        final Endpoint proxyEndpoint = http1Server.endpoint();
+        assert proxyEndpoint.ipAddr() != null;
+        final InetSocketAddress proxyAddr = new InetSocketAddress(proxyEndpoint.ipAddr(), proxyEndpoint.port());
 
         final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();
         DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
@@ -341,11 +357,11 @@ class HAProxyClientIntegrationTest {
 
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfig.haproxy(srcAddr, destAddr))
+                                  .proxyConfig(ProxyConfig.haproxy(proxyAddr, srcAddr))
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
+            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, destEndpoint)
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
@@ -362,8 +378,10 @@ class HAProxyClientIntegrationTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.concat(
-                    SessionProtocol.httpValues().stream().map(p -> arguments(p, backendServer.httpEndpoint())),
-                    SessionProtocol.httpsValues().stream().map(p -> arguments(p, backendServer.httpsEndpoint()))
+                    SessionProtocol.httpValues().stream()
+                                   .map(p -> arguments(p, backendServer.httpSocketAddress())),
+                    SessionProtocol.httpsValues().stream()
+                                   .map(p -> arguments(p, backendServer.httpsSocketAddress()))
             );
         }
     }

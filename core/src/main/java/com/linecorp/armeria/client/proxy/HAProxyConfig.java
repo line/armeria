@@ -25,34 +25,28 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.server.ServiceRequestContext;
+
 /**
  * <a href="http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">HAPROXY configuration.</a>
  */
 public final class HAProxyConfig extends ProxyConfig {
 
+    private final InetSocketAddress proxyAddress;
+
     @Nullable
     private final InetSocketAddress sourceAddress;
 
-    private final InetSocketAddress destinationAddress;
-
-    HAProxyConfig(InetSocketAddress destinationAddress) {
+    HAProxyConfig(InetSocketAddress proxyAddress) {
+        this.proxyAddress = proxyAddress;
         sourceAddress = null;
-        this.destinationAddress = destinationAddress;
     }
 
-    HAProxyConfig(InetSocketAddress sourceAddress, InetSocketAddress destinationAddress) {
-        checkArgument(sourceAddress.getAddress().getClass() == destinationAddress.getAddress().getClass(),
-                      "sourceAddress and destinationAddress should be the same type");
+    HAProxyConfig(InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
+        checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
+                      "sourceAddress and proxyAddress should be the same type");
+        this.proxyAddress = proxyAddress;
         this.sourceAddress = sourceAddress;
-        this.destinationAddress = destinationAddress;
-    }
-
-    /**
-     * Represents the destination address for the HAProxy protocol.
-     */
-    @Override
-    public InetSocketAddress proxyAddress() {
-        return destinationAddress;
     }
 
     @Override
@@ -60,9 +54,14 @@ public final class HAProxyConfig extends ProxyConfig {
         return ProxyType.HAPROXY;
     }
 
+    @Override
+    public InetSocketAddress proxyAddress() {
+        return proxyAddress;
+    }
+
     /**
-     * Represents the source address. The local connection address will be used
-     * if this value is {@code null}.
+     * Represents the source address. When this value is {@code null}, it will be inferred
+     * from either the {@link ServiceRequestContext} or the local connection address.
      */
     @Nullable
     public InetSocketAddress sourceAddress() {
@@ -78,21 +77,21 @@ public final class HAProxyConfig extends ProxyConfig {
             return false;
         }
         final HAProxyConfig that = (HAProxyConfig) o;
-        return Objects.equals(sourceAddress, that.sourceAddress) &&
-               destinationAddress.equals(that.destinationAddress);
+        return proxyAddress.equals(that.proxyAddress) &&
+               Objects.equals(sourceAddress, that.sourceAddress);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(sourceAddress, destinationAddress);
+        return Objects.hash(proxyAddress, sourceAddress);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("proxyType", proxyType())
+                          .add("proxyAddress", proxyAddress)
                           .add("sourceAddress", sourceAddress)
-                          .add("destinationAddress", destinationAddress)
                           .omitNullValues()
                           .toString();
     }

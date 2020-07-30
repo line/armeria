@@ -536,10 +536,11 @@ final class HttpChannelPool implements AsyncCloseable {
                     }
                 });
             } else {
-                if (future.cause() instanceof ProxyConnectException) {
-                    invokeProxyConnectFailed(desiredProtocol, key, future.cause());
+                final Throwable throwable = future.cause();
+                if (throwable instanceof ProxyConnectException) {
+                    invokeProxyConnectFailed(desiredProtocol, key, throwable);
                 }
-                promise.completeExceptionally(UnprocessedRequestException.of(future.cause()));
+                promise.completeExceptionally(UnprocessedRequestException.of(throwable));
             }
         } catch (Exception e) {
             promise.completeExceptionally(UnprocessedRequestException.of(e));

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static io.netty.handler.codec.haproxy.HAProxyCommand.PROXY;
 import static io.netty.handler.codec.haproxy.HAProxyProtocolVersion.V2;
 import static io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TCP4;
+import static io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TCP6;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -38,11 +39,15 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageEncoder;
 import io.netty.handler.proxy.ProxyConnectException;
+import io.netty.handler.proxy.ProxyConnectionEvent;
+import io.netty.util.NetUtil;
 
 final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(HAProxyHandler.class);
 
     private final HAProxyConfig haProxyConfig;
+    private static final String PROTOCOL = "haproxy";
+    private static final String AUTH = "none";
 
     HAProxyHandler(HAProxyConfig haProxyConfig) {
         this.haProxyConfig = haProxyConfig;
@@ -57,12 +62,14 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
                         SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        final InetSocketAddress proxyAddress = haProxyConfig.proxyAddress();
+        assert proxyAddress != null;
         promise.addListener(f -> {
             if (!f.isSuccess()) {
                 return;
             }
             try {
-                ctx.write(createMessage(haProxyConfig, ctx.channel())).addListener(f0 -> {
+                ctx.write(createMessage(haProxyConfig, ctx.channel(), remoteAddress)).addListener(f0 -> {
                     if (f0.isSuccess()) {
                         ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                     } else {
@@ -70,8 +77,13 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                         ctx.close();
                     }
                 });
+                reschedule(ctx, () -> {
+                    final ProxyConnectionEvent event = new ProxyConnectionEvent(
+                            PROTOCOL, AUTH, proxyAddress, remoteAddress);
+                    ctx.pipeline().fireUserEventTriggered(event);
+                });
             } catch (Exception e) {
-                ctx.channel().eventLoop().execute(() -> {
+                reschedule(ctx, () -> {
                     ctx.pipeline().fireUserEventTriggered(wrapException(e));
                     ctx.close();
                 });
@@ -79,23 +91,29 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                 ctx.pipeline().remove(this);
             }
         });
-        super.connect(ctx, remoteAddress, localAddress, promise);
+        super.connect(ctx, proxyAddress, localAddress, promise);
     }
 
-    ProxyConnectException wrapException(Throwable e) {
+    private static ProxyConnectException wrapException(Throwable e) {
         if (e instanceof ProxyConnectException) {
             return (ProxyConnectException) e;
         }
         return new ProxyConnectException(e);
     }
 
+    // Call fireUserEventTriggered success/failure in the executor to execute it after the
+    // HttpSessionHandler is added to the pipeline.
+    private static void reschedule(ChannelHandlerContext ctx, Runnable runnable) {
+        ctx.channel().eventLoop().execute(runnable);
+    }
+
     private static HAProxyMessage createMessage(HAProxyConfig haProxyConfig,
-                                                Channel channel) throws ProxyConnectException {
+                                                Channel channel, SocketAddress remoteAddress)
+            throws ProxyConnectException {
         final InetSocketAddress srcSocketAddress =
                 haProxyConfig.sourceAddress() != null ? haProxyConfig.sourceAddress()
                                                       : (InetSocketAddress) channel.localAddress();
-        final InetSocketAddress destSocketAddress = haProxyConfig.proxyAddress();
-        assert destSocketAddress != null;
+        final InetSocketAddress destSocketAddress = (InetSocketAddress) remoteAddress;
 
         final InetAddress srcAddress = srcSocketAddress.getAddress();
         final InetAddress destAddress = destSocketAddress.getAddress();
@@ -104,16 +122,18 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
             return new HAProxyMessage(V2, PROXY, TCP4,
                                       srcAddress.getHostAddress(), destAddress.getHostAddress(),
                                       srcSocketAddress.getPort(), destSocketAddress.getPort());
-        } else if (srcAddress instanceof Inet6Address && destAddress instanceof Inet6Address) {
-            return new HAProxyMessage(V2, PROXY, TCP4,
-                                      srcAddress.getHostAddress(), destAddress.getHostAddress(),
-                                      srcSocketAddress.getPort(), destSocketAddress.getPort());
         } else {
-            logger.warn("Incompatible PROXY address types. srcAddress: {}, destAddress: {}",
-                        srcAddress.getClass(), destAddress.getClass());
-            throw new ProxyConnectException("incompatible addresses: [" + srcAddress + '-' +
-                                            destAddress + ']');
+            return new HAProxyMessage(V2, PROXY, TCP6, translateToInet6(srcAddress).getHostAddress(),
+                                      translateToInet6(destAddress).getHostAddress(),
+                                      srcSocketAddress.getPort(), destSocketAddress.getPort());
         }
+    }
+
+    private static Inet6Address translateToInet6(InetAddress inetAddress) {
+        if (inetAddress instanceof Inet6Address) {
+            return (Inet6Address) inetAddress;
+        }
+        return NetUtil.getByName(inetAddress.getHostAddress());
     }
 }
 

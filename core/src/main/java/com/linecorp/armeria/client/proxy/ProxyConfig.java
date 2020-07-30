@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Base configuration for proxy settings used by {@link ClientFactory}.
@@ -120,18 +121,30 @@ public abstract class ProxyConfig {
     }
 
     /**
-     * Creates a {@code ProxyConfig} configuration for HAProxy protocol.
+     * Creates a {@link ProxyConfig} configuration for HAProxy protocol.
      *
+     * @param proxyAddress the proxy address
      * @param sourceAddress the source address
-     * @param destinationAddress the destination address
      */
     public static HAProxyConfig haproxy(
-            InetSocketAddress sourceAddress, InetSocketAddress destinationAddress) {
+            InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         requireNonNull(sourceAddress, "sourceAddress");
         checkArgument(!sourceAddress.isUnresolved(), "sourceAddress must be resolved");
-        requireNonNull(destinationAddress, "destinationAddress");
-        checkArgument(!destinationAddress.isUnresolved(), "destinationAddress must be resolved");
-        return new HAProxyConfig(sourceAddress, destinationAddress);
+        return new HAProxyConfig(proxyAddress, sourceAddress);
+    }
+
+    /**
+     * Creates a {@link ProxyConfig} configuration for HAProxy protocol. The {@code sourceAddress} will
+     * be inferred from either the {@link ServiceRequestContext} or the local connection address.
+     *
+     * @param proxyAddress the proxy address
+     */
+    public static ProxyConfig haproxy(InetSocketAddress proxyAddress) {
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        return new HAProxyConfig(proxyAddress);
     }
 
     /**
