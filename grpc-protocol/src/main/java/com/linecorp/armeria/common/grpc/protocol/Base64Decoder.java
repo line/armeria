@@ -51,8 +51,6 @@ final class Base64Decoder implements ByteProcessor {
     // Forked from https://github.com/netty/netty/blob/netty-4.1.51.Final/codec
     // /src/main/java/io/netty/handler/codec/base64/Base64.java
 
-    private static final byte WHITE_SPACE_ENC = -5; // Indicates white space in encoding
-
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
     private static final byte[] DECODABET = {
@@ -123,7 +121,7 @@ final class Base64Decoder implements ByteProcessor {
     @Override
     public boolean process(byte value) throws Exception {
         final byte decodedByte = DECODABET[value & 0xFF];
-        if (decodedByte <= WHITE_SPACE_ENC) {
+        if (decodedByte < EQUALS_SIGN_ENC) {
             throw new IllegalArgumentException(
                     "invalid Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
         }

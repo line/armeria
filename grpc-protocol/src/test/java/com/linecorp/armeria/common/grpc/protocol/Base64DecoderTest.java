@@ -17,16 +17,14 @@ package com.linecorp.armeria.common.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -35,7 +33,7 @@ import io.netty.buffer.Unpooled;
 class Base64DecoderTest {
 
     @ParameterizedTest
-    @ArgumentsSource(EncodedStringProvider.class)
+    @ExpectedAndEncodedStringSource
     void decode(String expected, String encoded) {
         final Base64Decoder base64Decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
         final ByteBuf decoded = base64Decoder.decode(Unpooled.wrappedBuffer(encoded.getBytes()));
@@ -44,7 +42,7 @@ class Base64DecoderTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(EncodedStringProvider.class)
+    @ExpectedAndEncodedStringSource
     void decodeConcatenatedBufs(String expected, String encoded) {
         final ByteBuf buf1 = Unpooled.wrappedBuffer(encoded.getBytes());
         final ByteBuf buf2 = buf1.retainedDuplicate();
@@ -56,14 +54,14 @@ class Base64DecoderTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(EncodedStringProvider.class)
+    @ExpectedAndEncodedStringSource
     void decodeEachByteSeparately(String expected, String encoded) {
         final ByteBuf buf = Unpooled.wrappedBuffer(encoded.getBytes());
         final Base64Decoder base64Decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
         final int readableBytes = buf.readableBytes();
         final List<ByteBuf> bufs = new ArrayList<>();
         for (int i = 0; i < readableBytes; i++) {
-            bufs.add(base64Decoder.decode(buf.retainedSlice(i, 1)));
+            bufs.add(base64Decoder.decode(buf.readRetainedSlice(1)));
         }
         buf.release();
         final ByteBuf wrappedBuffer = Unpooled.wrappedBuffer(bufs.toArray(new ByteBuf[0]));
@@ -71,13 +69,11 @@ class Base64DecoderTest {
         wrappedBuffer.release();
     }
 
-    private static final class EncodedStringProvider implements ArgumentsProvider {
-
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(Arguments.of("abcde", "YWJjZGU="),
-                             Arguments.of("123456789", "MTIzNDU2Nzg5"),
-                             Arguments.of("~!@#$%^&*()-_", "fiFAIyQlXiYqKCktXw=="));
-        }
-    }
+    @CsvSource({
+            "abcde,         YWJjZGU=",
+            "123456789,     MTIzNDU2Nzg5",
+            "~!@#$%^&*()-_, fiFAIyQlXiYqKCktXw=="
+    })
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface ExpectedAndEncodedStringSource {}
 }
