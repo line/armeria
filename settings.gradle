@@ -44,7 +44,7 @@ includeWithFlags ':javadoc',                             'java', 'publish', 'no_
 // Unpublished Java projects
 includeWithFlags ':benchmarks',              'java'
 includeWithFlags ':it:context-storage',      'java'
-includeWithFlags ':it:grpcweb',              'java', 'akka-grpc'
+includeWithFlags ':it:grpcweb',              'java', 'akka-grpc_2.13'
 includeWithFlags ':it:micrometer1.3',        'java', 'relocate'
 includeWithFlags ':it:server',               'java', 'relocate'
 includeWithFlags ':it:spring:boot2-tomcat9', 'java', 'relocate'
@@ -73,7 +73,7 @@ project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:grpc-example',                       'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                        'java'
-includeWithFlags ':examples:grpc-scala',                         'java', 'scala-grpc'
+includeWithFlags ':examples:grpc-scala',                         'java', 'scala-grpc_2.13'
 includeWithFlags ':examples:grpc-reactor',                       'java', 'reactor-grpc'
 includeWithFlags ':examples:proxy-server',                       'java'
 includeWithFlags ':examples:saml-service-provider',              'java'
