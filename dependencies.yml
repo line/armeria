@@ -173,35 +173,14 @@ io.dropwizard:
   dropwizard-core:
     version: &DROPWIZARD_VERSION '2.0.12'
     javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.11/
-  dropwizard-jackson:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jackson/2.0.11/
-  dropwizard-lifecycle:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-lifecycle/2.0.11/
-  dropwizard-jersey:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jersey/2.0.11/
-  dropwizard-jetty:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jetty/2.0.11/
-  dropwizard-testing:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-      - https://www.javadoc.io/doc/io.dropwizard/dropwizard-testing/2.0.11/
-  dropwizard-util:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-util/2.0.11/
-  dropwizard-validation:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-validation/2.0.11/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.12/
+  dropwizard-jackson: { version: *DROPWIZARD_VERSION }
+  dropwizard-lifecycle: { version: *DROPWIZARD_VERSION }
+  dropwizard-jersey: { version: *DROPWIZARD_VERSION }
+  dropwizard-jetty: { version: *DROPWIZARD_VERSION }
+  dropwizard-testing: { version: *DROPWIZARD_VERSION }
+  dropwizard-util: { version: *DROPWIZARD_VERSION }
+  dropwizard-validation: { version: *DROPWIZARD_VERSION }
 
 io.dropwizard.metrics:
   metrics-core:
