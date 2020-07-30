@@ -63,8 +63,7 @@ class Base64DecoderTest {
         final int readableBytes = buf.readableBytes();
         final List<ByteBuf> bufs = new ArrayList<>();
         for (int i = 0; i < readableBytes; i++) {
-            bufs.add(base64Decoder.decode(buf.retainedSlice(buf.readerIndex(), 1)));
-            buf.readerIndex(i + 1);
+            bufs.add(base64Decoder.decode(buf.retainedSlice(i, 1)));
         }
         buf.release();
         final ByteBuf wrappedBuffer = Unpooled.wrappedBuffer(bufs.toArray(new ByteBuf[0]));
