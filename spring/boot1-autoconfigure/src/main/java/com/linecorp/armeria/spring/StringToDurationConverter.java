@@ -17,35 +17,16 @@
 package com.linecorp.armeria.spring;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Set;
 
-import javax.annotation.Nullable;
-
-import org.springframework.core.convert.TypeDescriptor;
-import org.springframework.core.convert.converter.GenericConverter;
-import org.springframework.stereotype.Component;
-import org.springframework.util.ObjectUtils;
+import org.springframework.core.convert.converter.Converter;
 
 /**
  * Convert {@link String} to {@link Duration}.
  */
-@Component
-public class StringToDurationConverter implements GenericConverter {
+public class StringToDurationConverter implements Converter<String, Duration> {
 
     @Override
-    public Set<ConvertiblePair> getConvertibleTypes() {
-        return Collections.singleton(new ConvertiblePair(String.class, Duration.class));
-    }
-
-    @Nullable
-    @Override
-    public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
-        if (ObjectUtils.isEmpty(source)) {
-            return null;
-        }
-
-        final String value = source.toString();
-        return DurationStyle.detect(value).parse(value);
+    public Duration convert(String source) {
+        return DurationStyle.detect(source).parse(source);
     }
 }

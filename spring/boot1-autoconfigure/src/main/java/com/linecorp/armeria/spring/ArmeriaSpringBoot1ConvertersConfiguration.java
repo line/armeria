@@ -16,27 +16,42 @@
 
 package com.linecorp.armeria.spring;
 
+import java.util.HashSet;
+import java.util.List;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ConversionServiceFactoryBean;
 import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.converter.Converter;
 
 import com.google.common.collect.Sets;
 
 /**
- * Provides useful {@link ConversionService}.
+ * Provides useful {@link Converter}s.
  */
 @Configuration
-public class ArmeriaSpringBoot1ConversionServiceConfiguration {
+public class ArmeriaSpringBoot1ConvertersConfiguration {
 
     /**
      * Create an {@link ConversionService} bean.
      */
     @Bean
-    public ConversionService armeriaSpringBoot1ConversionService() {
-        final ConversionServiceFactoryBean factoryBean = new ConversionServiceFactoryBean();
-        factoryBean.setConverters(Sets.newHashSet(new StringToDurationConverter()));
-        factoryBean.afterPropertiesSet();
-        return factoryBean.getObject();
+    @ConditionalOnBean(Converter.class)
+    @ConditionalOnMissingBean(ConversionService.class)
+    public ConversionServiceFactoryBean conversionService(List<Converter> converterList) {
+        final ConversionServiceFactoryBean conversionServiceFactoryBean = new ConversionServiceFactoryBean();
+        conversionServiceFactoryBean.setConverters(Sets.newHashSet(converterList));
+        return conversionServiceFactoryBean;
+    }
+
+    /**
+     * Create an {@link StringToDurationConverter} bean.
+     */
+    @Bean
+    public StringToDurationConverter stringToDurationConverter() {
+        return new StringToDurationConverter();
     }
 }
