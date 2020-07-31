@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.spring;
 
-import java.util.HashSet;
 import java.util.List;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,7 +37,6 @@ public class ArmeriaSpringBoot1ConvertersConfiguration {
      * Create an {@link ConversionService} bean.
      */
     @Bean
-    @ConditionalOnBean(Converter.class)
     @ConditionalOnMissingBean(ConversionService.class)
     public ConversionServiceFactoryBean conversionService(List<Converter> converterList) {
         final ConversionServiceFactoryBean conversionServiceFactoryBean = new ConversionServiceFactoryBean();
