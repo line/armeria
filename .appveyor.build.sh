@@ -30,12 +30,12 @@ fi
 
 # Prepare the environment variables based on the specified profile.
 PROFILE="$1"
+COVERAGE=0
 case "$PROFILE" in
 java8)
   TEST_JRE_URL="$JRE8_URL"
   TEST_JRE_VERSION="$JRE8_VERSION"
   TEST_JAVA_VERSION='8'
-  COVERAGE=0
   ;;
 java11)
   TEST_JRE_URL="$JRE11_URL"
@@ -43,11 +43,10 @@ java11)
   TEST_JAVA_VERSION='11'
   COVERAGE=1
   ;;
-java13|site)
+java13|site|leak)
   TEST_JRE_URL="$JRE13_URL"
   TEST_JRE_VERSION="$JRE13_VERSION"
   TEST_JAVA_VERSION='13'
-  COVERAGE=0
   ;;
 *)
   echo "Unknown profile: $PROFILE" >&2
@@ -146,11 +145,17 @@ if [[ "$COVERAGE" -eq 1 ]]; then
 fi
 
 msg "Building .."
-if [[ "$PROFILE" != 'site' ]]; then
-  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 lint build
-else
+case "$PROFILE" in
+site)
   echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:lint :site:site
-fi
+  ;;
+leak)
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 -Pleak -PnoLint test
+  ;;
+*)
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 lint build
+  ;;
+esac
 
 if [[ "$COVERAGE" -eq 1 ]]; then
   # Send coverage reports to CodeCov.io.
