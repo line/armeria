@@ -34,8 +34,6 @@
  */
 package com.linecorp.armeria.common.grpc.protocol;
 
-import java.util.Base64;
-
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
@@ -43,8 +41,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ByteProcessor;
 
 /**
- * A stateful Base64decoder. Unlike {@link Base64#getDecoder()}, this decoder does not end when it meets
- * padding('='), but continues to decode until the end of the {@link ByteBuf} given by
+ * A stateful Base64decoder. Unlike {@link io.netty.handler.codec.base64.Base64Decoder}, this decoder does
+ * not end when it meets padding('='), but continues to decode until the end of the {@link ByteBuf} given by
  * {@link #decode(ByteBuf)}. If the {@link ByteBuf} does not have necessary 4 bytes to decode as 3 bytes,
  * it stores the remained bytes and prepend them to the next {@link #decode(ByteBuf)} and decode together.
  */
@@ -52,8 +50,6 @@ final class Base64Decoder implements ByteProcessor {
 
     // Forked from https://github.com/netty/netty/blob/netty-4.1.51.Final/codec
     // /src/main/java/io/netty/handler/codec/base64/Base64.java
-
-    private static final byte WHITE_SPACE_ENC = -5; // Indicates white space in encoding
 
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
@@ -125,19 +121,18 @@ final class Base64Decoder implements ByteProcessor {
     @Override
     public boolean process(byte value) throws Exception {
         final byte decodedByte = DECODABET[value & 0xFF];
-        if (decodedByte < WHITE_SPACE_ENC) {
+        if (decodedByte < EQUALS_SIGN_ENC) {
             throw new IllegalArgumentException(
                     "invalid Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
         }
 
-        // White space, Equals sign or better
-        if (decodedByte < EQUALS_SIGN_ENC) {
-            // Ignore the white space.
-            return true;
-        }
-
         // Equals sign or better
         if (pos < 3) {
+            if (pos < 2 && decodedByte == EQUALS_SIGN_ENC) {
+                throw new IllegalArgumentException(
+                        "invalid padding position: " + pos + " (expected: 2 or 3)");
+            }
+
             // Needs more bytes.
             last3[pos++] = decodedByte;
             return true;
@@ -153,13 +148,18 @@ final class Base64Decoder implements ByteProcessor {
         final ByteBuf dest = this.dest;
         assert dest != null;
 
+        final byte b3 = decodedByte;
         if (b2 == EQUALS_SIGN_ENC) {
+            if (b3 != EQUALS_SIGN_ENC) {
+                throw new IllegalArgumentException(
+                        "a non padding character can't follow to a padding. character: " + b3);
+            }
+
             // Example: Dk==
             dest.writeByte((b0 & 0xff) << 2 | (b1 & 0xff) >>> 4);
             return true;
         }
 
-        final byte b3 = decodedByte;
         if (b3 == EQUALS_SIGN_ENC) {
             // Example: DkL=
             // Packing bytes into a short to reduce bound and reference count checking.

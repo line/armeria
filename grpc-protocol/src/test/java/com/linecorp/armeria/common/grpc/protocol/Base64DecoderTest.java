@@ -16,66 +16,96 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.base64.Base64;
 
 class Base64DecoderTest {
 
-    private static final ByteBuf[] EMPTY_BYTE_BUF = new ByteBuf[0];
+    @Test
+    void lineBreakTabSpaceIllegal() {
+        invalidCharacter("YWJj\nZGU=");
+        invalidCharacter("YWJj\tZGU=");
+        invalidCharacter("YWJj ZGU=");
+    }
 
     @Test
-    void decodeConcatenatedBufsWithPadding() {
-        final String str = "abcd"; // YWJjZA==
-        final ByteBuf buf = Unpooled.wrappedBuffer(str.getBytes());
-        final ByteBuf encoded1 = Base64.encode(buf);
-        buf.readerIndex(0);
-        final ByteBuf encoded2 = Base64.encode(buf);
-        final ByteBuf concatenated = Unpooled.wrappedBuffer(encoded1, encoded2); // YWJjZA==YWJjZA==
+    void invalidString() {
+        invalidCharacter("A\u007f"); // 0x7f is invalid
+        invalidCharacter("Wf2!"); // ! is invalid
+        invalidCharacter("?"); // ? is invalid
+        // invalid padding position
+        invalidCharacter("A=BC");
+        invalidCharacter("=ABC");
+        invalidCharacter("AB=C");
+    }
+
+    private static void invalidCharacter(String invalid) {
+        final Base64Decoder decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
+        final ByteBuf buf = Unpooled.wrappedBuffer(invalid.getBytes());
+        assertThatThrownBy(() -> decoder.decode(buf)).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @ParameterizedTest
+    @ExpectedAndEncodedStringSource
+    void decode(String expected, String encoded) {
         final Base64Decoder base64Decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
-        final ByteBuf decoded = base64Decoder.decode(concatenated);
-        assertThat(decoded.toString(Charset.defaultCharset())).isEqualTo("abcdabcd");
+        final ByteBuf decoded = base64Decoder.decode(Unpooled.wrappedBuffer(encoded.getBytes()));
+        assertThat(decoded.toString(Charset.defaultCharset())).isEqualTo(expected);
         decoded.release();
     }
 
-    @Test
-    void decodeMultipleEncodedBytes() {
-        final String str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz1234567890";
-        final byte[] bytes = str.getBytes();
-        final List<ByteBuf> fragments = fragmentRandomly(bytes);
-        final int half = fragments.size() / 2;
-        final ByteBuf first =
-                Unpooled.wrappedBuffer(fragments.subList(0, half).toArray(EMPTY_BYTE_BUF));
-        final ByteBuf second =
-                Unpooled.wrappedBuffer(fragments.subList(half, fragments.size()).toArray(EMPTY_BYTE_BUF));
+    @ParameterizedTest
+    @ExpectedAndEncodedStringSource
+    void decodeConcatenatedBufs(String expected, String encoded) {
+        final ByteBuf buf1 = Unpooled.wrappedBuffer(encoded.getBytes());
+        final ByteBuf buf2 = buf1.retainedDuplicate();
+
         final Base64Decoder base64Decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
-        final ByteBuf decodedFirst = base64Decoder.decode(first);
-        final ByteBuf decodedSecond = base64Decoder.decode(second);
-        assertThat(Unpooled.wrappedBuffer(decodedFirst, decodedSecond).toString(Charset.defaultCharset()))
-                .isEqualTo(str);
-        decodedFirst.release();
-        decodedSecond.release();
+        final ByteBuf decoded = base64Decoder.decode(Unpooled.wrappedBuffer(buf1, buf2));
+        assertThat(decoded.toString(Charset.defaultCharset())).isEqualTo(expected + expected);
+        decoded.release();
     }
 
-    private static List<ByteBuf> fragmentRandomly(byte[] bytes) {
-        final List<ByteBuf> fragments = new ArrayList<>();
-        for (int i = 0; i < bytes.length;) {
-            final int to = Math.min(bytes.length,
-                                    new Random().nextInt(5) + 1 + i); // One byte is selected at least.
-            final ByteBuf encoded = Base64.encode(Unpooled.wrappedBuffer(Arrays.copyOfRange(bytes, i, to)));
-            fragments.add(encoded);
-            i = to;
+    @ParameterizedTest
+    @ExpectedAndEncodedStringSource
+    void decodeEachByteSeparately(String expected, String encoded) {
+        final ByteBuf buf = Unpooled.wrappedBuffer(encoded.getBytes());
+        final Base64Decoder base64Decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
+        final List<ByteBuf> bufs = new ArrayList<>();
+        while (buf.isReadable()) {
+            bufs.add(base64Decoder.decode(buf.readRetainedSlice(1)));
         }
-        return fragments;
+        buf.release();
+        final ByteBuf wrappedBuffer = Unpooled.wrappedBuffer(bufs.toArray(new ByteBuf[0]));
+        assertThat(wrappedBuffer.toString(Charset.defaultCharset())).isEqualTo(expected);
+        wrappedBuffer.release();
     }
+
+    @CsvSource({
+            "f,             Zg==",
+            "fo,            Zm8=",
+            "foo,           Zm9v",
+            "foob,          Zm9vYg==",
+            "fooba,         Zm9vYmE=",
+            "foobar,        Zm9vYmFy",
+            "abcde,         YWJjZGU=",
+            "123456789,     MTIzNDU2Nzg5",
+            "~!@#$%^&*()-_, fiFAIyQlXiYqKCktXw=="
+    })
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface ExpectedAndEncodedStringSource {}
 }
