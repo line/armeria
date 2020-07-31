@@ -144,7 +144,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             final ByteBuf maybeEncodedBuf;
             if (encodeBase64) {
                 try {
-                    maybeEncodedBuf = Base64.encode(buf);
+                    maybeEncodedBuf = Base64.encode(buf, false);
                 } finally {
                     buf.release();
                 }
