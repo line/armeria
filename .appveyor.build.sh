@@ -150,7 +150,7 @@ site)
   echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:lint :site:site
   ;;
 leak)
-  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 -Pleak -PnoLint -PnoWeb test
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 -Pleak -PnoLint test
   ;;
 *)
   echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 lint build
