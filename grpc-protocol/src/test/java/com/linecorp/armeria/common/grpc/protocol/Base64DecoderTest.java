@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -23,6 +24,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -31,6 +33,31 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 class Base64DecoderTest {
+
+    @Test
+    void lineBreakTabSpaceIllegal() {
+        invalidCharacter("YWJj\nZGU=");
+        invalidCharacter("YWJj\tZGU=");
+        invalidCharacter("YWJj ZGU=");
+    }
+
+    @Test
+    void invalidString() {
+        invalidCharacter("A\u007f"); // 0x7f is invalid
+        invalidCharacter("Wf2!"); // ! is invalid
+        invalidCharacter("?"); // ? is invalid
+        // invalid padding position
+        invalidCharacter("A=BC");
+        invalidCharacter("=ABC");
+        invalidCharacter("AB=C");
+    }
+
+    private static void invalidCharacter(String invalid) {
+        final Base64Decoder decoder = new Base64Decoder(PooledByteBufAllocator.DEFAULT);
+        final ByteBuf buf = Unpooled.wrappedBuffer(invalid.getBytes());
+        assertThatThrownBy(() -> decoder.decode(buf)).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(buf.refCnt()).isZero();
+    }
 
     @ParameterizedTest
     @ExpectedAndEncodedStringSource
@@ -69,6 +96,12 @@ class Base64DecoderTest {
     }
 
     @CsvSource({
+            "f,             Zg==",
+            "fo,            Zm8=",
+            "foo,           Zm9v",
+            "foob,          Zm9vYg==",
+            "fooba,         Zm9vYmE=",
+            "foobar,        Zm9vYmFy",
             "abcde,         YWJjZGU=",
             "123456789,     MTIzNDU2Nzg5",
             "~!@#$%^&*()-_, fiFAIyQlXiYqKCktXw=="

@@ -128,6 +128,11 @@ final class Base64Decoder implements ByteProcessor {
 
         // Equals sign or better
         if (pos < 3) {
+            if (pos < 2 && decodedByte == EQUALS_SIGN_ENC) {
+                throw new IllegalArgumentException(
+                        "invalid padding position: " + pos + " (expected: 2 or 3)");
+            }
+
             // Needs more bytes.
             last3[pos++] = decodedByte;
             return true;
@@ -143,13 +148,18 @@ final class Base64Decoder implements ByteProcessor {
         final ByteBuf dest = this.dest;
         assert dest != null;
 
+        final byte b3 = decodedByte;
         if (b2 == EQUALS_SIGN_ENC) {
+            if (b3 != EQUALS_SIGN_ENC) {
+                throw new IllegalArgumentException(
+                        "a non padding character can't follow to a padding. character: " + b3);
+            }
+
             // Example: Dk==
             dest.writeByte((b0 & 0xff) << 2 | (b1 & 0xff) >>> 4);
             return true;
         }
 
-        final byte b3 = decodedByte;
         if (b3 == EQUALS_SIGN_ENC) {
             // Example: DkL=
             // Packing bytes into a short to reduce bound and reference count checking.
