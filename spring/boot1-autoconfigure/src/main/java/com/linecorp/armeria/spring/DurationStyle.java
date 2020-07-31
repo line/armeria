@@ -41,7 +41,6 @@ import org.springframework.util.StringUtils;
 
 /**
  * Duration format styles.
- *
  */
 enum DurationStyle {
 

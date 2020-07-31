@@ -34,7 +34,7 @@ import com.google.common.collect.Sets;
 public class ArmeriaSpringBoot1ConversionServiceConfiguration {
 
     /**
-     * Create an {@link ConversionService} bean.
+     * Create a new {@link ConversionService} bean.
      */
     @Bean
     @ConditionalOnMissingBean(ConversionService.class)
@@ -46,7 +46,7 @@ public class ArmeriaSpringBoot1ConversionServiceConfiguration {
     }
 
     /**
-     * Create an {@link StringToDurationConverter} bean. If {@link ConversionService} is already registered,
+     * Create a new {@link StringToDurationConverter} bean. If {@link ConversionService} is already registered,
      * it is provided so that {@link Converter} can be taken out from {@link BeanFactory} and used.
      */
     @Bean

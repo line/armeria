@@ -24,7 +24,6 @@ import org.springframework.core.convert.converter.Converter;
  * Convert {@link String} to {@link Duration}.
  */
 class StringToDurationConverter implements Converter<String, Duration> {
-
     @Override
     public Duration convert(String source) {
         return DurationStyle.detect(source).parse(source);

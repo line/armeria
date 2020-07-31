@@ -26,10 +26,6 @@ class ArmeriaSpringBoot1FormatterRegistrar implements FormatterRegistrar {
 
     @Override
     public void registerFormatters(FormatterRegistry registry) {
-        registerConverters(registry);
-    }
-
-    private static void registerConverters(FormatterRegistry registry) {
         registry.addConverter(new StringToDurationConverter());
     }
 }
