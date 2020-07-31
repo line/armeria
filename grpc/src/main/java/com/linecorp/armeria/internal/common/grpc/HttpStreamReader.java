@@ -209,8 +209,9 @@ public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunctio
         // 4) A gRPC client requests a message and the received message contains trailers,
         //    so ArmeriaClientCall tries to close deframer.
         if (!deframer.isClosing() && !deframer.isClosed()) {
-            // A Request is completed, however the corresponding response could not be started yet.
-            // Therefore we cannot send an endOfStream signal here.
+            // This is a workaround that some gRPC implementations does not handle halfClose properly.
+            // For example, gRPC-Kotlin calls ArmeriaServerCall.close() by invoking listener.onHalfClose().
+            // Let a gRPC stub completes the requestStream by itself when sending all request messages.
             deframer.closeWhenComplete();
         }
     }
