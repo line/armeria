@@ -82,9 +82,3 @@ tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.com
 tasks.withType(Checkstyle) {
     onlyIf { false }
 }
-
-// Graceful shutdown is supported only on Spring Boot 2
-// because Spring Boot 1 cannot convert a String to a Duration.
-tasks.withType(Test) {
-    exclude '**/ArmeriaGracefulShutdownConfigurationTest*'
-}
