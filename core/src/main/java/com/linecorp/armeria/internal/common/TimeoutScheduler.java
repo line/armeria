@@ -51,6 +51,8 @@ public final class TimeoutScheduler {
     private static final AtomicLongFieldUpdater<TimeoutScheduler> pendingTimeoutNanosUpdater =
             AtomicLongFieldUpdater.newUpdater(TimeoutScheduler.class, "pendingTimeoutNanos");
 
+    private static final Runnable initializedPendingTimeoutTask = () -> {};
+
     private static final TimeoutFuture COMPLETED_FUTURE;
 
     static {
@@ -90,8 +92,6 @@ public final class TimeoutScheduler {
     @SuppressWarnings("FieldMayBeFinal")
     private volatile long pendingTimeoutNanos;
 
-    private volatile boolean initialized;
-
     public TimeoutScheduler(long timeoutNanos) {
         this.timeoutNanos = timeoutNanos;
         pendingTimeoutNanos = timeoutNanos;
@@ -121,21 +121,15 @@ public final class TimeoutScheduler {
             state = State.INACTIVE;
         }
 
-        Runnable pendingTimeoutTask;
         for (;;) {
-            pendingTimeoutTask = this.pendingTimeoutTask;
-            if (pendingTimeoutTaskUpdater.compareAndSet(this, pendingTimeoutTask, null)) {
+            final Runnable pendingTimeoutTask = this.pendingTimeoutTask;
+            if (pendingTimeoutTaskUpdater.compareAndSet(this, pendingTimeoutTask,
+                                                        initializedPendingTimeoutTask)) {
+                if (pendingTimeoutTask != null) {
+                    pendingTimeoutTask.run();
+                }
                 break;
             }
-        }
-
-        if (pendingTimeoutTask != null) {
-            pendingTimeoutTask.run();
-        }
-        initialized = true;
-        final Runnable newlyAdded = this.pendingTimeoutTask;
-        if (newlyAdded != null) {
-            newlyAdded.run();
         }
     }
 
@@ -148,7 +142,7 @@ public final class TimeoutScheduler {
             return;
         }
 
-        if (initialized) {
+        if (initialized()) {
             if (eventLoop.inEventLoop()) {
                 clearTimeout0(resetTimeout);
             } else {
@@ -223,7 +217,7 @@ public final class TimeoutScheduler {
             return;
         }
 
-        if (initialized) {
+        if (initialized()) {
             if (eventLoop.inEventLoop()) {
                 extendTimeoutNanos0(adjustmentNanos);
             } else {
@@ -265,7 +259,7 @@ public final class TimeoutScheduler {
     private void setTimeoutNanosFromNow(long timeoutNanos) {
         checkArgument(timeoutNanos > 0, "timeoutNanos: %s (expected: > 0)", timeoutNanos);
 
-        if (initialized) {
+        if (initialized()) {
             if (eventLoop.inEventLoop()) {
                 setTimeoutNanosFromNow0(timeoutNanos);
             } else {
@@ -305,7 +299,7 @@ public final class TimeoutScheduler {
     }
 
     public void timeoutNow() {
-        if (initialized) {
+        if (initialized()) {
             if (eventLoop.inEventLoop()) {
                 timeoutNow0();
             } else {
@@ -343,18 +337,19 @@ public final class TimeoutScheduler {
     private void addPendingTimeoutTask(Runnable pendingTimeoutTask) {
         if (!pendingTimeoutTaskUpdater.compareAndSet(this, null, pendingTimeoutTask)) {
             for (;;) {
-                if (initialized) {
+                final Runnable oldPendingTimeoutTask = this.pendingTimeoutTask;
+                if (oldPendingTimeoutTask == initializedPendingTimeoutTask) {
                     eventLoop.execute(pendingTimeoutTask);
                     break;
                 }
 
-                final Runnable pendingTask = this.pendingTimeoutTask;
-                final Runnable newPendingTask = () -> {
-                    pendingTask.run();
+                final Runnable newPendingTimeoutTask = () -> {
+                    oldPendingTimeoutTask.run();
                     pendingTimeoutTask.run();
                 };
 
-                if (pendingTimeoutTaskUpdater.compareAndSet(this, pendingTask, newPendingTask)) {
+                if (pendingTimeoutTaskUpdater.compareAndSet(this, oldPendingTimeoutTask,
+                                                            newPendingTimeoutTask)) {
                     break;
                 }
             }
@@ -410,7 +405,11 @@ public final class TimeoutScheduler {
     }
 
     public long timeoutNanos() {
-        return initialized ? timeoutNanos : pendingTimeoutNanos;
+        return initialized() ? timeoutNanos : pendingTimeoutNanos;
+    }
+
+    private boolean initialized() {
+        return pendingTimeoutTask == initializedPendingTimeoutTask;
     }
 
     public CompletableFuture<Void> whenTimingOut() {
