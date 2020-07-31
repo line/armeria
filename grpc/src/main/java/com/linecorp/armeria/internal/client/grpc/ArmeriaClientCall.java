@@ -331,8 +331,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                 buf = ctx.alloc().compositeBuffer();
                 boolean success = false;
-                try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
-                    final InputStream stream = message.stream();
+                try (ByteBufOutputStream os = new ByteBufOutputStream(buf);
+                     InputStream stream = message.stream()) {
                     assert stream != null;
                     ByteStreams.copy(stream, os);
                     success = true;
