@@ -215,7 +215,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         res.subscribe(responseReader, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-        res.whenComplete().handleAsync(responseReader, ctx.eventLoop());
         responseListener.onReady();
     }
 
@@ -224,7 +223,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             responseReader.request(numMessages);
         } else {
-            ctx.eventLoop().submit(() -> responseReader.request(numMessages));
+            ctx.eventLoop().execute(() -> responseReader.request(numMessages));
         }
     }
 
@@ -233,7 +232,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doCancel(message, cause);
         } else {
-            ctx.eventLoop().submit(() -> doCancel(message, cause));
+            ctx.eventLoop().execute(() -> doCancel(message, cause));
         }
     }
 
@@ -266,7 +265,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             req.close();
         } else {
-            ctx.eventLoop().submit((Runnable) req::close);
+            ctx.eventLoop().execute(req::close);
         }
     }
 
@@ -276,7 +275,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
-            ctx.eventLoop().submit(() -> doSendMessage(message));
+            ctx.eventLoop().execute(() -> doSendMessage(message));
         }
     }
 
@@ -390,6 +389,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status, Metadata metadata) {
+        if (cancelCalled) {
+            return;
+        }
         close(status, metadata);
     }
 

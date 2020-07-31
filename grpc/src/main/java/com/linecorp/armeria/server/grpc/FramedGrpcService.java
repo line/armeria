@@ -207,7 +207,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (call != null) {
             ctx.setRequestTimeoutHandler(() -> call.close(Status.CANCELLED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-            req.whenComplete().handleAsync(call.messageReader(), ctx.eventLoop());
         }
         return res;
     }
