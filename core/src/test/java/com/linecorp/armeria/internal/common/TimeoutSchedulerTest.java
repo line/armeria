@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.common.util.TimeoutMode.EXTEND;
+import static com.linecorp.armeria.common.util.TimeoutMode.SET_FROM_NOW;
+import static com.linecorp.armeria.common.util.TimeoutMode.SET_FROM_START;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,7 +33,6 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.TimeoutScheduler.State;
 import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 
@@ -63,21 +65,21 @@ class TimeoutSchedulerTest {
 
     @Test
     void adjustTimeout() {
-        final long initTimeoutNanos = Duration.ofMillis(1000).toNanos();
-        final long adjustmentNanos = Duration.ofMillis(200).toNanos();
-        final long tolerance = Duration.ofMillis(100).toNanos();
+        final long initTimeoutNanos = MILLISECONDS.toNanos(1000);
+        final long adjustmentNanos = MILLISECONDS.toNanos(200);
+        final long tolerance = MILLISECONDS.toNanos(100);
 
         executeInEventLoop(initTimeoutNanos, timeoutScheduler -> {
             final long startTimeNanos = timeoutScheduler.startTimeNanos();
 
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, adjustmentNanos);
+            timeoutScheduler.setTimeoutNanos(EXTEND, adjustmentNanos);
             final long passedNanos = System.nanoTime() - startTimeNanos;
             assertThat(timeoutScheduler.timeoutNanos()).isBetween(
                     initTimeoutNanos + adjustmentNanos - passedNanos - tolerance,
                     initTimeoutNanos + adjustmentNanos - passedNanos + tolerance);
 
-            final long adjustmentNanos2 = Duration.ofMillis(-200).toNanos();
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, adjustmentNanos2);
+            final long adjustmentNanos2 = MILLISECONDS.toNanos(-200);
+            timeoutScheduler.setTimeoutNanos(EXTEND, adjustmentNanos2);
             final long passedMillis2 = System.nanoTime() - startTimeNanos;
             assertThat(timeoutScheduler.timeoutNanos()).isBetween(
                     initTimeoutNanos + adjustmentNanos + adjustmentNanos2 - passedMillis2 - tolerance,
@@ -88,40 +90,35 @@ class TimeoutSchedulerTest {
     @Test
     void resetTimeout() {
         executeInEventLoop(0, timeoutScheduler -> {
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(500).toNanos());
-            assertTimeout(timeoutScheduler.timeoutNanos(), Duration.ofMillis(500).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(500));
+            assertTimeoutWithTolerance(timeoutScheduler.timeoutNanos(), MILLISECONDS.toNanos(500));
         });
     }
 
     @Test
     void resetTimeout_zero() {
         executeInEventLoop(0, timeoutScheduler -> {
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             assertThatThrownBy(() -> {
-                timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, 0);
+                timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, 0);
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessageContaining("timeoutNanos:");
         });
     }
 
-    void assertTimeout(long actualNanos, long expectedNanos) {
-        assertThat(actualNanos)
-                .isCloseTo(expectedNanos, Offset.offset(Duration.ofMillis(200).toNanos()));
-    }
-
     @Test
     void resetTimout_multipleNonZero() {
         executeInEventLoop(0, timeoutScheduler -> {
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(500).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(500));
         });
     }
 
     @Test
     void cancelTimeout_beforeDeadline() {
         executeInEventLoop(0, timeoutScheduler -> {
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             timeoutScheduler.clearTimeout();
             assertThat(timeoutScheduler.isTimedOut()).isFalse();
         });
@@ -139,7 +136,7 @@ class TimeoutSchedulerTest {
     @Test
     void cancelTimeout_byResetTimeoutZero() {
         executeInEventLoop(0, timeoutScheduler -> {
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             timeoutScheduler.clearTimeout();
             assertThat((Object) timeoutScheduler.timeoutFuture()).isNull();
         });
@@ -150,7 +147,7 @@ class TimeoutSchedulerTest {
         executeInEventLoop(0, timeoutScheduler -> {
             timeoutScheduler.timeoutNow();
             assertThat(timeoutScheduler.isTimedOut()).isTrue();
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             assertThat(timeoutScheduler.isTimedOut()).isTrue();
         });
     }
@@ -158,12 +155,12 @@ class TimeoutSchedulerTest {
     @Test
     void extendTimeoutWhenScheduled() {
         executeInEventLoop(0, timeoutScheduler -> {
-            final long timeoutNanos = Duration.ofMillis(1000).toNanos();
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, timeoutNanos);
+            final long timeoutNanos = MILLISECONDS.toNanos(1000);
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, timeoutNanos);
             final long currentTimeoutNanos = timeoutScheduler.timeoutNanos();
-            assertTimeout(currentTimeoutNanos, timeoutNanos);
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, timeoutNanos);
-            assertTimeout(timeoutScheduler.timeoutNanos(), currentTimeoutNanos + timeoutNanos);
+            assertTimeoutWithTolerance(currentTimeoutNanos, timeoutNanos);
+            timeoutScheduler.setTimeoutNanos(EXTEND, timeoutNanos);
+            assertTimeoutWithTolerance(timeoutScheduler.timeoutNanos(), currentTimeoutNanos + timeoutNanos);
         });
     }
 
@@ -172,7 +169,7 @@ class TimeoutSchedulerTest {
         executeInEventLoop(0, timeoutScheduler -> {
             timeoutScheduler.timeoutNow();
             assertThat(timeoutScheduler.isTimedOut()).isTrue();
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(1000));
             assertThat(timeoutScheduler.isTimedOut()).isTrue();
         });
     }
@@ -180,7 +177,7 @@ class TimeoutSchedulerTest {
     @Test
     void cancelTimeoutWhenScheduled() {
         executeInEventLoop(0, timeoutScheduler -> {
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             timeoutScheduler.clearTimeout();
         });
     }
@@ -230,7 +227,7 @@ class TimeoutSchedulerTest {
 
             assertThat(timeoutScheduler.isTimedOut()).isFalse();
 
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             assertThat(timeoutScheduler.state()).isEqualTo(State.SCHEDULED);
 
             timeoutSchedulerRef.set(timeoutScheduler);
@@ -250,7 +247,7 @@ class TimeoutSchedulerTest {
         executeInEventLoop(0, timeoutScheduler -> {
             final CompletableFuture<Void> timeoutFuture = timeoutScheduler.whenTimedOut();
             assertThat(timeoutFuture).isNotDone();
-            timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, Duration.ofMillis(1000).toNanos());
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             timeoutFutureRef.set(timeoutFuture);
         });
         timeoutFutureRef.get().join();
@@ -259,11 +256,58 @@ class TimeoutSchedulerTest {
     @Test
     void pendingTimeout() {
         final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(1000);
-        timeoutScheduler.setTimeoutNanos(TimeoutMode.EXTEND, 1000);
+        timeoutScheduler.setTimeoutNanos(EXTEND, 1000);
         assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(2000);
-        timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_NOW, 1000);
+        timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, 1000);
         assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(1000);
-        timeoutScheduler.setTimeoutNanos(TimeoutMode.SET_FROM_START, 3000);
+
+        timeoutScheduler.clearTimeout(false);
+        assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(1000);
+        timeoutScheduler.clearTimeout();
+        assertThat(timeoutScheduler.timeoutNanos()).isZero();
+
+        timeoutScheduler.setTimeoutNanos(SET_FROM_START, 3000);
         assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(3000);
+    }
+
+    @Test
+    void evaluatePendingTimeout() {
+        final AtomicBoolean completed = new AtomicBoolean();
+        eventExecutor.execute(() -> {
+            TimeoutScheduler timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
+            timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(1000));
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(2000));
+
+            timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
+            timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            assertTimeoutWithTolerance(timeoutScheduler.timeoutNanos(), MILLISECONDS.toNanos(1000));
+
+            timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
+            timeoutScheduler.clearTimeout(false);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(1000));
+
+            timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
+            timeoutScheduler.clearTimeout();
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            assertThat(timeoutScheduler.timeoutNanos()).isZero();
+
+            timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
+            timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
+            timeoutScheduler.setTimeoutNanos(SET_FROM_START, MILLISECONDS.toNanos(10000));
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            assertTimeoutWithTolerance(timeoutScheduler.timeoutNanos(), MILLISECONDS.toNanos(10000));
+            completed.set(true);
+        });
+        await().untilTrue(completed);
+    }
+
+    static void assertTimeoutWithTolerance(long actualNanos, long expectedNanos) {
+        assertThat(actualNanos)
+                .isCloseTo(expectedNanos, Offset.offset(MILLISECONDS.toNanos(200)));
     }
 }

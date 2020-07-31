@@ -144,7 +144,7 @@ public final class TimeoutScheduler {
     }
 
     public void clearTimeout(boolean resetTimeout) {
-        if (timeoutNanos == 0) {
+        if (timeoutNanos() == 0) {
             return;
         }
 
@@ -155,7 +155,9 @@ public final class TimeoutScheduler {
                 eventLoop.execute(() -> clearTimeout0(resetTimeout));
             }
         } else {
-            setPendingTimeoutNanos(0);
+            if (resetTimeout) {
+                setPendingTimeoutNanos(0);
+            }
             addPendingTimeoutTask(() -> clearTimeout0(resetTimeout));
         }
     }
@@ -206,17 +208,18 @@ public final class TimeoutScheduler {
             return;
         }
 
-        if (this.timeoutNanos == 0) {
+        final long currentTimeoutNanos = timeoutNanos();
+        if (currentTimeoutNanos == 0) {
             setTimeoutNanosFromNow(timeoutNanos);
             return;
         }
 
-        final long adjustmentNanos = LongMath.saturatedSubtract(timeoutNanos, this.timeoutNanos);
+        final long adjustmentNanos = LongMath.saturatedSubtract(timeoutNanos, currentTimeoutNanos);
         extendTimeoutNanos(adjustmentNanos);
     }
 
     private void extendTimeoutNanos(long adjustmentNanos) {
-        if (adjustmentNanos == 0 || timeoutNanos == 0) {
+        if (adjustmentNanos == 0 || timeoutNanos() == 0) {
             return;
         }
 
