@@ -142,7 +142,7 @@ public final class TimeoutScheduler {
             return;
         }
 
-        if (initialized()) {
+        if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
                 clearTimeout0(resetTimeout);
             } else {
@@ -217,7 +217,7 @@ public final class TimeoutScheduler {
             return;
         }
 
-        if (initialized()) {
+        if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
                 extendTimeoutNanos0(adjustmentNanos);
             } else {
@@ -259,7 +259,7 @@ public final class TimeoutScheduler {
     private void setTimeoutNanosFromNow(long timeoutNanos) {
         checkArgument(timeoutNanos > 0, "timeoutNanos: %s (expected: > 0)", timeoutNanos);
 
-        if (initialized()) {
+        if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
                 setTimeoutNanosFromNow0(timeoutNanos);
             } else {
@@ -299,7 +299,7 @@ public final class TimeoutScheduler {
     }
 
     public void timeoutNow() {
-        if (initialized()) {
+        if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
                 timeoutNow0();
             } else {
@@ -405,10 +405,10 @@ public final class TimeoutScheduler {
     }
 
     public long timeoutNanos() {
-        return initialized() ? timeoutNanos : pendingTimeoutNanos;
+        return isInitialized() ? timeoutNanos : pendingTimeoutNanos;
     }
 
-    private boolean initialized() {
+    private boolean isInitialized() {
         return pendingTimeoutTask == initializedPendingTimeoutTask;
     }
 
