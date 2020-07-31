@@ -264,7 +264,5 @@ enum DurationStyle {
             }
             throw new IllegalArgumentException("Unknown unit '" + suffix + "'");
         }
-
     }
-
 }
