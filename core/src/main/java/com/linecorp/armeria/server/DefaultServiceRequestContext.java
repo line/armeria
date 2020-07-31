@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -53,7 +54,6 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -84,7 +84,7 @@ public final class DefaultServiceRequestContext
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
-    private final TimeoutScheduler timeoutScheduler;
+    private final TimeoutScheduler requestTimeoutScheduler;
     @Nullable
     private final SSLSession sslSession;
 
@@ -136,14 +136,15 @@ public final class DefaultServiceRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
-             sslSession, proxiedAddresses, clientAddress, requestStartTimeNanos, requestStartTimeMicros,
-             HttpHeaders.of(), HttpHeaders.of());
+             sslSession, proxiedAddresses, clientAddress, /* requestTimeoutScheduler */ null,
+             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
-    private DefaultServiceRequestContext(
+    DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            @Nullable TimeoutScheduler requestTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
@@ -156,7 +157,12 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+        if (requestTimeoutScheduler != null) {
+            this.requestTimeoutScheduler = requestTimeoutScheduler;
+        } else {
+            this.requestTimeoutScheduler =
+                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+        }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -277,45 +283,48 @@ public final class DefaultServiceRequestContext
 
     @Override
     public long requestTimeoutMillis() {
-        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
+        return TimeUnit.NANOSECONDS.toMillis(requestTimeoutScheduler.timeoutNanos());
     }
 
     @Override
     public void clearRequestTimeout() {
-        timeoutScheduler.clearTimeout();
+        requestTimeoutScheduler.clearTimeout();
     }
 
     @Override
     public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
+        requestTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
     }
 
     @Override
     public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         requireNonNull(requestTimeout, "requestTimeout").toNanos());
+        requestTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                requireNonNull(requestTimeout, "requestTimeout").toNanos());
     }
 
-    @Nullable
-    @Override
-    public Runnable requestTimeoutHandler() {
-        return requestTimeoutHandler;
-    }
-
-    @Override
-    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
-        this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
+    TimeoutScheduler requestTimeoutScheduler() {
+        return requestTimeoutScheduler;
     }
 
     @Override
     public void timeoutNow() {
-        timeoutScheduler.timeoutNow();
+        requestTimeoutScheduler.timeoutNow();
     }
 
     @Override
     public boolean isTimedOut() {
-        return timeoutScheduler.isTimedOut();
+        return requestTimeoutScheduler.isTimedOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenRequestTimingOut() {
+        return requestTimeoutScheduler.whenTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenRequestTimedOut() {
+        return requestTimeoutScheduler.whenTimedOut();
     }
 
     @Override
@@ -410,17 +419,6 @@ public final class DefaultServiceRequestContext
     @Override
     public RequestLogBuilder logBuilder() {
         return log;
-    }
-
-    /**
-     * Sets the {@code requestTimeoutController} that is set to a new timeout when
-     * the {@linkplain #requestTimeoutMillis()} request timeout} of the request is changed.
-     *
-     * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
-     * a timeout task when a user updates the request timeout configuration.
-     */
-    void setRequestTimeoutController(TimeoutController requestTimeoutController) {
-        timeoutScheduler.setTimeoutController(requestTimeoutController, ch.eventLoop());
     }
 
     @Override

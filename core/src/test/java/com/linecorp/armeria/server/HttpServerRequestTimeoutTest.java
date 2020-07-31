@@ -18,9 +18,13 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+
+import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,12 +39,16 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 
 class HttpServerRequestTimeoutTest {
+
+    @Nullable
+    private static CompletableFuture<Void> timeoutFuture;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -71,6 +79,10 @@ class HttpServerRequestTimeoutTest {
               .service("/timeout-immediately", (ctx, req) -> {
                   ctx.timeoutNow();
                   return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
+              })
+              .service("/streaming", (ctx, req) -> {
+                  timeoutFuture = ctx.whenRequestTimedOut();
+                  return HttpResponse.streaming();
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->
                       HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1)))
@@ -133,6 +145,8 @@ class HttpServerRequestTimeoutTest {
         withoutTimeoutServerClient = WebClient.builder(serverWithoutTimeout.httpUri())
                                               .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                                               .build();
+
+        timeoutFuture = null;
     }
 
     @ParameterizedTest
@@ -195,5 +209,15 @@ class HttpServerRequestTimeoutTest {
         final AggregatedHttpResponse response =
                 withoutTimeoutServerClient.get("/timeout-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
+    }
+
+    @Test
+    void whenTimedOut() {
+        final AggregatedHttpResponse response = client.get("/streaming").aggregate().join();
+        assertThat(response.status().code()).isEqualTo(503);
+        await().untilAsserted(() -> {
+            assertThat(timeoutFuture).isInstanceOf(UnmodifiableFuture.class);
+            assertThat(timeoutFuture).isDone();
+        });
     }
 }
