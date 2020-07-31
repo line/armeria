@@ -106,14 +106,21 @@ public final class DefaultDnsNameResolver {
                     causes.add(future.cause());
                 }
 
-                if (--remaining == 0 && !aggregatedPromise.isDone()) {
+                if (--remaining > 0) {
+                    return;
+                }
+
+                boolean notifiedRecords = false;
+                try {
+                    if (aggregatedPromise.isDone()) {
+                        return;
+                    }
+
                     if (!records.isEmpty()) {
                         if (records.size() > 1) {
                             records.sort(Comparator.comparing(DnsRecord::type, preferredOrder));
                         }
-                        if (!aggregatedPromise.trySuccess(records)) {
-                            records.forEach(ReferenceCountUtil::safeRelease);
-                        }
+                        notifiedRecords = aggregatedPromise.trySuccess(records);
                     } else {
                         final Throwable aggregatedCause;
                         if (causes == null) {
@@ -126,6 +133,10 @@ public final class DefaultDnsNameResolver {
                             }
                         }
                         aggregatedPromise.tryFailure(aggregatedCause);
+                    }
+                } finally {
+                    if (!notifiedRecords) {
+                        records.forEach(ReferenceCountUtil::safeRelease);
                     }
                 }
             }
