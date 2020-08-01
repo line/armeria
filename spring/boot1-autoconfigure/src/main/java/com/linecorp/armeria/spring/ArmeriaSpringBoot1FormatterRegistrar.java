@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.spring;
 
+import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.format.FormatterRegistrar;
 import org.springframework.format.FormatterRegistry;
 
@@ -24,8 +26,14 @@ import org.springframework.format.FormatterRegistry;
  */
 class ArmeriaSpringBoot1FormatterRegistrar implements FormatterRegistrar {
 
+    private ListableBeanFactory beanFactory;
+
+    ArmeriaSpringBoot1FormatterRegistrar(ListableBeanFactory beanFactory) {
+        this.beanFactory = beanFactory;
+    }
+
     @Override
     public void registerFormatters(FormatterRegistry registry) {
-        registry.addConverter(new StringToDurationConverter());
+        beanFactory.getBeansOfType(Converter.class).forEach((s, converter) -> registry.addConverter(converter));
     }
 }

@@ -17,11 +17,13 @@
 package com.linecorp.armeria.spring;
 
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.format.FormatterRegistrar;
 import org.springframework.format.support.FormattingConversionService;
 import org.springframework.format.support.FormattingConversionServiceFactoryBean;
 
@@ -38,16 +40,16 @@ public class ArmeriaSpringBoot1ConversionServiceConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(ConversionService.class)
-    public FormattingConversionService conversionService() {
+    public FormattingConversionService conversionService(ListableBeanFactory beanFactory) {
         final FormattingConversionServiceFactoryBean factoryBean = new FormattingConversionServiceFactoryBean();
-        factoryBean.setFormatterRegistrars(Sets.newHashSet(new ArmeriaSpringBoot1FormatterRegistrar()));
+        final FormatterRegistrar formatterRegistrar = new ArmeriaSpringBoot1FormatterRegistrar(beanFactory);
+        factoryBean.setFormatterRegistrars(Sets.newHashSet(formatterRegistrar));
         factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
     }
 
     /**
-     * Create a new {@link StringToDurationConverter} bean. If {@link ConversionService} is already registered,
-     * it is provided so that {@link Converter} can be taken out from {@link BeanFactory} and used.
+     * Create a new {@link StringToDurationConverter} bean.
      */
     @Bean
     public StringToDurationConverter armeriaSpringBoot1StringDurationConverter() {
