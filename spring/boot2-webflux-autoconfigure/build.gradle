@@ -37,6 +37,7 @@ task generateSources(type: Copy) {
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
     include '**/CustomAlias*KeyManager*.java'
+    include '**/DocServiceConfigurator.java'
     include '**/DropwizardSupport.java'
     include '**/LocalArmeriaPort.java'
     include '**/LocalArmeriaPorts.java'
