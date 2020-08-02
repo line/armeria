@@ -16,24 +16,16 @@
 
 package com.linecorp.armeria.spring;
 
-import org.springframework.beans.factory.ListableBeanFactory;
+import java.time.Duration;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.format.FormatterRegistrar;
-import org.springframework.format.FormatterRegistry;
 
 /**
- * Configures useful formatting system for use with Spring.
+ * Registers a {@link Converter} that converts a {@link String} into a {@link Duration}.
  */
-class ArmeriaSpringBoot1FormatterRegistrar implements FormatterRegistrar {
-
-    private ListableBeanFactory beanFactory;
-
-    ArmeriaSpringBoot1FormatterRegistrar(ListableBeanFactory beanFactory) {
-        this.beanFactory = beanFactory;
-    }
-
-    @Override
-    public void registerFormatters(FormatterRegistry registry) {
-        beanFactory.getBeansOfType(Converter.class).forEach((s, converter) -> registry.addConverter(converter));
-    }
+@Configuration
+@Import(StringToDurationConverter.class)
+public class ArmeriaSpringBoot1ConverterConfiguration {
 }
