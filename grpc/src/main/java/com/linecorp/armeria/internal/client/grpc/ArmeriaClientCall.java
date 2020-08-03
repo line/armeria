@@ -339,6 +339,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                         buf.release();
                     }
                     cancel(null, t);
+                    return;
                 }
             }
             try {
