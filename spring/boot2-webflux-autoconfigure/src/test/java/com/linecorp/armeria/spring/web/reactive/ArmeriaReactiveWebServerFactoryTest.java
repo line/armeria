@@ -38,6 +38,10 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.util.SocketUtils;
 import org.springframework.util.unit.DataSize;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -49,7 +53,11 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.DocServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import reactor.core.publisher.Mono;
@@ -59,6 +67,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     static final String POST_BODY = "Hello, world!";
 
     private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+    private static final ObjectMapper mapper = new ObjectMapper();
     private static ClientFactory clientFactory;
 
     private static ArmeriaReactiveWebServerFactory factory(ConfigurableListableBeanFactory beanFactory) {
@@ -93,6 +102,13 @@ class ArmeriaReactiveWebServerFactoryTest {
         return WebClient.builder("http://example.com:" + server.getPort())
                         .factory(clientFactory)
                         .build();
+    }
+
+    private static class HelloService {
+        @Get("/hello/:name")
+        public String hello(@Param String name) {
+            return "Hello, " + name;
+        }
     }
 
     @Test
@@ -293,6 +309,83 @@ class ArmeriaReactiveWebServerFactoryTest {
             final AggregatedHttpResponse res = client.get("/hello").aggregate().join();
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
             assertThat(res.contentUtf8()).isEmpty();
+        });
+    }
+
+    @Test
+    void testDocServiceConfigurator_withDocServiceConfigurator() {
+        final ArmeriaReactiveWebServerFactory factory = factory();
+
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
+        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+
+        rbd = new RootBeanDefinition(ArmeriaServerConfigurator.class,
+                                     () -> builder -> builder.annotatedService()
+                                                             .build(new HelloService()));
+        beanFactory.registerBeanDefinition("armeriaServerConfigurator", rbd);
+
+        rbd = new RootBeanDefinition(DocServiceConfigurator.class,
+                                     () -> builder -> builder.examplePaths(
+                                             HelloService.class,
+                                             "hello",
+                                             "/hello/foo")
+                                                             .build());
+        beanFactory.registerBeanDefinition("docServiceConfigurator", rbd);
+
+        runEchoServer(factory, server -> {
+            final WebClient client = httpClient(server);
+            final AggregatedHttpResponse res = client.get("/internal/docs/specification.json")
+                                                     .aggregate()
+                                                     .join();
+            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+
+            try {
+                final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+                assertThat(actualJson.path("services")
+                                     .path(0)
+                                     .path("methods")
+                                     .path(0)
+                                     .path("examplePaths")
+                                     .path(0)
+                                     .textValue())
+                        .isEqualTo("/hello/foo");
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Test
+    void testDocServiceConfigurator_withoutDocServiceConfigurator() {
+        final ArmeriaReactiveWebServerFactory factory = factory();
+
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
+        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+
+        rbd = new RootBeanDefinition(ArmeriaServerConfigurator.class,
+                                     () -> builder -> builder.annotatedService()
+                                                             .build(new HelloService()));
+        beanFactory.registerBeanDefinition("armeriaServerConfigurator", rbd);
+
+        runEchoServer(factory, server -> {
+            final WebClient client = httpClient(server);
+            final AggregatedHttpResponse res = client.get("/internal/docs/specification.json")
+                                                     .aggregate()
+                                                     .join();
+            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+            try {
+                final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+                assertThat(actualJson.path("services")
+                                     .path(0)
+                                     .path("methods")
+                                     .path(0)
+                                     .path("examplePaths")
+                                     .path(0)
+                                     .textValue())
+                        .isNullOrEmpty();
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         });
     }
 }
