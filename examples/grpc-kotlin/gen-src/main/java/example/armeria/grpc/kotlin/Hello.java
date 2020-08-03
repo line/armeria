@@ -1171,7 +1171,7 @@ public final class Hello {
     java.lang.String[] descriptorData = {
       "\n\013hello.proto\022\022example.grpc.hello\"\034\n\014Hel" +
       "loRequest\022\014\n\004name\030\001 \001(\t\"\035\n\nHelloReply\022\017\n" +
-      "\007message\030\001 \001(\t2\340\004\n\014HelloService\022K\n\005Hello" +
+      "\007message\030\001 \001(\t2\277\005\n\014HelloService\022K\n\005Hello" +
       "\022 .example.grpc.hello.HelloRequest\032\036.exa" +
       "mple.grpc.hello.HelloReply\"\000\022O\n\tLazyHell" +
       "o\022 .example.grpc.hello.HelloRequest\032\036.ex" +
@@ -1182,12 +1182,14 @@ public final class Hello {
       "lloRequest\032\036.example.grpc.hello.HelloRep" +
       "ly\"\000\022U\n\rLotsOfReplies\022 .example.grpc.hel" +
       "lo.HelloRequest\032\036.example.grpc.hello.Hel" +
-      "loReply\"\0000\001\022W\n\017LotsOfGreetings\022 .example" +
-      ".grpc.hello.HelloRequest\032\036.example.grpc." +
-      "hello.HelloReply\"\000(\001\022S\n\tBidiHello\022 .exam" +
-      "ple.grpc.hello.HelloRequest\032\036.example.gr" +
-      "pc.hello.HelloReply\"\000(\0010\001B\035\n\033example.arm" +
-      "eria.grpc.kotlinb\006proto3"
+      "loReply\"\0000\001\022]\n\025BlockingLotsOfReplies\022 .e" +
+      "xample.grpc.hello.HelloRequest\032\036.example" +
+      ".grpc.hello.HelloReply\"\0000\001\022W\n\017LotsOfGree" +
+      "tings\022 .example.grpc.hello.HelloRequest\032" +
+      "\036.example.grpc.hello.HelloReply\"\000(\001\022S\n\tB" +
+      "idiHello\022 .example.grpc.hello.HelloReque" +
+      "st\032\036.example.grpc.hello.HelloReply\"\000(\0010\001" +
+      "B\035\n\033example.armeria.grpc.kotlinb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -86,6 +86,25 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
                 emit(buildReply("Hello, ${request.name}! (sequence: $i)")) // emit next value
                 ServiceRequestContext.current()
             }
+        }.flowOn(armeriaDispatcher())
+    }
+
+    /**
+     * Sends 5 [HelloReply] responses when receiving a request using [armeriaBlockingDispatcher].
+     *
+     * @see lazyHello(HelloRequest, StreamObserver)
+     */
+    override fun blockingLotsOfReplies(request: HelloRequest): Flow<HelloReply> {
+        // You can also write this code without Reactor like 'lazyHello' example.
+        return flow {
+            for (i in 1..5) {
+                // Check context between delay and emit
+                ServiceRequestContext.current()
+                delay(10)
+                ServiceRequestContext.current()
+                emit(buildReply("Hello, ${request.name}! (sequence: $i)")) // emit next value
+                ServiceRequestContext.current()
+            }
         }.flowOn(armeriaBlockingDispatcher())
     }
 

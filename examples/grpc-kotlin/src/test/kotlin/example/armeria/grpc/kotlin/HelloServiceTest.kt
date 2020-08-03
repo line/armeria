@@ -81,12 +81,13 @@ class HelloServiceTest {
         }
     }
 
+    @Test
     fun parallelLotsOfReplies() {
         runBlocking {
             repeat(30) {
                 launch {
                     var sequence = 0
-                    helloService.lotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                    helloService.blockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
                         .collect {
                             assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                         }

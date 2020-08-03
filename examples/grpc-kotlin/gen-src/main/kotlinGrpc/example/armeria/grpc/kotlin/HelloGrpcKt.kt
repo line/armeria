@@ -59,6 +59,10 @@ object HelloServiceGrpcKt {
     @JvmStatic
     get() = HelloServiceGrpc.getLotsOfRepliesMethod()
 
+  val blockingLotsOfRepliesMethod: MethodDescriptor<Hello.HelloRequest, Hello.HelloReply>
+    @JvmStatic
+    get() = HelloServiceGrpc.getBlockingLotsOfRepliesMethod()
+
   val lotsOfGreetingsMethod: MethodDescriptor<Hello.HelloRequest, Hello.HelloReply>
     @JvmStatic
     get() = HelloServiceGrpc.getLotsOfGreetingsMethod()
@@ -161,6 +165,25 @@ object HelloServiceGrpcKt {
     fun lotsOfReplies(request: Hello.HelloRequest): Flow<Hello.HelloReply> = serverStreamingRpc(
       channel,
       HelloServiceGrpc.getLotsOfRepliesMethod(),
+      request,
+      callOptions,
+      Metadata()
+    )
+    /**
+     * Returns a [Flow] that, when collected, executes this RPC and emits responses from the
+     * server as they arrive.  That flow finishes normally if the server closes its response with
+     * [`Status.OK`][Status], and fails by throwing a [StatusException] otherwise.  If
+     * collecting the flow downstream fails exceptionally (including via cancellation), the RPC
+     * is cancelled with that exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @return A flow that, when collected, emits the responses from the server.
+     */
+    fun blockingLotsOfReplies(request: Hello.HelloRequest): Flow<Hello.HelloReply> =
+        serverStreamingRpc(
+      channel,
+      HelloServiceGrpc.getBlockingLotsOfRepliesMethod(),
       request,
       callOptions,
       Metadata()
@@ -294,6 +317,22 @@ object HelloServiceGrpcKt {
         StatusException(UNIMPLEMENTED.withDescription("Method example.grpc.hello.HelloService.LotsOfReplies is unimplemented"))
 
     /**
+     * Returns a [Flow] of responses to an RPC for
+     * example.grpc.hello.HelloService.BlockingLotsOfReplies.
+     *
+     * If creating or collecting the returned flow fails with a [StatusException], the RPC
+     * will fail with the corresponding [Status].  If it fails with a
+     * [java.util.concurrent.CancellationException], the RPC will fail with status
+     * `Status.CANCELLED`.  If creating
+     * or collecting the returned flow fails for any other reason, the RPC will fail with
+     * `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    open fun blockingLotsOfReplies(request: Hello.HelloRequest): Flow<Hello.HelloReply> = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method example.grpc.hello.HelloService.BlockingLotsOfReplies is unimplemented"))
+
+    /**
      * Returns the response to an RPC for example.grpc.hello.HelloService.LotsOfGreetings.
      *
      * If this method fails with a [StatusException], the RPC will fail with the corresponding
@@ -353,6 +392,11 @@ object HelloServiceGrpcKt {
       context = this.context,
       descriptor = HelloServiceGrpc.getLotsOfRepliesMethod(),
       implementation = ::lotsOfReplies
+    ))
+      .addMethod(serverStreamingServerMethodDefinition(
+      context = this.context,
+      descriptor = HelloServiceGrpc.getBlockingLotsOfRepliesMethod(),
+      implementation = ::blockingLotsOfReplies
     ))
       .addMethod(clientStreamingServerMethodDefinition(
       context = this.context,
