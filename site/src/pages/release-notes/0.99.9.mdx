@@ -19,7 +19,7 @@ date: 2020-08-03
                 .build(helloService)
         .build();
   ```
-- You can now specify whether the entire annotated service methods has to run in a `blockingTaskExecutor`.
+- You can now specify whether the entire annotated service methods have to run in a `blockingTaskExecutor`.
   #2923 #2925
   ```java
   Server.builder()
@@ -181,7 +181,7 @@ date: 2020-08-03
 
 - Added `final` to the various classes and methods so that a user doesn't extend them beyond the devs'
   intention. #2927
-- `com.linecorp.amreria.common.util.NonNullByDefault` and `UnstableApi` have been moved to
+- `com.linecorp.armeria.common.util.NonNullByDefault` and `UnstableApi` have been moved to
   `com.linecorp.armeria.common.annotation`. #2890
 - `KeyedCircuitBreakerMapping` and its inner class are now package-private. #2890
   - Use the static factory methods in <type://CircuitBreakerMapping>.
