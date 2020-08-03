@@ -140,21 +140,16 @@ public final class GrpcWebUtil {
                             return null;
                         }
 
+                        // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                         final ByteBuf outputBuf = ctx.alloc().compositeBuffer();
-                        boolean success = false;
                         try (ByteBufInputStream is = new ByteBufInputStream(buf);
                              InputStream decompressIs = decompressor.decompress(is);
                              ByteBufOutputStream os = new ByteBufOutputStream(outputBuf)) {
                             ByteStreams.copy(decompressIs, os);
-                            success = true;
-                        } catch (Throwable t) {
-                            if (!success) {
-                                outputBuf.release();
-                            }
-                            return null;
-                        }
-                        try {
                             return InternalGrpcWebUtil.parseGrpcWebTrailers(outputBuf);
+                        } catch (Throwable t) {
+                            // Swallow the exception and just return null.
+                            return null;
                         } finally {
                             outputBuf.release();
                         }
