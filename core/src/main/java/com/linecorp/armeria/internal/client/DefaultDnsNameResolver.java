@@ -42,6 +42,7 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsNameResolver;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -105,12 +106,21 @@ public final class DefaultDnsNameResolver {
                     causes.add(future.cause());
                 }
 
-                if (--remaining == 0 && !aggregatedPromise.isDone()) {
+                if (--remaining > 0) {
+                    return;
+                }
+
+                boolean notifiedRecords = false;
+                try {
+                    if (aggregatedPromise.isDone()) {
+                        return;
+                    }
+
                     if (!records.isEmpty()) {
                         if (records.size() > 1) {
                             records.sort(Comparator.comparing(DnsRecord::type, preferredOrder));
                         }
-                        aggregatedPromise.trySuccess(records);
+                        notifiedRecords = aggregatedPromise.trySuccess(records);
                     } else {
                         final Throwable aggregatedCause;
                         if (causes == null) {
@@ -123,6 +133,10 @@ public final class DefaultDnsNameResolver {
                             }
                         }
                         aggregatedPromise.tryFailure(aggregatedCause);
+                    }
+                } finally {
+                    if (!notifiedRecords) {
+                        records.forEach(ReferenceCountUtil::safeRelease);
                     }
                 }
             }

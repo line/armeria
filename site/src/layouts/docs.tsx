@@ -18,6 +18,7 @@ const DocsLayout: React.FC<DocsLayoutProps> = (props) => {
       allMdx(filter: { fileAbsolutePath: { glob: "**/src/pages/docs/**" } }) {
         nodes {
           tableOfContents(maxDepth: 1)
+          excerpt(pruneLength: 256, truncate: true)
           parent {
             ... on File {
               sourceInstanceName

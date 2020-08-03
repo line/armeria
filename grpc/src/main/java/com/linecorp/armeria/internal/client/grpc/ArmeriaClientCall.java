@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -185,28 +186,28 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         listener = responseListener;
 
+        final long remainingNanos;
         if (callOptions.getDeadline() != null) {
-            final long remainingMillis = callOptions.getDeadline().timeRemaining(TimeUnit.MILLISECONDS);
-            if (remainingMillis <= 0) {
+            remainingNanos = callOptions.getDeadline().timeRemaining(TimeUnit.NANOSECONDS);
+            if (remainingNanos <= 0) {
                 final Status status = Status.DEADLINE_EXCEEDED
-                        .augmentDescription(
-                                "ClientCall started after deadline exceeded: " +
-                                callOptions.getDeadline());
+                        .augmentDescription("ClientCall started after deadline exceeded: " +
+                                            callOptions.getDeadline());
                 close(status, new Metadata());
             } else {
-                ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, remainingMillis);
-                ctx.setResponseTimeoutHandler(() -> {
+                ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
+                ctx.whenResponseTimingOut().thenRun(() -> {
                     final Status status = Status.DEADLINE_EXCEEDED
-                            .augmentDescription(
-                                    "deadline exceeded after " +
-                                    TimeUnit.MILLISECONDS.toNanos(remainingMillis) + "ns.");
+                            .augmentDescription("deadline exceeded after " + remainingNanos + "ns.");
                     close(status, new Metadata());
                 });
             }
+        } else {
+            remainingNanos = TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis());
         }
 
         // Must come after handling deadline.
-        prepareHeaders(compressor, metadata);
+        prepareHeaders(compressor, metadata, remainingNanos);
 
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpointGroup, HttpResponse::from,
@@ -215,7 +216,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         res.subscribe(responseReader, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-        res.whenComplete().handleAsync(responseReader, ctx.eventLoop());
         responseListener.onReady();
     }
 
@@ -224,7 +224,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             responseReader.request(numMessages);
         } else {
-            ctx.eventLoop().submit(() -> responseReader.request(numMessages));
+            ctx.eventLoop().execute(() -> responseReader.request(numMessages));
         }
     }
 
@@ -233,7 +233,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doCancel(message, cause);
         } else {
-            ctx.eventLoop().submit(() -> doCancel(message, cause));
+            ctx.eventLoop().execute(() -> doCancel(message, cause));
         }
     }
 
@@ -266,7 +266,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             req.close();
         } else {
-            ctx.eventLoop().submit((Runnable) req::close);
+            ctx.eventLoop().execute(req::close);
         }
     }
 
@@ -276,7 +276,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
-            ctx.eventLoop().submit(() -> doSendMessage(message));
+            ctx.eventLoop().execute(() -> doSendMessage(message));
         }
     }
 
@@ -330,8 +330,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                 buf = ctx.alloc().compositeBuffer();
                 boolean success = false;
-                try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
-                    final InputStream stream = message.stream();
+                try (ByteBufOutputStream os = new ByteBufOutputStream(buf);
+                     InputStream stream = message.stream()) {
                     assert stream != null;
                     ByteStreams.copy(stream, os);
                     success = true;
@@ -340,6 +340,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                         buf.release();
                     }
                     cancel(null, t);
+                    return;
                 }
             }
             try {
@@ -390,10 +391,13 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status, Metadata metadata) {
+        if (cancelCalled) {
+            return;
+        }
         close(status, metadata);
     }
 
-    private void prepareHeaders(Compressor compressor, Metadata metadata) {
+    private void prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         if (compressor != Identity.NONE) {
             newHeaders.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
@@ -403,9 +407,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             newHeaders.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
         }
 
-        newHeaders.add(GrpcHeaderNames.GRPC_TIMEOUT,
-                       TimeoutHeaderUtil.toHeaderValue(
-                               TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
+        if (remainingNanos > 0) {
+            newHeaders.add(GrpcHeaderNames.GRPC_TIMEOUT, TimeoutHeaderUtil.toHeaderValue(remainingNanos));
+        }
 
         MetadataUtil.fillHeaders(metadata, newHeaders);
 

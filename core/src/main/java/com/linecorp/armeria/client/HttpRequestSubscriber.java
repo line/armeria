@@ -186,9 +186,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         final long maxContentLength = ctx.maxResponseLength();
         responseWrapper = responseDecoder.addResponse(id, originalRes, ctx,
                                                       ch.eventLoop(), responseTimeoutMillis, maxContentLength);
-        if (ctx instanceof DefaultClientRequestContext) {
-            ((DefaultClientRequestContext) ctx).setResponseTimeoutController(responseWrapper);
-        }
     }
 
     private void writeFirstHeader(HttpSession session) {
