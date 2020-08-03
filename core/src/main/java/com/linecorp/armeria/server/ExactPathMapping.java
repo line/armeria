@@ -67,6 +67,11 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public String patternString() {
+        return exactPath;
+    }
+
+    @Override
     public RoutePathType pathType() {
         return RoutePathType.EXACT;
     }

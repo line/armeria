@@ -155,4 +155,18 @@ class ParameterizedPathMappingTest {
         assertThat(parameterizedPathMapping.loggerName()).isEqualTo("service._value_");
         assertThat(parameterizedPathMapping.meterTag()).isEqualTo("/service/{value}");
     }
+
+    @Test
+    void patternString() {
+        final ParameterizedPathMapping pathMappingWithBrace = new ParameterizedPathMapping("/service/{value}");
+        assertThat(pathMappingWithBrace.patternString()).isEqualTo("/service/:value");
+
+        final ParameterizedPathMapping pathMappingWithColon = new ParameterizedPathMapping("/service/:value");
+        assertThat(pathMappingWithColon.patternString()).isEqualTo("/service/:value");
+
+        final ParameterizedPathMapping pathMappingWithComplexPattern =
+                new ParameterizedPathMapping("/service/{value}/items/{value}/:itemId");
+        assertThat(pathMappingWithComplexPattern.patternString())
+                .isEqualTo("/service/:value/items/:value/:itemId");
+    }
 }

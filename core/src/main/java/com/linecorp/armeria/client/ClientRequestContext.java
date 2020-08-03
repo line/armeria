@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -73,17 +74,14 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the client-side context of the {@link Request} that is being handled in the current thread.
      *
      * @return the {@link ClientRequestContext} available in the current thread, or {@code null} if unavailable.
-     * @throws IllegalStateException if the current context is not a {@link ClientRequestContext}.
      */
     @Nullable
     static ClientRequestContext currentOrNull() {
         final RequestContext ctx = RequestContext.currentOrNull();
-        if (ctx == null) {
-            return null;
+        if (ctx instanceof ClientRequestContext) {
+            return (ClientRequestContext) ctx;
         }
-        checkState(ctx instanceof ClientRequestContext,
-                   "The current context is not a client-side context: %s", ctx);
-        return (ClientRequestContext) ctx;
+        return null;
     }
 
     /**
@@ -102,6 +100,12 @@ public interface ClientRequestContext extends RequestContext {
         final ClientRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
+        }
+
+        final ServiceRequestContext serviceRequestContext = ServiceRequestContext.currentOrNull();
+        if (serviceRequestContext != null) {
+            throw new IllegalStateException("The current context is not a client-side context: " +
+                                            serviceRequestContext);
         }
 
         if (defaultValueSupplier != null) {
@@ -426,9 +430,14 @@ public interface ClientRequestContext extends RequestContext {
      * Returns {@link Response} timeout handler which is executed when
      * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
      * or the default {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
+     *
+     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
      */
+    @Deprecated
     @Nullable
-    Runnable responseTimeoutHandler();
+    default Runnable responseTimeoutHandler() {
+        return null;
+    }
 
     /**
      * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must abort
@@ -443,8 +452,27 @@ public interface ClientRequestContext extends RequestContext {
      * });
      * ...
      * }</pre>
+     *
+     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
      */
-    void setResponseTimeoutHandler(Runnable responseTimeoutHandler);
+    @Deprecated
+    default void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
+        whenResponseTimingOut().thenRun(responseTimeoutHandler);
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} is about to
+     * get timed out.
+     */
+    CompletableFuture<Void> whenResponseTimingOut();
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed after {@link ClientRequestContext} has been
+     * timed out (e.g., when the corresponding request passes a deadline).
+     * {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed.
+     */
+    CompletableFuture<Void> whenResponseTimedOut();
 
     /**
      * Returns the maximum length of the received {@link Response}.

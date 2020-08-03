@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -36,6 +38,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -86,6 +89,31 @@ class HttpClientResponseTimeoutTest {
                                            .aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
+        });
+    }
+
+    @Test
+    void whenTimedOut() {
+        final AtomicReference<CompletableFuture<Void>> timeoutFutureRef = new AtomicReference<>();
+        final WebClient client = WebClient
+                .builder(server.httpUri())
+                .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(1000L))
+                .decorator((delegate, ctx, req) -> {
+                    timeoutFutureRef.set(ctx.whenResponseTimedOut());
+                    return delegate.execute(ctx, req);
+                })
+                .build();
+
+        await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ResponseTimeoutException.class);
+        });
+
+        await().untilAsserted(() -> {
+            final CompletableFuture<Void> timeoutFuture = timeoutFutureRef.get();
+            assertThat(timeoutFuture).isInstanceOf(UnmodifiableFuture.class);
+            assertThat(timeoutFuture).isDone();
         });
     }
 

@@ -20,12 +20,18 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil;
 
 import io.grpc.ClientInterceptor;
@@ -62,19 +68,30 @@ public final class GrpcWebUtil {
      * <pre>{@code
      * Clients.builder(grpcServerUri)
      *        .decorator(RetryingClient.newDecorator(
-     *                RetryRuleWithContent.onResponse(response -> {
+     *                RetryRuleWithContent.onResponse((ctx, response) -> {
      *                    return response.aggregate().thenApply(aggregated -> {
-     *                        HttpHeaders trailers = GrpcWebUtil.parseTrailers(aggregated.content());
+     *                        HttpHeaders trailers = GrpcWebUtil.parseTrailers(ctx, aggregated.content());
      *                        // Retry if the 'grpc-status' is not equal to 0.
      *                        return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
      *                    });
      *                })))
      *        .build(MyGrpcStub.class);
      * }</pre>
+     *
+     * @throws RequestLogAvailabilityException if the {@link RequestLogProperty#SCHEME} is not available
+     *                                         yet from the {@link RequestLog} of the specified
+     *                                         {@link ClientRequestContext#log()}.
      */
     @Nullable
-    public static HttpHeaders parseTrailers(HttpData response) {
+    public static HttpHeaders parseTrailers(ClientRequestContext ctx, HttpData response) {
+        requireNonNull(ctx, "ctx");
         requireNonNull(response, "response");
+        final SerializationFormat serializationFormat =
+                ctx.log().ensureAvailable(RequestLogProperty.SCHEME).scheme().serializationFormat();
+        if (GrpcSerializationFormats.isGrpcWebText(serializationFormat)) {
+            // TODO(minwoox) support decoding base64.
+            return null;
+        }
         final ByteBuf buf = response.byteBuf();
 
         HttpHeaders trailers = null;

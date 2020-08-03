@@ -5,16 +5,20 @@
 boms:
   - com.fasterxml.jackson:jackson-bom:2.11.1
   - io.dropwizard.metrics:metrics-bom:4.1.11
-  - io.grpc:grpc-bom:1.30.2
-  - io.micrometer:micrometer-bom:1.5.2
+  - io.grpc:grpc-bom:1.31.0
+  - io.micrometer:micrometer-bom:1.5.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.51.Final
-  - io.zipkin.brave:brave-bom:5.12.3
-  - org.eclipse.jetty:jetty-bom:9.4.30.v20200611
+  - io.zipkin.brave:brave-bom:5.12.4
+  - org.eclipse.jetty:jetty-bom:9.4.31.v20200723
   - org.junit:junit-bom:5.6.2
 
 cglib:
   cglib: { version: '3.3.0' }
+
+# Akka is used only for testing in it:grpcweb module.
+ch.megard:
+  akka-http-cors_2.13: { version: '1.0.0' }
 
 ch.qos.logback:
   logback-classic:
@@ -115,13 +119,17 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.12' }
   protoc: { version: *PROTOBUF_VERSION }
 
+# Akka is used only for testing in it:grpcweb module.
+com.lightbend.akka.grpc:
+  akka-grpc-runtime_2.13: { version: '1.0.1' }
+
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
   eureka-client: { version: &EUREKA_VERSION '1.9.25' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.34' }
+  checkstyle: { version: '8.35' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -147,47 +155,32 @@ com.thesamet.scalapb:
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
   scalapb-json4s_2.13: { version: '0.10.1' }
 
+# Akka is used only for testing in it:grpcweb module.
+com.typesafe.akka:
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.8' }
+  akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
+  akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
+
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '20.6.0'
+    version: '20.7.0'
 
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.11'
+    version: &DROPWIZARD_VERSION '2.0.12'
     javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.11/
-  dropwizard-jackson:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jackson/2.0.11/
-  dropwizard-lifecycle:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-lifecycle/2.0.11/
-  dropwizard-jersey:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jersey/2.0.11/
-  dropwizard-jetty:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jetty/2.0.11/
-  dropwizard-testing:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-      - https://www.javadoc.io/doc/io.dropwizard/dropwizard-testing/2.0.11/
-  dropwizard-util:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-util/2.0.11/
-  dropwizard-validation:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-validation/2.0.11/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.12/
+  dropwizard-jackson: { version: *DROPWIZARD_VERSION }
+  dropwizard-lifecycle: { version: *DROPWIZARD_VERSION }
+  dropwizard-jersey: { version: *DROPWIZARD_VERSION }
+  dropwizard-jetty: { version: *DROPWIZARD_VERSION }
+  dropwizard-testing: { version: *DROPWIZARD_VERSION }
+  dropwizard-util: { version: *DROPWIZARD_VERSION }
+  dropwizard-validation: { version: *DROPWIZARD_VERSION }
 
 io.dropwizard.metrics:
   metrics-core:
@@ -246,7 +239,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.7.RELEASE'
+    version: &REACTOR_VERSION '3.3.8.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -281,7 +274,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: '8.3.1'
+    version: '8.4.0'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -469,7 +462,7 @@ org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.4.4' }
+  mockito-core: { version: &MOCKITO_VERSION '3.4.6' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -521,11 +514,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.2.7.RELEASE' }
+  spring-web: { version: '5.2.8.RELEASE' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.3.1.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.3.2.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

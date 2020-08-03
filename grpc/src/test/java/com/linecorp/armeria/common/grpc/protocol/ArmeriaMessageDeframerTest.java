@@ -24,11 +24,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.Random;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
@@ -57,10 +62,12 @@ class ArmeriaMessageDeframerTest {
     private ArmeriaMessageDeframer deframer;
 
     @BeforeEach
-    void setUp() {
+    void setUp(TestInfo info) {
+        final Method method = info.getTestMethod().get();
+        final boolean decodeBase64 = method.getName().contains("Base64");
         deframer = new ArmeriaMessageDeframer(listener,
                                               MAX_MESSAGE_SIZE,
-                                              UnpooledByteBufAllocator.DEFAULT)
+                                              UnpooledByteBufAllocator.DEFAULT, decodeBase64)
                 .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
     }
 
@@ -95,9 +102,32 @@ class ArmeriaMessageDeframerTest {
     }
 
     @Test
+    void decodeBase64AndDeframe_noRequests() throws Exception {
+        final byte[] data = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        deframer.deframe(HttpData.wrap(Base64.getEncoder().encode(data)), false);
+        assertThat(deframer.isStalled()).isFalse();
+        verifyNoMoreInteractions(listener);
+
+        deframer.request(1);
+        verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        assertThat(deframer.isStalled()).isTrue();
+        verifyNoMoreInteractions(listener);
+    }
+
+    @Test
     void deframe_hasRequests() throws Exception {
         deframer.request(1);
         deframer.deframe(HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())), false);
+        verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        verifyNoMoreInteractions(listener);
+        assertThat(deframer.isStalled()).isTrue();
+    }
+
+    @Test
+    void decodeBase64AndDeframe_hasRequests() throws Exception {
+        deframer.request(1);
+        final byte[] data = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        deframer.deframe(HttpData.wrap(Base64.getEncoder().encode(data)), false);
         verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
         verifyNoMoreInteractions(listener);
         assertThat(deframer.isStalled()).isTrue();
@@ -122,6 +152,25 @@ class ArmeriaMessageDeframerTest {
     }
 
     @Test
+    void decodeBase64AndDeframe_frameWithManyFragments() throws Exception {
+        deframer.request(1);
+        final byte[] frameBytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        final ArrayList<byte[]> fragments = base64EncodedFragments(frameBytes);
+
+        // Only the last fragment should notify the listener.
+        for (int i = 0; i < fragments.size() - 1; i++) {
+            deframer.deframe(HttpData.wrap(fragments.get(i)), false);
+            verifyNoMoreInteractions(listener);
+            assertThat(deframer.isStalled()).isTrue();
+        }
+
+        deframer.deframe(HttpData.wrap(fragments.get(fragments.size() - 1)), false);
+        verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        verifyNoMoreInteractions(listener);
+        assertThat(deframer.isStalled()).isTrue();
+    }
+
+    @Test
     void deframe_frameWithHeaderAndBodyFragment() throws Exception {
         final byte[] frameBytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
         deframer.request(1);
@@ -137,9 +186,43 @@ class ArmeriaMessageDeframerTest {
     }
 
     @Test
+    void decodeBase64AndDeframe_frameWithHeaderAndBodyFragment() throws Exception {
+        final byte[] frameBytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        deframer.request(1);
+
+        // Frame is split into two fragments - header and body.
+        deframer.deframe(HttpData.wrap(Base64.getEncoder().encode(
+                Arrays.copyOfRange(frameBytes, 0, 5))), false);
+        verifyNoMoreInteractions(listener);
+        assertThat(deframer.isStalled()).isTrue();
+        deframer.deframe(HttpData.wrap(Base64.getEncoder().encode(
+                Arrays.copyOfRange(frameBytes, 5, frameBytes.length))), false);
+        verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        verifyNoMoreInteractions(listener);
+        assertThat(deframer.isStalled()).isTrue();
+    }
+
+    @Test
     void deframe_multipleMessagesBeforeRequests() throws Exception {
         deframer.deframe(HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())), false);
         deframer.deframe(HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())), false);
+        deframer.request(1);
+        assertThat(deframer.isStalled()).isFalse();
+        verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        verifyNoMoreInteractions(listener);
+        reset(listener);
+        deframer.request(1);
+        assertThat(deframer.isStalled()).isTrue();
+        verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        verifyNoMoreInteractions(listener);
+    }
+
+    @Test
+    void decodeBase64AndDeframe_multipleMessagesBeforeRequests() throws Exception {
+        deframer.deframe(HttpData.wrap(Base64.getEncoder().encode(
+                GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()))), false);
+        deframer.deframe(HttpData.wrap(Base64.getEncoder().encode(
+                GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()))), false);
         deframer.request(1);
         assertThat(deframer.isStalled()).isFalse();
         verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
@@ -174,6 +257,23 @@ class ArmeriaMessageDeframerTest {
     void deframe_compressed() throws Exception {
         deframer.request(1);
         deframer.deframe(HttpData.wrap(GrpcTestUtil.compressedFrame(GrpcTestUtil.requestByteBuf())), false);
+        final ArgumentCaptor<DeframedMessage> messageCaptor = ArgumentCaptor.forClass(DeframedMessage.class);
+        verify(listener).messageRead(messageCaptor.capture());
+        verifyNoMoreInteractions(listener);
+        final DeframedMessage message = messageCaptor.getValue();
+        assertThat(message.stream()).isNotNull();
+        final byte[] messageBytes;
+        try (InputStream stream = message.stream()) {
+            messageBytes = ByteStreams.toByteArray(stream);
+        }
+        assertThat(messageBytes).isEqualTo(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
+    }
+
+    @Test
+    void decodeBase64AndDeframe_compressed() throws Exception {
+        deframer.request(1);
+        deframer.deframe(HttpData.wrap(Base64.getEncoder().encode(
+                GrpcTestUtil.compressedFrame(GrpcTestUtil.requestByteBuf()))), false);
         final ArgumentCaptor<DeframedMessage> messageCaptor = ArgumentCaptor.forClass(DeframedMessage.class);
         verify(listener).messageRead(messageCaptor.capture());
         verifyNoMoreInteractions(listener);
@@ -239,5 +339,17 @@ class ArmeriaMessageDeframerTest {
         if (message.buf() != null) {
             message.buf().release();
         }
+    }
+
+    private static ArrayList<byte[]> base64EncodedFragments(byte[] frameBytes) {
+        final ArrayList<byte[]> fragments = new ArrayList<>();
+        for (int i = 0; i < frameBytes.length;) {
+            final int to = Math.min(frameBytes.length,
+                                    new Random().nextInt(5) + 1 + i); // One byte is selected at least.
+            final byte[] encoded = Base64.getEncoder().encode(Arrays.copyOfRange(frameBytes, i, to));
+            fragments.add(encoded);
+            i = to;
+        }
+        return fragments;
     }
 }

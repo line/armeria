@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -90,14 +91,7 @@ public interface ServiceRequestContext extends RequestContext {
             return null;
         }
 
-        final ServiceRequestContext root = ctx.root();
-        if (root != null) {
-            return root;
-        }
-
-        throw new IllegalStateException(
-                "The current context is not a server-side context and does not have a root " +
-                "which means that the context is not invoked by a server request. ctx: " + ctx);
+        return ctx.root();
     }
 
     /**
@@ -116,6 +110,14 @@ public interface ServiceRequestContext extends RequestContext {
         final ServiceRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
+        }
+
+        final ClientRequestContext clientRequestContext = ClientRequestContext.currentOrNull();
+        if (clientRequestContext != null) {
+            throw new IllegalStateException(
+                    "The current context is not a server-side context and does not have a root " +
+                    "which means that the context is not invoked by a server request. ctx: " +
+                    clientRequestContext);
         }
 
         if (defaultValueSupplier != null) {
@@ -417,9 +419,14 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns {@link Request} timeout handler which is executed when
      * receiving the current {@link Request} and sending the corresponding {@link Response}
      * is not completely received within the allowed {@link #requestTimeoutMillis()}.
+     *
+     * @deprecated Use {@link #whenRequestTimingOut()} or {@link #whenRequestTimedOut()}
      */
+    @Deprecated
     @Nullable
-    Runnable requestTimeoutHandler();
+    default Runnable requestTimeoutHandler() {
+        return null;
+    }
 
     /**
      * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
@@ -437,8 +444,27 @@ public interface ServiceRequestContext extends RequestContext {
      *   });
      *   ...
      * }</pre>
+     *
+     * @deprecated Use {@link #whenRequestTimingOut()} or {@link #whenRequestTimedOut()}.
      */
-    void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
+    @Deprecated
+    default void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
+        whenRequestTimingOut().thenRun(requestTimeoutHandler);
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} is about to
+     * get timed out.
+     */
+    CompletableFuture<Void> whenRequestTimingOut();
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed after {@link ServiceRequestContext} has been
+     * timed out (e.g., when the corresponding request passes a deadline).
+     * {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed.
+     */
+    CompletableFuture<Void> whenRequestTimedOut();
 
     /**
      * Returns the maximum length of the current {@link Request}.

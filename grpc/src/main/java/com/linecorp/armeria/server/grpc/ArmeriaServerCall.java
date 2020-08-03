@@ -152,15 +152,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
-                new ArmeriaMessageDeframer(
-                        this,
-                        maxInboundMessageSizeBytes,
-                        ctx.alloc())
+                new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc(), grpcWebText)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry)),
                 this);
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
+        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding =
@@ -188,7 +186,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             messageReader.request(numMessages);
         } else {
-            ctx.eventLoop().submit(() -> messageReader.request(numMessages));
+            ctx.eventLoop().execute(() -> messageReader.request(numMessages));
         }
     }
 
@@ -197,7 +195,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendHeaders(metadata);
         } else {
-            ctx.eventLoop().submit(() -> doSendHeaders(metadata));
+            ctx.eventLoop().execute(() -> doSendHeaders(metadata));
         }
     }
 
@@ -238,7 +236,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
-            ctx.eventLoop().submit(() -> doSendMessage(message));
+            ctx.eventLoop().execute(() -> doSendMessage(message));
         }
     }
 
@@ -288,7 +286,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doClose(status, metadata);
         } else {
-            ctx.eventLoop().submit(() -> doClose(status, metadata));
+            ctx.eventLoop().execute(() -> doClose(status, metadata));
         }
     }
 
@@ -375,8 +373,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
         }
 
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+
         try {
-            request = marshaller.deserializeRequest(message);
+            request = marshaller.deserializeRequest(message, grpcWebText);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -385,7 +385,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
         }
 
-        if (unsafeWrapRequestBuffers && buf != null) {
+        if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
             GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
         }
 
