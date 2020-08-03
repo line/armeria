@@ -70,7 +70,8 @@ task generateSources(type: Copy) {
 }
 
 tasks.compileJava.dependsOn(generateSources)
-tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
+tasks.compileTestJava.source "${projectDir}/src/test/java",
+        "${autoconfigureProjectDir}/src/test/java",
         "${autoconfigureProjectDir}/gen-src/test/grpc",
         "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
