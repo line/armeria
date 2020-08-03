@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Status;
 import io.grpc.StatusException;
+import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 class GrpcWebRetryTest {
@@ -91,17 +93,29 @@ class GrpcWebRetryTest {
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
     @ParameterizedTest
     void unaryCall(SerializationFormat serializationFormat) {
+        unaryCall(serializationFormat, SimpleRequest.newBuilder().build());
+    }
+
+    private void unaryCall(SerializationFormat serializationFormat, SimpleRequest request) {
         final TestServiceBlockingStub client =
                 Clients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
                        .decorator(RetryingClient.newDecorator(ruleWithContent))
                        .build(TestServiceBlockingStub.class);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final SimpleResponse result = client.unaryCall(SimpleRequest.newBuilder().build());
+            final SimpleResponse result = client.unaryCall(request);
             assertThat(result.getUsername()).isEqualTo("my name");
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.children()).hasSize(3);
         }
+    }
+
+    @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
+    @ParameterizedTest
+    void unaryCallCompressedResponse(SerializationFormat serializationFormat) {
+        unaryCall(serializationFormat, SimpleRequest.newBuilder()
+                                                    .setResponseCompression(CompressionType.GZIP)
+                                                    .build());
     }
 
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
@@ -124,8 +138,7 @@ class GrpcWebRetryTest {
         @Override
         public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
             return GrpcSerializationFormats.values().stream()
-                                           .filter(format -> GrpcSerializationFormats.isGrpcWeb(format) &&
-                                                             !GrpcSerializationFormats.isGrpcWebText(format))
+                                           .filter(GrpcSerializationFormats::isGrpcWeb)
                                            .map(Arguments::of);
         }
     }
@@ -150,17 +163,22 @@ class GrpcWebRetryTest {
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            final ServerCallStreamObserver<SimpleResponse> serverCallStreamObserver =
+                    (ServerCallStreamObserver<SimpleResponse>) responseObserver;
+            if (request.getResponseCompression() == CompressionType.GZIP) {
+                serverCallStreamObserver.setCompression("gzip");
+            }
             switch (retryCounter.getAndIncrement()) {
                 case 0:
-                    responseObserver.onError(new StatusException(Status.INTERNAL));
+                    serverCallStreamObserver.onError(new StatusException(Status.INTERNAL));
                     break;
                 case 1:
-                    responseObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
-                    responseObserver.onError(new StatusException(Status.INTERNAL));
+                    serverCallStreamObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
+                    serverCallStreamObserver.onError(new StatusException(Status.INTERNAL));
                     break;
                 default:
-                    responseObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
-                    responseObserver.onCompleted();
+                    serverCallStreamObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
+                    serverCallStreamObserver.onCompleted();
                     break;
             }
         }

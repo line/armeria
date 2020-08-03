@@ -32,7 +32,7 @@
  * Written by Robert Harder and released to the public domain, as explained at
  * http://creativecommons.org/licenses/publicdomain
  */
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.internal.common.grpc.protocol;
 
 import javax.annotation.Nullable;
 
@@ -46,7 +46,7 @@ import io.netty.util.ByteProcessor;
  * {@link #decode(ByteBuf)}. If the {@link ByteBuf} does not have necessary 4 bytes to decode as 3 bytes,
  * it stores the remained bytes and prepend them to the next {@link #decode(ByteBuf)} and decode together.
  */
-final class Base64Decoder implements ByteProcessor {
+public final class Base64Decoder implements ByteProcessor {
 
     // Forked from https://github.com/netty/netty/blob/netty-4.1.51.Final/codec
     // /src/main/java/io/netty/handler/codec/base64/Base64.java
@@ -94,11 +94,11 @@ final class Base64Decoder implements ByteProcessor {
     private final byte[] last3 = new byte[3]; // The 4th byte is stored in a local variable.
     private int pos;
 
-    Base64Decoder(ByteBufAllocator allocator) {
+    public Base64Decoder(ByteBufAllocator allocator) {
         this.allocator = allocator;
     }
 
-    ByteBuf decode(ByteBuf src) {
+    public ByteBuf decode(ByteBuf src) {
         final ByteBuf dest = allocator.buffer(decodedBufferSize(src.readableBytes()));
         this.dest = dest;
         boolean success = false;
