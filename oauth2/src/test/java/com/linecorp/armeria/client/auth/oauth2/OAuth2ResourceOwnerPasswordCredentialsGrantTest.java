@@ -112,12 +112,12 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
     public void testOk() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        try (OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
+        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
                 .userCredentialsSupplier(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-             Server server = resourceServer.start()) {
+        try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
@@ -139,12 +139,12 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
     public void testWithAuthorization() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        try (OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
+        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
                 .userCredentialsSupplier(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-             Server server = resourceServer.start()) {
+        try (Server server = resourceServer.start()) {
 
             final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
             final CompletionStage<HttpRequest> authorizedRequest1 = grant.withAuthorization(request1);
@@ -178,12 +178,12 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
     public void testUnauthorized() {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        try (OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
+        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
                 .userCredentialsSupplier(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
-             Server server = resourceServer.start()) {
+        try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
@@ -199,12 +199,12 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
     public void testUnauthorized2() {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        try (OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
+        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
                 .userCredentialsSupplier(
                         () -> new AbstractMap.SimpleImmutableEntry<>("foo", "bar"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-             Server server = resourceServer.start()) {
+        try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))

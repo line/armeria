@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -55,8 +56,9 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrant extends AbstractOAuth2A
                                                 @Nullable
                                                 Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier,
                                                 @Nullable
-                                                Consumer<? super GrantedOAuth2AccessToken> tokenConsumer) {
-        super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer);
+                                                Consumer<? super GrantedOAuth2AccessToken> tokenConsumer,
+                                                @Nullable Executor executor) {
+        super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer, executor);
         this.obtainRequest = requireNonNull(obtainRequest);
     }
 

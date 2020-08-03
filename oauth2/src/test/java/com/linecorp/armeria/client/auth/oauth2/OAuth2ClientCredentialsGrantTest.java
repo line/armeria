@@ -26,6 +26,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
@@ -115,10 +117,10 @@ public class OAuth2ClientCredentialsGrantTest {
     @Test
     public void testOk() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
-        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+        final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-            Server server = resourceServer.start()) {
+        try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
@@ -139,10 +141,10 @@ public class OAuth2ClientCredentialsGrantTest {
     @Test
     public void testWithAuthorization() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
-        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+        final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-            Server server = resourceServer.start()) {
+        try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.of(resourceServer.httpUri());
 
@@ -176,10 +178,12 @@ public class OAuth2ClientCredentialsGrantTest {
     public void testConcurrent() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+        final ExecutorService executor = Executors.newWorkStealingPool();
+        final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
-                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-            Server server = resourceServer.start()) {
+                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
+                .withExecutor(executor).build();
+        try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
@@ -199,6 +203,8 @@ public class OAuth2ClientCredentialsGrantTest {
             final List<HttpResponse> responses3 = makeGetRequests(client,
                                                                   "/resource-read-write-update/", count, pool);
             validateResponses(responses3, HttpStatus.FORBIDDEN);
+        } finally {
+            executor.shutdownNow();
         }
     }
 
@@ -229,10 +235,10 @@ public class OAuth2ClientCredentialsGrantTest {
     public void testUnauthorized() {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        try (OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
+        final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
-            Server server = resourceServer.start()) {
+        try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))

@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 /**
  * Represents an OAuth 2.0 Access Token Grant flow to obtain Access Token.
  */
-public interface OAuth2AuthorizationGrant extends AutoCloseable {
+public interface OAuth2AuthorizationGrant {
 
     /**
      * Produces OAuth 2.0 Access Token
