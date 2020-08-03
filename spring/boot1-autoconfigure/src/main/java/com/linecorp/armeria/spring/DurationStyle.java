@@ -30,13 +30,17 @@
  */
 package com.linecorp.armeria.spring;
 
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.springframework.util.Assert;
+import javax.annotation.Nullable;
+
 import org.springframework.util.StringUtils;
 
 /**
@@ -52,23 +56,17 @@ enum DurationStyle {
      */
     SIMPLE("^([+-]?\\d+)([a-zA-Z]{0,2})$") {
         @Override
-        Duration parse(String value, ChronoUnit unit) {
+        Duration parse(String value, @Nullable ChronoUnit unit) {
             try {
-                Matcher matcher = matcher(value);
-                Assert.state(matcher.matches(), "Does not match simple duration pattern");
-                String suffix = matcher.group(2);
+                final Matcher matcher = matcher(value);
+                checkState(matcher.matches(), "Does not match simple duration pattern");
+                final String suffix = matcher.group(2);
                 return (StringUtils.hasLength(suffix) ? Unit.fromSuffix(suffix) : Unit.fromChronoUnit(unit))
                         .parse(matcher.group(1));
             } catch (Exception ex) {
-                throw new IllegalArgumentException("'" + value + "' is not a valid simple duration", ex);
+                throw new IllegalArgumentException("\'" + value + "' is not a valid simple duration", ex);
             }
         }
-
-        @Override
-        String print(Duration value, ChronoUnit unit) {
-            return Unit.fromChronoUnit(unit).print(value);
-        }
-
     },
 
     /**
@@ -76,19 +74,13 @@ enum DurationStyle {
      */
     ISO8601("^[+-]?P.*$") {
         @Override
-        Duration parse(String value, ChronoUnit unit) {
+        Duration parse(String value, @Nullable ChronoUnit unit) {
             try {
                 return Duration.parse(value);
             } catch (Exception ex) {
-                throw new IllegalArgumentException("'" + value + "' is not a valid ISO-8601 duration", ex);
+                throw new IllegalArgumentException("\'" + value + "' is not a valid ISO-8601 duration", ex);
             }
         }
-
-        @Override
-        String print(Duration value, ChronoUnit unit) {
-            return value.toString();
-        }
-
     };
 
     private final Pattern pattern;
@@ -98,15 +90,15 @@ enum DurationStyle {
     }
 
     protected final boolean matches(String value) {
-        return this.pattern.matcher(value).matches();
+        return pattern.matcher(value).matches();
     }
 
     protected final Matcher matcher(String value) {
-        return this.pattern.matcher(value);
+        return pattern.matcher(value);
     }
 
     /**
-     * Parse the given value to a duration.
+     * Parses the given value to a duration.
      * @param value the value to parse
      * @return a duration
      */
@@ -115,69 +107,28 @@ enum DurationStyle {
     }
 
     /**
-     * Parse the given value to a duration.
+     * Parses the given value to a duration.
      * @param value the value to parse
      * @param unit the duration unit to use if the value doesn't specify one ({@code null}
      * will default to ms)
      * @return a duration
      */
-    abstract Duration parse(String value, ChronoUnit unit);
+    abstract Duration parse(String value, @Nullable ChronoUnit unit);
 
     /**
-     * Print the specified duration.
-     * @param value the value to print
-     * @return the printed result
-     */
-    String print(Duration value) {
-        return print(value, null);
-    }
-
-    /**
-     * Print the specified duration using the given unit.
-     * @param value the value to print
-     * @param unit the value to use for printing
-     * @return the printed result
-     */
-    abstract String print(Duration value, ChronoUnit unit);
-
-    /**
-     * Detect the style then parse the value to return a duration.
-     * @param value the value to parse
-     * @return the parsed duration
-     * @throws IllegalArgumentException if the value is not a known style or cannot be
-     * parsed
-     */
-    static Duration detectAndParse(String value) {
-        return detectAndParse(value, null);
-    }
-
-    /**
-     * Detect the style then parse the value to return a duration.
-     * @param value the value to parse
-     * @param unit the duration unit to use if the value doesn't specify one ({@code null}
-     * will default to ms)
-     * @return the parsed duration
-     * @throws IllegalArgumentException if the value is not a known style or cannot be
-     * parsed
-     */
-    static Duration detectAndParse(String value, ChronoUnit unit) {
-        return detect(value).parse(value, unit);
-    }
-
-    /**
-     * Detect the style from the given source value.
+     * Detects the style from the given source value.
      * @param value the source value
      * @return the duration style
      * @throws IllegalArgumentException if the value is not a known style
      */
     static DurationStyle detect(String value) {
-        Assert.notNull(value, "Value must not be null");
+        requireNonNull(value, "Value must not be null");
         for (DurationStyle candidate : values()) {
             if (candidate.matches(value)) {
                 return candidate;
             }
         }
-        throw new IllegalArgumentException("'" + value + "' is not a valid duration");
+        throw new IllegalArgumentException("\'" + value + "' is not a valid duration");
     }
 
     /**
@@ -193,7 +144,7 @@ enum DurationStyle {
         /**
          * Microseconds.
          */
-        MICROS(ChronoUnit.MICROS, "us", (duration) -> duration.toMillis() * 1000L),
+        MICROS(ChronoUnit.MICROS, "us", duration -> duration.toMillis() * 1000L),
 
         /**
          * Milliseconds.
@@ -233,20 +184,12 @@ enum DurationStyle {
         }
 
         Duration parse(String value) {
-            return Duration.of(Long.parseLong(value), this.chronoUnit);
+            return Duration.of(Long.parseLong(value), chronoUnit);
         }
 
-        String print(Duration value) {
-            return longValue(value) + this.suffix;
-        }
-
-        long longValue(Duration value) {
-            return this.longValue.apply(value);
-        }
-
-        static Unit fromChronoUnit(ChronoUnit chronoUnit) {
+        static Unit fromChronoUnit(@Nullable ChronoUnit chronoUnit) {
             if (chronoUnit == null) {
-                return Unit.MILLIS;
+                return MILLIS;
             }
             for (Unit candidate : values()) {
                 if (candidate.chronoUnit == chronoUnit) {
@@ -262,7 +205,7 @@ enum DurationStyle {
                     return candidate;
                 }
             }
-            throw new IllegalArgumentException("Unknown unit '" + suffix + "'");
+            throw new IllegalArgumentException("Unknown unit \'" + suffix + "\'");
         }
     }
 }
