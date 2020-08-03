@@ -186,7 +186,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             messageReader.request(numMessages);
         } else {
-            ctx.eventLoop().submit(() -> messageReader.request(numMessages));
+            ctx.eventLoop().execute(() -> messageReader.request(numMessages));
         }
     }
 
@@ -195,7 +195,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendHeaders(metadata);
         } else {
-            ctx.eventLoop().submit(() -> doSendHeaders(metadata));
+            ctx.eventLoop().execute(() -> doSendHeaders(metadata));
         }
     }
 
@@ -236,7 +236,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
-            ctx.eventLoop().submit(() -> doSendMessage(message));
+            ctx.eventLoop().execute(() -> doSendMessage(message));
         }
     }
 
@@ -286,7 +286,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doClose(status, metadata);
         } else {
-            ctx.eventLoop().submit(() -> doClose(status, metadata));
+            ctx.eventLoop().execute(() -> doClose(status, metadata));
         }
     }
 

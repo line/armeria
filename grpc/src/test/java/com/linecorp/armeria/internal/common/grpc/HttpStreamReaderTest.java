@@ -153,7 +153,7 @@ public class HttpStreamReaderTest {
 
     @Test
     public void clientDone() throws Exception {
-        reader.apply(null, null);
+        reader.onComplete();
         verify(deframer).deframe(HttpData.empty(), true);
         verify(deframer).closeWhenComplete();
     }
@@ -161,7 +161,7 @@ public class HttpStreamReaderTest {
     @Test
     public void onComplete_when_deframer_isClosing() {
         when(deframer.isClosing()).thenReturn(true);
-        reader.apply(null, null);
+        reader.onComplete();
         verify(deframer, never()).deframe(HttpData.empty(), true);
         verify(deframer, never()).closeWhenComplete();
     }

@@ -158,12 +158,11 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             }
 
             return HttpData.wrap(maybeEncodedBuf).withEndOfStream(webTrailers);
+        } catch (ArmeriaStatusException e) {
+            throw e;
         } catch (IOException | RuntimeException e) {
             // IOException will not be thrown, since sink#deliverFrame doesn't throw.
-            throw new ArmeriaStatusException(
-                    StatusCodes.INTERNAL,
-                    "Failed to frame message",
-                    e);
+            throw new ArmeriaStatusException(StatusCodes.INTERNAL, "Failed to frame message", e);
         }
     }
 
