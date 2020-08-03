@@ -275,6 +275,7 @@ class HAProxyClientIntegrationTest {
                 msgRef.set((HAProxyMessage) msg);
                 return;
             }
+            final HAProxyMessage proxyMsg = msgRef.get();
             final FullHttpRequest request = (FullHttpRequest) msg;
             final DefaultFullHttpResponse response;
             if ("h2c".equals(request.headers().get(HttpHeaderNames.UPGRADE))) {
@@ -288,10 +289,11 @@ class HAProxyClientIntegrationTest {
             } else {
                 response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                                                        HttpResponseStatus.OK,
-                                                       Unpooled.copiedBuffer(strRepr(msgRef.get()),
+                                                       Unpooled.copiedBuffer(toString(proxyMsg),
                                                                              StandardCharsets.US_ASCII));
             }
 
+            ReferenceCountUtil.release(proxyMsg);
             ReferenceCountUtil.release(msg);
             ctx.writeAndFlush(response);
             ctx.close();
@@ -331,6 +333,7 @@ class HAProxyClientIntegrationTest {
                 msgRef.set((HAProxyMessage) msg);
                 return;
             }
+            final HAProxyMessage proxyMsg = msgRef.get();
             final FullHttpRequest request = (FullHttpRequest) msg;
             final DefaultFullHttpResponse response;
             if ("PRI".equals(request.method().name())) {
@@ -344,10 +347,11 @@ class HAProxyClientIntegrationTest {
             } else {
                 response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                                                        HttpResponseStatus.OK,
-                                                       Unpooled.copiedBuffer(strRepr(msgRef.get()),
+                                                       Unpooled.copiedBuffer(toString(proxyMsg),
                                                                              StandardCharsets.US_ASCII));
             }
 
+            ReferenceCountUtil.release(proxyMsg);
             ReferenceCountUtil.release(msg);
             ctx.writeAndFlush(response);
             ctx.close();
@@ -384,7 +388,7 @@ class HAProxyClientIntegrationTest {
         }
     }
 
-    private static String strRepr(HAProxyMessage message) {
+    private static String toString(HAProxyMessage message) {
         return String.format("%s-%s", new InetSocketAddress(message.sourceAddress(), message.sourcePort()),
                              new InetSocketAddress(message.destinationAddress(), message.destinationPort()));
     }
