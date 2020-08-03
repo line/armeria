@@ -77,7 +77,7 @@ date: 2020-08-03
                         MyGrpcServiceStub.class);
   ```
 - You can now send a request via an HAPROXY server preserving the original source and destination addresses.
-  #2907
+  #2589 #2907
   ```java
   ClientFactory factory =
       ClientFactory.builder()
@@ -152,6 +152,7 @@ date: 2020-08-03
   `FileService` misbehave. #2926.
 - Fixed an `IllegalReferenceCountException` when content preview is turned on. #2905
 - gRPC-Web trailers are now compressed and decompressed properly. #2930
+- Fixed the compatibility issues with `grpc-kotlin` #2947 #2950
 - You can now use the graceful shutdown properties when integration with Spring Boot 1. #2954
 - You can now use <type://DocServiceConfigurator> when integrating with Spring Boot 2. #2960
 - <type://MetricCollectingService> now decorates all services if the `armeria.enableMetrics` property is set
@@ -233,6 +234,7 @@ date: 2020-08-03
     'matsumana',
     'minwoox',
     'okue',
+    'smax48',
     'tobias-',
     'trustin',
   ]}
