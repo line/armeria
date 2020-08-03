@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
@@ -23,19 +25,33 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.server.ServiceRequestContext;
+
 /**
- * SOCKS4 proxy configuration.
+ * <a href="http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">HAPROXY configuration.</a>
  */
-public final class Socks4ProxyConfig extends ProxyConfig {
+public final class HAProxyConfig extends ProxyConfig {
 
     private final InetSocketAddress proxyAddress;
 
     @Nullable
-    private final String username;
+    private final InetSocketAddress sourceAddress;
 
-    Socks4ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username) {
+    HAProxyConfig(InetSocketAddress proxyAddress) {
         this.proxyAddress = proxyAddress;
-        this.username = username;
+        sourceAddress = null;
+    }
+
+    HAProxyConfig(InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
+        checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
+                      "sourceAddress and proxyAddress should be the same type");
+        this.proxyAddress = proxyAddress;
+        this.sourceAddress = sourceAddress;
+    }
+
+    @Override
+    public ProxyType proxyType() {
+        return ProxyType.HAPROXY;
     }
 
     @Override
@@ -44,16 +60,12 @@ public final class Socks4ProxyConfig extends ProxyConfig {
     }
 
     /**
-     * Returns the configured username.
+     * Represents the source address. When this value is {@code null}, it will be inferred
+     * from either the {@link ServiceRequestContext} or the local connection address.
      */
     @Nullable
-    public String username() {
-        return username;
-    }
-
-    @Override
-    public ProxyType proxyType() {
-        return ProxyType.SOCKS4;
+    public InetSocketAddress sourceAddress() {
+        return sourceAddress;
     }
 
     @Override
@@ -61,25 +73,25 @@ public final class Socks4ProxyConfig extends ProxyConfig {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Socks4ProxyConfig)) {
+        if (!(o instanceof HAProxyConfig)) {
             return false;
         }
-        final Socks4ProxyConfig that = (Socks4ProxyConfig) o;
+        final HAProxyConfig that = (HAProxyConfig) o;
         return proxyAddress.equals(that.proxyAddress) &&
-               Objects.equals(username, that.username);
+               Objects.equals(sourceAddress, that.sourceAddress);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(proxyAddress, username);
+        return Objects.hash(proxyAddress, sourceAddress);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("proxyType", proxyType())
-                          .add("proxyAddress", proxyAddress())
-                          .add("username", username())
+                          .add("proxyAddress", proxyAddress)
+                          .add("sourceAddress", sourceAddress)
                           .toString();
     }
 }

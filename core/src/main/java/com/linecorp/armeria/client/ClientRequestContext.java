@@ -74,17 +74,14 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the client-side context of the {@link Request} that is being handled in the current thread.
      *
      * @return the {@link ClientRequestContext} available in the current thread, or {@code null} if unavailable.
-     * @throws IllegalStateException if the current context is not a {@link ClientRequestContext}.
      */
     @Nullable
     static ClientRequestContext currentOrNull() {
         final RequestContext ctx = RequestContext.currentOrNull();
-        if (ctx == null) {
-            return null;
+        if (ctx instanceof ClientRequestContext) {
+            return (ClientRequestContext) ctx;
         }
-        checkState(ctx instanceof ClientRequestContext,
-                   "The current context is not a client-side context: %s", ctx);
-        return (ClientRequestContext) ctx;
+        return null;
     }
 
     /**
@@ -103,6 +100,12 @@ public interface ClientRequestContext extends RequestContext {
         final ClientRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
+        }
+
+        final ServiceRequestContext serviceRequestContext = ServiceRequestContext.currentOrNull();
+        if (serviceRequestContext != null) {
+            throw new IllegalStateException("The current context is not a client-side context: " +
+                                            serviceRequestContext);
         }
 
         if (defaultValueSupplier != null) {
