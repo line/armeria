@@ -125,12 +125,16 @@ public final class HttpStreamReader implements Subscriber<HttpObject> {
 
             final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
             if (grpcStatus != null) {
-                // A gRPC client could not receive messages fully yet.
-                // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
-                deframer.whenClosed().thenRun(() -> {
+                if (deframer.isClosed()) {
                     GrpcStatus.reportStatus(headers, this, transportStatusListener);
-                });
-                deframer.closeWhenComplete();
+                } else {
+                    // A gRPC client could not receive messages fully yet.
+                    // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
+                    deframer.whenClosed().thenRun(() -> {
+                        GrpcStatus.reportStatus(headers, this, transportStatusListener);
+                    });
+                    deframer.closeWhenComplete();
+                }
             }
 
             // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
