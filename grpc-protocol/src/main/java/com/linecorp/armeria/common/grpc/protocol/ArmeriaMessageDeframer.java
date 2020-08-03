@@ -56,6 +56,7 @@ import java.io.InputStream;
 import java.util.ArrayDeque;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -63,6 +64,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -83,6 +85,13 @@ import io.netty.buffer.Unpooled;
 public class ArmeriaMessageDeframer implements AutoCloseable {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
+
+    private static final CloseFuture CLOSED_FUTURE;
+
+    static {
+        CLOSED_FUTURE = new CloseFuture();
+        CLOSED_FUTURE.doComplete();
+    }
 
     private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
 
@@ -208,6 +217,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     @Nullable
     private Decompressor decompressor;
 
+    @Nullable
+    private CloseFuture whenClosed;
     private boolean endOfStream;
     private boolean closeWhenComplete;
 
@@ -328,6 +339,22 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 listener.endOfStream();
             }
         }
+
+        if (whenClosed == null) {
+            whenClosed = CLOSED_FUTURE;
+        } else {
+            whenClosed.doComplete();
+        }
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which will be completed when this deframer has been closed.
+     */
+    public CompletableFuture<Void> whenClosed() {
+        if (whenClosed == null) {
+            whenClosed = new CloseFuture();
+        }
+        return whenClosed;
     }
 
     /**
@@ -646,6 +673,12 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                                 "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
                                 debugString, maxMessageSize, count));
             }
+        }
+    }
+
+    private static class CloseFuture extends UnmodifiableFuture<Void> {
+        private void doComplete() {
+            doComplete(null);
         }
     }
 }

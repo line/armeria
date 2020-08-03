@@ -56,6 +56,21 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
     }
 
     /**
+     * Sends a [HelloReply] with a small amount of blocking time using `ArmeriaBlockingContext`.
+     *
+     * @see [Blocking service implementation](https://armeria.dev/docs/server-grpc#blocking-service-implementation)
+     */
+    override suspend fun shortBlockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
+        try { // Simulate a blocking API call.
+            Thread.sleep(10)
+        } catch (ignored: Exception) { // Do nothing.
+        }
+        // Make sure that current thread is request context aware
+        ServiceRequestContext.current()
+        buildReply(toMessage(request.name))
+    }
+
+    /**
      * Sends 5 [HelloReply] responses when receiving a request.
      *
      * @see lazyHello(HelloRequest, StreamObserver)
@@ -72,6 +87,44 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
                 ServiceRequestContext.current()
             }
         }.flowOn(armeriaDispatcher())
+    }
+
+    /**
+     * Sends 5 [HelloReply] responses using [armeriaBlockingDispatcher] when receiving a request.
+     * @see lazyHello(HelloRequest, StreamObserver)
+     */
+    override fun blockingLotsOfReplies(request: HelloRequest): Flow<HelloReply> {
+        // You can also write this code without Reactor like 'lazyHello' example.
+        return flow {
+            for (i in 1..5) {
+                // Check context between delay and emit
+                ServiceRequestContext.current()
+                delay(1000)
+                ServiceRequestContext.current()
+                emit(buildReply("Hello, ${request.name}! (sequence: $i)")) // emit next value
+                ServiceRequestContext.current()
+            }
+        }.flowOn(armeriaBlockingDispatcher())
+    }
+
+    /**
+     * Sends 5 [HelloReply] responses with a small amount of blocking time when receiving a request
+     * using [armeriaBlockingDispatcher].
+     *
+     * @see lazyHello(HelloRequest, StreamObserver)
+     */
+    override fun shortBlockingLotsOfReplies(request: HelloRequest): Flow<HelloReply> {
+        // You can also write this code without Reactor like 'lazyHello' example.
+        return flow {
+            for (i in 1..5) {
+                // Check context between delay and emit
+                ServiceRequestContext.current()
+                delay(10)
+                ServiceRequestContext.current()
+                emit(buildReply("Hello, ${request.name}! (sequence: $i)")) // emit next value
+                ServiceRequestContext.current()
+            }
+        }.flowOn(armeriaBlockingDispatcher())
     }
 
     /**
@@ -100,6 +153,9 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
     companion object {
         fun armeriaDispatcher(): CoroutineDispatcher =
             ServiceRequestContext.current().eventLoop().asCoroutineDispatcher()
+
+        fun armeriaBlockingDispatcher(): CoroutineDispatcher =
+            ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher()
 
         suspend fun <T> withArmeriaContext(block: suspend CoroutineScope.() -> T): T =
             withContext(armeriaDispatcher(), block)
