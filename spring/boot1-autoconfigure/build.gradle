@@ -70,7 +70,8 @@ task generateSources(type: Copy) {
 }
 
 tasks.compileJava.dependsOn(generateSources)
-tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
+tasks.compileTestJava.source "${projectDir}/src/test/java",
+        "${autoconfigureProjectDir}/src/test/java",
         "${autoconfigureProjectDir}/gen-src/test/grpc",
         "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
@@ -81,10 +82,4 @@ tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.com
 // Disable checkstyle because it's checked by ':spring:boot2-autoconfigure'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
-}
-
-// Graceful shutdown is supported only on Spring Boot 2
-// because Spring Boot 1 cannot convert a String to a Duration.
-tasks.withType(Test) {
-    exclude '**/ArmeriaGracefulShutdownConfigurationTest*'
 }
