@@ -17,7 +17,7 @@ const transformer = (props) => {
 
   const hasTopHeading = index >= 0;
 
-  // Generate the document title from the first heading.
+  // Generate the document title from the frontmatter or first heading.
   let pageTitle;
   if (hasTopHeading) {
     try {
@@ -31,6 +31,8 @@ const transformer = (props) => {
     } catch (e) {
       // Ignore.
     }
+  } else {
+    pageTitle = frontmatter.title;
   }
 
   // Generate ToC from the non-first headings.
@@ -54,6 +56,7 @@ const transformer = (props) => {
   let oldChildren = markdownAST.children;
   const newChildren = [];
 
+  // Export the page title as a property.
   if (pageTitle) {
     newChildren.push({
       type: 'export',
@@ -61,11 +64,13 @@ const transformer = (props) => {
     });
   }
 
+  // Insert the top heading.
   if (hasTopHeading) {
     newChildren.push(...oldChildren.slice(0, index + 1));
     oldChildren = oldChildren.slice(index + 1);
   }
 
+  // Insert date.
   if (frontmatter.date) {
     newChildren.push({
       type: 'paragraph',
@@ -81,8 +86,8 @@ const transformer = (props) => {
     });
   }
 
+  // Insert ToC.
   if (toc) {
-    // Insert ToC and body.
     newChildren.push({
       type: 'heading',
       depth: 6, // Use the level ignored by Tocbot.
