@@ -122,7 +122,7 @@ enum DurationStyle {
      * @throws IllegalArgumentException if the value is not a known style
      */
     static DurationStyle detect(String value) {
-        requireNonNull(value, "Value must not be null");
+        requireNonNull(value, "value");
         for (DurationStyle candidate : values()) {
             if (candidate.matches(value)) {
                 return candidate;
