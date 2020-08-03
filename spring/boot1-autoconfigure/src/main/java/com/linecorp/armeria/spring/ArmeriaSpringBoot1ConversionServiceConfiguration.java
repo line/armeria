@@ -18,9 +18,11 @@ package com.linecorp.armeria.spring;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.format.FormatterRegistrar;
@@ -52,6 +54,7 @@ public class ArmeriaSpringBoot1ConversionServiceConfiguration {
      * Create a new {@link StringToDurationConverter} bean.
      */
     @Bean
+    @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
     public StringToDurationConverter armeriaSpringBoot1StringDurationConverter() {
         return new StringToDurationConverter();
     }
