@@ -46,10 +46,15 @@ public class ProxyConfigTest {
 
     @Test
     void testUnresolvedProxyAddress() {
-        final InetSocketAddress addr = InetSocketAddress.createUnresolved("unresolved", 0);
-        assertThatThrownBy(() -> ProxyConfig.socks4(addr)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.socks5(addr)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.connect(addr)).isInstanceOf(IllegalArgumentException.class);
+        final InetSocketAddress unresolved = InetSocketAddress.createUnresolved("unresolved", 0);
+        final InetSocketAddress resolved = new InetSocketAddress("127.0.0.1", 80);
+        assertThatThrownBy(() -> ProxyConfig.socks4(unresolved)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ProxyConfig.socks5(unresolved)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ProxyConfig.connect(unresolved)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ProxyConfig.haproxy(unresolved, resolved))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ProxyConfig.haproxy(resolved, unresolved))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -57,6 +62,7 @@ public class ProxyConfigTest {
         assertThatThrownBy(() -> ProxyConfig.socks4(null)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> ProxyConfig.socks5(null)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> ProxyConfig.connect(null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> ProxyConfig.haproxy(null, null)).isInstanceOf(NullPointerException.class);
     }
 
     private static class ProxyConfigProvider implements ArgumentsProvider {
@@ -89,7 +95,11 @@ public class ProxyConfigTest {
                 ProxyConfig.socks5(addr2),
                 ProxyConfig.socks5(addr1, "uname1", "pw1"),
                 ProxyConfig.socks5(addr1, "uname2", "pw1"),
-                ProxyConfig.socks5(addr1, "uname1", "pw2")
+                ProxyConfig.socks5(addr1, "uname1", "pw2"),
+
+                ProxyConfig.haproxy(addr1, addr2),
+                ProxyConfig.haproxy(addr2, addr1),
+                new HAProxyConfig(addr1)
         );
     }
 }
