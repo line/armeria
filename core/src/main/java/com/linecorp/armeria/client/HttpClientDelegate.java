@@ -186,10 +186,8 @@ final class HttpClientDelegate implements HttpClient {
             assert proxyAddress != null;
 
             // use proxy information in context if available
-            final ClientRequestContext clientCtx = ClientRequestContext.currentOrNull();
-            if (clientCtx != null && clientCtx.root() != null) {
-                final ServiceRequestContext serviceCtx = clientCtx.root();
-                assert serviceCtx != null;
+            final ServiceRequestContext serviceCtx = ServiceRequestContext.currentOrNull();
+            if (serviceCtx != null) {
                 final ProxiedAddresses proxiedAddresses = serviceCtx.proxiedAddresses();
                 return ProxyConfig.haproxy(proxyAddress, proxiedAddresses.sourceAddress());
             }
