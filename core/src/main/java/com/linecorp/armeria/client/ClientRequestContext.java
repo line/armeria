@@ -77,9 +77,6 @@ public interface ClientRequestContext extends RequestContext {
     @Nullable
     static ClientRequestContext currentOrNull() {
         final RequestContext ctx = RequestContext.currentOrNull();
-        if (ctx == null) {
-            return null;
-        }
         if (ctx instanceof ClientRequestContext) {
             return (ClientRequestContext) ctx;
         }
