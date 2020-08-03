@@ -17,7 +17,6 @@ package com.linecorp.armeria.client.proxy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.net.ConnectException;
@@ -25,8 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -128,7 +126,7 @@ class HAProxyClientIntegrationTest {
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse = String.format("%s-%s", srcAddr,
                                                           destAddr);
@@ -164,7 +162,7 @@ class HAProxyClientIntegrationTest {
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(destEndpoint.ipAddr()).isNotNull();
 
@@ -193,16 +191,16 @@ class HAProxyClientIntegrationTest {
                              .decorator(LoggingClient.newDecorator())
                              .decorator((delegate, ctx, req) -> {
                                  final HttpResponse response = delegate.execute(ctx, req);
-                                 await().atMost(10, TimeUnit.SECONDS).until(
-                                         () -> ctx.log().isAvailable(RequestLogProperty.SESSION));
-                                 srcAddressRef.set(ctx.localAddress());
+                                 ctx.log()
+                                    .whenAvailable(RequestLogProperty.SESSION)
+                                    .thenAccept(log ->  srcAddressRef.set(log.context().localAddress()));
                                  return response;
                              })
                              .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse = String.format("%s-%s", srcAddressRef.get(), destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
@@ -229,7 +227,7 @@ class HAProxyClientIntegrationTest {
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
@@ -255,8 +253,8 @@ class HAProxyClientIntegrationTest {
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
 
-            assertThatThrownBy(() -> responseFuture.get(10, TimeUnit.SECONDS))
-                    .isInstanceOf(ExecutionException.class)
+            assertThatThrownBy(responseFuture::join)
+                    .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                     .hasRootCauseInstanceOf(ConnectException.class);
         }
@@ -311,7 +309,7 @@ class HAProxyClientIntegrationTest {
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
-            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);
@@ -367,7 +365,7 @@ class HAProxyClientIntegrationTest {
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
-            final AggregatedHttpResponse response = responseFuture.get(10, TimeUnit.SECONDS);
+            final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             final String expectedResponse = String.format("%s-%s", srcAddr, destAddr);
             assertThat(response.contentUtf8()).isEqualTo(expectedResponse);

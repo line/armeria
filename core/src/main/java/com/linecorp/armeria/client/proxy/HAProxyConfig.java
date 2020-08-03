@@ -88,11 +88,10 @@ public final class HAProxyConfig extends ProxyConfig {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress)
                           .add("sourceAddress", sourceAddress)
-                          .omitNullValues()
                           .toString();
     }
 }
