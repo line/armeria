@@ -81,12 +81,12 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
             for (i in 1..5) {
                 // Check context between delay and emit
                 ServiceRequestContext.current()
-                delay(1000)
+                delay(10)
                 ServiceRequestContext.current()
                 emit(buildReply("Hello, ${request.name}! (sequence: $i)")) // emit next value
                 ServiceRequestContext.current()
             }
-        }.flowOn(armeriaDispatcher())
+        }.flowOn(armeriaBlockingDispatcher())
     }
 
     /**
@@ -115,6 +115,9 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase(Dispat
     companion object {
         fun armeriaDispatcher(): CoroutineDispatcher =
             ServiceRequestContext.current().eventLoop().asCoroutineDispatcher()
+
+        fun armeriaBlockingDispatcher(): CoroutineDispatcher =
+            ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher()
 
         suspend fun <T> withArmeriaContext(block: suspend CoroutineScope.() -> T): T =
             withContext(armeriaDispatcher(), block)

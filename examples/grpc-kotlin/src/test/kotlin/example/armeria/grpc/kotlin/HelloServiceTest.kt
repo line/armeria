@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -69,15 +70,19 @@ class HelloServiceTest {
         }
     }
 
-    @Test
+    @RepeatedTest(1000)
     fun lotsOfReplies() {
         runBlocking {
-            var sequence = 0
-            helloService.lotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
-                .collect {
-                    assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
+            repeat(30) {
+                launch {
+                    var sequence = 0
+                    helloService.lotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                        .collect {
+                            assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
+                        }
+                    assertThat(sequence).isEqualTo(5)
                 }
-            assertThat(sequence).isEqualTo(5)
+            }
         }
     }
 
