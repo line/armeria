@@ -82,12 +82,28 @@ class HelloServiceTest {
     }
 
     @Test
-    fun parallelLotsOfReplies() {
+    fun parallelBlockingLotsOfReplies() {
         runBlocking {
             repeat(30) {
                 launch {
                     var sequence = 0
                     helloService.blockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                        .collect {
+                            assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
+                        }
+                    assertThat(sequence).isEqualTo(5)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun parallelShortBlockingLotsOfReplies() {
+        runBlocking {
+            repeat(30) {
+                launch {
+                    var sequence = 0
+                    helloService.shortBlockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
                         .collect {
                             assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                         }
