@@ -131,6 +131,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private volatile boolean listenerClosed;
     private boolean sendHeadersCalled;
     private boolean closeCalled;
+    private boolean inHalfClose;
 
     private volatile int pendingMessages;
 
@@ -283,7 +284,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void close(Status status, Metadata metadata) {
-        if (ctx.eventLoop().inEventLoop()) {
+        // TODO(ikhoon): `onHalfClose()` could call directly 'ServerCall.close()' due to a race condition of
+        //               Coroutine in gRPC-Kotline. By rescheduling the close event, we can avoid the race
+        //               condition. Remove `inHalfClose` flag once
+        //               https://github.com/grpc/grpc-kotlin/issues/151 is resolved properly.
+        if (ctx.eventLoop().inEventLoop() && !inHalfClose) {
             doClose(status, metadata);
         } else {
             ctx.eventLoop().execute(() -> doClose(status, metadata));
@@ -422,9 +427,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void invokeHalfClose() {
         try (SafeCloseable ignored = ctx.push()) {
+            inHalfClose = true;
             listener.onHalfClose();
         } catch (Throwable t) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
+        } finally {
+            inHalfClose = false;
         }
     }
 

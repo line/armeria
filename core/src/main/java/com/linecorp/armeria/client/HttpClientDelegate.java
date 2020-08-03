@@ -26,7 +26,9 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
+import com.linecorp.armeria.client.proxy.HAProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -37,6 +39,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.server.ProxiedAddresses;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -142,9 +146,8 @@ final class HttpClientDelegate implements HttpClient {
 
         final ProxyConfig proxyConfig;
         try {
-            final Endpoint endpoint = Endpoint.of(host, port);
-            proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
-            requireNonNull(proxyConfig, "proxyConfig");
+            final Endpoint endpoint = Endpoint.of(host, port).withIpAddr(ipAddr);
+            proxyConfig = getProxyConfig(protocol, endpoint);
         } catch (Throwable t) {
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
             handleEarlyRequestException(ctx, req, wrapped);
@@ -170,6 +173,27 @@ final class HttpClientDelegate implements HttpClient {
                 return null;
             });
         }
+    }
+
+    private ProxyConfig getProxyConfig(SessionProtocol protocol, Endpoint endpoint) {
+        final ProxyConfig proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
+        requireNonNull(proxyConfig, "proxyConfig");
+
+        // special behavior for haproxy when sourceAddress is null
+        if (proxyConfig.proxyType() == ProxyType.HAPROXY &&
+            ((HAProxyConfig) proxyConfig).sourceAddress() == null) {
+            final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
+            assert proxyAddress != null;
+
+            // use proxy information in context if available
+            final ServiceRequestContext serviceCtx = ServiceRequestContext.currentOrNull();
+            if (serviceCtx != null) {
+                final ProxiedAddresses proxiedAddresses = serviceCtx.proxiedAddresses();
+                return ProxyConfig.haproxy(proxyAddress, proxiedAddresses.sourceAddress());
+            }
+        }
+
+        return proxyConfig;
     }
 
     private static void logSession(ClientRequestContext ctx, @Nullable PooledChannel pooledChannel,

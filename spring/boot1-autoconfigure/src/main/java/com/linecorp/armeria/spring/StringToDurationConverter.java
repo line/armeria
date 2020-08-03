@@ -14,35 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.proxy;
+package com.linecorp.armeria.spring;
+
+import java.time.Duration;
+
+import org.springframework.core.convert.converter.Converter;
 
 /**
- * The proxy protocol type.
+ * Convert {@link String} to {@link Duration}.
  */
-public enum ProxyType {
-
-    /**
-     * Proxy is absent.
-     */
-    DIRECT,
-
-    /**
-     * SOCKS4 proxy protocol.
-     */
-    SOCKS4,
-
-    /**
-     * SOCKS5 proxy protocol.
-     */
-    SOCKS5,
-
-    /**
-     * CONNECT proxy protocol.
-     */
-    CONNECT,
-
-    /**
-     * HAPROXY protocol.
-     */
-    HAPROXY
+class StringToDurationConverter implements Converter<String, Duration> {
+    @Override
+    public Duration convert(String source) {
+        return DurationStyle.detect(source).parse(source);
+    }
 }

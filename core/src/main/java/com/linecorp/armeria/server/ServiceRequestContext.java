@@ -91,14 +91,7 @@ public interface ServiceRequestContext extends RequestContext {
             return null;
         }
 
-        final ServiceRequestContext root = ctx.root();
-        if (root != null) {
-            return root;
-        }
-
-        throw new IllegalStateException(
-                "The current context is not a server-side context and does not have a root " +
-                "which means that the context is not invoked by a server request. ctx: " + ctx);
+        return ctx.root();
     }
 
     /**
@@ -117,6 +110,14 @@ public interface ServiceRequestContext extends RequestContext {
         final ServiceRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
+        }
+
+        final ClientRequestContext clientRequestContext = ClientRequestContext.currentOrNull();
+        if (clientRequestContext != null) {
+            throw new IllegalStateException(
+                    "The current context is not a server-side context and does not have a root " +
+                    "which means that the context is not invoked by a server request. ctx: " +
+                    clientRequestContext);
         }
 
         if (defaultValueSupplier != null) {
