@@ -26,7 +26,7 @@ import org.springframework.format.FormatterRegistry;
  */
 class ArmeriaSpringBoot1FormatterRegistrar implements FormatterRegistrar {
 
-    private ListableBeanFactory beanFactory;
+    private final ListableBeanFactory beanFactory;
 
     ArmeriaSpringBoot1FormatterRegistrar(ListableBeanFactory beanFactory) {
         this.beanFactory = beanFactory;
