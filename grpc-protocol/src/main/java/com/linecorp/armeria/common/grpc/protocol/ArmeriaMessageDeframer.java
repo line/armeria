@@ -328,12 +328,6 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     @Override
     public void close() {
-        if (whenClosed == null) {
-            whenClosed = CLOSED_FUTURE;
-        } else {
-            whenClosed.doComplete();
-        }
-
         if (unprocessed != null) {
             try {
                 unprocessed.forEach(ByteBuf::release);
@@ -344,6 +338,12 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             if (endOfStream) {
                 listener.endOfStream();
             }
+        }
+
+        if (whenClosed == null) {
+            whenClosed = CLOSED_FUTURE;
+        } else {
+            whenClosed.doComplete();
         }
     }
 
