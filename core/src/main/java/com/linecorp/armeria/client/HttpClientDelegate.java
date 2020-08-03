@@ -191,8 +191,6 @@ final class HttpClientDelegate implements HttpClient {
                 final ProxiedAddresses proxiedAddresses = serviceCtx.proxiedAddresses();
                 return ProxyConfig.haproxy(proxyAddress, proxiedAddresses.sourceAddress());
             }
-            // otherwise use the endpoint information
-            return ProxyConfig.haproxy(proxyAddress);
         }
 
         return proxyConfig;
