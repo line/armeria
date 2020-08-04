@@ -155,9 +155,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     }
                     merged = headers;
                 } else {
-                    if (req.method() == HttpMethod.HEAD) {
-                        endOfStream = true;
-                    } else if (status.isContentAlwaysEmpty()) {
+                    if (status.isContentAlwaysEmpty()) {
                         state = State.NEEDS_TRAILERS;
                     } else {
                         state = State.NEEDS_DATA_OR_TRAILERS;
@@ -208,6 +206,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     final HttpData data = (HttpData) o;
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
+
+                    // when HTTP body is published for HEAD method,
+                    // subscription should be cancelled not to include message-body in response.
+                    if (req.method() == HttpMethod.HEAD) {
+                        endOfStream = true;
+                    }
+
                     if (endOfStream) {
                         setDone(true);
                     }

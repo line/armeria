@@ -16,6 +16,11 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.web.reactive.function.BodyInserters.fromValue;
+import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
+import static org.springframework.web.reactive.function.server.RequestPredicates.HEAD;
+import static org.springframework.web.reactive.function.server.RouterFunctions.route;
+import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -27,10 +32,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.google.common.io.ByteStreams;
 
@@ -46,10 +54,17 @@ class ReactiveWebServerLoadBalancerInteropTest {
     static class TestConfiguration {
         @RestController
         static class TestController {
-            @GetMapping("/api/ping")
+            @GetMapping("/controller/api/ping")
             Mono<String> ping() {
                 return Mono.just("PONG");
             }
+        }
+
+        @Bean
+        RouterFunction<ServerResponse> routerFunction() {
+            return route(GET("/router/api/poke"), request -> ok().build())
+                    .and(route(HEAD("/router/api/poke"), request -> ok().build()))
+                    .and(route(HEAD("/router/api/ping"), request -> ok().body(fromValue("PONG"))));
         }
     }
 
@@ -57,35 +72,73 @@ class ReactiveWebServerLoadBalancerInteropTest {
     int port;
 
     @Test
-    void get() throws Exception {
-        try (Socket s = new Socket(NetUtil.LOCALHOST4, port)) {
-            s.setSoTimeout(10000);
-            final InputStream in = s.getInputStream();
-            final OutputStream out = s.getOutputStream();
-            out.write("GET /api/ping HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
-
-            // Should not be chunked.
-            assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(
-                    "HTTP/1.1 200 OK\r\n" +
-                    "content-type: text/plain;charset=UTF-8\r\n" +
-                    "content-length: 4\r\n\r\n" +
-                    "PONG");
-        }
+    void getToController() throws Exception {
+        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
+        final String httpRequest = "GET /controller/api/ping HTTP/1.0\r\n\r\n";
+        // Should not be chunked.
+        final String expectedHttpResponse =
+                "HTTP/1.1 200 OK\r\n" +
+                "content-type: text/plain;charset=UTF-8\r\n" +
+                "content-length: 4\r\n\r\n" +
+                "PONG";
+        testHttpResponse(httpRequest, expectedHttpResponse);
     }
 
     @Test
-    void head() throws Exception {
+    void headToController() throws Exception {
+        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
+        final String httpRequest = "HEAD /controller/api/ping HTTP/1.0\r\n\r\n";
+        // Should not be chunked.
+        final String expectedHttpResponse =
+                "HTTP/1.1 200 OK\r\n" +
+                "content-type: text/plain;charset=UTF-8\r\n" +
+                "content-length: 4\r\n\r\n";
+        testHttpResponse(httpRequest, expectedHttpResponse);
+    }
+
+    @Test
+    void getToRouter() throws Exception {
+        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
+        final String httpRequest = "GET /router/api/poke HTTP/1.0\r\n\r\n";
+        // Should not be chunked.
+        final String expectedHttpResponse =
+                "HTTP/1.1 200 OK\r\n" +
+                "content-length: 0\r\n\r\n";
+        testHttpResponse(httpRequest, expectedHttpResponse);
+    }
+
+    @Test
+    void headToRouterWithoutBody() throws Exception {
+        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
+        final String httpRequest = "HEAD /router/api/poke HTTP/1.0\r\n\r\n";
+        // Should not be chunked.
+        final String expectedHttpResponse =
+                "HTTP/1.1 200 OK\r\n" +
+                "content-length: 0\r\n\r\n";
+        testHttpResponse(httpRequest, expectedHttpResponse);
+    }
+
+    @Test
+    void headToRouterWithBody() throws Exception {
+        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
+        final String httpRequest = "HEAD /router/api/ping HTTP/1.0\r\n\r\n";
+        // Should not be chunked.
+        final String expectedHttpResponse =
+                "HTTP/1.1 200 OK\r\n" +
+                "content-type: text/plain;charset=UTF-8\r\n" +
+                "content-length: 4\r\n\r\n";
+        testHttpResponse(httpRequest, expectedHttpResponse);
+    }
+
+    private void testHttpResponse(String httpRequest, String expectedHttpResponse)
+            throws Exception {
         try (Socket s = new Socket(NetUtil.LOCALHOST4, port)) {
             s.setSoTimeout(10000);
             final InputStream in = s.getInputStream();
             final OutputStream out = s.getOutputStream();
-            out.write("HEAD /api/ping HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            out.write(httpRequest.getBytes(StandardCharsets.US_ASCII));
 
-            // Should neither be chunked nor have content.
-            assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(
-                    "HTTP/1.1 200 OK\r\n" +
-                    "content-type: text/plain;charset=UTF-8\r\n" +
-                    "content-length: 4\r\n\r\n");
+            assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(expectedHttpResponse);
         }
     }
 }
