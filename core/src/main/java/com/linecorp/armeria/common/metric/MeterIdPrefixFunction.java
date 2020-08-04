@@ -19,20 +19,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
-import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
@@ -67,50 +60,7 @@ public interface MeterIdPrefixFunction {
      * </ul>
      */
     static MeterIdPrefixFunction ofDefault(String name) {
-        requireNonNull(name, "name");
-        return new MeterIdPrefixFunction() {
-            @Override
-            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
-                // hostNamePattern, method, route
-                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
-                buildTags(tagListBuilder, log);
-                return new MeterIdPrefix(name, tagListBuilder.build());
-            }
-
-            @Override
-            public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
-                // hostNamePattern, httpStatus, method, route
-                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
-                buildTags(tagListBuilder, log);
-                RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
-                return new MeterIdPrefix(name, tagListBuilder.build());
-            }
-
-            /**
-             * Appends the tags in lexicographical order for better sort performance.
-             */
-            private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
-                final RequestContext ctx = log.context();
-
-                if (ctx instanceof ServiceRequestContext) {
-                    final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                    tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "hostnamePattern"
-                                                                          : "hostname.pattern",
-                                              sCtx.config().virtualHost().hostnamePattern()));
-                }
-
-                String methodName = log.name();
-                if (methodName == null) {
-                    final RequestHeaders requestHeaders = log.requestHeaders();
-                    methodName = requestHeaders.method().name();
-                }
-                tagListBuilder.add(Tag.of("method", methodName));
-                final String serviceName = log.serviceName();
-                if (serviceName != null) {
-                    tagListBuilder.add(Tag.of("service", serviceName));
-                }
-            }
-        };
+        return new DefaultMeterIdPrefixFunction(name);
     }
 
     /**

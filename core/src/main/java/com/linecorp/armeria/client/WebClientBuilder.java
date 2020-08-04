@@ -164,6 +164,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder clearDecorator() {
+        return (WebClientBuilder) super.clearDecorator();
+    }
+
+    @Override
     public WebClientBuilder addHttpHeader(CharSequence name, Object value) {
         return (WebClientBuilder) super.addHttpHeader(name, value);
     }

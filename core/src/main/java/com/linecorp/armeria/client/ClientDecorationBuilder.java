@@ -63,6 +63,17 @@ public final class ClientDecorationBuilder {
     }
 
     /**
+     * Clears the HTTP-level decorators set using {@link #add(ClientDecoration)}, {@link #add(Function)} and
+     * {@link #add(DecoratingHttpClientFunction)}.
+     * Please note that RPC-level decorators are not cleared by this method. You should use
+     * {@link #clearRpc()}.
+     */
+    public ClientDecorationBuilder clear() {
+        decorators.clear();
+        return this;
+    }
+
+    /**
      * Adds the specified RPC-level {@code decorator}.
      *
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
@@ -80,6 +91,15 @@ public final class ClientDecorationBuilder {
     public ClientDecorationBuilder addRpc(DecoratingRpcClientFunction decorator) {
         requireNonNull(decorator, "decorator");
         return addRpc(delegate -> new FunctionalDecoratingRpcClient(delegate, decorator));
+    }
+
+    /**
+     * Clears the RPC-level decorators set using {@link #add(ClientDecoration)},
+     * {@link #addRpc(DecoratingRpcClientFunction)} and {@link #addRpc(Function)}.
+     */
+    public ClientDecorationBuilder clearRpc() {
+        rpcDecorators.clear();
+        return this;
     }
 
     /**

@@ -237,6 +237,15 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Clears the HTTP-level decorators set so far. Please note that RPC-level decorators are not cleared
+     * by this method. You should use {@link #clearRpcDecorator()}.
+     */
+    public AbstractClientOptionsBuilder clearDecorator() {
+        decoration.clear();
+        return this;
+    }
+
+    /**
      * Adds the specified RPC-level {@code decorator}.
      *
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
@@ -254,6 +263,14 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         decoration.addRpc(decorator);
+        return this;
+    }
+
+    /**
+     * Clears the RPC-level decorators set so far.
+     */
+    public AbstractClientOptionsBuilder clearRpcDecorator() {
+        decoration.clearRpc();
         return this;
     }
 

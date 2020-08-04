@@ -15,11 +15,11 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
+import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
+
 import java.net.URI;
 
 import javax.annotation.Nullable;
-
-import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
@@ -101,7 +101,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         final ClientOptions options = options();
         final int maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
-        final int maxInboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES);
+        final int maxInboundMessageSizeBytes = maxInboundMessageSizeBytes(options);
         final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
 
         final HttpClient client;
@@ -120,8 +120,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 req,
                 method,
                 maxOutboundMessageSizeBytes,
-                maxInboundMessageSizeBytes > 0 ? maxInboundMessageSizeBytes
-                                               : Ints.saturatedCast(options.maxResponseLength()),
+                maxInboundMessageSizeBytes,
                 callOptions,
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),

@@ -38,10 +38,8 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
-import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -311,14 +309,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public EurekaEndpointGroupBuilder rpcDecorator(
-            Function<? super RpcClient, ? extends RpcClient> decorator) {
-        return (EurekaEndpointGroupBuilder) super.rpcDecorator(decorator);
-    }
-
-    @Override
-    public EurekaEndpointGroupBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
-        return (EurekaEndpointGroupBuilder) super.rpcDecorator(decorator);
+    public EurekaEndpointGroupBuilder clearDecorator() {
+        return (EurekaEndpointGroupBuilder) super.clearDecorator();
     }
 
     @Override

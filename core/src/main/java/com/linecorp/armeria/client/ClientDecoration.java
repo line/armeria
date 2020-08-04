@@ -88,11 +88,17 @@ public final class ClientDecoration {
         this.rpcDecorators = ImmutableList.copyOf(rpcDecorators);
     }
 
-    List<Function<? super HttpClient, ? extends HttpClient>> decorators() {
+    /**
+     * Returns the HTTP-level decorators.
+     */
+    public List<Function<? super HttpClient, ? extends HttpClient>> decorators() {
         return decorators;
     }
 
-    List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators() {
+    /**
+     * Returns the RPC-level decorators.
+     */
+    public List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators() {
         return rpcDecorators;
     }
 

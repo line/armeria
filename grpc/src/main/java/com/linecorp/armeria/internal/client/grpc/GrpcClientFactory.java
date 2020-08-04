@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -28,8 +29,10 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
@@ -84,7 +87,9 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             throw newUnknownClientTypeException(clientType);
         }
 
-        final HttpClient httpClient = newHttpClient(params);
+        final ClientBuilderParams params0 =
+                addTrailersExtractorIfGrpcWeb(params, options, serializationFormat);
+        final HttpClient httpClient = newHttpClient(params0);
 
         final GrpcJsonMarshaller jsonMarshaller;
         if (GrpcSerializationFormats.isJson(serializationFormat)) {
@@ -95,7 +100,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         }
 
         final ArmeriaChannel channel = new ArmeriaChannel(
-                params,
+                params0,
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
@@ -117,6 +122,27 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
             throw new IllegalStateException("Could not create a gRPC stub through reflection.", e);
         }
+    }
+
+    private static ClientBuilderParams addTrailersExtractorIfGrpcWeb(
+            ClientBuilderParams params,
+            ClientOptions options,
+            SerializationFormat serializationFormat) {
+        if (!GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
+            return params;
+        }
+        final GrpcWebTrailersExtractor webTrailersExtractor = new GrpcWebTrailersExtractor(
+                maxInboundMessageSizeBytes(options),
+                GrpcSerializationFormats.isGrpcWebText(serializationFormat));
+        final ClientDecoration originalDecoration = options.decoration();
+        final ClientOptionsBuilder optionsBuilder = options.toBuilder();
+        optionsBuilder.clearDecorator();
+        optionsBuilder.decorator(webTrailersExtractor);
+        originalDecoration.decorators().forEach(optionsBuilder::decorator);
+
+        return ClientBuilderParams.of(
+                params.scheme(), params.endpointGroup(), params.absolutePathRef(),
+                params.clientType(), optionsBuilder.build());
     }
 
     @Nullable
@@ -158,7 +184,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             return null;
         }
 
-        for (Constructor<?> constructor: clientType.getConstructors()) {
+        for (Constructor<?> constructor : clientType.getConstructors()) {
             final Class<?>[] methodParameterTypes = constructor.getParameterTypes();
             if (methodParameterTypes.length == 1 && methodParameterTypes[0] == Channel.class) {
                 // Must have a single `Channel` parameter.

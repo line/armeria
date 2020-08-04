@@ -167,4 +167,9 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     public AbstractWebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
+
+    @Override
+    public AbstractClientOptionsBuilder clearRpcDecorator() {
+        throw new UnsupportedOperationException("Cannot clear RPC decorator.");
+    }
 }
