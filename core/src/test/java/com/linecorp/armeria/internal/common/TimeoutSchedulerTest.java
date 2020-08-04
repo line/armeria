@@ -222,7 +222,7 @@ class TimeoutSchedulerTest {
 
     @Test
     void setTimeoutFromStartAfterClearAndTimedOut() {
-        AtomicBoolean completed = new AtomicBoolean();
+        final AtomicBoolean completed = new AtomicBoolean();
         executeInEventLoop(0, timeoutScheduler -> {
             timeoutScheduler.clearTimeout();
             eventExecutor.schedule(() -> {
