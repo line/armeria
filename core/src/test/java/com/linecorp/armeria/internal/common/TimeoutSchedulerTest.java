@@ -202,6 +202,40 @@ class TimeoutSchedulerTest {
     }
 
     @Test
+    void setTimeoutFromStartAfterClear() {
+        final AtomicBoolean completed = new AtomicBoolean();
+
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.clearTimeout();
+            final long newTimeoutNanos = MILLISECONDS.toNanos(1123);
+            timeoutScheduler.setTimeoutNanos(SET_FROM_START, newTimeoutNanos);
+            assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(newTimeoutNanos);
+
+            eventExecutor.schedule(() -> {
+                assertThat(timeoutScheduler.isTimedOut()).isTrue();
+                completed.set(true);
+            }, 2500, MILLISECONDS);
+        });
+
+        await().untilTrue(completed);
+    }
+
+    @Test
+    void setTimeoutFromStartAfterClearAndTimedOut() {
+        AtomicBoolean completed = new AtomicBoolean();
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.clearTimeout();
+            eventExecutor.schedule(() -> {
+                final long newTimeoutNanos = MILLISECONDS.toNanos(1123);
+                timeoutScheduler.setTimeoutNanos(SET_FROM_START, newTimeoutNanos);
+                assertThat(timeoutScheduler.isTimedOut()).isTrue();
+                completed.set(true);
+            }, 2000, MILLISECONDS);
+        });
+        await().untilTrue(completed);
+    }
+
+    @Test
     void whenTimingOut() {
         final AtomicReference<CompletableFuture<Void>> timeoutFutureRef = new AtomicReference<>();
         final AtomicReference<TimeoutScheduler> timeoutSchedulerRef = new AtomicReference<>();
