@@ -33,7 +33,6 @@ const type2icon = {
 };
 
 const Article: React.FC<ArticleProps> = (props) => {
-  console.log(props);
   const typeIcons = [];
   let typesLabel = '';
   if (typeof props.type === 'string') {
