@@ -69,6 +69,7 @@ import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
@@ -192,9 +193,13 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                   Ints.saturatedCast(minResponseSize)));
         }
 
+        final DocServiceBuilder docServiceBuilder = DocService.builder();
+        findBeans(DocServiceConfigurator.class).forEach(
+                configurator -> configurator.configure(docServiceBuilder));
+
         final ArmeriaSettings settings = findBean(ArmeriaSettings.class);
         if (settings != null) {
-            configureArmeriaService(sb, settings);
+            configureArmeriaService(sb, docServiceBuilder, settings);
         }
         findBeans(ArmeriaServerConfigurator.class).forEach(configurator -> configurator.configure(sb));
 
@@ -227,9 +232,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         });
     }
 
-    private void configureArmeriaService(ServerBuilder sb, ArmeriaSettings settings) {
+    private void configureArmeriaService(ServerBuilder sb, DocServiceBuilder docServiceBuilder,
+                                         ArmeriaSettings settings) {
         configurePorts(sb, settings.getPorts());
-        final DocServiceBuilder docServiceBuilder = DocService.builder();
         configureThriftServices(sb,
                                 docServiceBuilder,
                                 findBeans(ThriftServiceRegistrationBean.class),
