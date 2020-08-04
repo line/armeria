@@ -215,7 +215,6 @@ public final class TimeoutScheduler {
     }
 
     private void setTimeoutNanosFromStart0(long timeoutNanos) {
-
         final long passedTimeoutNanos = System.nanoTime() - firstExecutionTimeNanos;
         final long newTimeoutNanos = LongMath.saturatedSubtract(timeoutNanos, passedTimeoutNanos);
 
