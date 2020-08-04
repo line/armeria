@@ -207,7 +207,7 @@ public final class HttpStreamReader implements Subscriber<HttpObject> {
         // 4) A gRPC client requests a message and the received message contains trailers,
         //    so ArmeriaClientCall tries to close deframer.
         if (!deframer.isClosing() && !deframer.isClosed()) {
-            deframer.deframe(HttpData.empty(true));
+            deframer.deframe(HttpData.empty().withEndOfStream());
             deframer.closeWhenComplete();
         }
     }
