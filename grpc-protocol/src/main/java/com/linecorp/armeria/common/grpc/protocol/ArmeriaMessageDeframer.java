@@ -277,16 +277,20 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * Adds the given data to this deframer and attempts delivery to the listener.
      *
      * @param data the raw data read from the remote endpoint. Must be non-null.
-     * @param endOfStream if {@code true}, indicates that {@code data} is the end of the stream from
-     *        the remote endpoint.  End of stream should not be used in the event of a transport
-     *        error, such as a stream reset.
+     *
      * @throws IllegalStateException if {@link #close()} has been called previously or if
      *         this method has previously been called with {@code endOfStream=true}.
      */
-    public void deframe(HttpData data, boolean endOfStream) {
+    public void deframe(HttpData data) {
         requireNonNull(data, "data");
         checkNotClosed();
-        checkState(!this.endOfStream, "Past end of stream");
+        if (endOfStream) {
+            if (!data.isEndOfStream()) {
+                throw new IllegalStateException("Past end of stream");
+            }
+            deliver();
+            return;
+        }
 
         startedDeframing = true;
 
@@ -304,7 +308,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         }
 
         // Indicate that all of the data for this stream has been received.
-        this.endOfStream = endOfStream;
+        endOfStream = data.isEndOfStream();
         deliver();
     }
 
@@ -399,7 +403,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         }
         inDelivery = true;
         try {
-            // Process the uncompressed bytes.
+            // Process the unprocessed bytes.
             while (pendingDeliveries > 0 && hasRequiredBytes()) {
                 if (currentType == UNINITIALIED_TYPE) {
                     readHeader();

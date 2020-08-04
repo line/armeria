@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.common.grpc;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
@@ -116,7 +115,7 @@ public class HttpStreamReaderTest {
     public void onMessage_noServerRequests() throws Exception {
         reader.onSubscribe(subscription);
         reader.onNext(DATA);
-        verify(deframer).deframe(DATA, false);
+        verify(deframer).deframe(DATA);
         verifyNoMoreInteractions(subscription);
     }
 
@@ -125,17 +124,17 @@ public class HttpStreamReaderTest {
         reader.onSubscribe(subscription);
         when(deframer.isStalled()).thenReturn(true);
         reader.onNext(DATA);
-        verify(deframer).deframe(DATA, false);
+        verify(deframer).deframe(DATA);
         verify(subscription).request(1);
     }
 
     @Test
     public void onMessage_deframeError() throws Exception {
         doThrow(Status.INTERNAL.asRuntimeException())
-                .when(deframer).deframe(isA(HttpData.class), anyBoolean());
+                .when(deframer).deframe(isA(HttpData.class));
         reader.onSubscribe(subscription);
         reader.onNext(DATA);
-        verify(deframer).deframe(DATA, false);
+        verify(deframer).deframe(DATA);
         verify(transportStatusListener).transportReportStatus(Status.INTERNAL);
         verify(deframer).close();
     }
@@ -143,7 +142,7 @@ public class HttpStreamReaderTest {
     @Test
     public void onMessage_deframeError_errorListenerThrows() throws Exception {
         doThrow(Status.INTERNAL.asRuntimeException())
-                .when(deframer).deframe(isA(HttpData.class), anyBoolean());
+                .when(deframer).deframe(isA(HttpData.class));
         doThrow(new IllegalStateException())
                 .when(transportStatusListener).transportReportStatus(isA(Status.class));
         reader.onSubscribe(subscription);
@@ -154,7 +153,7 @@ public class HttpStreamReaderTest {
     @Test
     public void clientDone() throws Exception {
         reader.onComplete();
-        verify(deframer).deframe(HttpData.empty(), true);
+        verify(deframer).deframe(HttpData.empty(true));
         verify(deframer).closeWhenComplete();
     }
 
@@ -162,7 +161,7 @@ public class HttpStreamReaderTest {
     public void onComplete_when_deframer_isClosing() {
         when(deframer.isClosing()).thenReturn(true);
         reader.onComplete();
-        verify(deframer, never()).deframe(HttpData.empty(), true);
+        verify(deframer, never()).deframe(HttpData.empty(true));
         verify(deframer, never()).closeWhenComplete();
     }
 

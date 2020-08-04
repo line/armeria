@@ -118,7 +118,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                 Integer.MAX_VALUE,
                 alloc, false)) {
             deframer.request(1);
-            deframer.deframe(framed, true);
+            deframer.deframe(framed.withEndOfStream());
         }
         return deframed;
     }

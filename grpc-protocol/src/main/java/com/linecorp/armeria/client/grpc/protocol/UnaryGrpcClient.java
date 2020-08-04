@@ -181,7 +181,7 @@ public final class UnaryGrpcClient {
                                }
                            }, Integer.MAX_VALUE, ctx.alloc(), false)) {
                                deframer.request(1);
-                               deframer.deframe(msg.content(), true);
+                               deframer.deframe(msg.content().withEndOfStream());
                            }
                            return responseFuture;
                        }), ctx.eventLoop());

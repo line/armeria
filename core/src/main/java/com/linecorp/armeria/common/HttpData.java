@@ -62,6 +62,13 @@ public interface HttpData extends HttpObject, SafeCloseable {
     }
 
     /**
+     * Returns an empty {@link HttpData} whose HTTP/2 {@code endOfStream} flag is set with the specified value.
+     */
+    static HttpData empty(boolean endOfStream) {
+        return endOfStream ? ByteArrayHttpData.EMPTY_EOS : ByteArrayHttpData.EMPTY;
+    }
+
+    /**
      * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
      * array later will be visible to {@link HttpData}.
      *

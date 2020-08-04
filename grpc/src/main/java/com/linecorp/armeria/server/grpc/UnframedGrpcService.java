@@ -284,7 +284,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                 Integer.MAX_VALUE,
                 ctx.alloc(), false)) {
             deframer.request(1);
-            deframer.deframe(grpcResponse.content(), true);
+            deframer.deframe(grpcResponse.content().withEndOfStream());
         }
     }
 

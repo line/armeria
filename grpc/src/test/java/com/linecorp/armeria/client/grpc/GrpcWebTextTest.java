@@ -178,7 +178,7 @@ class GrpcWebTextTest {
                     Integer.MAX_VALUE,
                     alloc, true)) {
                 deframer.request(1);
-                deframer.deframe(framed, true);
+                deframer.deframe(framed.withEndOfStream());
             }
             return deframed;
         }
