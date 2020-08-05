@@ -22,12 +22,13 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -39,10 +40,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.adapter.HttpWebHandlerAdapter;
 
-import com.google.common.io.ByteStreams;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SessionProtocol;
 
-import io.netty.util.NetUtil;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import reactor.core.publisher.Mono;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -62,83 +70,83 @@ class ReactiveWebServerLoadBalancerInteropTest {
 
         @Bean
         RouterFunction<ServerResponse> routerFunction() {
-            return route(GET("/router/api/poke"), request -> ok().build())
-                    .and(route(HEAD("/router/api/poke"), request -> ok().build()))
-                    .and(route(HEAD("/router/api/ping"), request -> ok().body(fromValue("PONG"))));
+            return route(GET("/router/api/ping"), request -> ok().body(fromValue("PONG")))
+                    .and(route(HEAD("/router/api/ping"), request -> ok().body(fromValue("PONG")))
+                    .and(route(HEAD("/router/api/poke"), request -> ok().build())));
         }
     }
 
     @LocalServerPort
     int port;
 
-    @Test
-    void getToController() throws Exception {
-        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
-        final String httpRequest = "GET /controller/api/ping HTTP/1.0\r\n\r\n";
-        // Should not be chunked.
-        final String expectedHttpResponse =
-                "HTTP/1.1 200 OK\r\n" +
-                "content-type: text/plain;charset=UTF-8\r\n" +
-                "content-length: 4\r\n\r\n" +
-                "PONG";
-        testHttpResponse(httpRequest, expectedHttpResponse);
+    Logger httpWebHandlerAdapterLogger;
+    final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
+
+    @BeforeEach
+    public void attachAppender() {
+        httpWebHandlerAdapterLogger = (Logger) LoggerFactory.getLogger(HttpWebHandlerAdapter.class);
+        logAppender.start();
+        httpWebHandlerAdapterLogger.addAppender(logAppender);
     }
 
-    @Test
-    void headToController() throws Exception {
-        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
-        final String httpRequest = "HEAD /controller/api/ping HTTP/1.0\r\n\r\n";
-        // Should not be chunked.
-        final String expectedHttpResponse =
-                "HTTP/1.1 200 OK\r\n" +
-                "content-type: text/plain;charset=UTF-8\r\n" +
-                "content-length: 4\r\n\r\n";
-        testHttpResponse(httpRequest, expectedHttpResponse);
+    @AfterEach
+    public void detachAppender() {
+        httpWebHandlerAdapterLogger.detachAppender(logAppender);
+        logAppender.list.clear();
     }
 
-    @Test
-    void getToRouter() throws Exception {
-        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
-        final String httpRequest = "GET /router/api/poke HTTP/1.0\r\n\r\n";
-        // Should not be chunked.
-        final String expectedHttpResponse =
-                "HTTP/1.1 200 OK\r\n" +
-                "content-length: 0\r\n\r\n";
-        testHttpResponse(httpRequest, expectedHttpResponse);
+    @ParameterizedTest
+    @CsvSource({
+            "H1C, /controller/api/ping",
+            "H2C, /router/api/ping"
+    })
+    void testGet(SessionProtocol sessionProtocol, String path) {
+        final String uri = sessionProtocol.uriText() + "://127.0.0.1:" + port;
+        final WebClient webClient = WebClient.of(uri);
+        final AggregatedHttpResponse res = webClient.get(path).aggregate().join();
+
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.headers().get("content-length")).isEqualTo("4");
+        assertThat(res.content().toStringUtf8()).isEqualTo("PONG");
+        assertNoErrorLogByHttpWebHandlerAdapter();
     }
 
-    @Test
-    void headToRouterWithoutBody() throws Exception {
-        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
-        final String httpRequest = "HEAD /router/api/poke HTTP/1.0\r\n\r\n";
-        // Should not be chunked.
-        final String expectedHttpResponse =
-                "HTTP/1.1 200 OK\r\n" +
-                "content-length: 0\r\n\r\n";
-        testHttpResponse(httpRequest, expectedHttpResponse);
-    }
+    @ParameterizedTest
+    @CsvSource({
+            "H1C, /controller/api/ping, 4",
+            "H2C, /controller/api/ping, 4",
+            "H1C, /router/api/ping, 4",
+            "H2C, /router/api/ping, 4",
+            "H2C, /router/api/poke, 0",
+            "H1C, /router/api/poke, 0"
+    })
+    void testHead(SessionProtocol sessionProtocol, String path, int contentLength) {
+        final String uri = sessionProtocol.uriText() + "://127.0.0.1:" + port;
+        final WebClient webClient = WebClient.of(uri);
+        final AggregatedHttpResponse res = webClient.head(path).aggregate().join();
 
-    @Test
-    void headToRouterWithBody() throws Exception {
-        // TODO: Need to assert that CancelledSubscriptionException is not propagated to HttpWebHandlerAdapter
-        final String httpRequest = "HEAD /router/api/ping HTTP/1.0\r\n\r\n";
-        // Should not be chunked.
-        final String expectedHttpResponse =
-                "HTTP/1.1 200 OK\r\n" +
-                "content-type: text/plain;charset=UTF-8\r\n" +
-                "content-length: 4\r\n\r\n";
-        testHttpResponse(httpRequest, expectedHttpResponse);
-    }
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.content().isEmpty()).isTrue();
 
-    private void testHttpResponse(String httpRequest, String expectedHttpResponse)
-            throws Exception {
-        try (Socket s = new Socket(NetUtil.LOCALHOST4, port)) {
-            s.setSoTimeout(10000);
-            final InputStream in = s.getInputStream();
-            final OutputStream out = s.getOutputStream();
-            out.write(httpRequest.getBytes(StandardCharsets.US_ASCII));
-
-            assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(expectedHttpResponse);
+        if (contentLength > 0) {
+            assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
+            assertThat(res.headers().get("content-length")).isEqualTo(String.valueOf(contentLength));
         }
+        assertNoErrorLogByHttpWebHandlerAdapter();
+    }
+
+    private void assertNoErrorLogByHttpWebHandlerAdapter() {
+        // Example error log for CancelledSubscriptionException by HttpWebHandlerAdapter:
+        //
+        // Error [com.linecorp.armeria.common.stream.CancelledSubscriptionException] for
+        // HTTP HEAD "/router/api/poke", but ServerHttpResponse already committed (200 OK)
+        final String errorLogSubString =
+                "Error [com.linecorp.armeria.common.stream.CancelledSubscriptionException] for HTTP HEAD";
+        assertThat(logAppender.list
+                           .stream()
+                           .filter(event -> event.getFormattedMessage().contains(errorLogSubString))
+                           .collect(Collectors.toList()))
+                .hasSize(0);
     }
 }
