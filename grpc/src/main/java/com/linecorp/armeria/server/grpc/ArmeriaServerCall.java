@@ -305,7 +305,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             return;
         }
 
-        final HttpHeaders trailers = statusToTrailers(ctx, status, metadata, sendHeadersCalled);
+        final HttpHeaders trailers = statusToTrailers(
+                ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
+                status, metadata);
         try {
             if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 // Normal trailers are not supported in grpc-web and must be encoded as a message.
@@ -515,22 +517,22 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     static HttpHeaders statusToTrailers(
-            ServiceRequestContext ctx, Status status, Metadata metadata, boolean headersSent) {
-        final HttpHeadersBuilder trailers = GrpcTrailersUtil.statusToTrailers(
-                status.getCode().value(), status.getDescription(), headersSent);
+            ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
+        GrpcTrailersUtil.addStatusMessageToTrailers(
+                trailersBuilder, status.getCode().value(), status.getDescription());
 
-        MetadataUtil.fillHeaders(metadata, trailers);
+        MetadataUtil.fillHeaders(metadata, trailersBuilder);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
-            trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
-                         Base64.getEncoder().encodeToString(proto.toByteArray()));
+            trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
+                               Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
         final HttpHeaders additionalTrailers = ctx.additionalResponseTrailers();
         ctx.mutateAdditionalResponseTrailers(HttpHeadersBuilder::clear);
-        trailers.add(additionalTrailers);
-        return trailers.build();
+        trailersBuilder.add(additionalTrailers);
+        return trailersBuilder.build();
     }
 
     HttpStreamReader messageReader() {

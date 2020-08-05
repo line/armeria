@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingResult;
@@ -105,6 +106,8 @@ class FramedGrpcServiceTest {
                 ResponseHeaders.builder(HttpStatus.OK)
                                .endOfStream(true)
                                .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
+                               .add(GrpcHeaderNames.GRPC_ENCODING, "identity")
+                               .add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip")
                                .addInt("grpc-status", 12)
                                .add("grpc-message", "Method not found: grpc.testing.TestService/FooCall")
                                .addInt(HttpHeaderNames.CONTENT_LENGTH, 0)

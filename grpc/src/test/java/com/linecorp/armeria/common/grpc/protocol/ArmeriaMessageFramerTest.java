@@ -35,7 +35,9 @@ import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
@@ -205,7 +207,9 @@ class ArmeriaMessageFramerTest {
     }
 
     private static ByteBuf serializedTrailers() {
-        final HttpHeaders trailers = GrpcTrailersUtil.statusToTrailers(StatusCodes.OK, null, true).build();
-        return serializeTrailersAsMessage(ByteBufAllocator.DEFAULT, trailers);
+        final ResponseHeadersBuilder trailersBuilder = ResponseHeaders.builder(200).contentType(
+                GrpcSerializationFormats.PROTO.mediaType());
+        GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
+        return serializeTrailersAsMessage(ByteBufAllocator.DEFAULT, trailersBuilder.build());
     }
 }

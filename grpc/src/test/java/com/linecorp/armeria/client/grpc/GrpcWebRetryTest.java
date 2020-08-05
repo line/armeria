@@ -35,6 +35,7 @@ import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -107,6 +108,10 @@ class GrpcWebRetryTest {
             assertThat(result.getUsername()).isEqualTo("my name");
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.children()).hasSize(3);
+            log.children().forEach(child -> {
+                final ResponseHeaders responseHeaders = child.ensureComplete().responseHeaders();
+                assertThat(responseHeaders.contentType()).isSameAs(serializationFormat.mediaType());
+            });
         }
     }
 
@@ -131,6 +136,10 @@ class GrpcWebRetryTest {
             assertThat(result).isEqualTo(Empty.getDefaultInstance());
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.children()).hasSize(3);
+            log.children().forEach(child -> {
+                final ResponseHeaders responseHeaders = child.ensureComplete().responseHeaders();
+                assertThat(responseHeaders.contentType()).isSameAs(serializationFormat.mediaType());
+            });
         }
     }
 
