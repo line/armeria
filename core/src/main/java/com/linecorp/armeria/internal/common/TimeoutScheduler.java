@@ -202,14 +202,33 @@ public final class TimeoutScheduler {
             return;
         }
 
-        final long currentTimeoutNanos = timeoutNanos();
-        if (currentTimeoutNanos == 0) {
-            setTimeoutNanosFromNow(timeoutNanos);
+        if (isInitialized()) {
+            if (eventLoop.inEventLoop()) {
+                setTimeoutNanosFromStart0(timeoutNanos);
+            } else {
+                eventLoop.execute(() -> setTimeoutNanosFromStart0(timeoutNanos));
+            }
+        } else {
+            addPendingTimeoutNanos(timeoutNanos);
+            addPendingTimeoutTask(() -> setTimeoutNanosFromStart0(timeoutNanos));
+        }
+    }
+
+    private void setTimeoutNanosFromStart0(long timeoutNanos) {
+        final long passedTimeoutNanos = System.nanoTime() - firstExecutionTimeNanos;
+        final long newTimeoutNanos = LongMath.saturatedSubtract(timeoutNanos, passedTimeoutNanos);
+
+        if (newTimeoutNanos <= 0) {
+            invokeTimeoutTask();
             return;
         }
 
-        final long adjustmentNanos = LongMath.saturatedSubtract(timeoutNanos, currentTimeoutNanos);
-        extendTimeoutNanos(adjustmentNanos);
+        // Cancel the previously scheduled timeout, if exists.
+        clearTimeout0(true);
+        this.timeoutNanos = timeoutNanos;
+
+        state = State.SCHEDULED;
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutNanos, TimeUnit.NANOSECONDS);
     }
 
     private void extendTimeoutNanos(long adjustmentNanos) {
