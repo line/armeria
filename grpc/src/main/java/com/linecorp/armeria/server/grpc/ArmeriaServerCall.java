@@ -517,22 +517,22 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     static HttpHeaders statusToTrailers(
-            ServiceRequestContext ctx, HttpHeadersBuilder trailerBuilder, Status status, Metadata metadata) {
+            ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
         GrpcTrailersUtil.addStatusMessageToTrailers(
-                trailerBuilder, status.getCode().value(), status.getDescription());
+                trailersBuilder, status.getCode().value(), status.getDescription());
 
-        MetadataUtil.fillHeaders(metadata, trailerBuilder);
+        MetadataUtil.fillHeaders(metadata, trailersBuilder);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
-            trailerBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
+            trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                                Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
         final HttpHeaders additionalTrailers = ctx.additionalResponseTrailers();
         ctx.mutateAdditionalResponseTrailers(HttpHeadersBuilder::clear);
-        trailerBuilder.add(additionalTrailers);
-        return trailerBuilder.build();
+        trailersBuilder.add(additionalTrailers);
+        return trailersBuilder.build();
     }
 
     HttpStreamReader messageReader() {
