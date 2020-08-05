@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -134,9 +135,10 @@ class GrpcWebTextTest {
         }
 
         private static void writeTrailers(ServiceRequestContext ctx, HttpResponseWriter streaming) {
-            final HttpHeaders trailers = GrpcTrailersUtil.statusToTrailers(StatusCodes.OK, null, true).build();
+            final HttpHeadersBuilder trailersBuilder = HttpHeaders.builder();
+            GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
             final ByteBuf serializedTrailers =
-                    GrpcTrailersUtil.serializeTrailersAsMessage(ctx.alloc(), trailers);
+                    GrpcTrailersUtil.serializeTrailersAsMessage(ctx.alloc(), trailersBuilder.build());
             final HttpData httpdataTrailers = HttpData.wrap(
                     encode64(serializeMessage(serializedTrailers, true))).withEndOfStream();
             streaming.write(httpdataTrailers);
