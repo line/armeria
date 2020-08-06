@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.metric;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -106,10 +107,7 @@ public interface MeterIdPrefixFunction {
                 }
                 tagListBuilder.add(Tag.of("method", methodName));
 
-                String serviceName = log.serviceName();
-                if (serviceName == null) {
-                    serviceName = "none";
-                }
+                final String serviceName = firstNonNull(log.serviceName(), "none");
                 tagListBuilder.add(Tag.of("service", serviceName));
             }
         };
