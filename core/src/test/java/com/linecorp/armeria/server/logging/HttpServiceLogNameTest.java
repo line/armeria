@@ -112,7 +112,6 @@ class HttpServiceLogNameTest {
                 .containsKey("test.response.duration#total{http.status=200,method=GET,service=none}");
     }
 
-
     private static void assertName(String serviceName, String name) {
         final RequestOnlyLog log = capturedCtx.log().whenRequestComplete().join();
         assertThat(log.serviceName()).isEqualTo(serviceName);
