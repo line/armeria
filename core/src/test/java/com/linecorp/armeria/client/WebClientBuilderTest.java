@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -81,7 +82,7 @@ class WebClientBuilderTest {
         final AggregatedHttpResponse res = webClient.head("/head").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.headers().get("content-length")).isEqualTo("13");
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo("13");
         assertThat(res.content().isEmpty()).isTrue();
     }
 
@@ -91,7 +92,7 @@ class WebClientBuilderTest {
         final AggregatedHttpResponse res = webClient.head("/head").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.headers().get("content-length")).isEqualTo("13");
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo("13");
         assertThat(res.content().isEmpty()).isTrue();
     }
 

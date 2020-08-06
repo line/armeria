@@ -44,6 +44,7 @@ import org.springframework.web.server.adapter.HttpWebHandlerAdapter;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -79,12 +80,11 @@ class ReactiveWebServerLoadBalancerInteropTest {
     @LocalServerPort
     int port;
 
-    Logger httpWebHandlerAdapterLogger;
+    final Logger httpWebHandlerAdapterLogger = (Logger) LoggerFactory.getLogger(HttpWebHandlerAdapter.class);
     final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
 
     @BeforeEach
     public void attachAppender() {
-        httpWebHandlerAdapterLogger = (Logger) LoggerFactory.getLogger(HttpWebHandlerAdapter.class);
         logAppender.start();
         httpWebHandlerAdapterLogger.addAppender(logAppender);
     }
@@ -107,7 +107,7 @@ class ReactiveWebServerLoadBalancerInteropTest {
 
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.headers().get("content-length")).isEqualTo("4");
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo("4");
         assertThat(res.content().toStringUtf8()).isEqualTo("PONG");
         assertNoErrorLogByHttpWebHandlerAdapter();
     }
@@ -131,7 +131,8 @@ class ReactiveWebServerLoadBalancerInteropTest {
 
         if (contentLength > 0) {
             assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
-            assertThat(res.headers().get("content-length")).isEqualTo(String.valueOf(contentLength));
+            assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH))
+                    .isEqualTo(String.valueOf(contentLength));
         }
         assertNoErrorLogByHttpWebHandlerAdapter();
     }
@@ -147,6 +148,6 @@ class ReactiveWebServerLoadBalancerInteropTest {
                            .stream()
                            .filter(event -> event.getFormattedMessage().contains(errorLogSubString))
                            .collect(Collectors.toList()))
-                .hasSize(0);
+                .isEmpty();
     }
 }

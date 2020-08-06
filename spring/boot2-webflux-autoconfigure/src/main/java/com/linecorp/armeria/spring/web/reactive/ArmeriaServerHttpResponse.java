@@ -289,7 +289,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         logger.debug("{} Response future has been completed with an HttpResponse", ctx);
 
         return Mono.fromFuture(response.whenComplete())
-                .onErrorResume(CancelledSubscriptionException.class, e -> Mono.empty());
+                   .onErrorResume(CancelledSubscriptionException.class, e -> Mono.empty());
     }
 
     @Override
