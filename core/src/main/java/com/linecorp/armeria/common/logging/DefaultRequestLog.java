@@ -808,16 +808,14 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.NAME);
     }
 
-    @Nullable
     @Override
     public String fullName() {
         ensureAvailable(RequestLogProperty.NAME);
         if (fullName != null) {
             return fullName;
         }
-        if (name == null) {
-            return null;
-        }
+
+        assert name != null;
 
         if (serviceName != null) {
             return fullName = serviceName + '/' + name;
@@ -1847,13 +1845,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return serviceName;
         }
 
-        @Nullable
         @Override
         public String name() {
             return name;
         }
 
-        @Nullable
         @Override
         public String fullName() {
             return DefaultRequestLog.this.fullName();

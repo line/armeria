@@ -105,10 +105,12 @@ public interface MeterIdPrefixFunction {
                     methodName = requestHeaders.method().name();
                 }
                 tagListBuilder.add(Tag.of("method", methodName));
-                final String serviceName = log.serviceName();
-                if (serviceName != null) {
-                    tagListBuilder.add(Tag.of("service", serviceName));
+
+                String serviceName = log.serviceName();
+                if (serviceName == null) {
+                    serviceName = "none";
                 }
+                tagListBuilder.add(Tag.of("service", serviceName));
             }
         };
     }

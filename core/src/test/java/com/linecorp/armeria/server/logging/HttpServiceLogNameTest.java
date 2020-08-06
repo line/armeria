@@ -18,23 +18,33 @@ package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 class HttpServiceLogNameTest {
 
+    @Nullable
     private static ServiceRequestContext capturedCtx;
 
     @RegisterExtension
@@ -58,11 +68,19 @@ class HttpServiceLogNameTest {
         }
     };
 
+    MeterRegistry registry;
     WebClient client;
 
     @BeforeEach
     void setUp() {
-        client = WebClient.of(server.httpUri());
+        registry = new SimpleMeterRegistry();
+        client = WebClient.builder(server.httpUri())
+                          .factory(ClientFactory.builder()
+                                                .meterRegistry(registry)
+                                                .build())
+                          .decorator(
+                                  MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("test")))
+                          .build();
     }
 
     @Test
@@ -85,6 +103,15 @@ class HttpServiceLogNameTest {
         client.get("/annotated/hello").aggregate().join();
         assertName(MyAnnotatedService.class.getName(), "world");
     }
+
+    @Test
+    void serviceNameOfWebClientMetric() {
+        client.get("/no-default?a=1").aggregate().join();
+        assertName(MyHttpService.class.getName(), "GET");
+        assertThat(MoreMeters.measureAll(registry))
+                .containsKey("test.response.duration#total{http.status=200,method=GET,service=none}");
+    }
+
 
     private static void assertName(String serviceName, String name) {
         final RequestOnlyLog log = capturedCtx.log().whenRequestComplete().join();
