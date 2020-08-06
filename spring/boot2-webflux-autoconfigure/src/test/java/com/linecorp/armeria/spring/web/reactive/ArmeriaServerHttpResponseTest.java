@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.PooledByteBufAllocator;
@@ -169,6 +170,30 @@ class ArmeriaServerHttpResponseTest {
                     .verify();
 
         await().until(() -> httpResponse.whenComplete().isDone());
+    }
+
+    @Test
+    void ignoreCancelledSubscriptionException() throws Exception {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.HEAD, "/"));
+
+        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+        final ArmeriaServerHttpResponse response = response(ctx, future);
+
+        response.setStatusCode(HttpStatus.OK);
+        response.getHeaders().add("Armeria", "awesome");
+        assertThat(future.isDone()).isFalse();
+
+        StepVerifier.create(Mono.defer(response::setComplete))
+                    .then(() -> {
+                        try {
+                            // throw CancelledSubscriptionException as HttpResponseSubscriber
+                            // cancels subscription for HTTP HEAD
+                            final HttpResponse httpResponse = future.get();
+                            httpResponse.whenComplete()
+                                        .completeExceptionally(CancelledSubscriptionException.get());
+                        } catch (Throwable ignored) { }
+                    })
+                    .verifyComplete();
     }
 
     @Test
