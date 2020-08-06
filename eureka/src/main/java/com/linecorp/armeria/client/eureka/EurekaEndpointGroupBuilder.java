@@ -309,8 +309,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public EurekaEndpointGroupBuilder clearDecorator() {
-        return (EurekaEndpointGroupBuilder) super.clearDecorator();
+    public EurekaEndpointGroupBuilder clearDecorators() {
+        return (EurekaEndpointGroupBuilder) super.clearDecorators();
     }
 
     @Override

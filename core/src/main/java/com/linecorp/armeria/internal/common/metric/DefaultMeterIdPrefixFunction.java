@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.internal.common.metric;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -28,6 +27,8 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -36,67 +37,72 @@ import io.micrometer.core.instrument.Tag;
 /**
  * Default {@link MeterIdPrefixFunction} implementation.
  */
-public class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction {
+public final class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     private final String name;
-    private final int activeRequestPrefixSize;
-    private final int completeRequestPrefixSize;
 
-    /**
-     * Creates a new instance.
-     */
-    protected DefaultMeterIdPrefixFunction(String name) {
-        this(name,
-             3, /* hostname.pattern, method, service */
-             4  /* hostname.pattern, http.status, method, service */);
+    public static MeterIdPrefixFunction of(String name) {
+        return new DefaultMeterIdPrefixFunction(name);
     }
 
-    /**
-     * Creates a new instance.
-     */
-    protected DefaultMeterIdPrefixFunction(String name, int activeRequestPrefixSize,
-                                           int completeRequestPrefixSize) {
+    DefaultMeterIdPrefixFunction(String name) {
         this.name = requireNonNull(name, "name");
-        checkArgument(activeRequestPrefixSize > 0, "activeRequestPrefixSize: %s (expected: > 0)",
-                      activeRequestPrefixSize);
-        checkArgument(completeRequestPrefixSize > 0, "completeRequestPrefixSize: %s (expected: > 0)",
-                      completeRequestPrefixSize);
-        this.activeRequestPrefixSize = activeRequestPrefixSize;
-        this.completeRequestPrefixSize = completeRequestPrefixSize;
     }
 
     @Override
     public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
-        final Builder<Tag> tagListBuilder =
-                ImmutableList.builderWithExpectedSize(activeRequestPrefixSize);
+        /* hostname.pattern, method, service */
+        final Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
         addActiveRequestPrefixTags(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
     @Override
     public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
-        final Builder<Tag> tagListBuilder =
-                ImmutableList.builderWithExpectedSize(completeRequestPrefixSize);
+        /* hostname.pattern, http.status, method, service */
+        final Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
         addCompleteRequestPrefixTags(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
     /**
      * Adds the active request tags in lexicographical order for better sort performance.
+     * This adds {@code hostname.pattern}, {@code method} and {@code service}, in order.
      */
-    protected void addActiveRequestPrefixTags(
-            Builder<Tag> tagListBuilder, RequestOnlyLog log) {
+    public static void addActiveRequestPrefixTags(Builder<Tag> tagListBuilder, RequestOnlyLog log) {
+        requireNonNull(tagListBuilder, "tagListBuilder");
+        requireNonNull(log, "log");
         addHostnamePattern(tagListBuilder, log);
         addMethodAndService(tagListBuilder, log);
     }
 
     /**
      * Adds the complete request tags in lexicographical order for better sort performance.
+     * This adds {@code hostname.pattern}, {@code http.status}, {@code method} and {@code service}, in order.
      */
-    protected void addCompleteRequestPrefixTags(Builder<Tag> tagListBuilder, RequestLog log) {
+    public static void addCompleteRequestPrefixTags(Builder<Tag> tagListBuilder, RequestLog log) {
+        requireNonNull(tagListBuilder, "tagListBuilder");
+        requireNonNull(log, "log");
         addHostnamePattern(tagListBuilder, log);
         addHttpStatus(tagListBuilder, log);
         addMethodAndService(tagListBuilder, log);
+    }
+
+    /**
+     * Adds {@code http.status} tag to the {@code tagListBuilder}.
+     */
+    public static void addHttpStatus(Builder<Tag> tagListBuilder, RequestLog log) {
+        requireNonNull(tagListBuilder, "tagListBuilder");
+        requireNonNull(log, "log");
+        // Add the 'httpStatus' tag.
+        final HttpStatus status;
+        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            status = log.responseHeaders().status();
+        } else {
+            status = HttpStatus.UNKNOWN;
+        }
+        tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "httpStatus" : "http.status",
+                                  status.codeAsText()));
     }
 
     private static void addHostnamePattern(Builder<Tag> tagListBuilder, RequestOnlyLog log) {
@@ -120,22 +126,5 @@ public class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction {
         if (serviceName != null) {
             tagListBuilder.add(Tag.of("service", serviceName));
         }
-    }
-
-    /**
-     * Adds {@link HttpStatus} to {@link Tag}.
-     */
-    protected static void addHttpStatus(Builder<Tag> tagListBuilder, RequestLog log) {
-        requireNonNull(tagListBuilder, "tagListBuilder");
-        requireNonNull(log, "log");
-        // Add the 'httpStatus' tag.
-        final HttpStatus status;
-        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            status = log.responseHeaders().status();
-        } else {
-            status = HttpStatus.UNKNOWN;
-        }
-        tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "httpStatus" : "http.status",
-                                  status.codeAsText()));
     }
 }

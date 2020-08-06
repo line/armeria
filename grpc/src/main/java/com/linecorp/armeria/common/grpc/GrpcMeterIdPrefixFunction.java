@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.common.grpc;
 
+import static com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction.addActiveRequestPrefixTags;
+import static com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction.addCompleteRequestPrefixTags;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.rpc.Code;
@@ -23,10 +27,13 @@ import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.metric.DefaultMeterIdPrefixFunction;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
 /**
@@ -36,7 +43,7 @@ import io.micrometer.core.instrument.Tag;
  * @see MetricCollectingClient
  * @see MetricCollectingService
  */
-public final class GrpcMeterIdPrefixFunction extends DefaultMeterIdPrefixFunction {
+public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     /**
      * Returns a newly created {@link GrpcMeterIdPrefixFunction} with the specified {@code name}.
@@ -45,19 +52,30 @@ public final class GrpcMeterIdPrefixFunction extends DefaultMeterIdPrefixFunctio
         return new GrpcMeterIdPrefixFunction(name);
     }
 
+    private final String name;
+
     GrpcMeterIdPrefixFunction(String name) {
-        super(name,
-              3, /* hostname.pattern, method, service */
-              5  /* grpc.status, hostname.pattern, http.status, method, service */);
+        this.name = requireNonNull(name, "name");
     }
 
     @Override
-    protected void addCompleteRequestPrefixTags(Builder<Tag> tagListBuilder, RequestLog log) {
-        appendGrpcStatus(tagListBuilder, log);
-        super.addCompleteRequestPrefixTags(tagListBuilder, log);
+    public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
+        /* hostname.pattern, method, service */
+        final Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
+        addActiveRequestPrefixTags(tagListBuilder, log);
+        return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
-    private static void appendGrpcStatus(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
+    @Override
+    public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
+        /* grpc.status, hostname.pattern, http.status, method, service */
+        final Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
+        addGrpcStatus(tagListBuilder, log);
+        addCompleteRequestPrefixTags(tagListBuilder, log);
+        return new MeterIdPrefix(name, tagListBuilder.build());
+    }
+
+    private static void addGrpcStatus(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
         String status = log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS);
         if (status != null) {
             tagListBuilder.add(Tag.of("grpc.status", status));

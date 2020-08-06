@@ -109,16 +109,12 @@ class ClientOptionsBuilderTest {
                 DecodingClient.newDecorator();
         // Insert decorator at first.
         final ClientDecoration decoration = b.build().decoration();
-        b.clearDecorator();
+        b.clearDecorators();
         assertThat(b.build().decoration().decorators()).isEmpty();
-        assertThat(b.build().decoration().rpcDecorators()).containsExactly(rpcDecorator);
+        assertThat(b.build().decoration().rpcDecorators()).isEmpty();
 
         b.decorator(decorator3);
         decoration.decorators().forEach(b::decorator);
-        assertThat(b.build().decoration().decorators()).containsSequence(decorator3, decorator, decorator2);
-        assertThat(b.build().decoration().rpcDecorators()).containsExactly(rpcDecorator);
-
-        b.clearRpcDecorator();
         assertThat(b.build().decoration().decorators()).containsSequence(decorator3, decorator, decorator2);
         assertThat(b.build().decoration().rpcDecorators()).isEmpty();
     }

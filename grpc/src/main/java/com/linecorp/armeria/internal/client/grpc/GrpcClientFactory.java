@@ -87,9 +87,9 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             throw newUnknownClientTypeException(clientType);
         }
 
-        final ClientBuilderParams params0 =
+        final ClientBuilderParams newParams =
                 addTrailersExtractorIfGrpcWeb(params, options, serializationFormat);
-        final HttpClient httpClient = newHttpClient(params0);
+        final HttpClient httpClient = newHttpClient(newParams);
 
         final GrpcJsonMarshaller jsonMarshaller;
         if (GrpcSerializationFormats.isJson(serializationFormat)) {
@@ -100,7 +100,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         }
 
         final ArmeriaChannel channel = new ArmeriaChannel(
-                params0,
+                newParams,
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
@@ -136,7 +136,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 GrpcSerializationFormats.isGrpcWebText(serializationFormat));
         final ClientDecoration originalDecoration = options.decoration();
         final ClientOptionsBuilder optionsBuilder = options.toBuilder();
-        optionsBuilder.clearDecorator();
+        optionsBuilder.clearDecorators();
         optionsBuilder.decorator(webTrailersExtractor);
         originalDecoration.decorators().forEach(optionsBuilder::decorator);
 

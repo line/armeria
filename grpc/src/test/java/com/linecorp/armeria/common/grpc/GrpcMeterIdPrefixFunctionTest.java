@@ -20,6 +20,7 @@ import static io.micrometer.core.instrument.Statistic.COUNT;
 import static io.micrometer.core.instrument.Statistic.TOTAL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.awaitility.Awaitility.given;
 
 import java.util.stream.Stream;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -84,7 +86,9 @@ class GrpcMeterIdPrefixFunctionTest {
             //noinspection ResultOfMethodCallIgnored
             assertThatThrownBy(() -> client.emptyCall(Empty.getDefaultInstance())).isExactlyInstanceOf(
                     StatusRuntimeException.class);
-            final ResponseHeaders responseHeaders = captor.get().log().ensureAvailable(
+            final RequestLogAccess log = captor.get().log();
+            await().until(() -> log.isAvailable(RequestLogProperty.RESPONSE_HEADERS));
+            final ResponseHeaders responseHeaders = log.ensureAvailable(
                     RequestLogProperty.RESPONSE_HEADERS).responseHeaders();
             assertThat(responseHeaders.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo("10");
         }
@@ -118,6 +122,7 @@ class GrpcMeterIdPrefixFunctionTest {
             if (GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 trailers = GrpcWebUtil.trailers(ctx);
             } else {
+                await().until(() -> ctx.log().isAvailable(RequestLogProperty.RESPONSE_TRAILERS));
                 trailers = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_TRAILERS).responseTrailers();
             }
             assertThat(trailers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo("13");

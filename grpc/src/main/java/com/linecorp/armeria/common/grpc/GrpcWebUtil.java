@@ -27,14 +27,10 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
-import io.grpc.ClientInterceptor;
 import io.netty.util.AttributeKey;
 
 /**
  * Utilities for working with <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a>.
- *
- * <p>Note that this class will be removed once a retry {@link ClientInterceptor} is added.
- * See: https://github.com/line/armeria/issues/2860
  */
 @UnstableApi
 public final class GrpcWebUtil {

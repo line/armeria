@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -60,7 +61,7 @@ public interface MeterIdPrefixFunction {
      * </ul>
      */
     static MeterIdPrefixFunction ofDefault(String name) {
-        return new DefaultMeterIdPrefixFunction(name);
+        return DefaultMeterIdPrefixFunction.of(name);
     }
 
     /**

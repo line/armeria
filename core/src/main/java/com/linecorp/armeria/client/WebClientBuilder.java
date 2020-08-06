@@ -164,8 +164,8 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public WebClientBuilder clearDecorator() {
-        return (WebClientBuilder) super.clearDecorator();
+    public WebClientBuilder clearDecorators() {
+        return (WebClientBuilder) super.clearDecorators();
     }
 
     @Override

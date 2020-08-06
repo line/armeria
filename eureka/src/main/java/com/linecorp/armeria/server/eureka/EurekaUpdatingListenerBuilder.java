@@ -348,8 +348,8 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     @Override
-    public EurekaUpdatingListenerBuilder clearDecorator() {
-        return (EurekaUpdatingListenerBuilder) super.clearDecorator();
+    public EurekaUpdatingListenerBuilder clearDecorators() {
+        return (EurekaUpdatingListenerBuilder) super.clearDecorators();
     }
 
     @Override

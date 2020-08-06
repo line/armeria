@@ -198,8 +198,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ClientBuilder clearDecorator() {
-        return (ClientBuilder) super.clearDecorator();
+    public ClientBuilder clearDecorators() {
+        return (ClientBuilder) super.clearDecorators();
     }
 
     @Override
@@ -211,11 +211,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         return (ClientBuilder) super.rpcDecorator(decorator);
-    }
-
-    @Override
-    public ClientBuilder clearRpcDecorator() {
-        return (ClientBuilder) super.clearRpcDecorator();
     }
 
     @Override
