@@ -773,7 +773,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    @Nullable
     public String name() {
         ensureAvailable(RequestLogProperty.NAME);
         return name;
