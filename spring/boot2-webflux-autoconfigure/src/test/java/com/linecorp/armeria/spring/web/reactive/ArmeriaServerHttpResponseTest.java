@@ -191,7 +191,8 @@ class ArmeriaServerHttpResponseTest {
                             final HttpResponse httpResponse = future.get();
                             httpResponse.whenComplete()
                                         .completeExceptionally(CancelledSubscriptionException.get());
-                        } catch (Throwable ignored) { }
+                        } catch (Throwable ignored) {
+                        }
                     })
                     .verifyComplete();
     }
