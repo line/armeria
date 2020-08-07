@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import javax.annotation.Nullable;
 
@@ -108,8 +109,10 @@ class HttpServiceLogNameTest {
     void serviceNameOfWebClientMetric() {
         client.get("/no-default?a=1").aggregate().join();
         assertName(MyHttpService.class.getName(), "GET");
-        assertThat(MoreMeters.measureAll(registry))
-                .containsKey("test.response.duration#total{http.status=200,method=GET,service=none}");
+        await().untilAsserted(() -> {
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsKey("test.response.duration#total{http.status=200,method=GET,service=none}");
+        });
     }
 
     private static void assertName(String serviceName, String name) {

@@ -123,12 +123,14 @@ class RequestMetricSupportTest {
 
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{method=POST}", 0.0)
-                .containsEntry("foo.requests#count{http.status=500,method=POST,result=success}", 0.0)
-                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure}", 1.0)
-                .containsEntry("foo.response.duration#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.response.length#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.total.duration#count{http.status=500,method=POST}", 1.0);
+                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=success,service=none}",
+                               0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure,service=none}",
+                               1.0)
+                .containsEntry("foo.response.duration#count{http.status=500,method=POST,service=none}", 1.0)
+                .containsEntry("foo.response.length#count{http.status=500,method=POST,service=none}", 1.0)
+                .containsEntry("foo.total.duration#count{http.status=500,method=POST,service=none}", 1.0);
     }
 
     @Test
@@ -139,30 +141,36 @@ class RequestMetricSupportTest {
         addLogInfoInDerivedCtx(ctx);
 
         Map<String, Double> measurements = measureAll(registry);
-        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST}", 1.0);
+        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
 
         addLogInfoInDerivedCtx(ctx);
         // Does not increase the active requests.
-        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST}", 1.0);
+        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
 
         ctx.logBuilder().endResponseWithLastChild();
 
         measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{method=POST}", 0.0)
-                .containsEntry("foo.requests#count{http.status=500,method=POST,result=success}", 0.0)
-                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure}", 1.0)
-                .containsEntry("foo.actual.requests#count{http.status=500,method=POST}", 2.0)
-                .containsEntry("foo.connection.acquisition.duration#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.dns.resolution.duration#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.socket.connect.duration#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.pending.acquisition.duration#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.request.length#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.request.length#total{http.status=500,method=POST}", 123.0)
-                .containsEntry("foo.response.duration#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.response.length#count{http.status=500,method=POST}", 1.0)
-                .containsEntry("foo.response.length#total{http.status=500,method=POST}", 456.0)
-                .containsEntry("foo.total.duration#count{http.status=500,method=POST}", 1.0);
+                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=success,service=none}",
+                               0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure,service=none}",
+                               1.0)
+                .containsEntry("foo.actual.requests#count{http.status=500,method=POST,service=none}", 2.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=500,method=POST," +
+                               "service=none}", 1.0)
+                .containsEntry("foo.dns.resolution.duration#count{http.status=500,method=POST,service=none}",
+                               1.0)
+                .containsEntry("foo.socket.connect.duration#count{http.status=500,method=POST,service=none}",
+                               1.0)
+                .containsEntry("foo.pending.acquisition.duration#count{http.status=500,method=POST," +
+                               "service=none}", 1.0)
+                .containsEntry("foo.request.length#count{http.status=500,method=POST,service=none}", 1.0)
+                .containsEntry("foo.request.length#total{http.status=500,method=POST,service=none}", 123.0)
+                .containsEntry("foo.response.duration#count{http.status=500,method=POST,service=none}", 1.0)
+                .containsEntry("foo.response.length#count{http.status=500,method=POST,service=none}", 1.0)
+                .containsEntry("foo.response.length#total{http.status=500,method=POST,service=none}", 456.0)
+                .containsEntry("foo.total.duration#count{http.status=500,method=POST,service=none}", 1.0);
     }
 
     @Test
@@ -176,15 +184,16 @@ class RequestMetricSupportTest {
 
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{method=POST}", 0.0)
-                .containsEntry("foo.requests#count{http.status=0,method=POST,result=success}", 0.0)
-                .containsEntry("foo.requests#count{http.status=0,method=POST,result=failure}", 1.0)
-                .containsEntry("foo.timeouts#count{cause=WriteTimeoutException,http.status=0,method=POST}", 0.0)
+                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=0,method=POST,result=success,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=0,method=POST,result=failure,service=none}", 1.0)
+                .containsEntry("foo.timeouts#count{cause=WriteTimeoutException,http.status=0,method=POST," +
+                               "service=none}", 0.0)
                 .containsEntry("foo.timeouts#count{cause=ResponseTimeoutException," +
-                               "http.status=0,method=POST}", 1.0)
-                .containsEntry("foo.response.duration#count{http.status=0,method=POST}", 1.0)
-                .containsEntry("foo.response.length#count{http.status=0,method=POST}", 1.0)
-                .containsEntry("foo.total.duration#count{http.status=0,method=POST}", 1.0);
+                               "http.status=0,method=POST,service=none}", 1.0)
+                .containsEntry("foo.response.duration#count{http.status=0,method=POST,service=none}", 1.0)
+                .containsEntry("foo.response.length#count{http.status=0,method=POST,service=none}", 1.0)
+                .containsEntry("foo.total.duration#count{http.status=0,method=POST,service=none}", 1.0);
     }
 
     @Test
@@ -197,15 +206,16 @@ class RequestMetricSupportTest {
 
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{method=POST}", 0.0)
-                .containsEntry("foo.requests#count{http.status=0,method=POST,result=success}", 0.0)
-                .containsEntry("foo.requests#count{http.status=0,method=POST,result=failure}", 1.0)
-                .containsEntry("foo.timeouts#count{cause=WriteTimeoutException,http.status=0,method=POST}", 1.0)
+                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=0,method=POST,result=success,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=0,method=POST,result=failure,service=none}", 1.0)
+                .containsEntry("foo.timeouts#count{cause=WriteTimeoutException,http.status=0,method=POST," +
+                               "service=none}", 1.0)
                 .containsEntry("foo.timeouts#count{cause=ResponseTimeoutException," +
-                               "http.status=0,method=POST}", 0.0)
-                .containsEntry("foo.response.duration#count{http.status=0,method=POST}", 0.0)
-                .containsEntry("foo.response.length#count{http.status=0,method=POST}", 0.0)
-                .containsEntry("foo.total.duration#count{http.status=0,method=POST}", 0.0);
+                               "http.status=0,method=POST,service=none}", 0.0)
+                .containsEntry("foo.response.duration#count{http.status=0,method=POST,service=none}", 0.0)
+                .containsEntry("foo.response.length#count{http.status=0,method=POST,service=none}", 0.0)
+                .containsEntry("foo.total.duration#count{http.status=0,method=POST,service=none}", 0.0);
     }
 
     private static ClientRequestContext setupClientRequestCtx(MeterRegistry registry) {
@@ -322,12 +332,14 @@ class RequestMetricSupportTest {
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
                 // clientRequestContext
-                .containsEntry("bar.active.requests#value{method=POST}", 0.0)
-                .containsEntry("bar.requests#count{http.status=200,method=POST,result=success}", 1.0)
-                .containsEntry("bar.requests#count{http.status=200,method=POST,result=failure}", 0.0)
-                .containsEntry("bar.response.duration#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("bar.response.length#count{http.status=200,method=POST}", 1.0)
-                .containsEntry("bar.total.duration#count{http.status=200,method=POST}", 1.0)
+                .containsEntry("bar.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("bar.requests#count{http.status=200,method=POST,result=success,service=none}",
+                               1.0)
+                .containsEntry("bar.requests#count{http.status=200,method=POST,result=failure,service=none}",
+                               0.0)
+                .containsEntry("bar.response.duration#count{http.status=200,method=POST,service=none}", 1.0)
+                .containsEntry("bar.response.length#count{http.status=200,method=POST,service=none}", 1.0)
+                .containsEntry("bar.total.duration#count{http.status=200,method=POST,service=none}", 1.0)
                 // serviceRequestContext
                 .containsEntry("foo.active.requests#value{hostname.pattern=*,method=POST," +
                                serviceTag + '}', 0.0)
