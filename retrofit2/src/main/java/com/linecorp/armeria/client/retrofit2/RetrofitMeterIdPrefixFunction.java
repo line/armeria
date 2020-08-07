@@ -83,7 +83,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
 
     private final String name;
 
-    RetrofitMeterIdPrefixFunction(String name) {
+    private RetrofitMeterIdPrefixFunction(String name) {
         this.name = requireNonNull(name, "name");
     }
 

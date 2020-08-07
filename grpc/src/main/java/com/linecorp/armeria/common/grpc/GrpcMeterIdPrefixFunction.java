@@ -54,7 +54,7 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     private final String name;
 
-    GrpcMeterIdPrefixFunction(String name) {
+    private GrpcMeterIdPrefixFunction(String name) {
         this.name = requireNonNull(name, "name");
     }
 

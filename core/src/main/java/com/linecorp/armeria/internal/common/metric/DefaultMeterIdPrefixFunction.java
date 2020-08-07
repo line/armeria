@@ -45,7 +45,7 @@ public final class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction
         return new DefaultMeterIdPrefixFunction(name);
     }
 
-    DefaultMeterIdPrefixFunction(String name) {
+    private DefaultMeterIdPrefixFunction(String name) {
         this.name = requireNonNull(name, "name");
     }
 
