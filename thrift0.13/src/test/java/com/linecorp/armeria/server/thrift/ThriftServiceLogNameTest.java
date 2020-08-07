@@ -32,6 +32,8 @@ import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -109,5 +111,19 @@ class ThriftServiceLogNameTest {
                 return evt.getMessage().contains("POST /thrift#HelloService$AsyncIface/hello h2c");
             });
         });
+    }
+
+    @Test
+    void logNameOfClientSide() throws TException {
+        final HelloService.Iface client =
+                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
+                       .build(HelloService.Iface.class);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.hello("hello");
+            final ClientRequestContext ctx = captor.get();
+            final RequestLog requestLog = ctx.log().whenComplete().join();
+            assertThat(requestLog.serviceName()).isEqualTo(HelloService.Iface.class.getName());
+            assertThat(requestLog.name()).isEqualTo("hello");
+        }
     }
 }
