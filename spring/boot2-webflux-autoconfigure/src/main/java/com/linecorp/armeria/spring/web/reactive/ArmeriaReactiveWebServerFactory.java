@@ -34,6 +34,7 @@ import java.net.InetSocketAddress;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -51,6 +52,7 @@ import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.core.env.Environment;
 import org.springframework.http.server.reactive.HttpHandler;
 
 import com.google.common.base.Strings;
@@ -63,6 +65,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
@@ -86,13 +89,19 @@ import reactor.core.Disposable;
 public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
 
+    @Nullable
+    private static ArmeriaWebServer armeriaWebServer;
+
     private final ConfigurableListableBeanFactory beanFactory;
+    private final Environment environment;
 
     /**
      * Creates a new factory instance with the specified {@link ConfigurableListableBeanFactory}.
      */
-    public ArmeriaReactiveWebServerFactory(ConfigurableListableBeanFactory beanFactory) {
+    public ArmeriaReactiveWebServerFactory(ConfigurableListableBeanFactory beanFactory,
+                                           Environment environment) {
         this.beanFactory = requireNonNull(beanFactory, "beanFactory");
+        this.environment = environment;
     }
 
     private static com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
@@ -131,6 +140,11 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     @Override
     public WebServer getWebServer(HttpHandler httpHandler) {
+        final int port = ensureValidPort(getPort());
+        if (armeriaWebServer != null && needsToReuseWebServer(port)) {
+            return armeriaWebServer;
+        }
+
         final ServerBuilder sb = Server.builder();
         sb.disableServerHeader();
         sb.disableDateHeader();
@@ -178,7 +192,6 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         final InetAddress address = getAddress();
-        final int port = ensureValidPort(getPort());
         if (address != null) {
             sb.port(new InetSocketAddress(address, port), protocol);
         } else {
@@ -207,7 +220,39 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        return new ArmeriaWebServer(server, protocol, address, port, beanFactory);
+        armeriaWebServer = new ArmeriaWebServer(server, protocol, address, port, beanFactory);
+        return armeriaWebServer;
+    }
+
+    private boolean needsToReuseWebServer(int port) {
+        final boolean samePort = isManagementPortEqualsToServerPort();
+        Server existingServer = null;
+        try {
+            existingServer = beanFactory.getBean(Server.class);
+        } catch (NoSuchBeanDefinitionException ignore) {
+        }
+
+        if (samePort || existingServer == null) {
+            return false;
+        } else {
+            final Map<InetSocketAddress, ServerPort> activePorts = existingServer.activePorts();
+
+            // reuse the existing WebServer if it has the same port
+            return activePorts.values().stream()
+                              .anyMatch(serverPort -> serverPort.localAddress().getPort() == port);
+        }
+    }
+
+    private boolean isManagementPortEqualsToServerPort() {
+        final Integer managementPort = environment.getProperty("management.server.port", Integer.class);
+        if (managementPort != null && managementPort < 0) {
+            // The management port is disable
+            return true;
+        }
+        final Integer serverPort = environment.getProperty("server.port", Integer.class);
+        return managementPort == null ||
+               (serverPort == null && managementPort.equals(8080)) ||
+               (managementPort != 0 && managementPort.equals(serverPort));
     }
 
     private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,

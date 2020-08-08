@@ -23,10 +23,16 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Ssl;
@@ -35,6 +41,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.util.SocketUtils;
 import org.springframework.util.unit.DataSize;
 
@@ -58,6 +65,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
+import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import reactor.core.publisher.Mono;
@@ -71,7 +79,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     private static ClientFactory clientFactory;
 
     private static ArmeriaReactiveWebServerFactory factory(ConfigurableListableBeanFactory beanFactory) {
-        return new ArmeriaReactiveWebServerFactory(beanFactory);
+        return new ArmeriaReactiveWebServerFactory(beanFactory, new MockEnvironment());
     }
 
     private ArmeriaReactiveWebServerFactory factory() {
@@ -387,5 +395,21 @@ class ArmeriaReactiveWebServerFactoryTest {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    @Nested
+    @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT,
+            classes = TestConfiguration.class,
+            properties = "management.server.port=18080")
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    class ArmeriaReactiveWebServerFactoryWithManagementServerPortTest {
+
+        @Test
+        void testApplicationStartup() {
+            // Nothing to do.
+            // If ArmeriaReactiveWebServerFactory doesn't work with management.server.port,
+            // this test class itself will be failed.
+        }
     }
 }
