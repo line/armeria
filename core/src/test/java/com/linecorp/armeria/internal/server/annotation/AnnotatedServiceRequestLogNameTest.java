@@ -57,6 +57,11 @@ class AnnotatedServiceRequestLogNameTest {
                 });
             });
 
+            sb.annotatedService()
+              .pathPrefix("/configured")
+              .defaultServiceName("ConfiguredService")
+              .build(new BazService());
+
             sb.decorator((delegate, ctx, req) -> {
                 logs.add(ctx.log());
                 return delegate.serve(ctx, req);
@@ -134,6 +139,17 @@ class AnnotatedServiceRequestLogNameTest {
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    void customServiceNameWithConfiguration() throws Exception {
+        final AggregatedHttpResponse response = client.get("/configured/baz").aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+
+        final RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("ConfiguredService");
+        assertThat(log.name()).isEqualTo("baz");
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+    }
+
     private static class FooService {
         @Get("/ok")
         public String foo(ServiceRequestContext ctx) {
@@ -160,6 +176,15 @@ class AnnotatedServiceRequestLogNameTest {
         public String secured(ServiceRequestContext ctx) {
             assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
                     .isEqualTo("SecuredBarService");
+            return "OK";
+        }
+    }
+
+    private static class BazService {
+        @Get("/baz")
+        public String baz(ServiceRequestContext ctx) {
+            assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
+                    .isEqualTo("ConfiguredService");
             return "OK";
         }
     }

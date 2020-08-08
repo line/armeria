@@ -175,6 +175,7 @@ public final class AnnotatedServiceFactory {
      */
     public static List<AnnotatedServiceElement> find(
             String pathPrefix, Object object, boolean useBlockingTaskExecutor,
+            @Nullable String defaultServiceName,
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions,
             List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
@@ -182,8 +183,8 @@ public final class AnnotatedServiceFactory {
         return methods.stream()
                       .flatMap((Method method) ->
                                        create(pathPrefix, object, method, useBlockingTaskExecutor,
-                                              requestConverterFunctions, responseConverterFunctions,
-                                              exceptionHandlerFunctions).stream())
+                                              defaultServiceName, requestConverterFunctions,
+                                              responseConverterFunctions, exceptionHandlerFunctions).stream())
                       .collect(toImmutableList());
     }
 
@@ -237,6 +238,7 @@ public final class AnnotatedServiceFactory {
     @VisibleForTesting
     static List<AnnotatedServiceElement> create(String pathPrefix, Object object, Method method,
                                                 boolean useBlockingTaskExecutor,
+                                                @Nullable String defaultServiceName,
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers) {
@@ -316,7 +318,7 @@ public final class AnnotatedServiceFactory {
             return new AnnotatedServiceElement(
                     route,
                     new AnnotatedService(object, method, resolvers, eh, res, route, responseHeaders,
-                                         responseTrailers, needToUseBlockingTaskExecutor),
+                                         responseTrailers, needToUseBlockingTaskExecutor, defaultServiceName),
                     decorator(method, clazz));
         }).collect(toImmutableList());
     }

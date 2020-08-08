@@ -66,6 +66,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
 
     private boolean useBlockingTaskExecutor;
+    @Nullable
+    private String defaultServiceName;
     private String pathPrefix = "/";
     @Nullable
     private Object service;
@@ -209,6 +211,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     @Override
     public AnnotatedServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
+        this.defaultServiceName = defaultServiceName;
         return this;
     }
 
@@ -247,8 +250,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
 
         final List<AnnotatedServiceElement> elements =
                 AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
-                                             requestConverterFunctions, responseConverterFunctions,
-                                             exceptionHandlerFunctions);
+                                             defaultServiceName, requestConverterFunctions,
+                                             responseConverterFunctions, exceptionHandlerFunctions);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

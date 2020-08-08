@@ -118,7 +118,8 @@ public final class AnnotatedService implements HttpService {
                      Route route,
                      ResponseHeaders defaultHttpHeaders,
                      HttpHeaders defaultHttpTrailers,
-                     boolean useBlockingTaskExecutor) {
+                     boolean useBlockingTaskExecutor,
+                     @Nullable String defaultServiceName) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -147,9 +148,11 @@ public final class AnnotatedService implements HttpService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            defaultServiceName = serviceName.value();
+            this.defaultServiceName = serviceName.value();
+        } else if (defaultServiceName != null) {
+            this.defaultServiceName = defaultServiceName;
         } else {
-            defaultServiceName = object.getClass().getName();
+            this.defaultServiceName = object.getClass().getName();
         }
 
         this.method.setAccessible(true);
