@@ -216,6 +216,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder defaultServiceName(String defaultServiceName) {
+        defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
+        return this;
+    }
+
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *

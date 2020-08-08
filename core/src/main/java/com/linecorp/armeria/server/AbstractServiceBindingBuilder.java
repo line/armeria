@@ -86,12 +86,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
-    /**
-     * Sets the default value of the {@link RequestLog#serviceName()} property which is used when
-     * no service name was set via {@link RequestLogBuilder#name(String, String)}.
-     *
-     * @param defaultServiceName the default service name.
-     */
+    @Override
     public AbstractServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
         return this;

@@ -206,6 +206,12 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         return this;
     }
 
+    @Override
+    public AnnotatedServiceBindingBuilder defaultServiceName(String defaultServiceName) {
+        defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
+        return this;
+    }
+
     /**
      * Registers the given service to {@link ServerBuilder} and return {@link ServerBuilder}
      * to continue building {@link Server}.

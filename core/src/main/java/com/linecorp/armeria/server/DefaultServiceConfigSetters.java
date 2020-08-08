@@ -51,11 +51,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
 
-    ServiceConfigSetters defaultServiceName(String defaultServiceName) {
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
-        return this;
-    }
-
     ServiceConfigSetters defaultLogName(String defaultLogName) {
         this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
         return this;
@@ -115,6 +110,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
             return Function.identity();
         }
         return decorator;
+    }
+
+    @Override
+    public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
+        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        return this;
     }
 
     /**

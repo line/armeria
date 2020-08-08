@@ -51,11 +51,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         this.service = requireNonNull(service, "service");
     }
 
-    public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
-        return this;
-    }
-
     public ServiceConfigSetters defaultLogName(String defaultLogName) {
         this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
         return this;
@@ -105,6 +100,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigBuilder decorators(Function<? super HttpService, ? extends HttpService>... decorators) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
+        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        return this;
     }
 
     ServiceConfig build(long defaultRequestTimeoutMillis,
