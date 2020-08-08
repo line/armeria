@@ -50,6 +50,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
@@ -746,6 +748,8 @@ class GrpcClientTest {
         });
     }
 
+    private static final Logger logger = LoggerFactory.getLogger(GrpcClientTest.class);
+
     @Test
     void serverStreamingShouldBeFlowControlled() throws Exception {
         final StreamingOutputCallRequest request =
@@ -811,6 +815,7 @@ class GrpcClientTest {
         final Object actualResponse2 = queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(actualResponse2).withFailMessage("Unexpected response: %s", actualResponse2)
                                    .isEqualTo(goldenResponses.get(1));
+        call.request(1);
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
         call.cancel("Cancelled after all of the requests are done", null);
 

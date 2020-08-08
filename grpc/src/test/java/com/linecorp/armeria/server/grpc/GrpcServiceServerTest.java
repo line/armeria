@@ -536,7 +536,11 @@ class GrpcServiceServerTest {
     @AfterEach
     void tearDown() {
         // Make sure all RequestLogs are consumed by the test.
-        assertThat(requestLogQueue).isEmpty();
+        try {
+            assertThat(requestLogQueue).isEmpty();
+        } finally {
+            requestLogQueue.clear();
+        }
     }
 
     @ParameterizedTest
@@ -712,7 +716,7 @@ class GrpcServiceServerTest {
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.withCompression("gzip").staticUnaryCall(request));
 
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
 
         checkRequestLogStatus(grpcStatus -> {
             assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);

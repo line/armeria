@@ -46,17 +46,13 @@
 
 package com.linecorp.armeria.common.grpc.protocol;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayDeque;
 import java.util.Objects;
-import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -64,7 +60,10 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.HttpDeframerInput;
+import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
@@ -72,6 +71,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A deframer of messages transported in the gRPC wire format. See
@@ -83,16 +83,9 @@ import io.netty.buffer.Unpooled;
  * a {@link ByteBuf} to optimize message parsing.
  */
 @UnstableApi
-public class ArmeriaMessageDeframer implements AutoCloseable {
+public class ArmeriaMessageDeframer extends HttpDeframer<DeframedMessage> implements AutoCloseable {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
-
-    private static final CloseFuture CLOSED_FUTURE;
-
-    static {
-        CLOSED_FUTURE = new CloseFuture();
-        CLOSED_FUTURE.doComplete();
-    }
 
     private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
 
@@ -187,189 +180,29 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         }
     }
 
-    /**
-     * A listener of deframing events.
-     */
-    @UnstableApi
-    public interface Listener {
-
-        /**
-         * Called to deliver the next complete message. Either {@code message.buf} or {@code message.stream}
-         * will be non-null. {@code message.buf} must be released, or {@code message.stream} must be closed by
-         * the callee.
-         */
-        void messageRead(DeframedMessage message);
-
-        /**
-         * Called when the stream is complete and all messages have been successfully delivered.
-         */
-        void endOfStream();
-    }
-
-    private final Listener listener;
     private final int maxMessageSizeBytes;
-    private final ByteBufAllocator alloc;
     @Nullable
     private final Base64Decoder base64Decoder;
 
     private int currentType = UNINITIALIED_TYPE;
-
     private int requiredLength = HEADER_LENGTH;
+    private boolean startedDeframing;
+
     @Nullable
     private Decompressor decompressor;
-
-    @Nullable
-    private CloseFuture whenClosed;
-    private boolean endOfStream;
-    private boolean closeWhenComplete;
-
-    @Nullable
-    private Queue<ByteBuf> unprocessed;
-    private int unprocessedBytes;
-
-    private long pendingDeliveries;
-    private boolean inDelivery;
-    private boolean startedDeframing;
 
     /**
      * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
      */
-    public ArmeriaMessageDeframer(Listener listener,
-                                  int maxMessageSizeBytes,
-                                  ByteBufAllocator alloc, boolean decodeBase64) {
-        this.listener = requireNonNull(listener, "listener");
+    public ArmeriaMessageDeframer(EventExecutor eventLoop, ByteBufAllocator alloc,
+                                  int maxMessageSizeBytes, boolean decodeBase64) {
+        super(requireNonNull(eventLoop, "eventLoop"), requireNonNull(requireNonNull(alloc, "alloc")));
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
-        this.alloc = requireNonNull(alloc, "alloc");
-        unprocessed = new ArrayDeque<>();
         if (decodeBase64) {
             base64Decoder = new Base64Decoder(alloc);
         } else {
             base64Decoder = null;
         }
-    }
-
-    /**
-     * Requests up to the given number of messages from the call to be delivered to
-     * {@link Listener#messageRead(DeframedMessage)}. No additional messages will be delivered.
-     *
-     * <p>If {@link #close()} has been called, this method will have no effect.
-     *
-     * @param numMessages the requested number of messages to be delivered to the listener.
-     */
-    public void request(int numMessages) {
-        checkArgument(numMessages > 0, "numMessages must be > 0");
-        if (isClosed()) {
-            return;
-        }
-        pendingDeliveries += numMessages;
-        deliver();
-    }
-
-    /**
-     * Indicates whether delivery is currently stalled, pending receipt of more data. This means
-     * that no additional data can be delivered to the application.
-     */
-    public boolean isStalled() {
-        return !hasRequiredBytes();
-    }
-
-    /**
-     * Adds the given data to this deframer and attempts delivery to the listener.
-     *
-     * @param data the raw data read from the remote endpoint. Must be non-null.
-     * @param endOfStream if {@code true}, indicates that {@code data} is the end of the stream from
-     *        the remote endpoint.  End of stream should not be used in the event of a transport
-     *        error, such as a stream reset.
-     * @throws IllegalStateException if {@link #close()} has been called previously or if
-     *         this method has previously been called with {@code endOfStream=true}.
-     */
-    public void deframe(HttpData data, boolean endOfStream) {
-        requireNonNull(data, "data");
-        checkNotClosed();
-        checkState(!this.endOfStream, "Past end of stream");
-
-        startedDeframing = true;
-
-        final int dataLength = data.length();
-        if (dataLength != 0) {
-            final ByteBuf buf;
-            assert unprocessed != null;
-            if (base64Decoder != null) {
-                buf = base64Decoder.decode(data.byteBuf());
-            } else {
-                buf = data.byteBuf();
-            }
-            unprocessed.add(buf);
-            unprocessedBytes += buf.readableBytes();
-        }
-
-        // Indicate that all of the data for this stream has been received.
-        this.endOfStream = endOfStream;
-        deliver();
-    }
-
-    /**
-     * Requests closing this deframer when any messages currently queued have been requested and delivered.
-     */
-    public void closeWhenComplete() {
-        if (isClosed()) {
-            return;
-        }
-
-        if (isStalled()) {
-            close();
-        } else {
-            closeWhenComplete = true;
-        }
-    }
-
-    /**
-     * Closes this deframer and frees any resources. After this method is called, additional
-     * calls will have no effect.
-     */
-    @Override
-    public void close() {
-        if (unprocessed != null) {
-            try {
-                unprocessed.forEach(ByteBuf::release);
-            } finally {
-                unprocessed = null;
-            }
-
-            if (endOfStream) {
-                listener.endOfStream();
-            }
-        }
-
-        if (whenClosed == null) {
-            whenClosed = CLOSED_FUTURE;
-        } else {
-            whenClosed.doComplete();
-        }
-    }
-
-    /**
-     * Returns a {@link CompletableFuture} which will be completed when this deframer has been closed.
-     */
-    public CompletableFuture<Void> whenClosed() {
-        if (whenClosed == null) {
-            whenClosed = new CloseFuture();
-        }
-        return whenClosed;
-    }
-
-    /**
-     * Indicates whether or not this deframer is closing.
-     */
-    public boolean isClosing() {
-        return closeWhenComplete;
-    }
-
-    /**
-     * Indicates whether or not this deframer has been closed.
-     */
-    public boolean isClosed() {
-        return unprocessed == null;
     }
 
     /**
@@ -381,64 +214,36 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         return this;
     }
 
-    /**
-     * Throws if this deframer has already been closed.
-     */
-    private void checkNotClosed() {
-        checkState(!isClosed(), "MessageDeframer is already closed");
-    }
-
-    /**
-     * Reads and delivers as many messages to the listener as possible.
-     */
-    private void deliver() {
-        // We can have reentrancy here when using a direct executor, triggered by calls to
-        // request more messages. This is safe as we simply loop until pendingDelivers = 0
-        if (inDelivery) {
-            return;
-        }
-        inDelivery = true;
-        try {
-            // Process the uncompressed bytes.
-            while (pendingDeliveries > 0 && hasRequiredBytes()) {
-                if (currentType == UNINITIALIED_TYPE) {
-                    readHeader();
-                } else {
-                    // Read the body and deliver the message.
-                    readBody();
-
-                    // Since we've delivered a message, decrement the number of pending
-                    // deliveries remaining.
-                    pendingDeliveries--;
-                }
-            }
-
-            /*
-             * We are stalled when there are no more bytes to process. This allows delivering errors as
-             * soon as the buffered input has been consumed, independent of whether the application
-             * has requested another message.  At this point in the function, either all frames have been
-             * delivered, or unprocessed is empty.  If there is a partial message, it will be inside next
-             * frame and not in unprocessed.  If there is extra data but no pending deliveries, it will
-             * be in unprocessed.
-             */
-            if (closeWhenComplete && isStalled()) {
-                close();
-            }
-        } finally {
-            inDelivery = false;
+    @Override
+    protected final ByteBuf convertToByteBuf(HttpData data) {
+        if (base64Decoder != null) {
+            return base64Decoder.decode(data.byteBuf());
+        }  else {
+            return data.byteBuf();
         }
     }
 
-    private boolean hasRequiredBytes() {
-        return unprocessedBytes >= requiredLength;
+    @Override
+    protected final void process(HttpDeframerInput in, HttpDeframerOutput<DeframedMessage> out) {
+        startedDeframing = true;
+        int readableBytes = in.readableBytes();
+        while (readableBytes >= requiredLength) {
+            final int length = requiredLength;
+            if (currentType == UNINITIALIED_TYPE) {
+                readHeader(in);
+            } else {
+                out.add(readBody(in));
+            }
+            readableBytes -= length;
+        }
     }
 
     /**
      * Processes the gRPC compression header which is composed of the compression flag and the outer
      * frame length.
      */
-    private void readHeader() {
-        final int type = readUnsignedByte();
+    private void readHeader(HttpDeframerInput in) {
+        final int type = in.readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw new ArmeriaStatusException(
                     StatusCodes.INTERNAL,
@@ -446,7 +251,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         }
 
         // Update the required length to include the length of the frame.
-        requiredLength = readInt();
+        requiredLength = in.readInt();
         if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
             throw new ArmeriaStatusException(
                     StatusCodes.RESOURCE_EXHAUSTED,
@@ -459,113 +264,23 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         currentType = type;
     }
 
-    private int readUnsignedByte() {
-        unprocessedBytes--;
-        assert unprocessed != null;
-        final ByteBuf firstBuf = unprocessed.peek();
-        assert firstBuf != null;
-        final int value = firstBuf.readUnsignedByte();
-        if (!firstBuf.isReadable()) {
-            unprocessed.remove().release();
-        }
-        return value;
-    }
-
-    private int readInt() {
-        unprocessedBytes -= 4;
-        assert unprocessed != null;
-        final ByteBuf firstBuf = unprocessed.peek();
-        assert firstBuf != null;
-        final int firstBufLen = firstBuf.readableBytes();
-
-        if (firstBufLen >= 4) {
-            final int value = firstBuf.readInt();
-            if (!firstBuf.isReadable()) {
-                unprocessed.remove().release();
-            }
-            return value;
-        }
-
-        return readIntSlowPath();
-    }
-
-    private int readIntSlowPath() {
-        assert unprocessed != null;
-
-        int value = 0;
-        for (int i = 4; i > 0; i--) {
-            final ByteBuf buf = unprocessed.peek();
-            assert buf != null;
-            value <<= 8;
-            value |= buf.readUnsignedByte();
-            if (!buf.isReadable()) {
-                unprocessed.remove().release();
-            }
-        }
-        return value;
-    }
-
     /**
      * Processes the body of the gRPC compression frame. A single compression frame may contain
      * several gRPC messages within it.
      */
-    private void readBody() {
-        final ByteBuf buf = readBytes(requiredLength);
+    private DeframedMessage readBody(HttpDeframerInput in) {
+        final ByteBuf buf;
+        if (requiredLength == 0) {
+            buf = Unpooled.EMPTY_BUFFER;
+        } else {
+            buf = in.readBytes(requiredLength);
+        }
         final boolean isCompressed = (currentType & COMPRESSED_FLAG_MASK) != 0;
         final DeframedMessage msg = isCompressed ? getCompressedBody(buf) : getUncompressedBody(buf);
-        listener.messageRead(msg);
-
         // Done with this frame, begin processing the next header.
         currentType = UNINITIALIED_TYPE;
         requiredLength = HEADER_LENGTH;
-    }
-
-    private ByteBuf readBytes(int length) {
-        if (length == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        unprocessedBytes -= length;
-        assert unprocessed != null;
-        final ByteBuf firstBuf = unprocessed.peek();
-        assert firstBuf != null;
-        final int firstBufLen = firstBuf.readableBytes();
-
-        if (firstBufLen == length) {
-            unprocessed.remove();
-            return firstBuf;
-        }
-
-        if (firstBufLen > length) {
-            return firstBuf.readRetainedSlice(length);
-        }
-
-        return readBytesMerged(length);
-    }
-
-    private ByteBuf readBytesMerged(int length) {
-        assert unprocessed != null;
-
-        final ByteBuf merged = alloc.buffer(length);
-        for (;;) {
-            final ByteBuf buf = unprocessed.peek();
-            assert buf != null;
-
-            final int bufLen = buf.readableBytes();
-            final int remaining = merged.writableBytes();
-
-            if (bufLen <= remaining) {
-                merged.writeBytes(buf);
-                unprocessed.remove().release();
-
-                if (bufLen == remaining) {
-                    return merged;
-                }
-            } else {
-                merged.writeBytes(buf, remaining);
-                return merged;
-            }
-        }
+        return msg;
     }
 
     private DeframedMessage getUncompressedBody(ByteBuf buf) {
@@ -674,12 +389,6 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                                 "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
                                 debugString, maxMessageSize, count));
             }
-        }
-    }
-
-    private static class CloseFuture extends UnmodifiableFuture<Void> {
-        private void doComplete() {
-            doComplete(null);
         }
     }
 }

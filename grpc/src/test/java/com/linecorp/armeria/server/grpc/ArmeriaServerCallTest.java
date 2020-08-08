@@ -142,7 +142,7 @@ public class ArmeriaServerCallTest {
 
         // messageRead is always called from the event loop.
         eventLoop.get().submit(() -> {
-            call.messageRead(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+            call.onNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
 
             verify(listener, never()).onMessage(any());
         }).syncUninterruptibly();
@@ -151,7 +151,7 @@ public class ArmeriaServerCallTest {
     @Test
     public void messageRead_notWrappedByteBuf() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        call.messageRead(new DeframedMessage(buf, 0));
+        call.onNext(new DeframedMessage(buf, 0));
 
         verifyNoMoreInteractions(buffersAttr);
     }
@@ -178,7 +178,7 @@ public class ArmeriaServerCallTest {
                                .build());
 
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        call.messageRead(new DeframedMessage(buf, 0));
+        call.onNext(new DeframedMessage(buf, 0));
 
         verify(buffersAttr).put(any(), same(buf));
     }
@@ -189,8 +189,8 @@ public class ArmeriaServerCallTest {
 
         // messageRead is always called from the event loop.
         eventLoop.get().submit(() -> {
-            call.messageRead(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
-                                                 0));
+            call.onNext(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
+                                            0));
 
             verify(listener, never()).onMessage(any());
         }).syncUninterruptibly();

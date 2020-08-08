@@ -20,202 +20,107 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
+import org.reactivestreams.Processor;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 
-import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A {@link Subscriber} to read HTTP messages and pass to gRPC business logic.
+ * A {@link Processor} to read HTTP messages and pass to gRPC business logic.
  */
-public final class HttpStreamReader implements Subscriber<HttpObject> {
+public final class HttpStreamReader extends ArmeriaMessageDeframer {
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
 
-    @VisibleForTesting
-    public final ArmeriaMessageDeframer deframer;
-
-    @Nullable
-    private Subscription subscription;
-
-    private int deferredInitialMessageRequest;
-
-    private volatile boolean cancelled;
-
-    private boolean sawLeadingHeaders;
-
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
-                            ArmeriaMessageDeframer deframer,
-                            TransportStatusListener transportStatusListener) {
+                            TransportStatusListener transportStatusListener,
+                            EventExecutor eventLoop, ByteBufAllocator alloc,
+                            int maxMessageSizeBytes, boolean decodeBase64) {
+        super(eventLoop, alloc, maxMessageSizeBytes, decodeBase64);
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
-        this.deframer = requireNonNull(deframer, "deframer");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
     }
 
-    // Must be called from the IO thread.
-    public void request(int numMessages) {
-        if (subscription == null) {
-            deferredInitialMessageRequest += numMessages;
-            return;
-        }
-        deframer.request(numMessages);
-        requestHttpFrame();
-    }
-
-    // Must be called from the IO thread.
     @Override
-    public void onSubscribe(Subscription subscription) {
-        this.subscription = subscription;
-        if (cancelled) {
-            subscription.cancel();
+    protected void processHeaders(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
+        // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
+        // and client though as everything else is identical.
+        final String statusText = headers.get(HttpHeaderNames.STATUS);
+        if (statusText == null) {
+            // Not allowed to have empty leading headers, kill the stream hard.
+            transportStatusListener.transportReportStatus(
+                    Status.INTERNAL.withDescription("Missing HTTP status code"));
             return;
         }
-        if (deferredInitialMessageRequest > 0) {
-            request(deferredInitialMessageRequest);
-        }
-    }
 
-    @Override
-    public void onNext(HttpObject obj) {
-        if (cancelled) {
+        final HttpStatus status = HttpStatus.valueOf(statusText);
+        if (!status.equals(HttpStatus.OK)) {
+            transportStatusListener.transportReportStatus(
+                    GrpcStatus.httpStatusToGrpcStatus(status.code()));
             return;
         }
-        if (obj instanceof HttpHeaders) {
-            // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
-            // and client though as everything else is identical.
-            final HttpHeaders headers = (HttpHeaders) obj;
 
-            if (!sawLeadingHeaders) {
-                final String statusText = headers.get(HttpHeaderNames.STATUS);
-                if (statusText == null) {
-                    // Not allowed to have empty leading headers, kill the stream hard.
-                    transportStatusListener.transportReportStatus(
-                            Status.INTERNAL.withDescription("Missing HTTP status code"));
-                    return;
-                }
-
-                if (ArmeriaHttpUtil.isInformational(statusText)) {
-                    // Skip informational headers.
-                    return;
-                }
-
-                sawLeadingHeaders = true;
-
-                final HttpStatus status = HttpStatus.valueOf(statusText);
-                if (!status.equals(HttpStatus.OK)) {
-                    transportStatusListener.transportReportStatus(
-                            GrpcStatus.httpStatusToGrpcStatus(status.code()));
-                    return;
-                }
-            }
-
-            final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
-            if (grpcStatus != null) {
-                if (deframer.isClosed()) {
-                    GrpcStatus.reportStatus(headers, this, transportStatusListener);
-                } else {
-                    // A gRPC client could not receive messages fully yet.
-                    // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
-                    deframer.whenClosed().thenRun(() -> {
-                        GrpcStatus.reportStatus(headers, this, transportStatusListener);
-                    });
-                    deframer.closeWhenComplete();
-                }
-            }
-
-            // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
-            // messages.
-            final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
-            if (grpcEncoding != null) {
-                final Decompressor decompressor = decompressorRegistry.lookupDecompressor(grpcEncoding);
-                if (decompressor == null) {
-                    transportStatusListener.transportReportStatus(Status.INTERNAL.withDescription(
-                            "Can't find decompressor for " + grpcEncoding));
-                    return;
-                }
-                try {
-                    deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
-                } catch (Throwable t) {
-                    transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(t));
-                    return;
-                }
-            }
-            requestHttpFrame();
-            return;
+        final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
+        if (grpcStatus != null) {
+            // A gRPC client could not receive messages fully yet.
+            // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
+            whenComplete().thenRun(() -> {
+                GrpcStatus.reportStatus(headers, this, transportStatusListener);
+            });
         }
-        final HttpData data = (HttpData) obj;
-        try {
-            deframer.deframe(data, false);
-        } catch (Throwable cause) {
-            try {
-                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
+
+        // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
+        // messages.
+        final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
+        if (grpcEncoding != null) {
+            final io.grpc.Decompressor decompressor = decompressorRegistry.lookupDecompressor(grpcEncoding);
+            if (decompressor == null) {
+                transportStatusListener.transportReportStatus(Status.INTERNAL.withDescription(
+                        "Can't find decompressor for " + grpcEncoding));
                 return;
-            } finally {
-                deframer.close();
+            }
+            try {
+                decompressor(ForwardingDecompressor.forGrpc(decompressor));
+            } catch (Throwable t) {
+                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(t));
             }
         }
-        requestHttpFrame();
     }
 
     @Override
-    public void onError(Throwable cause) {
-        if (cancelled) {
-            return;
+    protected void processTrailers(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
+        final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
+        if (grpcStatus != null) {
+            GrpcStatus.reportStatus(headers, this, transportStatusListener);
         }
+    }
+
+    @Override
+    protected void processOnError(Throwable cause) {
         transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
     }
 
-    @Override
-    public void onComplete() {
-        if (cancelled) {
-            return;
-        }
-        closeDeframer();
-    }
-
+    /**
+     * Cancel this stream and prevents further subscription.
+     */
     public void cancel() {
-        cancelled = true;
-        if (subscription != null) {
-            subscription.cancel();
-        }
-        if (!deframer.isClosed()) {
-            deframer.close();
-        }
+       abort(CancelledSubscriptionException.get());
     }
 
-    void closeDeframer() {
-        // closeDeframer() could be called when deframer.isClosing() due to a race condition like the following:
-        //
-        // 1) HttpStreamReader received all data from publisher and added them to unprocessed of deframer.
-        // 2) A gRPC client does not request next messages yet, so deframer still has unprocessedBytes and
-        //    is not stalled.
-        // 3) HttpStreamReader receives onCompleted signal and closes deframer.
-        // 4) A gRPC client requests a message and the received message contains trailers,
-        //    so ArmeriaClientCall tries to close deframer.
-        if (!deframer.isClosing() && !deframer.isClosed()) {
-            deframer.deframe(HttpData.empty(), true);
-            deframer.closeWhenComplete();
-        }
-    }
-
-    private void requestHttpFrame() {
-        assert subscription != null;
-        if (deframer.isStalled()) {
-            subscription.request(1);
-        }
+    @Override
+    public HttpStreamReader decompressor(@Nullable Decompressor decompressor) {
+        return (HttpStreamReader) super.decompressor(decompressor);
     }
 }

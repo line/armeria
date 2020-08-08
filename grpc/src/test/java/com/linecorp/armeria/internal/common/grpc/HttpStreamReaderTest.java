@@ -16,172 +16,106 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
-import org.reactivestreams.Subscription;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import reactor.test.StepVerifier;
 
-public class HttpStreamReaderTest {
+class HttpStreamReaderTest {
+
+    //TODO(ikhoon): Add TCK test for HttpStreamReader
 
     private static final ResponseHeaders HEADERS = ResponseHeaders.of(HttpStatus.OK);
     private static final HttpHeaders TRAILERS = HttpHeaders.of(GrpcHeaderNames.GRPC_STATUS, 2);
-    private static final HttpData DATA = HttpData.ofUtf8("foobarbaz");
+    private static final HttpData DATA =
+            HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
 
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
-    private TransportStatusListener transportStatusListener;
-
-    @Mock
-    private ArmeriaMessageDeframer deframer;
-
-    @Mock
-    private Subscription subscription;
+    private AtomicReference<Status> statusRef;
 
     private HttpStreamReader reader;
 
-    @Before
-    public void setUp() {
-        reader = new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), deframer,
-                                      transportStatusListener);
+    @BeforeEach
+    void setUp() {
+        statusRef = new AtomicReference<>();
+        final TransportStatusListener transportStatusListener = (status, metadata) -> statusRef.set(status);
+        reader = new HttpStreamReader(
+                DecompressorRegistry.getDefaultInstance(), transportStatusListener,
+                ImmediateEventExecutor.INSTANCE,
+                ByteBufAllocator.DEFAULT, /* maxMessageSizeBytes */ -1, /* decodeBase64 */false);
     }
 
     @Test
-    public void subscribe_noServerRequests() {
-        reader.onSubscribe(subscription);
-        verifyNoMoreInteractions(subscription);
+    void onHeaders() {
+        final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS);
+        source.subscribe(reader);
+        StepVerifier.create(reader)
+                    .thenRequest(1)
+                    .expectNextCount(0)
+                    .verifyComplete();
     }
 
     @Test
-    public void subscribe_hasServerRequests_subscribeFirst() {
-        when(deframer.isStalled()).thenReturn(true);
-        reader.onSubscribe(subscription);
-        verifyNoMoreInteractions(subscription);
-        reader.request(1);
-        verify(subscription).request(1);
-        verifyNoMoreInteractions(subscription);
+    void onTrailers() {
+        final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS, TRAILERS);
+        source.subscribe(reader);
+        StepVerifier.create(reader)
+                    .thenRequest(1)
+                    .expectNextCount(0)
+                    .verifyComplete();
     }
 
     @Test
-    public void subscribe_hasServerRequests_requestFirst() {
-        when(deframer.isStalled()).thenReturn(true);
-        reader.request(1);
-        reader.onSubscribe(subscription);
-        verify(subscription).request(1);
-        verifyNoMoreInteractions(subscription);
+    void onMessage() throws Exception {
+        final StreamMessage<HttpObject> source = StreamMessage.of(DATA);
+        source.subscribe(reader);
+        StepVerifier.create(reader)
+                    .thenRequest(1)
+                    .expectNextCount(1)
+                    .verifyComplete();
     }
 
     @Test
-    public void onHeaders() {
-        reader.onSubscribe(subscription);
-        verifyNoMoreInteractions(subscription);
-        when(deframer.isStalled()).thenReturn(true);
-        reader.onNext(HEADERS);
-        verify(subscription).request(1);
+    void onMessage_deframeError() throws Exception {
+        final StreamMessage<HttpData> malformed = StreamMessage.of(HttpData.ofUtf8("foobar"));
+        malformed.subscribe(reader);
+
+        StepVerifier.create(reader)
+                    .thenRequest(1)
+                    .verifyError(ArmeriaStatusException.class);
+        await().untilAsserted(() -> {
+            assertThat(statusRef.get().getCode()).isEqualTo(Status.INTERNAL.getCode());
+        });
     }
 
     @Test
-    public void onTrailers() {
-        reader.onSubscribe(subscription);
-        when(deframer.isStalled()).thenReturn(true);
-        reader.onNext(TRAILERS);
-        verifyNoMoreInteractions(subscription);
-    }
+    void httpNotOk() {
+        final StreamMessage<ResponseHeaders> source =
+                StreamMessage.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
+        source.subscribe(reader);
+        StepVerifier.create(reader)
+                    .thenRequest(1)
+                    .verifyComplete();
 
-    @Test
-    public void onMessage_noServerRequests() throws Exception {
-        reader.onSubscribe(subscription);
-        reader.onNext(DATA);
-        verify(deframer).deframe(DATA, false);
-        verifyNoMoreInteractions(subscription);
-    }
-
-    @Test
-    public void onMessage_hasServerRequests() throws Exception {
-        reader.onSubscribe(subscription);
-        when(deframer.isStalled()).thenReturn(true);
-        reader.onNext(DATA);
-        verify(deframer).deframe(DATA, false);
-        verify(subscription).request(1);
-    }
-
-    @Test
-    public void onMessage_deframeError() throws Exception {
-        doThrow(Status.INTERNAL.asRuntimeException())
-                .when(deframer).deframe(isA(HttpData.class), anyBoolean());
-        reader.onSubscribe(subscription);
-        reader.onNext(DATA);
-        verify(deframer).deframe(DATA, false);
-        verify(transportStatusListener).transportReportStatus(Status.INTERNAL);
-        verify(deframer).close();
-    }
-
-    @Test
-    public void onMessage_deframeError_errorListenerThrows() throws Exception {
-        doThrow(Status.INTERNAL.asRuntimeException())
-                .when(deframer).deframe(isA(HttpData.class), anyBoolean());
-        doThrow(new IllegalStateException())
-                .when(transportStatusListener).transportReportStatus(isA(Status.class));
-        reader.onSubscribe(subscription);
-        assertThatThrownBy(() -> reader.onNext(DATA)).isInstanceOf(IllegalStateException.class);
-        verify(deframer).close();
-    }
-
-    @Test
-    public void clientDone() throws Exception {
-        reader.onComplete();
-        verify(deframer).deframe(HttpData.empty(), true);
-        verify(deframer).closeWhenComplete();
-    }
-
-    @Test
-    public void onComplete_when_deframer_isClosing() {
-        when(deframer.isClosing()).thenReturn(true);
-        reader.onComplete();
-        verify(deframer, never()).deframe(HttpData.empty(), true);
-        verify(deframer, never()).closeWhenComplete();
-    }
-
-    @Test
-    public void serverCancelled() {
-        reader.onSubscribe(subscription);
-        reader.cancel();
-        verify(subscription).cancel();
-    }
-
-    @Test
-    public void httpNotOk() {
-        reader.onSubscribe(subscription);
-        verifyNoMoreInteractions(subscription);
-        reader.onNext(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
-        verifyNoMoreInteractions(subscription);
-        verifyNoMoreInteractions(deframer);
-
-        verify(transportStatusListener).transportReportStatus(
-                argThat(s -> s.getCode() == Status.UNAUTHENTICATED.getCode()));
+        await().untilAsserted(() -> {
+            assertThat(statusRef.get().getCode()).isEqualTo(Status.UNAUTHENTICATED.getCode());
+        });
     }
 }

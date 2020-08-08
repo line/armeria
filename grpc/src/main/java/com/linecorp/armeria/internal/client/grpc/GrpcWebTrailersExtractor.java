@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
@@ -39,8 +40,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 
@@ -69,9 +70,89 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
     public HttpResponse execute(HttpClient delegate, ClientRequestContext ctx, HttpRequest req)
             throws Exception {
         final HttpResponse response = delegate.execute(ctx, req);
-        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(new Listener() {
+        final ArmeriaMessageDeframer deframer =
+                new ArmeriaMessageDeframer(ctx.eventLoop(), ctx.alloc(), maxMessageSizeBytes, grpcWebText);
+
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        publisher.subscribe(deframer, ctx.eventLoop());
+        deframer.subscribe(trailersSubscriber(ctx), ctx.eventLoop());
+        final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
             @Override
-            public void messageRead(DeframedMessage message) {
+            protected HttpObject filter(HttpObject obj) {
+                if (obj instanceof ResponseHeaders) {
+                    final ResponseHeaders headers = (ResponseHeaders) obj;
+                    final String statusText = headers.get(HttpHeaderNames.STATUS);
+                    if (statusText == null) {
+                        // Missing status header.
+                        publisher.close();
+                        return obj;
+                    }
+
+                    if (ArmeriaHttpUtil.isInformational(statusText)) {
+                        // Skip informational headers.
+                        return obj;
+                    }
+
+                    final HttpStatus status = HttpStatus.valueOf(statusText);
+                    if (!status.equals(HttpStatus.OK)) {
+                        // Not OK status.
+                        publisher.close();
+                        return obj;
+                    }
+
+                    final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
+                    if (grpcEncoding != null) {
+                        // We use DecompressorRegistry in ArmeriaClientCall. If ArmeriaClientCall
+                        // supports to add another decompressor, we will change this to support that too.
+                        final Decompressor decompressor =
+                                DecompressorRegistry.getDefaultInstance().lookupDecompressor(grpcEncoding);
+                        if (decompressor == null) {
+                            // Can't find decompressor.
+                            publisher.close();
+                            return obj;
+                        }
+                        deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                    }
+                    return obj;
+                }
+
+                if (obj instanceof HttpData && !publisher.isComplete()) {
+                    final HttpData httpData = (HttpData) obj;
+                    final HttpData wrapped = HttpData.wrap(
+                            httpData.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
+                    final boolean ignored = publisher.tryWrite(wrapped);
+                }
+                return obj;
+            }
+
+            @Override
+            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+                publisher.close();
+            }
+
+            @Override
+            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+                publisher.close();
+                return cause;
+            }
+        };
+        filteredHttpResponse.whenComplete().handle((unused, unused2) -> {
+            // To make sure the deframer is closed even when the response is cancelled.
+            publisher.close();
+            return null;
+        });
+        return filteredHttpResponse;
+    }
+
+    private static Subscriber<DeframedMessage> trailersSubscriber(ClientRequestContext ctx) {
+        return new Subscriber<DeframedMessage>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(DeframedMessage message) {
                 if (message.type() >> 7 == 1) {
                     final ByteBuf buf;
                     try {
@@ -106,75 +187,14 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
             }
 
             @Override
-            public void endOfStream() { /* no-op */ }
-        }, maxMessageSizeBytes, ctx.alloc(), grpcWebText);
-
-        final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
-            @Override
-            protected HttpObject filter(HttpObject obj) {
-                if (obj instanceof ResponseHeaders) {
-                    final ResponseHeaders headers = (ResponseHeaders) obj;
-                    final String statusText = headers.get(HttpHeaderNames.STATUS);
-                    if (statusText == null) {
-                        // Missing status header.
-                        deframer.close();
-                        return obj;
-                    }
-
-                    if (ArmeriaHttpUtil.isInformational(statusText)) {
-                        // Skip informational headers.
-                        return obj;
-                    }
-
-                    final HttpStatus status = HttpStatus.valueOf(statusText);
-                    if (!status.equals(HttpStatus.OK)) {
-                        // Not OK status.
-                        deframer.close();
-                        return obj;
-                    }
-
-                    final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
-                    if (grpcEncoding != null) {
-                        // We use DecompressorRegistry in ArmeriaClientCall. If ArmeriaClientCall
-                        // supports to add another decompressor, we will change this to support that too.
-                        final Decompressor decompressor =
-                                DecompressorRegistry.getDefaultInstance().lookupDecompressor(grpcEncoding);
-                        if (decompressor == null) {
-                            // Can't find decompressor.
-                            deframer.close();
-                            return obj;
-                        }
-                        deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
-                    }
-                    deframer.request(Integer.MAX_VALUE);
-                    return obj;
-                }
-
-                if (obj instanceof HttpData && !deframer.isClosed()) {
-                    final HttpData httpData = (HttpData) obj;
-                    final HttpData wrapped = HttpData.wrap(
-                            httpData.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
-                    deframer.deframe(wrapped, wrapped.isEndOfStream());
-                }
-                return obj;
+            public void onError(Throwable t) {
+                /* no-op */
             }
 
             @Override
-            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                deframer.close();
-            }
-
-            @Override
-            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                deframer.close();
-                return cause;
+            public void onComplete() {
+                /* no-op */
             }
         };
-        filteredHttpResponse.whenComplete().handle((unused, unused2) -> {
-            // To make sure the deframer is closed even when the response is cancelled.
-            deframer.close();
-            return null;
-        });
-        return filteredHttpResponse;
     }
 }

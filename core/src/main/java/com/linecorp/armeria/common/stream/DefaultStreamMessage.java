@@ -114,7 +114,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
+    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
             final SubscriptionImpl oldSubscription = this.subscription;
             assert oldSubscription != null;
@@ -215,7 +215,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    final void request(long n) {
+    void request(long n) {
         final SubscriptionImpl subscription = this.subscription;
         // A user cannot access subscription without subscribing.
         assert subscription != null;
@@ -241,7 +241,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    final void cancel() {
+    void cancel() {
         if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
             // It the state was CLOSED, close() or close(cause) has been called before cancel() or abort()
             // is called. We just ignore the previously pushed event and deal with CANCELLED_CLOSE.
