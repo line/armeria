@@ -193,7 +193,8 @@ public final class AnnotatedServiceFactory {
             // Set a default HTTP status code for a response depending on the return type of the method.
             final Class<?> returnType = method.getReturnType();
             return returnType == Void.class ||
-                   returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+                   returnType == void.class ||
+                   KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
         }
 
         final int statusCode = statusCodeAnnotation.value();
@@ -374,7 +375,7 @@ public final class AnnotatedServiceFactory {
                                            .stream()
                                            .map(Annotation::annotationType)
                                            .anyMatch(a -> a == Path.class ||
-                                       HTTP_METHOD_MAP.containsKey(a)))
+                                                          HTTP_METHOD_MAP.containsKey(a)))
                 .sorted(Comparator.comparingInt(AnnotatedServiceFactory::order))
                 .collect(toImmutableList());
     }

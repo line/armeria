@@ -86,6 +86,7 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
+import kotlin.coroutines.Continuation;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
@@ -174,8 +175,11 @@ final class AnnotatedValueResolver {
                                                    List<RequestObjectResolver> objectResolvers,
                                                    boolean implicitRequestObjectAnnotation,
                                                    boolean isServiceMethod) {
-        final Parameter[] parameters = constructorOrMethod.getParameters();
-        if (parameters.length == 0) {
+        final ImmutableList<Parameter> parameters =
+                Arrays.stream(constructorOrMethod.getParameters())
+                      .filter(it -> !Continuation.class.isAssignableFrom(it.getType()))
+                      .collect(toImmutableList());
+        if (parameters.isEmpty()) {
             throw new NoParameterException(constructorOrMethod.toGenericString());
         }
         //
@@ -198,7 +202,7 @@ final class AnnotatedValueResolver {
             // @Param
             // void setter() { ... }
             //
-            if (parameters.length != 1) {
+            if (parameters.size() != 1) {
                 throw new IllegalArgumentException("Only one parameter is allowed to an annotated method: " +
                                                    constructorOrMethod.toGenericString());
             }
@@ -208,15 +212,15 @@ final class AnnotatedValueResolver {
             // @Param
             // void setter(@Header String name) { ... }
             //
-            if (isAnnotationPresent(parameters[0])) {
+            if (isAnnotationPresent(parameters.get(0))) {
                 throw new IllegalArgumentException("Both a method and parameter are annotated: " +
                                                    constructorOrMethod.toGenericString());
             }
 
             resolver = of(constructorOrMethod,
-                          parameters[0], parameters[0].getType(), pathParams, objectResolvers,
+                          parameters.get(0), parameters.get(0).getType(), pathParams, objectResolvers,
                           implicitRequestObjectAnnotation);
-        } else if (!isServiceMethod && parameters.length == 1 &&
+        } else if (!isServiceMethod && parameters.size() == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
             // Filter out the cases like the following:
@@ -224,7 +228,7 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(@Header String name) { ... }
             //
-            if (isAnnotationPresent(parameters[0])) {
+            if (isAnnotationPresent(parameters.get(0))) {
                 throw new IllegalArgumentException("Both a method and parameter are annotated: " +
                                                    constructorOrMethod.toGenericString());
             }
@@ -234,7 +238,7 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(Bean bean) { ... }
             //
-            resolver = of(parameters[0], pathParams, objectResolvers, true);
+            resolver = of(parameters.get(0), pathParams, objectResolvers, true);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -261,18 +265,18 @@ final class AnnotatedValueResolver {
         if (resolver != null) {
             list = ImmutableList.of(resolver);
         } else {
-            list = Arrays.stream(parameters)
-                         .map(p -> of(p, pathParams, objectResolvers,
-                                      implicitRequestObjectAnnotation))
-                         .filter(Objects::nonNull)
-                         .collect(toImmutableList());
+            list = parameters.stream()
+                             .map(p -> of(p, pathParams, objectResolvers,
+                                          implicitRequestObjectAnnotation))
+                             .filter(Objects::nonNull)
+                             .collect(toImmutableList());
         }
 
         if (list.isEmpty()) {
             throw new NoAnnotatedParameterException(constructorOrMethod.toGenericString());
         }
 
-        if (list.size() != parameters.length) {
+        if (list.size() != parameters.size()) {
             // There are parameters which cannot be resolved, so we cannot accept this constructor or method
             // as an annotated bean or method. We handle this case in two ways as follows.
             if (list.stream().anyMatch(r -> r.annotationType() != null)) {
