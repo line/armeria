@@ -28,10 +28,9 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
@@ -93,9 +92,7 @@ public final class DnsResolverGroupBuilder {
     @Nullable
     private Boolean decodeIdn;
     @Nullable
-    private MeterRegistry meterRegistry;
-    @Nullable
-    private MeterIdPrefix meterIdPrefix;
+    private PrometheusMeterRegistry dnsMeterRegistry;
 
     DnsResolverGroupBuilder() {}
 
@@ -300,21 +297,11 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets MeterRegistry.
-     * @param meterRegistry {@link MeterRegistry}.
+     * @param dnsMeterRegistry {@link PrometheusMeterRegistry}.
      * @return DnsResolverGroupBuilder.
      */
-    public DnsResolverGroupBuilder meterRegistry(MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
-        return this;
-    }
-
-    /**
-     * Sets MeterIdPrefix.
-     * @param prefix {@link MeterIdPrefix}.
-     * @return DnsResolverGroupBuilder.
-     */
-    public DnsResolverGroupBuilder meterIdPrefix(MeterIdPrefix prefix) {
-        this.meterIdPrefix = prefix;
+    public DnsResolverGroupBuilder dnsMeterRegistry(PrometheusMeterRegistry dnsMeterRegistry) {
+        this.dnsMeterRegistry = dnsMeterRegistry;
         return this;
     }
 
@@ -369,7 +356,7 @@ public final class DnsResolverGroupBuilder {
             }
         };
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
-                                                  queryTimeoutMillis, refreshBackoff, resolvedAddressTypes,
-                                                   meterRegistry, meterIdPrefix);
+                                                  queryTimeoutMillis, refreshBackoff,
+                                                    resolvedAddressTypes, dnsMeterRegistry);
     }
 }

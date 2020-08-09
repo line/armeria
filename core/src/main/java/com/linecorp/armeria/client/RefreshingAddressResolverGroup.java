@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -38,7 +39,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.AddressResolver;
@@ -101,15 +102,13 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
-    private MeterRegistry meterRegistry;
-    private MeterIdPrefix meterIdPrefix;
+    private final PrometheusMeterRegistry dnsMeterRegistry;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                                    Backoff refreshBackoff,
                                    @Nullable ResolvedAddressTypes resolvedAddressTypes,
-                                   @Nullable MeterRegistry meterRegistry,
-                                   @Nullable MeterIdPrefix meterIdPrefix) {
+                                   @Nonnull PrometheusMeterRegistry dnsMeterRegistry) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
@@ -121,8 +120,8 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         } else {
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
-        this.meterRegistry = meterRegistry;
-        this.meterIdPrefix = meterIdPrefix;
+
+        this.dnsMeterRegistry = dnsMeterRegistry;
     }
 
     @VisibleForTesting
@@ -136,7 +135,8 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         final EventLoop eventLoop = (EventLoop) executor;
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
         builder.dnsQueryLifecycleObserverFactory(
-                new DefaultDnsQueryLifecycleObserverFactory(meterRegistry, meterIdPrefix));
+                new DefaultDnsQueryLifecycleObserverFactory(dnsMeterRegistry,
+                        new MeterIdPrefix("armeria.client.dns.queries")));
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
                                                                            queryTimeoutMillis);

@@ -50,7 +50,6 @@ import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -599,8 +598,7 @@ public final class ClientFactoryBuilder {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
                         }
                         return builder
-                                .meterRegistry(buildOptions().meterRegistry())
-                                .meterIdPrefix(buildOptions().meterIdPrefix())
+                                .dnsMeterRegistry(buildOptions().dnsRegistry())
                                 .build(eventLoopGroup);
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
@@ -647,13 +645,5 @@ public final class ClientFactoryBuilder {
         }
 
         return helper.toString();
-    }
-
-    /**
-     * Sets the {@link MeterIdPrefix} which collects various stats.
-     */
-    public ClientFactoryBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
-        option(ClientFactoryOptions.DEFAULT_METER_ID_PREFIX, requireNonNull(meterIdPrefix, "meterIdPrefix"));
-        return this;
     }
 }

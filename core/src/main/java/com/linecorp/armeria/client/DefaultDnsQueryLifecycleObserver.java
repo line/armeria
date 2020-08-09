@@ -16,15 +16,16 @@
 package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.dns.DnsQueryLifecycleObserver;
 
@@ -33,79 +34,77 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserver;
  */
 final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
 
-    private final Counter success;
-    private final Counter failure;
-    private final Counter protocolType;
-    private final Counter dnsErrorCode;
-    private final Counter queryWritten;
-    private final Counter queryType;
+    private final PrometheusMeterRegistry registry;
+    private final MeterIdPrefix meterIdPrefix;
+    private final DnsQuestion question;
+    private static final String NAME_TAG = "name";
+    private static final String RESULT_TAG = "result";
+    private static final String SERVER_TAG = "server";
+    private static final String CODE_TAG = "code";
+    private static final String CAUSE_TAG = "cause";
+    private static final String CNAME_TAG = "cname";
 
     /**
      * Accepts meterRegistry.
-     * @param meterRegistry {@link MeterRegistry} MeterRegistry to capture metrics.
+     * @param meterRegistry {@link PrometheusMeterRegistry} PrometheusMeterRegistry to capture metrics.
      * @param question {@link DnsQuestion} DnsQuestion.
      */
-    DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry, DnsQuestion question, MeterIdPrefix prefix) {
-        success = meterRegistry.counter(prefix.name(),
-                prefix.withTags("name", question.name(), "result", "success",
-                        "question", question.name()).tags());
-        failure = meterRegistry.counter(prefix.name(),
-                prefix.withTags("name", question.name(), "result", "failure",
-                        "question", question.name()).tags());
-        dnsErrorCode = meterRegistry.counter(prefix.name(),
-                prefix.withTags("name", question.name(), "dns", "errorcodes",
-                        "question", question.name()).tags());
-        queryWritten = meterRegistry.counter(prefix.name(),
-                prefix.withTags("name", question.name(), "written", question.type().name()).tags());
-        queryType = meterRegistry.counter(prefix.name(),
-                prefix.withTags("name", question.name(),
-                        "type", question.type().name()).tags());
-        protocolType = meterRegistry.counter(prefix.name(),
-                prefix.withTags("name", question.name(), "protocol", getProtocolType(question.type()),
-                        "question", question.name()).tags());
-        protocolType.increment();
-    }
-
-    private static String getProtocolType(DnsRecordType type) {
-        if (DnsRecordType.IXFR.equals(type) ||
-                DnsRecordType.AXFR.equals(type)) {
-            return "tcp";
-        }
-        return "udp";
+    DefaultDnsQueryLifecycleObserver(PrometheusMeterRegistry meterRegistry,
+                                     DnsQuestion question, MeterIdPrefix prefix) {
+        registry = meterRegistry;
+        meterIdPrefix = prefix;
+        this.question = question;
     }
 
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
-        queryWritten.increment();
+        registry.counter(meterIdPrefix.name().concat(".written"),
+                Arrays.asList(Tag.of(NAME_TAG, question.name()),
+                        Tag.of(SERVER_TAG, dnsServerAddress.getAddress().toString()))).increment();
     }
 
     @Override
     public void queryCancelled(int queriesRemaining) {
+        registry.counter(meterIdPrefix.name().concat(".cancelled"),
+                NAME_TAG, question.name()).increment();
     }
 
     @Override
     public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
-        return null;
+        registry.counter(meterIdPrefix.name().concat(".redirected"),
+                Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(SERVER_TAG,
+                        nameServers.stream().map(addr -> addr.getAddress().toString())
+                                .collect(Collectors.joining(","))))).increment();
+        return this;
     }
 
     @Override
     public DnsQueryLifecycleObserver queryCNAMEd(DnsQuestion cnameQuestion) {
-        return null;
+        registry.counter(meterIdPrefix.name().concat(".cnamed"),
+                Arrays.asList(Tag.of(NAME_TAG, question.name()),
+                        Tag.of(CNAME_TAG, cnameQuestion.name()))).increment();
+        return this;
     }
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        dnsErrorCode.increment();
+        registry.counter(meterIdPrefix.name().concat(".noanswer"),
+                Arrays.asList(Tag.of(NAME_TAG, question.name()),
+                        Tag.of(CODE_TAG, code.toString()))).increment();
         return this;
     }
 
     @Override
     public void queryFailed(Throwable cause) {
-        failure.increment();
+        registry.counter(meterIdPrefix.name(),
+                Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "failure"),
+                        Tag.of(CAUSE_TAG, cause.getMessage()))).increment();
     }
 
     @Override
     public void querySucceed() {
-        success.increment();
+        registry.counter(meterIdPrefix.name(),
+                Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "success"),
+                        Tag.of(CAUSE_TAG, ""))).increment();
     }
 }

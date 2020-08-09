@@ -51,6 +51,7 @@ import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
@@ -95,6 +96,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
+    private PrometheusMeterRegistry dnsMetricRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
@@ -147,6 +149,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
+        dnsMetricRegistry = options.dnsRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
 
         this.options = options;
@@ -249,6 +252,11 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+    }
+
+    @Override
+    public PrometheusMeterRegistry dnsMetricRegistry() {
+        return dnsMetricRegistry;
     }
 
     @Override
