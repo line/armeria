@@ -122,12 +122,11 @@ class ProxyProtocolEnabledServerTest {
     }
 
     @Test
-    void shouldAccept_AF_UNSPEC() throws IOException {
+    void shouldAcceptUnknownProtocol() throws IOException {
         final HAProxyMessage haProxyMessage = new HAProxyMessage(
                 HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNKNOWN,
                 null, null, 0, 0);
-
-        final byte[] encoded = encodeV2_AF_UNSPEC(haProxyMessage);
+        final byte[] encoded = encodeV2UnknownProtocol(haProxyMessage);
 
         try (Socket sock = new Socket("127.0.0.1", server.httpPort())) {
             final OutputStream os = sock.getOutputStream();
@@ -200,7 +199,7 @@ class ProxyProtocolEnabledServerTest {
         assertThat(reader.readLine()).isEqualToIgnoringCase("192.168.0.1:56324 -> 192.168.0.11:443");
     }
 
-    private static byte[] encodeV2_AF_UNSPEC(HAProxyMessage msg) {
+    private static byte[] encodeV2UnknownProtocol(HAProxyMessage msg) {
         final byte[] binaryPrefix = {
                 (byte) 0x0D, (byte) 0x0A, (byte) 0x0D, (byte) 0x0A, (byte) 0x00, (byte) 0x0D,
                 (byte) 0x0A, (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
