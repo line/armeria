@@ -60,8 +60,9 @@ public class AuthService extends SimpleDecoratingHttpService {
             // Authentication failed; fail the request.
             return HttpResponse.of(HttpStatus.UNAUTHORIZED);
         }
-
-        return unwrap().serve(ctx, req);
+        
+        HttpService delegate = unwrap();
+        return delegate.serve(ctx, req);
     }
 }
 
