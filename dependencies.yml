@@ -239,7 +239,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.8.RELEASE'
+    version: &REACTOR_VERSION '3.3.9.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }

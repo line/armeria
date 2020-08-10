@@ -1,0 +1,5 @@
+dependencies {
+    api 'io.projectreactor:reactor-core'
+
+    testImplementation 'io.projectreactor:reactor-test'
+}
