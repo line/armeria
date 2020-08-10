@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring.web.reactive;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.function.Consumer;
 
@@ -25,6 +26,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
@@ -48,6 +51,7 @@ import org.springframework.util.unit.DataSize;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
@@ -394,6 +398,46 @@ class ArmeriaReactiveWebServerFactoryTest {
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
+        });
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "8080, 8080, true",
+            "8080, , true",
+            ", 8080, true",
+            ", 8081, true",
+            ", , true",
+            "18080, 8080, false",
+            "18080, , false",
+            "0, 8080, false",
+            "1, 8080, false",
+            "65535, 8080, false",
+    })
+    void isManagementPortEqualsToServerPort(String managementPort, String serverPort,
+                                            boolean expected) {
+        final MockEnvironment environment = new MockEnvironment();
+        if (!Strings.isNullOrEmpty(managementPort)) {
+            environment.setProperty("management.server.port", managementPort);
+        }
+        if (!Strings.isNullOrEmpty(serverPort)) {
+            environment.setProperty("server.port", serverPort);
+        }
+        final ArmeriaReactiveWebServerFactory factory = new ArmeriaReactiveWebServerFactory(beanFactory,
+                                                                                            environment);
+        assertThat(factory.isManagementPortEqualsToServerPort()).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "-1",
+            "65536",
+    })
+    void isManagementPortEqualsToServerPortThrows(String managementPort) {
+        assertThrows(IllegalArgumentException.class, () -> {
+            final ArmeriaReactiveWebServerFactory factory = new ArmeriaReactiveWebServerFactory(
+                    beanFactory, new MockEnvironment().withProperty("management.server.port", managementPort));
+            factory.isManagementPortEqualsToServerPort();
         });
     }
 
