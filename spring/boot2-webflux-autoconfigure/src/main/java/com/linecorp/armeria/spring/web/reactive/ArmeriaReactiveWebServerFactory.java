@@ -34,7 +34,6 @@ import java.net.InetSocketAddress;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -66,7 +65,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
@@ -89,9 +87,6 @@ import reactor.core.Disposable;
  */
 public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
-
-    @Nullable
-    private static ArmeriaWebServer armeriaWebServer;
 
     private final ConfigurableListableBeanFactory beanFactory;
     private final Environment environment;
@@ -141,9 +136,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     @Override
     public WebServer getWebServer(HttpHandler httpHandler) {
-        final int port = ensureValidPort(getPort());
-        if (armeriaWebServer != null && needsToReuseWebServer(port)) {
-            return armeriaWebServer;
+        final ArmeriaWebServer armeriaWebServerBean = findBean(ArmeriaWebServer.class);
+        if (armeriaWebServerBean != null) {
+            return armeriaWebServerBean;
         }
 
         final ServerBuilder sb = Server.builder();
@@ -193,6 +188,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         final InetAddress address = getAddress();
+        final int port = ensureValidPort(getPort());
         if (address != null) {
             sb.port(new InetSocketAddress(address, port), protocol);
         } else {
@@ -221,27 +217,14 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        armeriaWebServer = new ArmeriaWebServer(server, protocol, address, port, beanFactory);
+        final ArmeriaWebServer armeriaWebServer = new ArmeriaWebServer(server, protocol, address, port,
+                                                                       beanFactory);
+        if (!isManagementPortEqualsToServerPort()) {
+            // Since this method will be called twice, need to reuse ArmeriaWebServer
+            beanFactory.registerSingleton("armeriaWebServer", armeriaWebServer);
+        }
+
         return armeriaWebServer;
-    }
-
-    private boolean needsToReuseWebServer(int port) {
-        final boolean samePort = isManagementPortEqualsToServerPort();
-        Server existingServer = null;
-        try {
-            existingServer = beanFactory.getBean(Server.class);
-        } catch (NoSuchBeanDefinitionException ignore) {
-        }
-
-        if (samePort || existingServer == null) {
-            return false;
-        } else {
-            final Map<InetSocketAddress, ServerPort> activePorts = existingServer.activePorts();
-
-            // reuse the existing WebServer if it has the same port
-            return activePorts.values().stream()
-                              .anyMatch(serverPort -> serverPort.localAddress().getPort() == port);
-        }
     }
 
     @VisibleForTesting

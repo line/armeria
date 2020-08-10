@@ -33,13 +33,14 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -47,6 +48,8 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.util.SocketUtils;
 import org.springframework.util.unit.DataSize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -441,19 +444,81 @@ class ArmeriaReactiveWebServerFactoryTest {
         });
     }
 
+    @SpringBootApplication
+    @RestController
+    static class ArmeriaReactiveWebServerFactoryWithManagementServerPortTestConfiguration {
+
+        @Bean
+        public ArmeriaServerConfigurator armeriaServerConfigurator() {
+            return builder -> builder.annotatedService()
+                                     .build(new HelloService());
+        }
+
+        @Bean
+        public DocServiceConfigurator docServiceConfigurator() {
+            return builder -> builder.examplePaths(HelloService.class, "hello", "/hello/foo")
+                                     .build();
+        }
+
+        @GetMapping("/webflux")
+        Mono<String> hello() {
+            return Mono.just("Hello, WebFlux!");
+        }
+    }
+
     @Nested
     @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT,
-            classes = TestConfiguration.class,
+            classes = ArmeriaReactiveWebServerFactoryWithManagementServerPortTestConfiguration.class,
             properties = "management.server.port=18080")
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     class ArmeriaReactiveWebServerFactoryWithManagementServerPortTest {
 
+        private static final int SERVER_PORT = 8080;
+        private static final int MANAGEMENT_PORT = 18080;
+
         @Test
-        void testApplicationStartup() {
-            // Nothing to do.
-            // If ArmeriaReactiveWebServerFactory doesn't work with management.server.port,
-            // this test class itself will be failed.
+        void testServerPort() {
+            final WebClient client = WebClient.builder("http://127.0.0.1:" + SERVER_PORT)
+                                              .factory(clientFactory)
+                                              .build();
+
+            // Request to Armeria service
+            final AggregatedHttpResponse res1 = client.get("/hello/world")
+                                                      .aggregate()
+                                                      .join();
+            assertThat(res1.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+
+            // Request to WebFlux controller
+            final AggregatedHttpResponse res2 = client.get("/webflux")
+                                                      .aggregate()
+                                                      .join();
+            assertThat(res2.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+        }
+
+        @Test
+        void testManagementPort() {
+            final WebClient client = WebClient.builder("http://127.0.0.1:" + MANAGEMENT_PORT)
+                                              .factory(clientFactory)
+                                              .build();
+            final AggregatedHttpResponse res = client.get("/internal/docs/specification.json")
+                                                     .aggregate()
+                                                     .join();
+            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+
+            try {
+                final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+                assertThat(actualJson.path("services")
+                                     .path(0)
+                                     .path("methods")
+                                     .path(0)
+                                     .path("examplePaths")
+                                     .path(0)
+                                     .textValue())
+                        .isEqualTo("/hello/foo");
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
