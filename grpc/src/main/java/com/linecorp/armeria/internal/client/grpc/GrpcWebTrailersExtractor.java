@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
+import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.parseGrpcWebTrailers;
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.trailersBuf;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -75,7 +75,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                 if (message.type() >> 7 == 1) {
                     final ByteBuf buf;
                     try {
-                        buf = trailersBuf(message, ctx.alloc());
+                        buf = messageBuf(message, ctx.alloc());
                     } catch (IOException e) {
                         // Ignore silently
                         return;

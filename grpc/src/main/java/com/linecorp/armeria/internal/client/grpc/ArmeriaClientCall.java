@@ -16,7 +16,7 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.trailersBuf;
+import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -321,7 +321,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
             final ByteBuf buf;
             try {
-                buf = trailersBuf(message, ctx.alloc());
+                buf = messageBuf(message, ctx.alloc());
             } catch (Throwable t) {
                 cancel(null, t);
                 return;

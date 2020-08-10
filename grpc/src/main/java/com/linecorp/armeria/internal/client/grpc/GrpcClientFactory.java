@@ -24,7 +24,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -36,6 +38,7 @@ import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -88,7 +91,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         }
 
         final ClientBuilderParams newParams =
-                addTrailersExtractorIfGrpcWeb(params, options, serializationFormat);
+                addTrailersExtractor(params, options, serializationFormat);
         final HttpClient httpClient = newHttpClient(newParams);
 
         final GrpcJsonMarshaller jsonMarshaller;
@@ -124,21 +127,42 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         }
     }
 
-    private static ClientBuilderParams addTrailersExtractorIfGrpcWeb(
+    /**
+     * Adds the {@link GrpcWebTrailersExtractor} if the specified {@link SerializationFormat} is a grpc-web and
+     * {@link RetryingClient} exists in the {@link ClientDecoration}.
+     */
+    private static ClientBuilderParams addTrailersExtractor(
             ClientBuilderParams params,
             ClientOptions options,
             SerializationFormat serializationFormat) {
         if (!GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
             return params;
         }
+        final ClientDecoration originalDecoration = options.decoration();
+        final List<Function<? super HttpClient, ? extends HttpClient>> decorators =
+                originalDecoration.decorators();
+
+        boolean foundRetryingClient = false;
+        final HttpClient noopClient = (ctx, req) -> null;
+        for (Function<? super HttpClient, ? extends HttpClient> decorator: decorators) {
+            final HttpClient decorated = decorator.apply(noopClient);
+            if (decorated instanceof RetryingClient) {
+                foundRetryingClient = true;
+                break;
+            }
+        }
+        if (!foundRetryingClient) {
+            return params;
+        }
+
         final GrpcWebTrailersExtractor webTrailersExtractor = new GrpcWebTrailersExtractor(
                 maxInboundMessageSizeBytes(options),
                 GrpcSerializationFormats.isGrpcWebText(serializationFormat));
-        final ClientDecoration originalDecoration = options.decoration();
         final ClientOptionsBuilder optionsBuilder = options.toBuilder();
         optionsBuilder.clearDecorators();
         optionsBuilder.decorator(webTrailersExtractor);
-        originalDecoration.decorators().forEach(optionsBuilder::decorator);
+
+        decorators.forEach(optionsBuilder::decorator);
 
         return ClientBuilderParams.of(
                 params.scheme(), params.endpointGroup(), params.absolutePathRef(),

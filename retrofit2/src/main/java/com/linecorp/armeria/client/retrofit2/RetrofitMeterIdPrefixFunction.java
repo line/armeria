@@ -72,7 +72,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
 
     private static final Map<Method, String> pathCache = new MapMaker().weakKeys().makeMap();
 
-    private static final String UNKNOWN = "UNKNOWN";
+    private static final String NONE = "none";
 
     /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the specified {@code name}.
@@ -124,7 +124,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
             path = getPathFromMethod(method);
         } else {
             methodName = requestHeaders.method().name();
-            serviceName = UNKNOWN;
+            serviceName = NONE;
             path = requestHeaders.path();
         }
 
@@ -161,7 +161,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
                 }
             }
             // Should never reach here.
-            return UNKNOWN;
+            return NONE;
         });
     }
 }
