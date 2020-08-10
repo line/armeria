@@ -63,6 +63,7 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
+import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2CodecUtil;
@@ -370,14 +371,20 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                              msg.destinationAddress(), msg.destinationPort(),
                              proxiedCandidates);
             }
+
+            final ProxiedAddresses proxiedAddresses;
+            if (msg.proxiedProtocol().addressFamily() == AddressFamily.AF_UNSPEC) {
+                proxiedAddresses = null;
+            } else {
+                final InetAddress src = InetAddress.getByAddress(
+                        NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress()));
+                final InetAddress dst = InetAddress.getByAddress(
+                        NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress()));
+                proxiedAddresses = ProxiedAddresses.of(new InetSocketAddress(src, msg.sourcePort()),
+                                                       new InetSocketAddress(dst, msg.destinationPort()));
+            }
+
             final ChannelPipeline p = ctx.pipeline();
-            final InetAddress src = InetAddress.getByAddress(
-                    NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress()));
-            final InetAddress dst = InetAddress.getByAddress(
-                    NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress()));
-            final ProxiedAddresses proxiedAddresses =
-                    ProxiedAddresses.of(new InetSocketAddress(src, msg.sourcePort()),
-                                        new InetSocketAddress(dst, msg.destinationPort()));
             configurePipeline(p, proxiedCandidates, proxiedAddresses);
             p.remove(this);
         }
