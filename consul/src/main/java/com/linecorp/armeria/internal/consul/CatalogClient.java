@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -35,7 +36,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * {@code CatalogClient} is responsible for endpoint of Consul API:
  * {@code `/catalog`}(https://www.consul.io/api/catalog.html)
  */
-final class CatalogClient {
+public final class CatalogClient {
 
     private static final CollectionType collectionTypeForNode =
             TypeFactory.defaultInstance().constructCollectionType(List.class, Node.class);
@@ -66,33 +66,36 @@ final class CatalogClient {
     /**
      * Gets endpoint list with service name.
      */
-    CompletableFuture<List<Endpoint>> endpoints(String serviceName, QueryParams params) {
+    CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
         requireNonNull(serviceName, "serviceName");
-        return service(serviceName, params)
-                .thenApply(nodes -> nodes.stream()
-                                         .map(node -> {
-                                             final String host;
-                                             if (!Strings.isNullOrEmpty(node.serviceAddress)) {
-                                                 host = node.serviceAddress;
-                                             } else if (!Strings.isNullOrEmpty(node.address)) {
-                                                 host = node.address;
-                                             } else {
-                                                 host = "127.0.0.1";
-                                             }
-                                             return Endpoint.of(host, node.servicePort);
-                                         })
-                                         .collect(toImmutableList()));
+        return service(serviceName)
+                .thenApply(nodes -> {
+                    final Function<Node, Endpoint> nodeEndpointFunction = node -> {
+                        final String host;
+                        if (!Strings.isNullOrEmpty(node.serviceAddress)) {
+                            host = node.serviceAddress;
+                        } else if (!Strings.isNullOrEmpty(node.address)) {
+                            host = node.address;
+                        } else {
+                            host = "127.0.0.1";
+                        }
+                        return Endpoint.of(host, node.servicePort);
+                    };
+                    return nodes.stream()
+                                .map(nodeEndpointFunction)
+                                .collect(toImmutableList());
+                });
     }
 
     /**
-     * Gets node list with service name.
+     * Returns node list with service name.
      */
     @VisibleForTesting
-    CompletableFuture<List<Node>> service(String serviceName, QueryParams params) {
+    CompletableFuture<List<Node>> service(String serviceName) {
         requireNonNull(serviceName, "serviceName");
 
         return client.consulWebClient()
-                     .get("/catalog/service/" + serviceName + '?' + params.toQueryString())
+                     .get("/catalog/service/" + serviceName)
                      .aggregate()
                      .thenApply(response -> {
                          try {
@@ -103,7 +106,6 @@ final class CatalogClient {
                     });
     }
 
-    @VisibleForTesting
     @JsonIgnoreProperties(ignoreUnknown = true)
     static final class Node {
         @Nullable

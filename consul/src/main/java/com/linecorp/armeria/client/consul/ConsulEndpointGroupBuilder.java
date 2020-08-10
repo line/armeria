@@ -15,33 +15,37 @@
  */
 package com.linecorp.armeria.client.consul;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.ScheduledExecutorService;
+import java.net.URI;
+import java.time.Duration;
 
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.internal.consul.ConsulClient;
+import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
 /**
  * Builder class for {@link ConsulEndpointGroup}. It helps to build {@link ConsulEndpointGroup}.
  */
 public final class ConsulEndpointGroupBuilder {
 
-    private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
+    private static final long DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS = 10;
 
-    private long intervalMillis = DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS;
+    private long registryFetchIntervalSeconds = DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS;
     private final String serviceName;
+
     @Nullable
-    private String consulUrl;
+    private URI consulUri;
     @Nullable
     private ConsulClient consulClient;
-    private ScheduledExecutorService executorService = CommonPools.blockingTaskExecutor();
     @Nullable
     private String token;
+
+    private boolean useHealthyEndpoints;
 
     /**
      * Constructor of {@code ConsulEndpointGroupBuilder}.
@@ -53,33 +57,45 @@ public final class ConsulEndpointGroupBuilder {
     /**
      * Sets the {@code consulUrl}.
      */
-    public ConsulEndpointGroupBuilder consulUrl(String consulUrl) {
-        this.consulUrl = requireNonNull(consulUrl, "consulUrl");
-        consulClient = null;
+    public ConsulEndpointGroupBuilder consulUrl(URI consulUrl) {
+        consulUri = requireNonNull(consulUrl, "consulUrl");
         return this;
     }
 
     /**
-     * Sets the {@code intervalMillis}.
+     * Sets the {@code consulUri}.
      */
-    public ConsulEndpointGroupBuilder intervalMillis(long intervalMillis) {
-        if (intervalMillis < 1_000) {
-            throw new IllegalArgumentException("intervalMillis is too small value: " + intervalMillis);
-        }
-        this.intervalMillis = intervalMillis;
+    public ConsulEndpointGroupBuilder consulUrl(String consulUri) {
+        requireNonNull(consulUri, "consulUri");
+        checkArgument(!consulUri.isEmpty(), "consulUri can't be empty");
+        this.consulUri = URI.create(consulUri);
         return this;
     }
 
     /**
-     * Sets the {@code executorService}.
+     * Sets the interval between fetching registry requests.
+     * If not set, {@value #DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS} is used by default.
      */
-    public ConsulEndpointGroupBuilder executorService(ScheduledExecutorService executorService) {
-        this.executorService = requireNonNull(executorService, "executorService");
+    public ConsulEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
+        requireNonNull(registryFetchInterval, "registryFetchInterval");
+        final long seconds = registryFetchInterval.getSeconds();
+        checkArgument(seconds > 0, "registryFetchInterval.getSeconds(): %s (expected: > 0)", seconds);
+        return registryFetchIntervalSeconds(seconds);
+    }
+
+    /**
+     * Sets the interval between fetching registry requests.
+     * If not set {@value #DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS} is used by default.
+     */
+    public ConsulEndpointGroupBuilder registryFetchIntervalSeconds(long registryFetchIntervalSeconds) {
+        checkArgument(registryFetchIntervalSeconds > 0, "registryFetchIntervalSeconds: %s (expected: > 0)",
+                      registryFetchIntervalSeconds);
+        this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
         return this;
     }
 
     /**
-     * Sets the {@code token} to access consul server.
+     * Sets the {@code token} to access Consul server.
      */
     public ConsulEndpointGroupBuilder token(String token) {
         this.token = requireNonNull(token, "token");
@@ -87,19 +103,27 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Builds a {@code ConsulEndpointGroup}.
-     * @return a ConsulEndpointGroup
+     * Sets whether to use <a href="https://www.consul.io/api/health.html">health HTTP endpoint</a>
+     * Before enabling this feature, make sure that the health of your endpoint is checked by Consul server.
+     *
+     * @see ConsulUpdatingListenerBuilder#checkUri(URI)
      */
-    public ConsulEndpointGroup build() {
-        if (consulClient == null) {
-            consulClient = new ConsulClient(consulUrl, token);
-        }
-        return new ConsulEndpointGroup(consulClient, serviceName, executorService, intervalMillis);
+    public ConsulEndpointGroupBuilder useHealthEndpoints(boolean useHealthyEndpoints) {
+        this.useHealthyEndpoints = useHealthyEndpoints;
+        return this;
     }
 
     /**
-     * Sets the {@code consulClient}.
+     * Returns a newly-created {@code ConsulEndpointGroup}.
      */
+    public ConsulEndpointGroup build() {
+        if (consulClient == null) {
+            consulClient = new ConsulClient(consulUri, token);
+        }
+        return new ConsulEndpointGroup(consulClient, serviceName, registryFetchIntervalSeconds,
+                                       useHealthyEndpoints);
+    }
+
     @VisibleForTesting
     ConsulEndpointGroupBuilder consulClient(ConsulClient consulClient) {
         this.consulClient = requireNonNull(consulClient, "consulClient");

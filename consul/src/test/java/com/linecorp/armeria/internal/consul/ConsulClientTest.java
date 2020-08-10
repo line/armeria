@@ -15,13 +15,9 @@
  */
 package com.linecorp.armeria.internal.consul;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.consul.ConsulTestBase;
@@ -34,8 +30,9 @@ class ConsulClientTest extends ConsulTestBase {
     void testGet() {
         final AggregatedHttpResponse response = client().consulWebClient()
                                                         .get("catalog/nodes").aggregate().join();
-        assertEquals(HttpStatus.OK, response.status(), "response status code should be:");
-        assertTrue(10 < response.content().length(), "response body length should be:");
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().length()).isGreaterThan(10);
     }
 
     @Test
@@ -47,31 +44,31 @@ class ConsulClientTest extends ConsulTestBase {
                                '}';
         final AggregatedHttpResponse resPut = client().consulWebClient()
                                                       .put("catalog/register", payload).aggregate().join();
-        assertEquals(HttpStatus.OK, resPut.status(), "response status code should be:");
-        assertEquals("true", resPut.contentUtf8().trim(), "result of registration should be:");
+        assertThat(resPut.status()).isEqualTo(HttpStatus.OK);
+        assertThat(resPut.contentUtf8().trim()).isEqualTo("true");
+
         final AggregatedHttpResponse resGet = client().consulWebClient()
                                                       .get("catalog/service/redis").aggregate().join();
-        assertEquals(HttpStatus.OK, resGet.status(), "response status code should be:");
-        assertTrue(resGet.contentUtf8().contains("redis"), "result should contain 'redis'");
+        assertThat(resGet.status()).isEqualTo(HttpStatus.OK);
+        assertThat(resGet.contentUtf8()).contains("redis");
     }
 
     @Test
-    void testRegisterAndDeregister() throws JsonProcessingException {
+    void testRegisterAndDeregister() {
         final Endpoint endpoint = Endpoint.of("localhost", 8080);
         final String serviceId = serviceName + '_' + endpoint.host() + '_' + endpoint.port();
-        final String result = client().register(serviceId, serviceName, endpoint, null).join();
-        System.out.println(result);
+        client().register(serviceId, serviceName, endpoint, null).aggregate().join();
         AggregatedHttpResponse resGet = client().consulWebClient()
                                                 .get("catalog/service/" + serviceName).aggregate().join();
-        System.out.println(resGet.contentUtf8());
-        assertEquals(HttpStatus.OK, resGet.status(), "response status code should be:");
-        assertTrue(resGet.contentUtf8().contains(serviceName), "result should contain '" + serviceName + '\'');
 
-        client().deregister(serviceId).join();
+        assertThat(resGet.status()).isEqualTo(HttpStatus.OK);
+        assertThat(resGet.contentUtf8()).contains(serviceName);
+
+        client().deregister(serviceId).aggregate().join();
 
         resGet = client().consulWebClient()
                          .get("catalog/service/" + serviceName).aggregate().join();
-        assertEquals(HttpStatus.OK, resGet.status(), "response status code should be:");
-        assertFalse(resGet.contentUtf8().contains(serviceId), "result should not contain '" + serviceId + '\'');
+        assertThat(resGet.status()).isEqualTo(HttpStatus.OK);
+        assertThat(resGet.contentUtf8()).doesNotContain(serviceId);
     }
 }

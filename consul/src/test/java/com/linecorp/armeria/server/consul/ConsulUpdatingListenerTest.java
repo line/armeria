@@ -36,17 +36,18 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.consul.ConsulTestBase;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
-public class ConsulUpdatingListenerTest extends ConsulTestBase {
+class ConsulUpdatingListenerTest extends ConsulTestBase {
 
     @Nullable
     static List<Server> servers;
 
     @BeforeAll
-    public static void startServers() throws JsonProcessingException {
+    static void startServers() throws JsonProcessingException {
         servers = new ArrayList<>();
 
         for (Endpoint endpoint : sampleEndpoints) {
@@ -55,11 +56,11 @@ public class ConsulUpdatingListenerTest extends ConsulTestBase {
                                         .service("/echo", new EchoService())
                                         .build();
             final ServerListener listener =
-                    new ConsulUpdatingListenerBuilder(serviceName).url(client().url())
+                    new ConsulUpdatingListenerBuilder(serviceName).uri(client().uri().toString())
                                                                   .endpoint(endpoint)
-                                                                  .checkUrl("http://" + endpoint.host() +
+                                                                  .checkUri("http://" + endpoint.host() +
                                                                             ':' + endpoint.port() + "/echo")
-                                                                  .checkMethod("POST")
+                                                                  .checkMethod(HttpMethod.POST)
                                                                   .checkInterval(Duration.ofSeconds(1))
                                                                   .build();
             server.addListener(listener);
@@ -69,61 +70,69 @@ public class ConsulUpdatingListenerTest extends ConsulTestBase {
     }
 
     @AfterAll
-    public static void stopServers() throws Exception {
-        assert servers != null;
+    static void stopServers() throws Exception {
         servers.forEach(Server::close);
     }
 
     @Test
-    public void shouldStartConsul() throws Throwable {
-        await().atMost(30, TimeUnit.SECONDS).until(() -> {
+    void shouldStartConsul() throws Throwable {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
             final AggregatedHttpResponse response = client().consulWebClient()
                                                             .get("/agent/self").aggregate().join();
-            return response.status() == HttpStatus.OK;
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
         });
     }
 
     @Test
-    public void testBuild() {
+    void testBuild() {
         assertThat(new ConsulUpdatingListenerBuilder(serviceName).build()).isNotNull();
-        assertThat(new ConsulUpdatingListenerBuilder(serviceName).url("http://localhost:8080")
+        assertThat(new ConsulUpdatingListenerBuilder(serviceName).uri("http://localhost:8080")
                                                                  .build()).isNotNull();
     }
 
     @Test
-    public void shouldRaiseExceptionWhenCheckUrlMissed() {
+    void shouldRaiseExceptionWhenCheckUrlMissed() {
         assertThatThrownBy(
-                new ConsulUpdatingListenerBuilder(serviceName).url("http://localhost:8080")
-                                                              .checkMethod("POST")
+                new ConsulUpdatingListenerBuilder(serviceName).uri("http://localhost:8080")
+                                                              .checkMethod(HttpMethod.POST)
                                                               .checkIntervalMillis(1000)::build
         ).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void testEndpointsCountOfListeningServiceWithAServerStopAndStart() {
+    void testEndpointsCountOfListeningServiceWithAServerStopAndStart() {
         // Checks sample endpoints created when initialized.
         await().atMost(5, TimeUnit.SECONDS)
-               .until(() -> client().endpoints(serviceName).join().size() == sampleEndpoints.size());
+               .untilAsserted(() -> {
+                   assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
+               });
 
         // When we close one server then the listener deregister it automatically from consul agent.
         assert servers != null;
         servers.get(0).stop().join();
 
         await().atMost(5, TimeUnit.SECONDS)
-               .until(() -> client().endpoints(serviceName).join().size() == sampleEndpoints.size() - 1);
+               .untilAsserted(() -> {
+                   assertThat(client().endpoints(serviceName).join()).hasSize(sampleEndpoints.size() - 1);
+               });
 
         // Endpoints increased after service restart.
         servers.get(0).start().join();
 
         await().atMost(5, TimeUnit.SECONDS)
-               .until(() -> client().endpoints(serviceName).join().size() == sampleEndpoints.size());
+               .untilAsserted(() -> {
+                   assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
+               });
     }
 
     @Test
-    public void testHealthyServiceWithAdditionalCheckRule() {
+    void testHealthyServiceWithAdditionalCheckRule() {
         // Checks sample endpoints created when initialized.
         await().atMost(5, TimeUnit.SECONDS)
-               .until(() -> client().healthyEndpoints(serviceName).join().size() == sampleEndpoints.size());
+               .untilAsserted(() -> {
+                   assertThat(client().healthyEndpoints(serviceName).join())
+                           .hasSameSizeAs(sampleEndpoints);
+               });
 
         // Make a service to produce 503 error for checking by consul.
         sampleEndpoints.stream()
@@ -137,11 +146,16 @@ public class ConsulUpdatingListenerTest extends ConsulTestBase {
 
         // And then, consul marks the service to an unhealthy state.
         await().atMost(5, TimeUnit.SECONDS)
-               .until(() -> client().healthyEndpoints(serviceName).join().size() == sampleEndpoints.size() - 1);
+               .untilAsserted(() -> {
+                   assertThat(client().healthyEndpoints(serviceName).join())
+                           .hasSize(sampleEndpoints.size() - 1);
+               });
 
         // But, the size of endpoints does not changed.
         await().atMost(5, TimeUnit.SECONDS)
-               .until(() -> client().endpoints(serviceName).join().size() == sampleEndpoints.size());
+               .untilAsserted(() -> {
+                   assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
+               });
 
         // Make a service to produce 200 OK for checking by consul.
         sampleEndpoints.stream()
@@ -153,6 +167,8 @@ public class ConsulUpdatingListenerTest extends ConsulTestBase {
                                     .join();
                        });
         await().atMost(5, TimeUnit.SECONDS)
-               .until(() -> client().healthyEndpoints(serviceName).join().size() == sampleEndpoints.size());
+               .untilAsserted(() -> {
+                   assertThat(client().healthyEndpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
+               });
     }
 }

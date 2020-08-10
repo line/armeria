@@ -18,10 +18,10 @@ package com.linecorp.armeria.internal.consul;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,23 +31,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
 
 /**
- * Health client supports below APIs.
- * {@code HealthClient} is responsible for endpoint of Consul API:
- * {@code `/health`}(https://www.consul.io/api/health.html)
- *
- * <p>GET /health/node/:node
- * GET /health/checks/:service
- * GET /health/service/:service?passing
- * GET /health/connect/:service
- * GET /health/state/:state
+ * A {@code HealthClient} that is responsible for the <a href="https://www.consul.io/api/health.html">
+ * healthy endpoint of Consul API</a>.
  */
 final class HealthClient {
 
@@ -66,55 +58,53 @@ final class HealthClient {
     }
 
     /**
-     * Gets a list of nodes for service.
-     */
-    private CompletableFuture<List<HealthService>> service(String serviceName, QueryParams params) {
-        logger.trace("service() {}, {}", serviceName, params.toQueryString());
-        return client.consulWebClient()
-                     .get("/health/service/" + serviceName + '?' + params.toQueryString())
-                     .aggregate()
-                     .thenApply(response -> {
-                         logger.trace("response: {}", response);
-                         final HttpStatus status = response.status();
-                         if (!status.isSuccess()) {
-                             throw new CompletionException(
-                                     new InvalidResponseHeadersException(response.headers()));
-                         }
-                         try {
-                             return ImmutableList.copyOf(mapper.readValue(
-                                     response.content().toStringUtf8(), HealthService[].class));
-                         } catch (IOException e) {
-                             throw new CompletionException(e);
-                         }
-                     });
-    }
-
-    /**
-     * Gets a endpoint list with service name and parameter.
-     */
-    private CompletableFuture<List<Endpoint>> endpoints(String serviceName, QueryParams params) {
-        return service(serviceName, params)
-                .thenApply(nodes ->
-                                   nodes.stream()
-                                        .map(node -> {
-                                            final String host;
-                                            if (!node.service.address.isEmpty()) {
-                                                host = node.service.address;
-                                            } else if (!node.node.address.isEmpty()) {
-                                                host = node.node.address;
-                                            } else {
-                                                host = "127.0.0.1";
-                                            }
-                                            return Endpoint.of(host, node.service.port);
-                                        })
-                                        .collect(toImmutableList()));
-    }
-
-    /**
-     * Gets a healthy endpoint list with service name.
+     * Returns a healthy endpoint list with service name.
      */
     CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
-        return endpoints(serviceName, QueryParams.of("passing", true));
+        final WebClient webClient = client.consulWebClient();
+        return webClient
+                .get("/health/service/" + serviceName + '?' + QueryParams.of("passing", true).toQueryString())
+                .aggregate()
+                .handle((response, cause) -> {
+                    if (cause != null) {
+                        logger.warn("Unexpected exception while fetching the registry from Consul: {}." +
+                                    " (serviceName: {})", webClient.uri(), serviceName,
+                                    cause);
+                        return null;
+                    }
+
+                    final HttpStatus status = response.status();
+                    if (!status.isSuccess()) {
+                        logger.warn("Unexpected response from Consul: {}. (status: {}, content: {}, " +
+                                    "serviceName: {})", webClient.uri(), status,
+                                    response.contentUtf8(), serviceName);
+                        return null;
+                    }
+
+                    final String content = response.content().toStringUtf8();
+                    try {
+                        return Arrays.stream(mapper.readValue(content, HealthService[].class))
+                                     .map(HealthClient::toEndpoint)
+                                     .collect(toImmutableList());
+                    } catch (IOException e) {
+                        logger.warn("Unexpected exception while parsing a response from Consul: {}. " +
+                                    "(content: {}, serviceName: {})",
+                                    webClient.uri(), content, serviceName, e);
+                        return null;
+                    }
+                });
+    }
+
+    private static Endpoint toEndpoint(HealthService healthService) {
+        final String host;
+        if (!healthService.service.address.isEmpty()) {
+            host = healthService.service.address;
+        } else if (!healthService.node.address.isEmpty()) {
+            host = healthService.node.address;
+        } else {
+            host = "127.0.0.1";
+        }
+        return Endpoint.of(host, healthService.service.port);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

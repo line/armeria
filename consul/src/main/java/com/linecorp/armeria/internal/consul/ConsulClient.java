@@ -15,50 +15,42 @@
  */
 package com.linecorp.armeria.internal.consul;
 
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
-import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * The Consul Client for accessing to consul agent API server.
  */
 public final class ConsulClient {
-    /**
-     * Default Consul API URI.
-     */
-    @VisibleForTesting
-    static final String DEFAULT_URI = "http://localhost:8500/v1";
-
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final ClientOptions retryingClientOptions =
-            ClientOptions.of(ClientOption.DECORATION.newValue(ClientDecoration.of(
+            ClientOptions.of(ClientOptions.DECORATION.newValue(ClientDecoration.of(
                     RetryingClient.newDecorator(RetryRule.failsafe(), 3))));
 
     private final WebClient webClient;
     private final HealthClient healthClient;
 
-    public ConsulClient(@Nullable String uri) {
+    public ConsulClient(URI uri) {
         this(uri, null);
     }
 
-    public ConsulClient(@Nullable String uri, @Nullable String token) {
-        final WebClientBuilder builder = WebClient.builder(uri == null ? DEFAULT_URI : uri);
+    public ConsulClient(URI uri, @Nullable String token) {
+        final WebClientBuilder builder = WebClient.builder(uri);
         builder.options(retryingClientOptions);
         if (token != null) {
             // TODO(eugene70) test with token
@@ -69,26 +61,10 @@ public final class ConsulClient {
     }
 
     /**
-     * Gets a object mapper.
-     * @return Jackson ObjectMapper
+     * Returns an {@link ObjectMapper} that is used to encode and decode consul requests and responses.
      */
     public ObjectMapper getObjectMapper() {
         return objectMapper;
-    }
-
-    /**
-     * Registers a service to Consul Agent without service ID.
-     *
-     * @param serviceName service name
-     * @param endpoint servicing endpoint
-     * @param check a check for health checking
-     * @return CompletableFuture with registered service ID(auto-generated)
-     */
-    public CompletableFuture<String> register(String serviceName, Endpoint endpoint, @Nullable Check check)
-            throws JsonProcessingException {
-        return AgentServiceClient.of(this)
-                                 .register(serviceName, endpoint.host(), endpoint.port(), check,
-                                           QueryParams.of());
     }
 
     /**
@@ -98,13 +74,12 @@ public final class ConsulClient {
      * @param serviceName a service name to register
      * @param endpoint an endpoint of service to register
      * @param check a check for the service
-     * @return CompletableFuture with registered service ID
+     * @return a {@link CompletableFuture} that will be completed with the registered service ID
      */
-    public CompletableFuture<String> register(String serviceId, String serviceName, Endpoint endpoint,
-                                              @Nullable Check check) throws JsonProcessingException {
+    public HttpResponse register(String serviceId, String serviceName, Endpoint endpoint,
+                                 @Nullable Check check) {
         return AgentServiceClient.of(this)
-                                 .register(serviceId, serviceName, endpoint.host(), endpoint.port(), check,
-                                           QueryParams.of());
+                                 .register(serviceId, serviceName, endpoint.host(), endpoint.port(), check);
     }
 
     /**
@@ -112,7 +87,7 @@ public final class ConsulClient {
      *
      * @param serviceId a service ID that identifying a service
      */
-    public CompletableFuture<Void> deregister(String serviceId) {
+    public HttpResponse deregister(String serviceId) {
         return AgentServiceClient.of(this).deregister(serviceId);
     }
 
@@ -120,28 +95,27 @@ public final class ConsulClient {
      * Get registered endpoints with service name from consul agent.
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
-        return CatalogClient.of(this)
-                            .endpoints(serviceName, QueryParams.of());
+        return CatalogClient.of(this).endpoints(serviceName);
     }
 
     /**
-     * Get registered endpoints with service name from consul agent.
+     * Returns the registered endpoints with the specified service name from consul agent.
      */
     public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
         return healthClient.healthyEndpoints(serviceName);
     }
 
     /**
-     * Gets a {@code WebClient} for accessing to consul server.
+     * Returns a {@code WebClient} for accessing to consul server.
      */
     public WebClient consulWebClient() {
         return webClient;
     }
 
     /**
-     * Gets a URL of consul agent.
+     * Returns the {@link URI} of consul agent.
      */
-    public String url() {
-        return webClient.uri().toString();
+    public URI uri() {
+        return webClient.uri();
     }
 }

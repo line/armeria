@@ -15,14 +15,17 @@
  */
 package com.linecorp.armeria.server.consul;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.time.Duration;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.internal.consul.ConsulClient;
 
 /**
@@ -30,29 +33,36 @@ import com.linecorp.armeria.internal.consul.ConsulClient;
  * <h2>Examples</h2>
  * <pre>{@code
  * ConsulUpdatingListener listener =
- *     new ConsulUpdatingListenerBuilder("myService").url("http://myConsulHost:8500").build();
+ *     new ConsulUpdatingListenerBuilder("myService").uri("http://myConsulHost:8500").build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
  */
 public final class ConsulUpdatingListenerBuilder {
+    /**
+     * Default Consul API URI.
+     */
+    private static final URI DEFAULT_CONSUL_URI = URI.create("http://localhost:8500/v1");
+
+    private static final String DEFAULT_CHECK_INTERVAL = "10s";
+
     private final String serviceName;
-    @Nullable
-    private String consulUrl;
+
+    private URI consulUri = DEFAULT_CONSUL_URI;
     @Nullable
     private Endpoint serviceEndpoint;
 
     @Nullable
-    private String checkUrl;
-    @Nullable
-    private String checkMethod;
+    private URI checkUri;
     @Nullable
     private String checkInterval;
+    @Nullable
+    private HttpMethod checkMethod;
 
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
      *
-     * @param serviceName Service name to register
+     * @param serviceName the service name to register
      */
     ConsulUpdatingListenerBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
@@ -60,38 +70,69 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the Consul's URL.
+     * Sets the specified Consul's URL.
+     * If not set, {@code "http://localhost:8500/v1"} is used by default.
      *
-     * @param consulUrl URL of consul agent, e.g.: http://127.0.0.1:8500
+     * @param consulUri the URL of consul agent, e.g.: http://127.0.0.1:8500
      */
-    public ConsulUpdatingListenerBuilder url(String consulUrl) {
-        this.consulUrl = requireNonNull(consulUrl, "consulUrl");
-        checkArgument(!this.consulUrl.isEmpty(), "consulUrl can't be empty");
+    public ConsulUpdatingListenerBuilder uri(URI consulUri) {
+        this.consulUri = requireNonNull(consulUri, "consulUri");
+        return this;
+    }
+
+    /**
+     * Sets the specified Consul's URI.
+     * If not set, {@code "http://localhost:8500/v1"} is used by default.
+     *
+     * @param consulUri the URI of consul agent, e.g.: http://127.0.0.1:8500
+     */
+    public ConsulUpdatingListenerBuilder uri(String consulUri) {
+        requireNonNull(consulUri, "consulUri");
+        checkArgument(!consulUri.isEmpty(), "consulUri can't be empty");
+        uri(URI.create(consulUri));
         return this;
     }
 
     /**
      * Sets URL for checking health by consul agent.
      *
-     * @param checkUrl URL for checking health of service
+     * @param checkUri the URI for checking health of service
      */
-    public ConsulUpdatingListenerBuilder checkUrl(String checkUrl) {
-        this.checkUrl = requireNonNull(checkUrl, "checkUrl");
+    public ConsulUpdatingListenerBuilder checkUri(URI checkUri) {
+        this.checkUri = requireNonNull(checkUri, "checkUri");
         return this;
+    }
+
+    /**
+     * Sets URL for checking health by consul agent.
+     *
+     * @param checkUri the URI for checking health of service
+     */
+    public ConsulUpdatingListenerBuilder checkUri(String checkUri) {
+        requireNonNull(checkUri, "checkUri");
+        checkArgument(!checkUri.isEmpty(), "checkUri can't be empty");
+        return checkUri(URI.create(checkUri));
     }
 
     /**
      * Sets HTTP method for checking health by consul agent.
      *
-     * @param checkMethod HTTP method for checking health of service
+     * <p>Note that the {@code checkMethod} should be configured with {@link #checkUri(String)}.
+     * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.
+     *
+     * @param checkMethod the {@link HttpMethod} for checking health of service
      */
-    public ConsulUpdatingListenerBuilder checkMethod(String checkMethod) {
+    public ConsulUpdatingListenerBuilder checkMethod(HttpMethod checkMethod) {
         this.checkMethod = requireNonNull(checkMethod, "checkMethod");
         return this;
     }
 
     /**
-     * Sets checkInterval in {@code java.time.Duration}.
+     * Sets the specified {@link Duration} for checking health.
+     * If not set {@value DEFAULT_CHECK_INTERVAL} is used by default.
+     *
+     * <p>Note that the {@code checkInterval} should be configured with {@link #checkUri(URI)}.
+     * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.
      */
     public ConsulUpdatingListenerBuilder checkInterval(Duration checkInterval) {
         requireNonNull(checkInterval, "checkInterval");
@@ -100,9 +141,11 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets checkInterval in milliseconds.
-     * the interval will be converted to a {@code String} representation that Consul can recognize.
-     * e.g.: "10s", "1m", "1000ms"
+     * Sets the specified {@code checkIntervalMills} for checking health.
+     * If not set {@value DEFAULT_CHECK_INTERVAL} is used by default.
+     *
+     * <p>Note that the {@code checkIntervalMillis} should be configured with {@link #checkUri(URI)}.
+     * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.
      */
     public ConsulUpdatingListenerBuilder checkIntervalMillis(long checkIntervalMillis) {
         checkArgument(checkIntervalMillis > 0, "checkIntervalMillis should be positive");
@@ -111,7 +154,7 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the {@link Endpoint} to register. If not set, the current host name is used automatically.
+     * Sets the {@link Endpoint} to register. If not set, the current host name is used by default.
      *
      * @param endpoint the {@link Endpoint} to register
      */
@@ -125,16 +168,17 @@ public final class ConsulUpdatingListenerBuilder {
      * Consul when the server starts.
      */
     public ConsulUpdatingListener build() {
-        if (checkUrl == null) {
+        if (checkUri == null) {
             if (checkMethod != null) {
-                throw new IllegalStateException("'checkMethod' should declare with checkUrl.");
+                throw new IllegalStateException("'checkMethod' should declare with checkUri.");
             }
             if (checkInterval != null) {
-                throw new IllegalStateException("'checkInterval' should declare with checkUrl.");
+                throw new IllegalStateException("'checkInterval' should declare with checkUri.");
             }
         }
-        final ConsulClient client = new ConsulClient(consulUrl);
-        return new ConsulUpdatingListener(client, serviceName, serviceEndpoint, checkUrl, checkMethod,
-                                          checkInterval);
+
+        final ConsulClient client = new ConsulClient(consulUri);
+        return new ConsulUpdatingListener(client, serviceName, serviceEndpoint, checkUri, checkMethod,
+                                          firstNonNull(checkInterval, DEFAULT_CHECK_INTERVAL));
     }
 }

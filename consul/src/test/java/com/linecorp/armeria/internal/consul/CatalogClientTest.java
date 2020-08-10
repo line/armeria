@@ -16,11 +16,10 @@
 package com.linecorp.armeria.internal.consul;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
@@ -30,12 +29,12 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.consul.ConsulTestBase;
-import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.internal.consul.CatalogClient.Node;
 import com.linecorp.armeria.server.Server;
 
-public class CatalogClientTest extends ConsulTestBase {
+class CatalogClientTest extends ConsulTestBase {
 
     @Nullable
     static List<Server> servers;
@@ -45,7 +44,7 @@ public class CatalogClientTest extends ConsulTestBase {
     final CatalogClient catalog = CatalogClient.of(client());
 
     @BeforeAll
-    public static void setup() {
+    static void setup() {
         servers = new ArrayList<>();
         sampleEndpoints.forEach(endpoint -> {
             final Server server = Server.builder()
@@ -57,35 +56,31 @@ public class CatalogClientTest extends ConsulTestBase {
     }
 
     @AfterAll
-    public static void cleanup() throws Exception {
-        assert servers != null;
+    static void cleanup() throws Exception {
         servers.forEach(Server::close);
-        servers = null;
     }
 
     @Test
-    public void testCatalogClient() {
+    void testCatalogClient() throws JsonProcessingException {
         // Register service endpoints.
-        sampleEndpoints.forEach(endpoint -> {
-                                    try {
-                                        agent.register(serviceName, endpoint.host(), endpoint.port(),
-                                                       null, QueryParams.of()).join();
-                                    } catch (JsonProcessingException e) {
-                                        fail(e.getMessage());
-                                    }
-                                }
-        );
+        for (Endpoint sampleEndpoint : sampleEndpoints) {
+            final String serviceId =
+                    serviceName + '.' + Long.toHexString(ThreadLocalRandom.current().nextLong());
+            agent.register(serviceId, serviceName, sampleEndpoint.host(), sampleEndpoint.port(), null)
+                 .aggregate().join();
+        }
         // Get registered service endpoints.
-        final List<Node> nodes = catalog.service(serviceName, QueryParams.of()).join();
+        final List<Node> nodes = catalog.service(serviceName).join();
 
         // Confirm registered service endpoints.
         assertThat(nodes).isNotNull();
-        assertThat(nodes.size()).isEqualTo(sampleEndpoints.size());
+        assertThat(nodes).hasSameSizeAs(sampleEndpoints);
         assertThat(
                 sampleEndpoints.stream().allMatch(
-                        endpoint -> nodes.stream().anyMatch(
-                                node -> Objects.equals(node.serviceAddress, endpoint.host()) &&
-                                        node.servicePort == endpoint.port()))
+                        endpoint -> nodes.stream().anyMatch(node -> {
+                            return node.serviceAddress.equals(endpoint.host()) &&
+                                   node.servicePort == endpoint.port();
+                        }))
         ).isTrue();
     }
 }

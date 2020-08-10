@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.client.consul;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -25,10 +25,14 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.internal.consul.ConsulClient;
+
+import io.netty.channel.EventLoop;
 
 /**
  * A Consul-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -56,26 +60,26 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
     private final ConsulClient consulClient;
     private final String serviceName;
-    private final ScheduledExecutorService executorService;
     private final long intervalMillis;
+    private final boolean useHealthyEndpoints;
+
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
 
     /**
      * Create a Consul-based {@link EndpointGroup}, endpoints will be retrieved by service name using
      * {@link ConsulClient}.
-     *
-     * @param consulClient   a consul client
-     * @param serviceName a service name to retrieve
-     * @param executorService a executorService
-     * @param intervalMillis a health check interval on milliseconds to check
+     *  @param consulClient the consul client
+     * @param serviceName the service name to retrieve
+     * @param intervalMillis the health check interval on milliseconds to check
+     * @param useHealthyEndpoints whether to use healthy endpoints
      */
-    ConsulEndpointGroup(ConsulClient consulClient, String serviceName, ScheduledExecutorService executorService,
-                        long intervalMillis) {
+    ConsulEndpointGroup(ConsulClient consulClient, String serviceName, long intervalMillis,
+                        boolean useHealthyEndpoints) {
         this.consulClient = consulClient;
         this.serviceName = serviceName;
-        this.executorService = executorService;
         this.intervalMillis = intervalMillis;
+        this.useHealthyEndpoints = useHealthyEndpoints;
 
         update();
     }
@@ -84,24 +88,33 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
         if (isClosing()) {
             return;
         }
-        consulClient.healthyEndpoints(serviceName)
-                    .handle((endpoints, cause) -> {
-                        if (cause != null) {
-                            logger.warn("Fail to fetch endpoints of {}.", serviceName, cause);
-                        } else {
-                            setEndpoints(endpoints);
-                        }
-                        return null;
-                    })
-                    .thenRun(() ->
-                        scheduledFuture = executorService.schedule(this::update,
-                                                                   intervalMillis,
-                                                                   TimeUnit.MILLISECONDS));
+
+        final CompletableFuture<List<Endpoint>> response;
+        final EventLoop eventLoop;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            if (useHealthyEndpoints) {
+                response = consulClient.healthyEndpoints(serviceName);
+            } else {
+                response = consulClient.endpoints(serviceName);
+            }
+            eventLoop = captor.get().eventLoop().withoutContext();
+        }
+
+        response.handle((endpoints, cause) -> {
+            if (cause != null) {
+                logger.warn("Unexpected exception while fetching the registry from: {}." +
+                            " (serviceName: {})", consulClient.uri(), serviceName, cause);
+            } else if (endpoints != null) {
+                setEndpoints(endpoints);
+            }
+
+            scheduledFuture = eventLoop.schedule(this::update,
+                                                 intervalMillis,
+                                                 TimeUnit.MILLISECONDS);
+            return null;
+        });
     }
 
-    /**
-     * Implements close method of {@link AutoCloseable}.
-     */
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;

@@ -19,13 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -35,8 +30,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * Consul API client to register, deregister service and get list of services.
@@ -49,8 +43,6 @@ import com.linecorp.armeria.common.QueryParams;
  * PUT /agent/service/deregister/:service_id
  */
 final class AgentServiceClient {
-
-    private static final Logger logger = LoggerFactory.getLogger(AgentServiceClient.class);
 
     /**
      * Builds an AgentServiceClient with a ConsulClient.
@@ -68,23 +60,10 @@ final class AgentServiceClient {
     }
 
     /**
-     * Registers a service with a health checking endpoint.
-     *
-     * @return returns a generated service ID.
-     */
-    CompletableFuture<String> register(String serviceName, String address, int port,
-                                       @Nullable Check check, QueryParams params)
-            throws JsonProcessingException {
-        final String serviceId = serviceName + '.' + Long.toHexString(ThreadLocalRandom.current().nextLong());
-        return register(serviceId, serviceName, address, port, check, params);
-    }
-
-    /**
      * Registers a service into the consul agent.
      */
-    CompletableFuture<String> register(String serviceId, String serviceName, String address, int port,
-                                       @Nullable Check check, QueryParams params)
-            throws JsonProcessingException {
+    HttpResponse register(String serviceId, String serviceName, String address, int port,
+                          @Nullable Check check) {
         final Service service = new Service();
         service.id = serviceId;
         service.name = serviceName;
@@ -94,48 +73,22 @@ final class AgentServiceClient {
             service.check = check;
         }
 
-        final String jsonBody = mapper.writeValueAsString(service);
-        logger.debug("Registers a service, payload: {}", jsonBody);
-
-        return client.consulWebClient()
-                     .put("/agent/service/register?" + params.toQueryString(), jsonBody)
-                     .aggregate()
-                     .handle((res, cause) -> {
-                         if (cause != null) {
-                             logger.warn("Failed to register {}:{} to Consul: {}",
-                                         service.address, service.port, client.url(), cause);
-                             return null;
-                         }
-                         if (res.status() != HttpStatus.OK) {
-                             logger.warn("Failed to register {}:{} to Consul: {}. (status: {}, content: {})",
-                                         service.address, service.port, client.url(), res.status(),
-                                         res.contentUtf8());
-                             return null;
-                         }
-                         return serviceId;
-                     });
+        try {
+            return client.consulWebClient()
+                         .put("/agent/service/register",
+                              mapper.writeValueAsString(service));
+        } catch (JsonProcessingException e) {
+            return HttpResponse.ofFailure(e);
+        }
     }
 
     /**
      * De-registers a service from the consul agent.
      */
-    CompletableFuture<Void> deregister(String serviceId) {
+    HttpResponse deregister(String serviceId) {
         requireNonNull(serviceId, "serviceId");
         return client.consulWebClient()
-                     .put("/agent/service/deregister/" + serviceId, "")
-                     .aggregate()
-                     .handle((res, cause) -> {
-                         if (cause != null) {
-                             logger.warn("Failed to deregister {} from Consul: {}",
-                                         serviceId, client.url(), cause);
-                         }
-                         if (res.status() != HttpStatus.OK) {
-                             logger.warn("Failed to deregister {} from Consul: {}. (status: {}, content: {})",
-                                         serviceId, client.url(), res.status(),
-                                         res.contentUtf8());
-                         }
-                         return null;
-                     });
+                     .put("/agent/service/deregister/" + serviceId, "");
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

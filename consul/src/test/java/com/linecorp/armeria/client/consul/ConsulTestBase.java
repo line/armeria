@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.consul;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.URI;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -42,12 +43,9 @@ import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class ConsulTestBase {
+public abstract class ConsulTestBase {
 
     protected static final String serviceName = "testService";
-    protected static final String checkName = "testCheck";
-    protected static final String checkPath = "/";
-    protected static final String checkMethod = "POST";
     protected static final Set<Endpoint> sampleEndpoints;
 
     static {
@@ -67,17 +65,17 @@ public class ConsulTestBase {
     private static ConsulClient consulClient;
 
     @BeforeAll
-    public static void start() throws Throwable {
+    static void start() throws Throwable {
         // Initialize Consul embedded server for testing
         consul = ConsulStarterBuilder.consulStarter()
                                      .withConsulVersion("1.8.1")
                                      .build().start();
         // Initialize Consul client
-        consulClient = new ConsulClient("http://localhost:" + consul.getHttpPort() + "/v1");
+        consulClient = new ConsulClient(URI.create("http://localhost:" + consul.getHttpPort() + "/v1"));
     }
 
     @AfterAll
-    public static void stop() throws Throwable {
+    static void stop() throws Throwable {
         if (consul != null) {
             consul.close();
             consul = null;
@@ -89,7 +87,7 @@ public class ConsulTestBase {
 
     protected static ConsulClient client() {
         if (consulClient == null) {
-            throw new RuntimeException("consul client has not initialized");
+            throw new IllegalStateException("consul client has not initialized");
         }
         return consulClient;
     }
