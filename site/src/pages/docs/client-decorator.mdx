@@ -43,16 +43,14 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 
 public class AuditClient extends SimpleDecoratingHttpClient {
 
-    private final HttpClient delegate;
     public AuditClient(HttpClient delegate) {
         super(delegate);
-        this.delegate = delegate;
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         auditRequest(req);
-        return delegate.execute(ctx, req);
+        return unwrap().execute(ctx, req);
     }
 }
 
