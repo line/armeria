@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,31 +27,29 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.internal.consul.ConsulClient;
+import com.linecorp.armeria.server.Server;
 
 /**
  * Builds a new {@link ConsulUpdatingListener}, which registers the server to a Consul cluster.
  * <h2>Examples</h2>
  * <pre>{@code
  * ConsulUpdatingListener listener =
- *     new ConsulUpdatingListenerBuilder("myService").uri("http://myConsulHost:8500").build();
+ *     ConsulUpdatingListener.builder("myService").consulUri("http://myConsulHost:8500").build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
  */
 public final class ConsulUpdatingListenerBuilder {
-    /**
-     * Default Consul API URI.
-     */
-    private static final URI DEFAULT_CONSUL_URI = URI.create("http://localhost:8500/v1");
 
+    private static final URI DEFAULT_CONSUL_URI = URI.create("http://127.0.0.1:8500/v1");
     private static final String DEFAULT_CHECK_INTERVAL = "10s";
 
     private final String serviceName;
 
     private URI consulUri = DEFAULT_CONSUL_URI;
+
     @Nullable
     private Endpoint serviceEndpoint;
-
     @Nullable
     private URI checkUri;
     @Nullable
@@ -71,25 +69,25 @@ public final class ConsulUpdatingListenerBuilder {
 
     /**
      * Sets the specified Consul's URL.
-     * If not set, {@code "http://localhost:8500/v1"} is used by default.
+     * If not set, {@code "http://127.0.0.1:8500/v1"} is used by default.
      *
      * @param consulUri the URL of consul agent, e.g.: http://127.0.0.1:8500
      */
-    public ConsulUpdatingListenerBuilder uri(URI consulUri) {
+    public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
         this.consulUri = requireNonNull(consulUri, "consulUri");
         return this;
     }
 
     /**
      * Sets the specified Consul's URI.
-     * If not set, {@code "http://localhost:8500/v1"} is used by default.
+     * If not set, {@code "http://127.0.0.1:8500/v1"} is used by default.
      *
      * @param consulUri the URI of consul agent, e.g.: http://127.0.0.1:8500
      */
-    public ConsulUpdatingListenerBuilder uri(String consulUri) {
+    public ConsulUpdatingListenerBuilder consulUri(String consulUri) {
         requireNonNull(consulUri, "consulUri");
         checkArgument(!consulUri.isEmpty(), "consulUri can't be empty");
-        uri(URI.create(consulUri));
+        consulUri(URI.create(consulUri));
         return this;
     }
 
@@ -164,8 +162,8 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Returns a newly-created {@link ConsulUpdatingListener} instance that registers the server to
-     * Consul when the server starts.
+     * Returns a newly-created {@link ConsulUpdatingListener} that registers the {@link Server} to
+     * Consul when the {@link Server} starts.
      */
     public ConsulUpdatingListener build() {
         if (checkUri == null) {

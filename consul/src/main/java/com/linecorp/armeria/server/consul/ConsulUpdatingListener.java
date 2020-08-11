@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,12 +33,13 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.consul.Check;
 import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServerPort;
 
 /**
- * A Consul Server Listener. When you add this listener, server will be automatically registered
- * into the Consul.
+ * A {@link ServerListener} which registers the current {@link Server} to
+ * <a href="https://www.consul.io">Consul</a>.
  */
 public class ConsulUpdatingListener extends ServerListenerAdapter {
 
@@ -50,11 +51,11 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
      * <p>If you need a fully customized {@link ConsulUpdatingListener} instance, use
      * {@link #builder()} or {@link #builder(String)} instead.
      *
-     * @param consulUri    the Consul connection {@link URI}
-     * @param serviceName  the Consul node path(under which this server will be registered)
+     * @param consulUri the Consul connection {@link URI}
+     * @param serviceName the Consul node path(under which this server will be registered)
      */
     public static ConsulUpdatingListener of(URI consulUri, String serviceName) {
-        return builder(serviceName).uri(consulUri).build();
+        return builder(serviceName).consulUri(consulUri).build();
     }
 
     /**
@@ -63,16 +64,16 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
      * <p>If you need a fully customized {@link ConsulUpdatingListener} instance, use
      * {@link #builder()} or {@link #builder(String)} instead.
      *
-     * @param consulUri    the Consul connection string
-     * @param serviceName  the Consul node path(under which this server will be registered)
+     * @param consulUri the Consul connection string
+     * @param serviceName the Consul node path(under which this server will be registered)
      */
     public static ConsulUpdatingListener of(String consulUri, String serviceName) {
-        return builder(serviceName).uri(consulUri).build();
+        return builder(serviceName).consulUri(consulUri).build();
     }
 
     /**
      * Returns a {@link ConsulUpdatingListenerBuilder} that builds {@link ConsulUpdatingListener}.
-     * @param serviceName the service name which registers into Consul.
+     * @param serviceName the service name which is registered into Consul.
      */
     public static ConsulUpdatingListenerBuilder builder(String serviceName) {
         return new ConsulUpdatingListenerBuilder(serviceName);
@@ -98,7 +99,9 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
         if (checkUrl != null) {
             final Check check = new Check();
             check.setHttp(checkUrl.toString());
-            check.setMethod(checkMethod.toString());
+            if (checkMethod != null) {
+                check.setMethod(checkMethod.toString());
+            }
             check.setInterval(checkInterval);
             this.check = check;
         } else {
@@ -119,11 +122,10 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
                       return null;
                   }
 
-                  final String content = res.contentUtf8();
                   if (res.status() != HttpStatus.OK) {
                       logger.warn("Failed to register {}:{} to Consul: {}. (status: {}, content: {})",
                                   endpoint.host(), endpoint.port(), client.uri(), res.status(),
-                                  content);
+                                  res.contentUtf8());
                       return null;
                   }
 

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.internal.consul.ConsulTestBase;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListener;
@@ -49,7 +50,7 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .service("/", new EchoService())
                                         .build();
             final ServerListener listener = ConsulUpdatingListener.builder(serviceName)
-                                                                  .uri(client().uri().toString())
+                                                                  .consulUri(client().uri().toString())
                                                                   .endpoint(endpoint)
                                                                   .build();
             server.addListener(listener);
@@ -93,7 +94,7 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
     void testConsulEndpointGroupWithUrl() {
         try (ConsulEndpointGroup endpointGroup =
                      ConsulEndpointGroup.builder(serviceName)
-                                        .consulUrl(client().uri().toString())
+                                        .consulUri(client().uri().toString())
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
             await().atMost(3, TimeUnit.SECONDS)

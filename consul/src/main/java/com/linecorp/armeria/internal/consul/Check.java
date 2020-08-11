@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -332,8 +332,7 @@ public final class Check {
                           .add("id", id)
                           .add("interval", interval)
                           .add("notes", notes)
-                          .add("deregisterCriticalServiceAfter",
-                               deregisterCriticalServiceAfter)
+                          .add("deregisterCriticalServiceAfter", deregisterCriticalServiceAfter)
                           .add("args", args)
                           .add("aliasNode", aliasNode)
                           .add("dockerContainerID", dockerContainerID)

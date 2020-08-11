@@ -48,24 +48,24 @@ public final class ConsulEndpointGroupBuilder {
     private boolean useHealthyEndpoints;
 
     /**
-     * Constructor of {@code ConsulEndpointGroupBuilder}.
+     * Constructor of {@link ConsulEndpointGroupBuilder}.
      */
     ConsulEndpointGroupBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
     }
 
     /**
-     * Sets the {@code consulUrl}.
+     * Sets the specified {@code consulUri}.
      */
-    public ConsulEndpointGroupBuilder consulUrl(URI consulUrl) {
-        consulUri = requireNonNull(consulUrl, "consulUrl");
+    public ConsulEndpointGroupBuilder consulUri(URI consulUri) {
+        this.consulUri = requireNonNull(consulUri, "consulUri");
         return this;
     }
 
     /**
-     * Sets the {@code consulUri}.
+     * Sets the specified {@code consulUri}.
      */
-    public ConsulEndpointGroupBuilder consulUrl(String consulUri) {
+    public ConsulEndpointGroupBuilder consulUri(String consulUri) {
         requireNonNull(consulUri, "consulUri");
         checkArgument(!consulUri.isEmpty(), "consulUri can't be empty");
         this.consulUri = URI.create(consulUri);
@@ -95,7 +95,7 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Sets the {@code token} to access Consul server.
+     * Sets the specified {@code token} for accessing Consul server.
      */
     public ConsulEndpointGroupBuilder token(String token) {
         this.token = requireNonNull(token, "token");
@@ -103,8 +103,8 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Sets whether to use <a href="https://www.consul.io/api/health.html">health HTTP endpoint</a>
-     * Before enabling this feature, make sure that the health of your endpoint is checked by Consul server.
+     * Sets whether to use <a href="https://www.consul.io/api/health.html">Health HTTP endpoint</a>
+     * Before enabling this feature, make sure that your target endpoints are health-checked by Consul.
      *
      * @see ConsulUpdatingListenerBuilder#checkUri(URI)
      */
@@ -114,7 +114,7 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Returns a newly-created {@code ConsulEndpointGroup}.
+     * Returns a newly-created {@link ConsulEndpointGroup}.
      */
     public ConsulEndpointGroup build() {
         if (consulClient == null) {

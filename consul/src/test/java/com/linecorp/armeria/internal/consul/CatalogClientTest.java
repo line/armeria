@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.consul.ConsulTestBase;
 import com.linecorp.armeria.internal.consul.CatalogClient.Node;
 import com.linecorp.armeria.server.Server;
 
@@ -75,12 +74,9 @@ class CatalogClientTest extends ConsulTestBase {
         // Confirm registered service endpoints.
         assertThat(nodes).isNotNull();
         assertThat(nodes).hasSameSizeAs(sampleEndpoints);
-        assertThat(
-                sampleEndpoints.stream().allMatch(
-                        endpoint -> nodes.stream().anyMatch(node -> {
-                            return node.serviceAddress.equals(endpoint.host()) &&
-                                   node.servicePort == endpoint.port();
-                        }))
+        assertThat(sampleEndpoints.stream().allMatch(
+                endpoint -> nodes.stream().anyMatch(node -> node.serviceAddress.equals(endpoint.host()) &&
+                                                            node.servicePort == endpoint.port()))
         ).isTrue();
     }
 }

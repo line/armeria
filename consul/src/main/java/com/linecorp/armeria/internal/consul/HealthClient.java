@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -74,14 +74,14 @@ final class HealthClient {
                     }
 
                     final HttpStatus status = response.status();
+                    final String content = response.contentUtf8();
                     if (!status.isSuccess()) {
                         logger.warn("Unexpected response from Consul: {}. (status: {}, content: {}, " +
                                     "serviceName: {})", webClient.uri(), status,
-                                    response.contentUtf8(), serviceName);
+                                    content, serviceName);
                         return null;
                     }
 
-                    final String content = response.content().toStringUtf8();
                     try {
                         return Arrays.stream(mapper.readValue(content, HealthService[].class))
                                      .map(HealthClient::toEndpoint)

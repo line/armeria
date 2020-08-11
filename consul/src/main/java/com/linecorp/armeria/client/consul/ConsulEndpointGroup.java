@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -35,24 +35,25 @@ import com.linecorp.armeria.internal.consul.ConsulClient;
 import io.netty.channel.EventLoop;
 
 /**
- * A Consul-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
- * {@link Endpoint}s from a Consul using {@link ConsulClient} and updates it when the status of the
- * service by polling.
+ * A Consul-based {@link EndpointGroup} implementation that retrieves the list of
+ * {@link Endpoint}s from Consul using <a href="https://www.consul.io/api">Consul's RESTful HTTP API</a> and
+ * updates the {@link Endpoint}s periodically.
  */
 public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulEndpointGroup.class);
 
     /**
-     * Creates a {@code ConsulEndpointGroup} with only service name. This {@code ConsulEndpointGroup} will
-     * retrieves the list of {@link Endpoint}s from a local Consul agent(using default consul service port).
+     * Returns a {@link ConsulEndpointGroup} with the specified {@code serviceName}.
+     * The returned {@link ConsulEndpointGroup} will retrieve the list of {@link Endpoint}s from
+     * a local Consul agent(using default consul service port).
      */
     public static ConsulEndpointGroup of(String serviceName) {
         return builder(serviceName).build();
     }
 
     /**
-     * Creates a {@code ConsulEndpointGroupBuilder} to build {@code ConsulEndpointGroup}.
+     * Returns a newly-created {@link ConsulEndpointGroupBuilder} with the specified {@code serviceName}.
      */
     public static ConsulEndpointGroupBuilder builder(String serviceName) {
         return new ConsulEndpointGroupBuilder(serviceName);
@@ -67,9 +68,9 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
     private volatile ScheduledFuture<?> scheduledFuture;
 
     /**
-     * Create a Consul-based {@link EndpointGroup}, endpoints will be retrieved by service name using
-     * {@link ConsulClient}.
-     *  @param consulClient the consul client
+     * Creates a Consul-based {@link EndpointGroup}, endpoints will be retrieved by service name using
+     * {@code ConsulClient}.
+     * @param consulClient the consul client
      * @param serviceName the service name to retrieve
      * @param intervalMillis the health check interval on milliseconds to check
      * @param useHealthyEndpoints whether to use healthy endpoints

@@ -34,10 +34,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.consul.ConsulTestBase;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.internal.consul.ConsulTestBase;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
@@ -56,13 +56,14 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                         .service("/echo", new EchoService())
                                         .build();
             final ServerListener listener =
-                    new ConsulUpdatingListenerBuilder(serviceName).uri(client().uri().toString())
-                                                                  .endpoint(endpoint)
-                                                                  .checkUri("http://" + endpoint.host() +
-                                                                            ':' + endpoint.port() + "/echo")
-                                                                  .checkMethod(HttpMethod.POST)
-                                                                  .checkInterval(Duration.ofSeconds(1))
-                                                                  .build();
+                    ConsulUpdatingListener.builder(serviceName)
+                                          .consulUri(client().uri().toString())
+                                          .endpoint(endpoint)
+                                          .checkUri("http://" + endpoint.host() +
+                                                    ':' + endpoint.port() + "/echo")
+                                          .checkMethod(HttpMethod.POST)
+                                          .checkInterval(Duration.ofSeconds(1))
+                                          .build();
             server.addListener(listener);
             server.start().join();
             servers.add(server);
@@ -85,17 +86,18 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
 
     @Test
     void testBuild() {
-        assertThat(new ConsulUpdatingListenerBuilder(serviceName).build()).isNotNull();
-        assertThat(new ConsulUpdatingListenerBuilder(serviceName).uri("http://localhost:8080")
-                                                                 .build()).isNotNull();
+        assertThat(ConsulUpdatingListener.builder(serviceName).build()).isNotNull();
+        assertThat(ConsulUpdatingListener.builder(serviceName)
+                                         .consulUri("http://localhost:8080")
+                                         .build()).isNotNull();
     }
 
     @Test
     void shouldRaiseExceptionWhenCheckUrlMissed() {
-        assertThatThrownBy(
-                new ConsulUpdatingListenerBuilder(serviceName).uri("http://localhost:8080")
-                                                              .checkMethod(HttpMethod.POST)
-                                                              .checkIntervalMillis(1000)::build
+        assertThatThrownBy(ConsulUpdatingListener.builder(serviceName)
+                                                 .consulUri("http://localhost:8080")
+                                                 .checkMethod(HttpMethod.POST)
+                                                 .checkIntervalMillis(1000)::build
         ).isInstanceOf(IllegalStateException.class);
     }
 
@@ -113,7 +115,8 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
 
         await().atMost(5, TimeUnit.SECONDS)
                .untilAsserted(() -> {
-                   assertThat(client().endpoints(serviceName).join()).hasSize(sampleEndpoints.size() - 1);
+                   final List<Endpoint> results = client().endpoints(serviceName).join();
+                   assertThat(results).hasSize(sampleEndpoints.size() - 1);
                });
 
         // Endpoints increased after service restart.
