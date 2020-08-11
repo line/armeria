@@ -30,7 +30,6 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -55,19 +54,20 @@ import com.google.common.primitives.Bytes;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.core.publisher.Flux;
 
 /**
  * Test {@link MultipartEncoder}.
  */
-public class MultipartEncoderTest {
+class MultipartEncoderTest {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media
     // /multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderTest.java
 
     @Test
-    public void testEncodeOnePart() throws Exception {
+    void testEncodeOnePart() throws Exception {
         final String boundary = "boundary";
         final String message = encodeParts(boundary,
                                            BodyPart.builder().content("part1").build());
@@ -79,7 +79,7 @@ public class MultipartEncoderTest {
     }
 
     @Test
-    public void testEncodeOnePartWithHeaders() throws Exception {
+    void testEncodeOnePartWithHeaders() throws Exception {
         final String boundary = "boundary";
         final BodyPart part1 = BodyPart.builder()
                                        .headers(HttpHeaders.builder()
@@ -96,7 +96,7 @@ public class MultipartEncoderTest {
     }
 
     @Test
-    public void testEncodeTwoParts() throws Exception {
+    void testEncodeTwoParts() throws Exception {
         final String boundary = "boundary";
         final String message = encodeParts(boundary,
                                            BodyPart.builder()
@@ -117,15 +117,15 @@ public class MultipartEncoderTest {
     }
 
     @Test
-    public void testRequests() throws Exception {
+    void testRequests() throws Exception {
         final MultipartEncoder enc = new MultipartEncoder("boundary");
-        final List<BodyPart> parts = LongStream.range(1, 500)
-                                               .mapToObj(i -> BodyPart.builder()
-                                                                      .content("part" + i)
-                                                                      .build())
-                                               .collect(toImmutableList());
+        final BodyPart[] parts = LongStream.range(1, 500)
+                                           .mapToObj(i -> BodyPart.builder()
+                                                                  .content("part" + i)
+                                                                  .build())
+                                           .toArray(BodyPart[]::new);
 
-        Multi.from(parts).subscribe(enc);
+        StreamMessage.of(parts).subscribe(enc);
         final AtomicInteger counter = new AtomicInteger(3);
         final Subscriber<HttpData> subscriber = new Subscriber<HttpData>() {
 
@@ -153,43 +153,41 @@ public class MultipartEncoderTest {
     }
 
     @Test
-    public void testSubscribingMoreThanOnce() {
+    void testSubscribingMoreThanOnce() {
         final MultipartEncoder encoder = new MultipartEncoder("boundary");
-        Multi.<BodyPart>empty().subscribe(encoder);
-        assertThatThrownBy(() -> Multi.<BodyPart>empty().subscribe(encoder))
-                .isInstanceOf(IllegalStateException.class)
+        Flux.<BodyPart>empty().subscribe(encoder);
+        assertThatThrownBy(() -> Flux.<BodyPart>empty().subscribe(encoder))
+                .hasCauseInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Subscription already set.");
     }
 
     @Test
-    public void testUpstreamError() {
+    void testUpstreamError() {
         final MultipartEncoder decoder = new MultipartEncoder("boundary");
-        Multi.<BodyPart>error(new IllegalStateException("oops")).subscribe(decoder);
+        Flux.<BodyPart>error(new IllegalStateException("oops")).subscribe(decoder);
         final HttpDataAggregator subscriber = new HttpDataAggregator();
         decoder.subscribe(subscriber);
         final CompletableFuture<String> future = subscriber.content().toCompletableFuture();
 
-        assertThat(future.isCompletedExceptionally()).isTrue();
-        assertThatThrownBy(() -> future.getNow(null))
+        assertThatThrownBy(future::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("oops");
     }
 
     @Test
-    public void testPartContentPublisherError() {
+    void testPartContentPublisherError() {
         final MultipartEncoder encoder = new MultipartEncoder("boundary");
         final HttpDataAggregator subscriber = new HttpDataAggregator();
         encoder.subscribe(subscriber);
 
-        Multi.just(BodyPart.builder()
-                           .content(Multi.error(new IllegalStateException("oops")))
+        Flux.just(BodyPart.builder()
+                           .content(Flux.error(new IllegalStateException("oops")))
                            .build())
              .subscribe(encoder);
         final CompletableFuture<String> future = subscriber.content().toCompletableFuture();
 
-        assertThat(future.isCompletedExceptionally()).isTrue();
-        assertThatThrownBy(() -> future.getNow(null))
+        assertThatThrownBy(future::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("oops");
@@ -197,7 +195,7 @@ public class MultipartEncoderTest {
 
     private static String encodeParts(String boundary, BodyPart... parts) throws Exception {
         final MultipartEncoder encoder = new MultipartEncoder(boundary);
-        Multi.just(parts).subscribe(encoder);
+        StreamMessage.of(parts).subscribe(encoder);
         return Flux.from(encoder)
                    .map(HttpData::array)
                    .reduce(Bytes::concat)

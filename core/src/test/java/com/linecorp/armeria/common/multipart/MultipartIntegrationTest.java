@@ -111,22 +111,14 @@ class MultipartIntegrationTest {
 
             sb.service("/simple", (ctx, req) -> {
                 final Multipart multiPart = Multipart.from(req);
-                Flux.from(multiPart.bodyParts())
-                    .collectList()
-                    .subscribe(bodyParts -> {
-                        bodyParts.forEach(part -> {
-                            Flux.from(part.content()).collectList()
-                                .subscribe(contents -> {
-                                    contents.forEach(d -> System.out.println("d = " + d.toStringUtf8()));
-                                });
-                        });
-                    });
-                return HttpResponse.of(200);
+                return HttpResponse.from(multiPart.aggregate().thenApply(agg -> {
+                    return HttpResponse.of(200);
+                }));
             });
         }
     };
 
-    @CsvSource({"/multipart", "/aggregate"})
+    @CsvSource({ "/multipart", "/aggregate" })
     @ParameterizedTest
     void multipart(String path) {
         final WebClient client = WebClient.of(server.httpUri());

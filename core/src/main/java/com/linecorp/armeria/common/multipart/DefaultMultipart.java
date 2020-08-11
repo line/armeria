@@ -21,17 +21,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Bytes;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class DefaultMultipart implements Multipart {
+
+    private static final BodyPart[] EMPTY_BODY_PARTS = new BodyPart[0];
 
     /**
      * The default boundary used for encoding multipart messages.
@@ -39,17 +42,16 @@ final class DefaultMultipart implements Multipart {
     static final String DEFAULT_BOUNDARY = "!@==boundary==@!";
 
     private final String boundary;
-    private final MultipartEncoder encoder;
-    private final Publisher<? extends BodyPart> parts;
+    private final StreamMessage<? extends BodyPart> parts;
 
-    DefaultMultipart(String boundary, Publisher<? extends BodyPart> parts) {
+    DefaultMultipart(String boundary, StreamMessage<? extends BodyPart> parts) {
         this.boundary = boundary;
-        encoder = new MultipartEncoder(boundary);
         this.parts = parts;
     }
 
     @Override
     public void subscribe(Subscriber<? super HttpData> s) {
+        final MultipartEncoder encoder = new MultipartEncoder(boundary);
         parts.subscribe(encoder);
         encoder.subscribe(s);
     }
@@ -61,8 +63,8 @@ final class DefaultMultipart implements Multipart {
 
     @SuppressWarnings("unchecked")
     @Override
-    public Publisher<BodyPart> bodyParts() {
-        return (Publisher<BodyPart>) parts;
+    public StreamMessage<BodyPart> bodyParts() {
+        return (StreamMessage<BodyPart>) parts;
     }
 
     @Override
@@ -70,22 +72,21 @@ final class DefaultMultipart implements Multipart {
         final BodyPartAggregator aggregator = new BodyPartAggregator();
         parts.subscribe(aggregator);
         return UnmodifiableFuture.wrap(
-                aggregator.future.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
+                aggregator.completionFuture.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("boundary", boundary)
-                          .add("encoder", encoder)
                           .add("parts", parts)
                           .toString();
     }
 
     private static final class BodyPartAggregator implements Subscriber<BodyPart> {
 
-        private final List<AggregatedBodyPart> bodyParts = new ArrayList<>();
-        private final CompletableFuture<List<AggregatedBodyPart>> future = new CompletableFuture<>();
+        private final CompletableFuture<List<AggregatedBodyPart>> completionFuture = new CompletableFuture<>();
+        private final List<CompletableFuture<AggregatedBodyPart>> bodyPartFutures = new ArrayList<>();
 
         @Override
         public void onSubscribe(Subscription subscription) {
@@ -95,21 +96,26 @@ final class DefaultMultipart implements Multipart {
 
         @Override
         public void onNext(BodyPart bodyPart) {
-            final HttpDataAggregator aggregator = new HttpDataAggregator();
+            final HttpDataAggregator aggregator = new HttpDataAggregator(bodyPart);
             bodyPart.content().subscribe(aggregator);
-            aggregator.future.thenAccept(data -> {
-                bodyParts.add(AggregatedBodyPart.of(bodyPart.headers(), data));
-            });
+            bodyPartFutures.add(aggregator.completionFuture);
         }
 
         @Override
         public void onError(Throwable t) {
-            future.completeExceptionally(t);
+            completionFuture.completeExceptionally(t);
         }
 
         @Override
         public void onComplete() {
-            future.complete(bodyParts);
+            CompletableFutures.allAsList(bodyPartFutures)
+                              .whenComplete((parts, cause) -> {
+                                  if (cause != null) {
+                                      completionFuture.completeExceptionally(cause);
+                                  } else {
+                                      completionFuture.complete(parts);
+                                  }
+                              });
         }
     }
 
@@ -119,7 +125,12 @@ final class DefaultMultipart implements Multipart {
     private static final class HttpDataAggregator implements Subscriber<HttpData> {
 
         private final List<HttpData> dataList = new ArrayList<>();
-        private final CompletableFuture<HttpData> future = new CompletableFuture<>();
+        private final CompletableFuture<AggregatedBodyPart> completionFuture = new CompletableFuture<>();
+        private final BodyPart bodyPart;
+
+        HttpDataAggregator(BodyPart bodyPart) {
+            this.bodyPart = bodyPart;
+        }
 
         @Override
         public void onSubscribe(Subscription subscription) {
@@ -134,7 +145,7 @@ final class DefaultMultipart implements Multipart {
 
         @Override
         public void onError(Throwable ex) {
-            future.completeExceptionally(ex);
+            completionFuture.completeExceptionally(ex);
         }
 
         @Override
@@ -143,7 +154,8 @@ final class DefaultMultipart implements Multipart {
             for (int i = 0; i < arrays.length; i++) {
                 arrays[i] = dataList.get(i).array();
             }
-            future.complete(HttpData.wrap(Bytes.concat(arrays)));
+            completionFuture.complete(AggregatedBodyPart.of(bodyPart.headers(),
+                                                            HttpData.wrap(Bytes.concat(arrays))));
         }
     }
 }

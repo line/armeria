@@ -36,16 +36,15 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.AsciiString;
 
@@ -68,11 +67,13 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
     private static final AtomicIntegerFieldUpdater<MultipartEncoder> initializedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(MultipartEncoder.class, "initialized");
 
+    private static final HttpData CRLF = HttpData.ofUtf8("\r\n");
+
     private final String boundary;
-    private final CompletableFuture<BufferedEmittingPublisher<Publisher<HttpData>>> initFuture;
+    private final CompletableFuture<ListenableStreamMessage<StreamMessage<HttpData>>> initFuture;
 
     @Nullable
-    private BufferedEmittingPublisher<Publisher<HttpData>> emitter;
+    private ListenableStreamMessage<StreamMessage<HttpData>> emitter;
 
     // Updated only via upstreamUpdater
     @Nullable
@@ -116,11 +117,10 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
         if (upstream != null && downstream != null) {
             // relay request to upstream, already reduced by flatmap
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
-                emitter = new BufferedEmittingPublisher<>(upstream::request, null);
-                Multi.from(emitter)
-                     .flatMap(Function.identity())
-                     .onCompleteResume(HttpData.ofUtf8("--" + boundary + "--"))
-                     .subscribe(downstream);
+                emitter = new ListenableStreamMessage<>(upstream::request, upstream::cancel, null);
+                StreamMessages.onCompleteResumeWith(StreamMessages.concat(emitter),
+                                                    StreamMessage.of(HttpData.ofUtf8("--" + boundary + "--")))
+                              .subscribe(downstream);
                 initFuture.complete(emitter);
                 this.downstream = null;
             }
@@ -129,21 +129,21 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
 
     @Override
     public void onNext(BodyPart bodyPart) {
-        emitter.emit(createBodyPartPublisher(bodyPart));
+        emitter.write(createBodyPartPublisher(bodyPart));
     }
 
     @Override
     public void onError(Throwable throwable) {
         requireNonNull(throwable, "throwable");
-        initFuture.whenComplete((e, t) -> e.fail(throwable));
+        initFuture.whenComplete((e, t) -> e.abort(throwable));
     }
 
     @Override
     public void onComplete() {
-        initFuture.whenComplete((e, t) -> e.complete());
+        initFuture.whenComplete((e, t) -> e.close());
     }
 
-    private Publisher<HttpData> createBodyPartPublisher(BodyPart bodyPart) {
+    private StreamMessage<HttpData> createBodyPartPublisher(BodyPart bodyPart) {
         // start boundary
         final StringBuilder sb = new StringBuilder("--").append(boundary).append("\r\n");
 
@@ -159,11 +159,12 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
 
         // end of headers empty line
         sb.append("\r\n");
-        return Multi.concat(Multi.concat(// Part prefix
-                                         Multi.singleton(HttpData.ofUtf8(sb.toString())),
-                                         // Part body
-                                         bodyPart.content()),
-                            // Part postfix
-                            Multi.singleton(HttpData.ofUtf8("\r\n")));
+        return StreamMessages.concat(
+                // Part prefix
+                StreamMessage.of(HttpData.ofUtf8(sb.toString())),
+                // Part body
+                bodyPart.content(),
+                // Part postfix
+                StreamMessage.of(CRLF));
     }
 }

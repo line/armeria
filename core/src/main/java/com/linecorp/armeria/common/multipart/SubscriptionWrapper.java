@@ -15,15 +15,26 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import org.reactivestreams.Subscription;
 
-enum NoopSubscription implements Subscription {
+class SubscriptionWrapper implements Subscription {
 
-    INSTANCE;
+    private final Subscription delegate;
+
+    SubscriptionWrapper(Subscription delegate) {
+        requireNonNull(delegate, "delegate");
+        this.delegate = delegate;
+    }
 
     @Override
-    public void request(long n) {}
+    public void request(long n) {
+        delegate.request(n);
+    }
 
     @Override
-    public void cancel() {}
+    public void cancel() {
+        delegate.cancel();
+    }
 }

@@ -33,53 +33,107 @@ package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.StreamMessage;
+
 /**
- * Relay items in order from subsequent Publishers as a single Multi source.
+ * Relay items in order from subsequent {@link StreamMessage}s as a single {@link StreamMessage} source.
  */
-final class MultiConcatArray<T> implements Multi<T> {
+final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
 
     // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common/reactive/src/main/java/io/helidon/common/reactive/MultiConcatArray.java
 
-    private final Publisher<? extends T>[] sources;
+    private final StreamMessage<? extends T>[] sources;
 
-    MultiConcatArray(Publisher<? extends T>[] sources) {
+    ConcatArrayStreamMessage(StreamMessage<? extends T>[] sources) {
         this.sources = sources;
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
+    public boolean isOpen() {
+        for (StreamMessage<? extends T> source : sources) {
+            if (source.isOpen()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        for (StreamMessage<? extends T> source : sources) {
+            if (!source.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return sources[sources.length - 1].whenComplete();
+    }
+
+    @Override
+    void subscribe(Subscriber<? super T> subscriber, boolean notifyCancellation) {
         requireNonNull(subscriber, "subscriber");
-        final ConcatArraySubscriber<T> parent = new ConcatArraySubscriber<>(subscriber, sources);
+        final ConcatArraySubscriber<T> parent =
+                new ConcatArraySubscriber<>(subscriber, sources, notifyCancellation);
         subscriber.onSubscribe(parent);
         parent.nextSource();
     }
 
+    @Override
+    public void abort() {
+        for (StreamMessage<? extends T> source : sources) {
+            source.abort();
+        }
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        for (StreamMessage<? extends T> source : sources) {
+            source.abort(cause);
+        }
+    }
+
     private static final class ConcatArraySubscriber<T> extends SubscriptionArbiter implements Subscriber<T> {
+        @SuppressWarnings("rawtypes")
+        private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> wipUpdater =
+                AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "wip");
 
         private static final long serialVersionUID = -9184116713095894096L;
 
         private final Subscriber<? super T> downstream;
-        private final Publisher<? extends T>[] sources;
-        private final AtomicInteger wip;
+        private final StreamMessage<? extends T>[] sources;
+        private final boolean notifyCancellation;
 
         private int index;
         private long produced;
+        private volatile int wip;
+        private boolean cancelRequested;
 
-        ConcatArraySubscriber(Subscriber<? super T> downstream, Publisher<? extends T>[] sources) {
+        ConcatArraySubscriber(Subscriber<? super T> downstream, StreamMessage<? extends T>[] sources,
+                              boolean notifyCancellation) {
             this.downstream = downstream;
             this.sources = sources;
-            wip = new AtomicInteger();
+            this.notifyCancellation = notifyCancellation;
         }
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            setSubscription(subscription);
+            if (cancelRequested) {
+                subscription.cancel();
+            } else {
+                setSubscription(subscription);
+            }
         }
 
         @Override
@@ -104,14 +158,14 @@ final class MultiConcatArray<T> implements Multi<T> {
         }
 
         void nextSource() {
-            if (wip.getAndIncrement() == 0) {
+            if (wipUpdater.getAndIncrement(this) == 0) {
                 do {
                     if (index == sources.length) {
                         downstream.onComplete();
                     } else {
                         sources[index++].subscribe(this);
                     }
-                } while (wip.decrementAndGet() != 0);
+                } while (wipUpdater.decrementAndGet(this) != 0);
             }
         }
 
@@ -122,6 +176,15 @@ final class MultiConcatArray<T> implements Multi<T> {
                         "Rule §3.9 violated: non-positive requests are forbidden"));
             } else {
                 super.request(n);
+            }
+        }
+
+        @Override
+        public void cancel() {
+            cancelRequested = true;
+            super.cancel();
+            if (notifyCancellation) {
+                downstream.onError(CancelledSubscriptionException.get());
             }
         }
     }

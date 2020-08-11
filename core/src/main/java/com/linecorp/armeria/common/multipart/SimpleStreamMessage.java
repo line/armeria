@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
@@ -22,26 +23,31 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
-/**
- * Implementation of {@link Multi} that is backed by a {@link StreamMessage}.
- *
- * @param <T> items type
- */
-final class MultiFromStreamMessage<T> implements Multi<T> {
+import io.netty.util.concurrent.EventExecutor;
 
-    private final StreamMessage<? extends T> source;
-    private final SubscriptionOption[] options;
+abstract class SimpleStreamMessage<T> implements StreamMessage<T> {
 
-    MultiFromStreamMessage(StreamMessage<? extends T> source, SubscriptionOption... options) {
-        requireNonNull(source, "source");
-        requireNonNull(options, "options");
-        this.source = source;
-        this.options = options;
+    @Override
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        subscribe(subscriber, false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        requireNonNull(subscriber, "subscriber");
-        source.subscribe(subscriber, options);
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                                SubscriptionOption... options) {
+        subscribe(subscriber, containsNotifyCancellation(options));
+    }
+
+    abstract void subscribe(Subscriber<? super T> subscriber, boolean notifyCancellation);
+
+    private static boolean containsNotifyCancellation(SubscriptionOption... options) {
+        requireNonNull(options, "options");
+        for (SubscriptionOption option : options) {
+            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

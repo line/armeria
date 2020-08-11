@@ -36,23 +36,31 @@ import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessage;
+
+import reactor.core.publisher.Flux;
+
 @Test
-public class MultiConcatArrayTck2Test extends PublisherVerification<Integer> {
+public class ConcatArrayStreamMessageTck1Test extends PublisherVerification<Integer> {
 
-    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common/reactive/src/test/java/io/helidon/common/reactive/MultiConcatArrayTck2Test.java
+    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common
+    // /reactive/src/test/java/io/helidon/common/reactive/MultiConcatArrayTck1Test.java
 
-    public MultiConcatArrayTck2Test() {
+    public ConcatArrayStreamMessageTck1Test() {
         super(new TestEnvironment(200));
     }
 
     @Override
     public Publisher<Integer> createPublisher(long l) {
+        final PublisherBasedStreamMessage<Integer> integerPublisherBasedStreamMessage =
+                new PublisherBasedStreamMessage<>(Flux.range(0, (int) l / 2));
+
         @SuppressWarnings("unchecked")
-        final Multi<Integer>[] sources = new Multi[(int)l];
-        for (int i = 0; i < l; i++) {
-            sources[i] = Multi.singleton(i);
-        }
-        return Multi.concatArray(sources);
+        final StreamMessage<Integer>[] streamMessages = new StreamMessage[2];
+        streamMessages[0] = new PublisherBasedStreamMessage<>(Flux.range(0, (int) l / 2));
+        streamMessages[1] = new PublisherBasedStreamMessage<>(Flux.range((int) l / 2, (int) (l - l / 2)));
+        return new ConcatArrayStreamMessage<>(streamMessages);
     }
 
     @Override

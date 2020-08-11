@@ -18,24 +18,29 @@ package com.linecorp.armeria.common.multipart;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A builder class for creating {@link BodyPart} instances.
  */
 public final class BodyPartBuilder {
 
-    private static final Multi<HttpData> EMPTY = Multi.empty();
+    private final ImmutableList.Builder<Publisher<? extends HttpData>> contentsBuilder =
+            ImmutableList.builder();
 
     private HttpHeaders headers = HttpHeaders.of();
-    private Multi<HttpData> content = EMPTY;
 
     BodyPartBuilder() {}
 
@@ -57,11 +62,7 @@ public final class BodyPartBuilder {
      */
     public BodyPartBuilder content(Publisher<? extends HttpData> publisher) {
         requireNonNull(publisher, "publisher");
-        if (content == EMPTY) {
-            content = Multi.from(publisher);
-        } else {
-            content = Multi.concat(content, publisher);
-        }
+        contentsBuilder.add(publisher);
         return this;
     }
 
@@ -86,7 +87,7 @@ public final class BodyPartBuilder {
      */
     public BodyPartBuilder content(HttpData content) {
         requireNonNull(content, "content");
-        return content(Multi.singleton(content));
+        return content(StreamMessage.of(content));
     }
 
     /**
@@ -108,7 +109,8 @@ public final class BodyPartBuilder {
      * Returns a newly-created {@link BodyPart}.
      */
     public BodyPart build() {
-        checkState(content != EMPTY, "Should set at least one content");
+        final List<Publisher<? extends HttpData>> contents = contentsBuilder.build();
+        checkState(!contents.isEmpty(), "Should set at least one content");
         final HttpHeaders headers;
         if (this.headers.contentType() == null) {
             final MediaType defaultContentType = defaultContentType(this.headers.contentDisposition());
@@ -116,6 +118,16 @@ public final class BodyPartBuilder {
         } else {
             headers = this.headers;
         }
-        return new DefaultBodyPart(headers, content);
+
+        if (contents.size() == 1) {
+            final Publisher<? extends HttpData> publisher = contents.get(0);
+            return new DefaultBodyPart(headers, StreamMessages.toStreamMessage(publisher));
+        }
+
+        @SuppressWarnings("unchecked")
+        final StreamMessage<HttpData>[] streamMessages = contents.stream()
+                                                                 .map(StreamMessages::toStreamMessage)
+                                                                 .toArray(StreamMessage[]::new);
+        return new DefaultBodyPart(headers, StreamMessages.concat(streamMessages));
     }
 }

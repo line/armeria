@@ -15,19 +15,18 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import org.reactivestreams.Publisher;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 final class DefaultBodyPart implements BodyPart {
 
     private final HttpHeaders headers;
-    private final Publisher<? extends HttpData> content;
+    private final StreamMessage<? extends HttpData> content;
 
-    DefaultBodyPart(HttpHeaders headers, Publisher<? extends HttpData> content) {
+    DefaultBodyPart(HttpHeaders headers, StreamMessage<? extends HttpData> content) {
         this.headers = headers;
         this.content = content;
     }
@@ -39,8 +38,8 @@ final class DefaultBodyPart implements BodyPart {
 
     @SuppressWarnings("unchecked")
     @Override
-    public Publisher<HttpData> content() {
-        return (Publisher<HttpData>) content;
+    public StreamMessage<HttpData> content() {
+        return (StreamMessage<HttpData>) content;
     }
 
     @Override

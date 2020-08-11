@@ -33,6 +33,7 @@ package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -42,35 +43,66 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.StreamMessage;
+
 /**
  * If the completes, switch to a generated Publisher and relay its signals then on.
- *
- * @param <T> the element type of the flows
  */
-final class MultiOnCompleteResumeWith<T> implements Multi<T> {
+final class StreamMessageOnCompleteResumeWith<T> extends SimpleStreamMessage<T> {
 
     // Forked from https://github.com/oracle/helidon/blob/0325cae20e68664da0f518ea2d803b9dd211a7b5/common/reactive/src/main/java/io/helidon/common/reactive/MultiOnCompleteResumeWith.java
 
-    private final Multi<T> source;
-    private final Publisher<? extends T> fallbackPublisher;
+    private final StreamMessage<? extends T> source;
+    private final StreamMessage<? extends T> fallbackPublisher;
 
-    MultiOnCompleteResumeWith(Multi<T> source, Publisher<? extends T> fallbackPublisher) {
+    StreamMessageOnCompleteResumeWith(StreamMessage<? extends T> source,
+                                      StreamMessage<? extends T> fallbackPublisher) {
         this.source = requireNonNull(source, "source");
         this.fallbackPublisher = requireNonNull(fallbackPublisher, "fallbackPublisher");
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
+    public boolean isOpen() {
+        return source.isOpen() || fallbackPublisher.isOpen();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return source.isEmpty() && fallbackPublisher.isEmpty();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return fallbackPublisher.whenComplete();
+    }
+
+    @Override
+    void subscribe(Subscriber<? super T> subscriber, boolean notifyCancellation) {
         requireNonNull(subscriber, "subscriber");
-        source.subscribe(new OnCompleteResumeWithSubscriber<>(subscriber, fallbackPublisher));
+        source.subscribe(
+                new OnCompleteResumeWithSubscriber<>(subscriber, fallbackPublisher, notifyCancellation));
+    }
+
+    @Override
+    public void abort() {
+        source.abort();
+        fallbackPublisher.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        source.abort(cause);
+        fallbackPublisher.abort(cause);
     }
 
     static final class OnCompleteResumeWithSubscriber<T> implements Subscriber<T>, Subscription {
 
         private final Subscriber<? super T> downstream;
-        private final Publisher<? extends T> fallbackPublisher;
+        private final StreamMessage<? extends T> fallbackPublisher;
         private final AtomicLong requested;
         private final FallbackSubscriber<T> fallbackSubscriber;
+        private final boolean notifyCancellation;
 
         private long received;
 
@@ -78,11 +110,13 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
         private Subscription upstream;
 
         OnCompleteResumeWithSubscriber(Subscriber<? super T> downstream,
-                                       Publisher<? extends T> fallbackPublisher) {
+                                       StreamMessage<? extends T> fallbackPublisher,
+                                       boolean notifyCancellation) {
             this.downstream = downstream;
             this.fallbackPublisher = fallbackPublisher;
             requested = new AtomicLong();
             fallbackSubscriber = new FallbackSubscriber<>(downstream, requested);
+            this.notifyCancellation = notifyCancellation;
         }
 
         @Override
@@ -142,6 +176,9 @@ final class MultiOnCompleteResumeWith<T> implements Multi<T> {
 
         @Override
         public void cancel() {
+            if (notifyCancellation && upstream != SubscriptionHelper.CANCELLED) {
+                downstream.onError(CancelledSubscriptionException.get());
+            }
             upstream.cancel();
             SubscriptionHelper.cancel(fallbackSubscriber);
         }

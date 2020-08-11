@@ -32,11 +32,10 @@ package com.linecorp.armeria.common.multipart;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Publisher;
-
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A body part entity.
@@ -60,7 +59,7 @@ public interface BodyPart {
     /**
      * Returns the reactive representation of the part content.
      */
-    Publisher<HttpData> content();
+    StreamMessage<HttpData> content();
 
     /**
      * Returns the control name.

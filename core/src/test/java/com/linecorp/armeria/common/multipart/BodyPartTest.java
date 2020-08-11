@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.core.publisher.Flux;
 
@@ -82,9 +83,10 @@ class BodyPartTest {
 
     @Test
     void testContentFromPublisher() {
-        final BodyPart bodyPart = BodyPart.builder()
-                                          .content(Multi.just(HttpData.of(DEFAULT_CHARSET, "body part data")))
-                                          .build();
+        final BodyPart bodyPart =
+                BodyPart.builder()
+                        .content(StreamMessage.of(HttpData.of(DEFAULT_CHARSET, "body part data")))
+                        .build();
         assertThat(getContents(bodyPart)).containsExactly("body part data");
     }
 

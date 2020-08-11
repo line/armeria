@@ -33,6 +33,7 @@ package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -40,56 +41,72 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-final class MultiFilterPublisher<T> implements Multi<T> {
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessageWrapper;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+
+import io.netty.util.concurrent.EventExecutor;
+
+final class StreamMessageFilter<T> extends StreamMessageWrapper<T> {
 
     // Forked from https://github.com/oracle/helidon/blob/5005bd7ebd57f416586149679c12778c8abebac3/common/reactive/src/main/java/io/helidon/common/reactive/MultiFilterPublisher.java
 
-    private final Multi<T> source;
     private final Predicate<? super T> predicate;
 
-    MultiFilterPublisher(Multi<T> source, Predicate<? super T> predicate) {
-        this.source = requireNonNull(source, "source");
+    StreamMessageFilter(StreamMessage<? extends T> source, Predicate<? super T> predicate) {
+        super(source);
         this.predicate = requireNonNull(predicate, "predicate");
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        requireNonNull(subscriber, "subscriber");
-        source.subscribe(new FilterSubscriber<>(subscriber, predicate));
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        super.subscribe(new FilterSubscriber<>(subscriber, predicate), executor);
     }
 
-    static final class FilterSubscriber<T> implements Subscriber<T>, Subscription {
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        super.subscribe(new FilterSubscriber<>(subscriber, predicate), executor, options);
+    }
+
+    private static final class FilterSubscriber<T> implements Subscriber<T>, Subscription {
+
+        @SuppressWarnings("rawtypes")
+        private static final AtomicReferenceFieldUpdater<FilterSubscriber, Subscription> upstreamUpdater =
+                AtomicReferenceFieldUpdater.newUpdater(FilterSubscriber.class, Subscription.class, "upstream");
 
         private final Subscriber<? super T> downstream;
         private final Predicate<? super T> predicate;
 
         @Nullable
-        private Subscription upstream;
+        private volatile Subscription upstream;
 
         FilterSubscriber(Subscriber<? super T> downstream, Predicate<? super T> predicate) {
+            requireNonNull(downstream, "downstream");
             this.downstream = downstream;
             this.predicate = predicate;
         }
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            if (upstream != null) {
+            requireNonNull(subscription, "subscription");
+            if (!upstreamUpdater.compareAndSet(this, null, subscription)) {
                 subscription.cancel();
                 throw new IllegalStateException("Subscription already set!");
             }
-            upstream = requireNonNull(subscription, "subscription");
+            upstream = subscription;
             downstream.onSubscribe(this);
         }
 
         @Override
         public void onNext(T item) {
-            final Subscription s = upstream;
-            if (s != null) {
+            final Subscription upstream = this.upstream;
+            if (upstream != null) {
                 final boolean pass;
                 try {
                     pass = predicate.test(item);
                 } catch (Throwable ex) {
-                    s.cancel();
+                    upstream.cancel();
                     onError(ex);
                     return;
                 }
@@ -97,7 +114,7 @@ final class MultiFilterPublisher<T> implements Multi<T> {
                 if (pass) {
                     downstream.onNext(item);
                 } else {
-                    s.request(1L);
+                    upstream.request(1L);
                 }
             }
         }

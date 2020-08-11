@@ -47,7 +47,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A reactive {@link Multipart} that represents
@@ -85,9 +86,8 @@ public interface Multipart extends Publisher<HttpData> {
     static Multipart of(String boundary, Iterable<? extends BodyPart> parts) {
         requireNonNull(boundary, "boundary");
         requireNonNull(parts, "parts");
-        @SuppressWarnings("unchecked")
-        final Iterable<BodyPart> cast = (Iterable<BodyPart>) parts;
-        return new DefaultMultipart(boundary, Multi.from(cast));
+        final BodyPart[] bodyParts = Iterables.toArray(parts, BodyPart.class);
+        return new DefaultMultipart(boundary, StreamMessage.of(bodyParts));
     }
 
     /**
@@ -102,7 +102,7 @@ public interface Multipart extends Publisher<HttpData> {
      */
     static Multipart of(String boundary, Publisher<? extends BodyPart> parts) {
         requireNonNull(parts, "parts");
-        return new DefaultMultipart(boundary, parts);
+        return new DefaultMultipart(boundary, new PublisherBasedStreamMessage<>(parts));
     }
 
     /**
@@ -148,10 +148,9 @@ public interface Multipart extends Publisher<HttpData> {
             throw new IllegalStateException("boundary header is missing");
         }
 
-        final Multi<?> contents = Multi.from(request, SubscriptionOption.WITH_POOLED_OBJECTS)
-                                       .filter(HttpData.class::isInstance);
+        final StreamMessage<?> contents = StreamMessages.filter(request, HttpData.class::isInstance);
         @SuppressWarnings("unchecked")
-        final Multi<HttpData> cast = (Multi<HttpData>) contents;
+        final StreamMessage<HttpData> cast = (StreamMessage<HttpData>) contents;
         return from(boundary, cast);
     }
 
@@ -159,7 +158,7 @@ public interface Multipart extends Publisher<HttpData> {
      * Returns a decoded {@link Multipart} from the the specified {@code boundary} and
      * {@link Publisher} of {@link HttpData}.
      */
-    static Multipart from(String boundary, Publisher<HttpData> contents) {
+    static Multipart from(String boundary, Publisher<? extends HttpData> contents) {
         requireNonNull(boundary, "boundary");
         requireNonNull(contents, "contents");
         final MultipartDecoder decoder = new MultipartDecoder(boundary);

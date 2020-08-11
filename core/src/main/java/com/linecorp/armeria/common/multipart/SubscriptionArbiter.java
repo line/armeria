@@ -57,12 +57,9 @@ import org.reactivestreams.Subscription;
  */
 class SubscriptionArbiter extends AtomicInteger implements Subscription {
 
-    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common
-    // /reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
+    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
 
     private static final long serialVersionUID = 1163246596979976791L;
-
-    // TODO(ikhoon): Remove AtomicInteger from superclass
 
     /**
      * The current outstanding request amount.

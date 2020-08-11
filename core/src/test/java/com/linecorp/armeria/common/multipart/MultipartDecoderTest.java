@@ -36,8 +36,11 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -48,6 +51,8 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
+
+import reactor.core.publisher.Flux;
 
 /**
  * Tests {@link MultipartDecoder}.
@@ -78,9 +83,8 @@ public class MultipartDecoderTest {
         };
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
-        await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.error).isNull();
-        assertThat(testSubscriber.complete).isTrue();
+        await().forever().untilAtomic(counter, is(0));
+        testSubscriber.completionFuture.join();
     }
 
     @Test
@@ -119,8 +123,7 @@ public class MultipartDecoderTest {
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.error).isNull();
-        assertThat(testSubscriber.complete).isTrue();
+        assertThat(testSubscriber.completionFuture).isDone();
     }
 
     @Test
@@ -149,8 +152,7 @@ public class MultipartDecoderTest {
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2)).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.error).isNull();
-        assertThat(testSubscriber.complete).isTrue();
+        assertThat(testSubscriber.completionFuture).isDone();
     }
 
     @Test
@@ -200,9 +202,8 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5,
                                                   chunk6, chunk7, chunk8, chunk9, chunk10))
                 .subscribe(testSubscriber);
-        await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.error).isNull();
-        assertThat(testSubscriber.complete).isTrue();
+        await().forever().untilAtomic(counter, is(0));
+        assertThat(testSubscriber.completionFuture).isDone();
     }
 
     @Test
@@ -234,8 +235,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5))
                 .subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.error).isNull();
-        assertThat(testSubscriber.complete).isTrue();
+        assertThat(testSubscriber.completionFuture).isDone();
     }
 
     @Test
@@ -273,9 +273,8 @@ public class MultipartDecoderTest {
         };
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
-        await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.error).isNull();
-        assertThat(testSubscriber.complete).isTrue();
+        await().forever().untilAtomic(counter, is(0));
+        assertThat(testSubscriber.completionFuture).isDone();
     }
 
     @Test
@@ -323,10 +322,9 @@ public class MultipartDecoderTest {
         final BodyPartSubscriber testSubscriber =
                 new BodyPartSubscriber(SubscriberType.CANCEL_AFTER_ONE, null);
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
-        assertThat(testSubscriber.complete).isFalse();
-        assertThat(testSubscriber.error).isNotNull();
-        assertThat(testSubscriber.error.getClass()).isEqualTo(MimeParsingException.class);
-        assertThat(testSubscriber.error.getMessage()).isEqualTo("No closing MIME boundary");
+        assertThatThrownBy(testSubscriber.completionFuture::join)
+                .hasCauseInstanceOf(MimeParsingException.class)
+                .hasMessageContaining("No closing MIME boundary");
     }
 
     @Test
@@ -369,13 +367,16 @@ public class MultipartDecoderTest {
                 @Override
                 public void onComplete() {}
             });
+            await().untilAtomic(counter, is(1));
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
+
+        final BodyPartSubscriber testSubscriber =
+                new BodyPartSubscriber(SubscriberType.CANCEL_AFTER_ONE, consumer);
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4)).subscribe(testSubscriber);
         Thread.sleep(1000);
         await().untilAtomic(counter, is(1));
-        assertThat(testSubscriber.error).isNull();
-        assertThat(testSubscriber.complete).isFalse();
+
+        assertThat(testSubscriber.completionFuture).isNotDone();
     }
 
     @Test
@@ -383,10 +384,11 @@ public class MultipartDecoderTest {
         final MultipartDecoder decoder = new MultipartDecoder("boundary");
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, null);
         decoder.subscribe(testSubscriber);
-        Multi.<HttpData>error(new IllegalStateException("oops")).subscribe(decoder);
-        assertThat(testSubscriber.complete).isFalse();
-        assertThat(testSubscriber.error).isNotNull();
-        assertThat(testSubscriber.error.getMessage()).isEqualTo("oops");
+        Flux.<HttpData>error(new IllegalStateException("oops")).subscribe(decoder);
+
+        assertThatThrownBy(testSubscriber.completionFuture::join)
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("oops");
     }
 
     @Test
@@ -394,7 +396,7 @@ public class MultipartDecoderTest {
         final MultipartDecoder decoder = new MultipartDecoder("boundary");
         chunksPublisher("foo".getBytes()).subscribe(decoder);
         assertThatThrownBy(() -> chunksPublisher("bar".getBytes()).subscribe(decoder))
-                .isInstanceOf(IllegalStateException.class)
+                .hasCauseInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Subscription already set.");
     }
 
@@ -413,12 +415,14 @@ public class MultipartDecoderTest {
     static class BodyPartSubscriber implements Subscriber<BodyPart> {
 
         private final SubscriberType subscriberType;
-        private final Consumer<BodyPart> consumer;
-        private Subscription subcription;
-        private Throwable error;
-        private boolean complete;
+        private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
-        BodyPartSubscriber(SubscriberType subscriberType, Consumer<BodyPart> consumer) {
+        @Nullable
+        private final Consumer<BodyPart> consumer;
+        @Nullable
+        private Subscription subcription;
+
+        BodyPartSubscriber(SubscriberType subscriberType, @Nullable Consumer<BodyPart> consumer) {
             this.subscriberType = subscriberType;
             this.consumer = consumer;
         }
@@ -448,12 +452,12 @@ public class MultipartDecoderTest {
 
         @Override
         public void onError(Throwable ex) {
-            error = ex;
+            completionFuture.completeExceptionally(ex);
         }
 
         @Override
         public void onComplete() {
-            complete = true;
+            completionFuture.complete(null);
         }
     }
 
@@ -497,6 +501,6 @@ public class MultipartDecoderTest {
         final HttpData[] chunks = data.stream()
                                       .map(HttpData::copyOf)
                                       .toArray(HttpData[]::new);
-        return Multi.just(chunks);
+        return Flux.just(chunks);
     }
 }

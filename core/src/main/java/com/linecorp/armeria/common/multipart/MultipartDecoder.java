@@ -32,7 +32,7 @@ package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -46,10 +46,9 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.unsafe.PooledObjects;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCountUtil;
 
 /**
  * Reactive processor that decodes HTTP payload as a stream of {@link BodyPart}.
@@ -62,32 +61,35 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
             AtomicReferenceFieldUpdater.newUpdater(
                     MultipartDecoder.class, Subscription.class, "upstream");
 
-    private static final AtomicIntegerFieldUpdater<MultipartDecoder> initializedUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "initialized");
-
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<MultipartDecoder, Subscriber> downstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
                     MultipartDecoder.class, Subscriber.class, "downstream");
 
-    private final CompletableFuture<BufferedEmittingPublisher<BodyPart>> initFuture;
-    private final LinkedList<BodyPart> bodyParts;
+    private static final AtomicIntegerFieldUpdater<MultipartDecoder> initializedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "initialized");
+
+    private final CompletableFuture<StreamMessage<BodyPart>> initFuture;
+    private final ArrayDeque<BodyPart> bodyParts;
     private final MimeParser parser;
     private final ParserEventProcessor parserEventProcessor;
 
     @Nullable
-    private BufferedEmittingPublisher<BodyPart> emitter;
+    private ListenableStreamMessage<BodyPart> emitter;
     @Nullable
     private BodyPartBuilder bodyPartBuilder;
     @Nullable
     private HttpHeadersBuilder bodyPartHeaderBuilder;
     @Nullable
-    private BufferedEmittingPublisher<HttpData> bodyPartPublisher;
+    private ListenableStreamMessage<HttpData> bodyPartPublisher;
+
+    @Nullable
+    private ListenableStreamMessage<HttpData> lastDeliveredContent;
 
     // Updated only via upstreamUpdater
     @Nullable
     private volatile Subscription upstream;
-    // Set a non-null value via downstreamUpdater or directly set null
+    // Updated via downstreamUpdater
     @Nullable
     private volatile Subscriber<? super BodyPart> downstream;
     // Updated via initializedUpdater
@@ -98,13 +100,13 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
         parserEventProcessor = new ParserEventProcessor();
         parser = new MimeParser(boundary, parserEventProcessor);
         initFuture = new CompletableFuture<>();
-        bodyParts = new LinkedList<>();
+        bodyParts = new ArrayDeque<>();
     }
 
     @Override
     public void subscribe(Subscriber<? super BodyPart> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
+        if (!downstreamUpdater.compareAndSet(this, null, subscriber)) {
             subscriber.onSubscribe(SubscriptionHelper.CANCELLED);
             subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
             return;
@@ -128,54 +130,55 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
             parser.offer(chunk.byteBuf());
             parser.parse();
         } catch (MimeParsingException ex) {
-            emitter.fail(ex);
-            PooledObjects.close(chunk);
+            emitter.abort(ex);
+            chunk.close();
             upstream.cancel();
             return;
         }
 
         // submit parsed parts
         while (!bodyParts.isEmpty()) {
-            if (emitter.isCancelled()) {
+            if (!emitter.isOpen()) {
                 return;
             }
-            emitter.emit(bodyParts.poll());
+            emitter.write(bodyParts.poll());
         }
 
         // complete the parts publisher
         if (parserEventProcessor.isCompleted()) {
-            emitter.complete();
+            emitter.close();
             // parts are delivered sequentially
             // we potentially drop the last part if not requested
-            emitter.clearBuffer(MultipartDecoder::drainPart);
         }
 
         // request more data to detect the next part
         // if not in the middle of a part content
         // or if the part content subscriber needs more
         if (upstream != SubscriptionHelper.CANCELLED &&
-            emitter.hasRequests() &&
+            emitter.demand() > 0 &&
             parserEventProcessor.isDataRequired() &&
-            (!parserEventProcessor.isContentDataRequired() || bodyPartPublisher.hasRequests())) {
+            (!parserEventProcessor.isContentDataRequired() || bodyPartPublisher.demand() > 0)) {
             upstream.request(1);
         }
     }
 
     @Override
     public void onError(Throwable throwable) {
+        cleanupUnsubscribed();
         requireNonNull(throwable, "throwable");
-        initFuture.thenAccept(emitter -> emitter.fail(throwable));
+        initFuture.thenAccept(emitter -> emitter.abort(throwable));
     }
 
     @Override
     public void onComplete() {
         initFuture.whenComplete((e, t) -> {
+            cleanupUnsubscribed();
             if (upstream != SubscriptionHelper.CANCELLED) {
                 upstream = SubscriptionHelper.CANCELLED;
                 try {
                     parser.close();
                 } catch (MimeParsingException ex) {
-                    emitter.fail(ex);
+                    emitter.abort(ex);
                 }
             }
         });
@@ -185,7 +188,7 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
         final Subscriber<? super BodyPart> downstream = this.downstream;
         if (upstream != null && downstream != null) {
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
-                emitter = new BufferedEmittingPublisher<>(this::onPartRequest, MultipartDecoder::drainPart);
+                emitter = new ListenableStreamMessage<>(this::onRequest, upstream::cancel, this::onEmitPart);
                 emitter.subscribe(downstream);
                 initFuture.complete(emitter);
                 this.downstream = null;
@@ -193,7 +196,7 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
         }
     }
 
-    private void onPartRequest(long unused) {
+    private void onRequest(long unused) {
         // require more raw chunks to decode if the decoding has not
         // yet started or if more data is required to make progress
         if (!parserEventProcessor.isStarted() || parserEventProcessor.isDataRequired()) {
@@ -201,25 +204,23 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
         }
     }
 
-    private static void drainPart(BodyPart part) {
-        part.content().subscribe(new Subscriber<HttpData>() {
-            @Override
-            public void onSubscribe(Subscription subscription) {
-                requireNonNull(subscription, "subscription");
-                subscription.request(Long.MAX_VALUE);
-            }
+    private void cleanupUnsubscribed() {
+        if (lastDeliveredContent != null && !lastDeliveredContent.isSubscribed()) {
+            lastDeliveredContent.abort();
+        }
+    }
 
-            @Override
-            public void onNext(HttpData item) {
-                ReferenceCountUtil.release(item);
-            }
+    private void onEmitPart(BodyPart part) {
+        final ListenableStreamMessage<HttpData> deliveredBodyPart = lastDeliveredContent;
 
-            @Override
-            public void onError(Throwable throwable) {}
+        final StreamMessage<HttpData> content = part.content();
+        if (content instanceof ListenableStreamMessage) {
+            lastDeliveredContent = (ListenableStreamMessage<HttpData>) content;
+        }
 
-            @Override
-            public void onComplete() {}
-        });
+        if (deliveredBodyPart != null && !deliveredBodyPart.isSubscribed()) {
+            deliveredBodyPart.abort();
+        }
     }
 
     private BodyPart createPart() {
@@ -241,7 +242,8 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
             final MimeParser.EventType eventType = event.type();
             switch (eventType) {
                 case START_PART:
-                    bodyPartPublisher = new BufferedEmittingPublisher<>();
+                    bodyPartPublisher = new ListenableStreamMessage<>(MultipartDecoder.this::onRequest, null,
+                                                                      null);
                     bodyPartHeaderBuilder = HttpHeaders.builder();
                     bodyPartBuilder = BodyPart.builder();
                     break;
@@ -250,7 +252,7 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
                     bodyPartHeaderBuilder.add(headerEvent.name(), headerEvent.value());
                     break;
                 case END_HEADERS:
-                    bodyParts.add(createPart());
+                    bodyParts.offer(createPart());
                     break;
                 case CONTENT:
                     final ByteBuf content = event.asContentEvent().content();
@@ -259,10 +261,10 @@ class MultipartDecoder implements Processor<HttpData, BodyPart> {
                     if (unwrap.isReadable()) {
                         unwrap.discardSomeReadBytes();
                     }
-                    bodyPartPublisher.emit(copied);
+                    bodyPartPublisher.write(copied);
                     break;
                 case END_PART:
-                    bodyPartPublisher.complete();
+                    bodyPartPublisher.close();
                     bodyPartPublisher = null;
                     bodyPartHeaderBuilder = null;
                     bodyPartBuilder = null;
