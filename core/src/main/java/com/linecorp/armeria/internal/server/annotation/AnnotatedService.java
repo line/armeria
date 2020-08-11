@@ -99,7 +99,7 @@ public final class AnnotatedService implements HttpService {
 
     private final Object object;
     private final Method method;
-    private final Boolean isKotlinSuspendingMethod;
+    private final boolean isKotlinSuspendingMethod;
     private final List<AnnotatedValueResolver> resolvers;
 
     private final AggregationStrategy aggregationStrategy;

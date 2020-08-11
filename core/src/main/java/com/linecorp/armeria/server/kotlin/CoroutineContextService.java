@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.kotlin;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -58,13 +60,14 @@ public class CoroutineContextService extends SimpleDecoratingHttpService {
     private final CoroutineContextProvider provider;
 
     CoroutineContextService(HttpService delegate, CoroutineContextProvider provider) {
-        super(delegate);
-        this.provider = provider;
+        super(requireNonNull(delegate, "delegate"));
+        this.provider = requireNonNull(provider, "provider");
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        CoroutineContextUtil.setCoroutineContext(ctx, provider.provide(ctx));
+        CoroutineContextUtil.setCoroutineContext(ctx, requireNonNull(provider.provide(ctx),
+                                                                     "provider returned null"));
         return unwrap().serve(ctx, req);
     }
 }

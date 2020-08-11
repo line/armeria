@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.kotlin;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -42,6 +44,8 @@ public final class CoroutineContextUtil {
      * Associates the given coroutine context with {@code COROUTINE_CONTEXT_KEY} attribute in the context.
      */
     public static void setCoroutineContext(RequestContext ctx, CoroutineContext coroutineContext) {
+        requireNonNull(ctx, "ctx");
+        requireNonNull(coroutineContext, "coroutineContext");
         ctx.setAttr(COROUTINE_CONTEXT_KEY, coroutineContext);
     }
 
@@ -50,6 +54,7 @@ public final class CoroutineContextUtil {
      */
     @Nullable
     public static CoroutineContext getCoroutineContext(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
         return ctx.attr(COROUTINE_CONTEXT_KEY);
     }
 
