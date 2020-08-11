@@ -52,7 +52,7 @@ public class GrpcServiceBenchmark {
     private static final byte[] FRAMED_EMPTY;
 
     static {
-        try (HttpData data = new ArmeriaMessageFramer(ByteBufAllocator.DEFAULT, 0)
+        try (HttpData data = new ArmeriaMessageFramer(ByteBufAllocator.DEFAULT, 0, false)
                 .writePayload(Unpooled.wrappedBuffer(Empty.getDefaultInstance().toByteArray()))) {
             FRAMED_EMPTY = data.array();
         }

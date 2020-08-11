@@ -150,7 +150,7 @@ public final class ServerBuilder {
             EpollChannelOption.EPOLL_MODE);
 
     @VisibleForTesting
-    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
 
     static {

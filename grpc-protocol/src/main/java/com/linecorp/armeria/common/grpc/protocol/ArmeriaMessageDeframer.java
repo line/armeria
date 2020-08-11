@@ -56,6 +56,7 @@ import java.io.InputStream;
 import java.util.ArrayDeque;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -63,6 +64,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -83,6 +86,13 @@ import io.netty.buffer.Unpooled;
 public class ArmeriaMessageDeframer implements AutoCloseable {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
+
+    private static final CloseFuture CLOSED_FUTURE;
+
+    static {
+        CLOSED_FUTURE = new CloseFuture();
+        CLOSED_FUTURE.doComplete();
+    }
 
     private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
 
@@ -199,6 +209,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private final Listener listener;
     private final int maxMessageSizeBytes;
     private final ByteBufAllocator alloc;
+    @Nullable
+    private final Base64Decoder base64Decoder;
 
     private int currentType = UNINITIALIED_TYPE;
 
@@ -206,6 +218,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     @Nullable
     private Decompressor decompressor;
 
+    @Nullable
+    private CloseFuture whenClosed;
     private boolean endOfStream;
     private boolean closeWhenComplete;
 
@@ -222,12 +236,16 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     public ArmeriaMessageDeframer(Listener listener,
                                   int maxMessageSizeBytes,
-                                  ByteBufAllocator alloc) {
+                                  ByteBufAllocator alloc, boolean decodeBase64) {
         this.listener = requireNonNull(listener, "listener");
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
         this.alloc = requireNonNull(alloc, "alloc");
-
         unprocessed = new ArrayDeque<>();
+        if (decodeBase64) {
+            base64Decoder = new Base64Decoder(alloc);
+        } else {
+            base64Decoder = null;
+        }
     }
 
     /**
@@ -274,10 +292,15 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         final int dataLength = data.length();
         if (dataLength != 0) {
-            final ByteBuf buf = data.byteBuf();
+            final ByteBuf buf;
             assert unprocessed != null;
+            if (base64Decoder != null) {
+                buf = base64Decoder.decode(data.byteBuf());
+            } else {
+                buf = data.byteBuf();
+            }
             unprocessed.add(buf);
-            unprocessedBytes += dataLength;
+            unprocessedBytes += buf.readableBytes();
         }
 
         // Indicate that all of the data for this stream has been received.
@@ -317,6 +340,22 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 listener.endOfStream();
             }
         }
+
+        if (whenClosed == null) {
+            whenClosed = CLOSED_FUTURE;
+        } else {
+            whenClosed.doComplete();
+        }
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which will be completed when this deframer has been closed.
+     */
+    public CompletableFuture<Void> whenClosed() {
+        if (whenClosed == null) {
+            whenClosed = new CloseFuture();
+        }
+        return whenClosed;
     }
 
     /**
@@ -632,9 +671,15 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
                 throw new ArmeriaStatusException(
                         StatusCodes.RESOURCE_EXHAUSTED,
                         String.format(
-                        "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
-                        debugString, maxMessageSize, count));
+                                "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
+                                debugString, maxMessageSize, count));
             }
+        }
+    }
+
+    private static class CloseFuture extends UnmodifiableFuture<Void> {
+        private void doComplete() {
+            doComplete(null);
         }
     }
 }

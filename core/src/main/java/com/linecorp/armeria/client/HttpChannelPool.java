@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
+import com.linecorp.armeria.client.proxy.HAProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.proxy.ProxyType;
@@ -63,6 +64,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
@@ -178,6 +180,9 @@ final class HttpChannelPool implements AsyncCloseable {
                     proxyHandler = new HttpProxyHandler(proxyAddress, username, password);
                 }
                 break;
+            case HAPROXY:
+                ch.pipeline().addFirst(new HAProxyHandler((HAProxyConfig) proxyConfig));
+                return;
             default:
                 throw new Error(); // Should never reach here.
         }
@@ -531,7 +536,11 @@ final class HttpChannelPool implements AsyncCloseable {
                     }
                 });
             } else {
-                promise.completeExceptionally(UnprocessedRequestException.of(future.cause()));
+                final Throwable throwable = future.cause();
+                if (throwable instanceof ProxyConnectException) {
+                    invokeProxyConnectFailed(desiredProtocol, key, throwable);
+                }
+                promise.completeExceptionally(UnprocessedRequestException.of(throwable));
             }
         } catch (Exception e) {
             promise.completeExceptionally(UnprocessedRequestException.of(e));

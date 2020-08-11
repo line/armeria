@@ -30,12 +30,13 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ResourceLeakHint;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
  * A {@link ByteBuf}-based {@link HttpData}.
  */
-final class ByteBufHttpData implements HttpData {
+final class ByteBufHttpData implements HttpData, ResourceLeakHint {
 
     private static final int FLAG_POOLED = 1;
     private static final int FLAG_END_OF_STREAM = 2;
@@ -94,6 +95,10 @@ final class ByteBufHttpData implements HttpData {
 
     @Override
     public String toString() {
+        return toString(false);
+    }
+
+    private String toString(boolean hint) {
         final int length = buf.readableBytes();
 
         final StringBuilder strBuf = TemporaryThreadLocals.get().stringBuilder();
@@ -116,25 +121,39 @@ final class ByteBufHttpData implements HttpData {
         // Generate the preview array.
         final int previewLength = Math.min(16, length);
         byte[] array = this.array;
+        final int offset;
         if (array == null) {
             try {
-                if (buf.hasArray() && buf.arrayOffset() == 0 && buf.readerIndex() == 0) {
+                if (buf.hasArray()) {
                     array = buf.array();
-                } else {
+                    offset = buf.arrayOffset() + buf.readerIndex();
+                } else if (!hint) {
                     array = ByteBufUtil.getBytes(buf, buf.readerIndex(), previewLength);
+                    offset = 0;
                     if (previewLength == length) {
                         this.array = array;
                     }
+                } else {
+                    // Can't call getBytes() when generating the hint string
+                    // because it will also create a leak record.
+                    return strBuf.append("<unknown>}").toString();
                 }
             } catch (IllegalReferenceCountException e) {
                 // Shouldn't really happen when used ByteBuf correctly,
                 // but we just don't make toString() fail because of this.
                 return strBuf.append("badRefCnt}").toString();
             }
+        } else {
+            offset = 0;
         }
 
-        return ByteArrayHttpData.appendPreviews(strBuf, array, previewLength)
+        return ByteArrayHttpData.appendPreviews(strBuf, array, offset, previewLength)
                                 .append('}').toString();
+    }
+
+    @Override
+    public String toHintString() {
+        return toString(true);
     }
 
     @Override

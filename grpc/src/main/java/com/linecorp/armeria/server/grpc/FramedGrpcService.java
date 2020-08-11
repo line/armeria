@@ -173,9 +173,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             return HttpResponse.of(
                     (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                             ctx,
+                            defaultHeaders.get(serializationFormat).toBuilder(),
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
-                            new Metadata(),
-                            false));
+                            new Metadata()));
         }
 
         if (useClientTimeoutHeader) {
@@ -191,7 +191,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 } catch (IllegalArgumentException e) {
                     return HttpResponse.of(
                             (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
-                                    ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
+                                    ctx, defaultHeaders.get(serializationFormat).toBuilder(),
+                                    GrpcStatus.fromThrowable(e), new Metadata()));
                 }
             }
         }
@@ -205,9 +206,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-            ctx.setRequestTimeoutHandler(() -> call.close(Status.CANCELLED, new Metadata()));
+            ctx.whenRequestTimingOut().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-            req.whenComplete().handleAsync(call.messageReader(), ctx.eventLoop());
         }
         return res;
     }

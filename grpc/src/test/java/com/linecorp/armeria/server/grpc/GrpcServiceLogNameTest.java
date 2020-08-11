@@ -33,6 +33,8 @@ import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -109,5 +111,18 @@ class GrpcServiceLogNameTest {
                 return evt.getMessage().contains("POST /armeria.grpc.testing.TestService/EmptyCall h2c");
             });
         });
+    }
+
+    @Test
+    void logNameInClientSide() {
+        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
+                                                      .build(TestServiceBlockingStub.class);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.emptyCall(Empty.newBuilder().build());
+            final ClientRequestContext ctx = captor.get();
+            final RequestLog requestLog = ctx.log().whenComplete().join();
+            assertThat(requestLog.serviceName()).isEqualTo(TestServiceGrpc.SERVICE_NAME);
+            assertThat(requestLog.name()).isEqualTo("EmptyCall");
+        }
     }
 }

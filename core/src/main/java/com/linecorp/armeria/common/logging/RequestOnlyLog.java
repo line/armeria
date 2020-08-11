@@ -201,7 +201,6 @@ public interface RequestOnlyLog extends RequestLogAccess {
      * </ul>
      * This property is often used as a meter tag or distributed trace's span name.
      */
-    @Nullable
     String name();
 
     /**
@@ -209,7 +208,6 @@ public interface RequestOnlyLog extends RequestLogAccess {
      * {@link #name()} using {@code '/'}, of the {@link Request}.
      * This property is often used as a meter tag or distributed trace's span name.
      */
-    @Nullable
     String fullName();
 
     /**

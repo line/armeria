@@ -85,7 +85,7 @@ public final class ClientFactoryBuilder {
             ClientFactoryOptions.PING_INTERVAL_MILLIS.newValue(0L);
 
     @VisibleForTesting
-    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final ClientFactoryOptionValue<Long> MIN_PING_INTERVAL =
             ClientFactoryOptions.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
 

@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.PooledByteBufAllocator;
@@ -73,7 +74,7 @@ class ArmeriaServerHttpResponseTest {
                                          .secure(true)
                                          .httpOnly(true)
                                          .build());
-        assertThat(future.isDone()).isFalse();
+        assertThat(future).isNotDone();
 
         // Create HttpResponse.
         response.setComplete().subscribe();
@@ -84,7 +85,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.whenComplete().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete()).isNotDone();
 
         StepVerifier.create(httpResponse)
                     .assertNext(o -> {
@@ -124,7 +125,7 @@ class ArmeriaServerHttpResponseTest {
                                          .secure(true)
                                          .httpOnly(true)
                                          .build());
-        assertThat(future.isDone()).isFalse();
+        assertThat(future).isNotDone();
 
         final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e")
                                           .map(String::getBytes)
@@ -139,7 +140,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.whenComplete().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete()).isNotDone();
 
         StepVerifier.create(httpResponse)
                     .assertNext(o -> {
@@ -172,12 +173,37 @@ class ArmeriaServerHttpResponseTest {
     }
 
     @Test
+    void ignoreCancelledSubscriptionException() throws Exception {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.HEAD, "/"));
+
+        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+        final ArmeriaServerHttpResponse response = response(ctx, future);
+
+        response.setStatusCode(HttpStatus.OK);
+        response.getHeaders().add("Armeria", "awesome");
+        assertThat(future).isNotDone();
+
+        StepVerifier.create(Mono.defer(response::setComplete))
+                    .then(() -> {
+                        try {
+                            // throw CancelledSubscriptionException as HttpResponseSubscriber
+                            // cancels subscription for HTTP HEAD
+                            final HttpResponse httpResponse = future.get();
+                            httpResponse.whenComplete()
+                                        .completeExceptionally(CancelledSubscriptionException.get());
+                        } catch (Throwable ignored) {
+                        }
+                    })
+                    .verifyComplete();
+    }
+
+    @Test
     void controlBackpressure() throws Exception {
         final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         final ArmeriaServerHttpResponse response = response(ctx, future);
 
         response.setStatusCode(HttpStatus.OK);
-        assertThat(future.isDone()).isFalse();
+        assertThat(future).isNotDone();
 
         final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e", "f", "g")
                                           .map(String::getBytes)
@@ -192,7 +218,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.whenComplete().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete()).isNotDone();
 
         StepVerifier.create(httpResponse, 1)
                     .assertNext(o -> {
@@ -223,7 +249,7 @@ class ArmeriaServerHttpResponseTest {
         final ArmeriaServerHttpResponse response = response(ctx, future);
 
         response.setStatusCode(HttpStatus.OK);
-        assertThat(future.isDone()).isFalse();
+        assertThat(future).isNotDone();
 
         final Flux<Flux<DataBuffer>> body = Flux.just(
                 Flux.just("a", "b", "c", "d", "e").map(String::getBytes)
@@ -241,7 +267,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.whenComplete().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete()).isNotDone();
 
         StepVerifier.create(httpResponse, 1)
                     .assertNext(o -> {

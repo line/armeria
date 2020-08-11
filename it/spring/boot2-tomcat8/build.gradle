@@ -1,5 +1,5 @@
-final def SPRING_BOOT_VERSION = '2.1.15.RELEASE'
-final def SPRING_VERSION = '5.1.16.RELEASE'
+final def SPRING_BOOT_VERSION = '2.1.16.RELEASE'
+final def SPRING_VERSION = '5.1.17.RELEASE'
 final def TOMCAT_VERSION = '8.5.57'
 
 dependencies {

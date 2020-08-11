@@ -18,18 +18,34 @@ package com.linecorp.armeria.client.grpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.InputStream;
+
 import javax.annotation.Nullable;
 
+import com.google.common.io.ByteStreams;
+
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil;
+import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 
 import io.grpc.ClientInterceptor;
+import io.grpc.Decompressor;
+import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
 
 /**
  * Utilities for working with <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a>.
@@ -62,48 +78,92 @@ public final class GrpcWebUtil {
      * <pre>{@code
      * Clients.builder(grpcServerUri)
      *        .decorator(RetryingClient.newDecorator(
-     *                RetryRuleWithContent.onResponse(response -> {
+     *                RetryRuleWithContent.onResponse((ctx, response) -> {
      *                    return response.aggregate().thenApply(aggregated -> {
-     *                        HttpHeaders trailers = GrpcWebUtil.parseTrailers(aggregated.content());
+     *                        HttpHeaders trailers = GrpcWebUtil.parseTrailers(ctx, aggregated.content());
      *                        // Retry if the 'grpc-status' is not equal to 0.
      *                        return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
      *                    });
      *                })))
      *        .build(MyGrpcStub.class);
      * }</pre>
+     *
+     * @throws RequestLogAvailabilityException if the {@link RequestLogProperty#SCHEME} or
+     *                                         {@link RequestLogProperty#RESPONSE_HEADERS} is not available
+     *                                         yet from the {@link RequestLog} of the specified
+     *                                         {@link ClientRequestContext#log()}.
      */
     @Nullable
-    public static HttpHeaders parseTrailers(HttpData response) {
+    public static HttpHeaders parseTrailers(ClientRequestContext ctx, HttpData response) {
+        requireNonNull(ctx, "ctx");
         requireNonNull(response, "response");
-        final ByteBuf buf = response.byteBuf();
+        final SerializationFormat serializationFormat =
+                ctx.log().ensureAvailable(RequestLogProperty.SCHEME).scheme().serializationFormat();
 
-        HttpHeaders trailers = null;
-        while (buf.isReadable(HEADER_LENGTH)) {
-            final short type = buf.readUnsignedByte();
-            if ((type & RESERVED_MASK) != 0) {
-                // Malformed header
-                break;
-            }
+        final ByteBuf buf;
+        if (GrpcSerializationFormats.isGrpcWebText(serializationFormat)) {
+            final Base64Decoder decoder = new Base64Decoder(ctx.alloc());
+            buf = decoder.decode(response.byteBuf());
+        } else {
+            buf = response.byteBuf();
+        }
 
-            final int length = buf.readInt();
-            // 8th (MSB) bit of the 1st gRPC frame byte is:
-            // - '1' for trailers
-            // - '0' for data
-            //
-            // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
-            if (type >> 7 == 1) {
-                if ((type & 1) > 0) {
-                    // TODO(minwoox) support compressed trailer.
+        try {
+            while (buf.isReadable(HEADER_LENGTH)) {
+                final short type = buf.readUnsignedByte();
+                if ((type & RESERVED_MASK) != 0) {
+                    // Malformed header
                     break;
                 }
-                trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
-                break;
-            } else {
-                // Skip a gRPC content
-                buf.skipBytes(length);
+
+                final int length = buf.readInt();
+                // 8th (MSB) bit of the 1st gRPC frame byte is:
+                // - '1' for trailers
+                // - '0' for data
+                //
+                // See: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
+                if (type >> 7 == 1) {
+                    if ((type & 1) > 0) {
+                        // The compressed trailers.
+                        final ResponseHeaders responseHeaders = ctx.log().ensureAvailable(
+                                RequestLogProperty.RESPONSE_HEADERS).responseHeaders();
+                        final String grpcEncoding = responseHeaders.get(GrpcHeaderNames.GRPC_ENCODING);
+                        // We use DecompressorRegistry in ArmeriaClientCall. If ArmeriaClientCall
+                        // supports to add another decompressor, we will change this to support that too.
+                        final DecompressorRegistry registry = DecompressorRegistry.getDefaultInstance();
+                        if (grpcEncoding == null) {
+                            // grpc-encoding header is missing.
+                            return null;
+                        }
+                        final Decompressor decompressor = registry.lookupDecompressor(grpcEncoding);
+                        if (decompressor == null) {
+                            return null;
+                        }
+
+                        // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
+                        final ByteBuf outputBuf = ctx.alloc().compositeBuffer();
+                        try (ByteBufInputStream is = new ByteBufInputStream(buf);
+                             InputStream decompressIs = decompressor.decompress(is);
+                             ByteBufOutputStream os = new ByteBufOutputStream(outputBuf)) {
+                            ByteStreams.copy(decompressIs, os);
+                            return InternalGrpcWebUtil.parseGrpcWebTrailers(outputBuf);
+                        } catch (Throwable t) {
+                            // Swallow the exception and just return null.
+                            return null;
+                        } finally {
+                            outputBuf.release();
+                        }
+                    }
+                    return InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
+                } else {
+                    // Skip a gRPC content
+                    buf.skipBytes(length);
+                }
             }
+            return null;
+        } finally {
+            buf.release();
         }
-        return trailers;
     }
 
     private GrpcWebUtil() {}

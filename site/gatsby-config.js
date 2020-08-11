@@ -4,7 +4,7 @@ const remarkGridTablesPlugin = require('remark-grid-tables');
 
 module.exports = {
   siteMetadata: {
-    title: 'Armeria web site',
+    title: 'Armeria - Your go-to microservice framework',
     siteUrl: 'https://armeria.dev/',
     shortUrls: [
       {
@@ -136,7 +136,12 @@ module.exports = {
       },
     },
     'gatsby-plugin-sharp',
-    'gatsby-plugin-sitemap',
+    {
+      resolve: 'gatsby-plugin-sitemap',
+      options: {
+        exclude: ['/s/*'],
+      },
+    },
     'gatsby-plugin-react-helmet',
     'gatsby-plugin-typescript',
     {

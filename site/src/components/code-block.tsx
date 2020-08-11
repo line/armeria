@@ -54,7 +54,9 @@ Object.entries(supportedLanguages).forEach(([name, func]) => {
   Prism.registerLanguage(name, func);
 });
 
-function filterLanguage(language: string) {
+function filterLanguage(language?: string) {
+  // eslint-disable-next-line no-param-reassign
+  language = (language || 'none').toLowerCase();
   const isSupported = Object.prototype.hasOwnProperty.call(
     supportedLanguages,
     language,

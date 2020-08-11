@@ -86,42 +86,52 @@ class RouteTest {
         route = Route.builder().path("/foo", "/bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
+        assertThat(route.patternString()).isEqualTo("/foo/bar");
 
         route = Route.builder().path("/foo", "/bar/{baz}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/foo/bar/:", "/foo/bar/:");
+        assertThat(route.patternString()).isEqualTo("/foo/bar/:baz");
 
         route = Route.builder().path("/bar", "/baz/:qux").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/baz/:", "/bar/baz/:");
+        assertThat(route.patternString()).isEqualTo("/bar/baz/:qux");
 
         route = Route.builder().path("/foo", "exact:/:bar/baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/:bar/baz", "/foo/:bar/baz");
+        assertThat(route.patternString()).isEqualTo("/foo/:bar/baz");
 
         route = Route.builder().path("/foo", "prefix:/").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
         assertThat(route.paths()).containsExactly("/foo/", "/foo/*");
+        assertThat(route.patternString()).isEqualTo("/foo/*");
 
         route = Route.builder().path("/foo", "prefix:/bar/baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
         assertThat(route.paths()).containsExactly("/foo/bar/baz/", "/foo/bar/baz/*");
+        assertThat(route.patternString()).isEqualTo("/foo/bar/baz/*");
 
         route = Route.builder().path("/foo", "glob:/bar/baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/bar/baz", "/foo/bar/baz");
+        assertThat(route.patternString()).isEqualTo("/foo/bar/baz");
 
         route = Route.builder().path("/foo", "glob:/home/*/files/**").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
         assertThat(route.paths()).containsExactly("^/foo/home/([^/]+)/files/(.*)$", "/foo/home/*/files/**");
+        assertThat(route.patternString()).isEqualTo("/foo/home/*/files/**");
 
         route = Route.builder().path("/foo", "glob:bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
         assertThat(route.paths()).containsExactly("^/foo/(?:.+/)?bar$", "/foo/**/bar");
+        assertThat(route.patternString()).isEqualTo("/foo/**/bar");
 
         route = Route.builder().path("/foo", "regex:^/files/(?<filePath>.*)$").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX_WITH_PREFIX);
         assertThat(route.paths()).containsExactly("^/files/(?<filePath>.*)$", "/foo/");
+        assertThat(route.patternString()).isEqualTo("/foo/^/files/(?<filePath>.*)$");
     }
 
     @Test

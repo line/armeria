@@ -1,0 +1,241 @@
+---
+date: 2020-08-03
+---
+
+## 🌟 New features
+
+- You can now add multiple request timeout callbacks using the following methods: #2937 #2939
+  - <type://ClientRequestContext#whenResponseTimingOut()>
+  - <type://ClientRequestContext#whenResponseTimedOut()>
+  - <type://ServiceRequestContext#whenRequestTimingOut()>
+  - <type://ServiceRequestContext#whenRequestTimedOut()>
+- You can now specify multiple decorators with a single call when building a service binding fluently. #2889
+  ```java
+  Server.builder()
+        .route().get("/hello")
+                .decorators(firstDecorator,
+                            secondDecorator,
+                            thirdDecorator)
+                .build(helloService)
+        .build();
+  ```
+- You can now specify whether the entire annotated service methods have to run in a `blockingTaskExecutor`.
+  #2923 #2925
+  ```java
+  Server.builder()
+        .annotatedService().pathPrefix("/my_service")
+                           .useBlockingTaskExecutor(true)
+                           .build(myService);
+
+  ```
+- You can also specify the <type://@Blocking> annotation on a class. It was previously allowed only on methods.
+  #2915
+  ```java
+  @Blocking
+  public class MyBlockingAnnotatedService {
+      @Get
+      public String delayed() throws Exception {
+          Thread.sleep(1000);
+          return "slept a second";
+      }
+  }
+  ```
+- You can now bind an annotated service method to the prefix path by specifying no path. #2708 #2853
+  ```java
+  public class MyAnnotatedService {
+      @Get
+      public String withoutSlash() {
+          return "without slash";
+      }
+
+      @Get("/")
+      public String withSlash() {
+          return "with slash";
+      }
+  }
+
+  Server server =
+      Server.builder()
+            .http(8080)
+            .annotatedService("/prefix", new MyAnnotatedService())
+            .build();
+  server.start().join();
+
+  assert "without slash".equals(
+      WebClient.of().get("http://127.0.0.1:8080/prefix")
+               .aggregate().toStringUtf8());
+
+  assert "with slash".equals(
+      WebClient.of().get("http://127.0.0.1:8080/prefix/")
+               .aggregate().toStringUtf8());
+  ```
+- You can now send and receive `grpc-web-text` messages in gRPC, as well as `grpc-web+proto` and
+  `grpc-web+json`. #2938 #2955
+  ```java
+  MyGrpcServiceStub client =
+      Clients.newClient("gproto-web-text+h2c://example.com",
+                        MyGrpcServiceStub.class);
+  ```
+- You can now send a request via an HAPROXY server preserving the original source and destination addresses.
+  #2589 #2907
+  ```java
+  ClientFactory factory =
+      ClientFactory.builder()
+                   .proxyConfig(ProxyConfig.haproxy(haproxyServerAddr))
+                   .build();
+
+  WebClient client =
+      WebClient.builder()
+               .factory(factory)
+               .build();
+
+  // Send an HTTP request to example.com via an HAPROXY server,
+  // preserving the source address by using HAPROXY protocol.
+  client.get("http://example.com/").aggregate().join();
+  ```
+- You can now use different <type://ProxyConfig> for different <typeplural://Endpoint> using
+  <type://ProxyConfigSelector>. #2752
+  ```java
+  ProxyConfigSelector mySelector = (protocol, endpoint) -> {
+      // Send the requests to *.foo.com via a SOCKS5 server.
+      if (endpoint.host().endsWith(".foo.com")) {
+          return ProxyConfig.socks5(socksServerAddr);
+      }
+      // Send the requests to *.bar.com via a HAPROXY server.
+      if (endpoint.host().endsWith(".bar.com")) {
+          return ProxyConfig.haproxy(haproxyServerAddr);
+      }
+      return ProxyConfig.direct();
+  };
+
+  ClientFactory factory =
+      ClientFactory.builder()
+                   .proxyConfig(mySelector)
+                   .build();
+  ```
+- Added <type://Route#patternString()> which can be used as a simple human-readable description of
+  a <type://Route>. #2932 #2933
+- <type://HttpData> now extends `AutoCloseable` and provides various methods useful when using
+  <type://SubscriptionOption#WITH_POOLED_OBJECTS>. #2892
+  - Note that this feature is only for the advanced users who want to reduce the number of memory copies
+    in a performance-sensitive environment.
+  - See <type://PooledObjects> for more information.
+
+## 📈 Improvements
+
+- We now use the following [Google Error Prone](https://errorprone.info/) annotations which might be useful
+  if you use Error Prone already or your static analysis tool supports them: #2876 #2908
+  - `@CheckReturnValue`
+  - `@FormatMethod` and `@FormatString`
+  - `@MustBeClosed`
+- You can now specify the connection ping interval less than 10 seconds, which was previously impossible. #2944
+- Improved the load distribution of client requests by randomizing how we choose the initial event loop,
+  which may reduce the error rate in a certain situation. #2941
+- Improved the performance of <type://Endpoint#toString()>. #2906
+
+## 🛠️ Bug fixes
+
+- <type://ClientRequestContext#currentOrNull()> and <type://ServiceRequestContext#currentOrNull()> don't throw
+  an `IllegalStateException` anymore but return `null` when the current context type mismatches. #2962
+- <type://Endpoint#parse(String)> doesn't fail anymore when given with an authority with a userInfo part.
+  #2869 #2893
+- `req.serviceName` in <type://BuiltInProperties> has been renamed to `req.service_name` for the consistency
+  with other property names. #2958
+- We now handle an HTTP/2 request with a `Host` header properly, matching the behavior of HAPROXY. #2877 #2878
+- You can now send an HTTPS request via an HTTPS CONNECT proxy server (double encryption). #2887
+- Fixed the buffer leaks in the following places: 😱 #2891 #2892 #2951
+  - <type://RetryingClient>
+  - <type://CircuitBreakerClient>
+  - `DefaultDnsNameResolver`
+  - `DefaultStreamMessageDuplicator`
+- You are now disallowed to set a `:status` header when building an `HttpFile`, because it will make
+  `FileService` misbehave. #2926.
+- Fixed an `IllegalReferenceCountException` when content preview is turned on. #2905
+- gRPC-Web trailers are now compressed and decompressed properly. #2930
+- Fixed the compatibility issues with `grpc-kotlin` #2947 #2950
+- You can now use the graceful shutdown properties when integration with Spring Boot 1. #2954
+- You can now use <type://DocServiceConfigurator> when integrating with Spring Boot 2. #2960
+- <type://MetricCollectingService> now decorates all services if the `armeria.enableMetrics` property is set
+  when integrating with Spring Boot. #2873 #2898
+
+## 🏚️ Deprecations
+
+- All option constants in <type://ClientOption> and <type://ClientFactoryOption> have been moved to
+  <type://ClientOptions> and <type://ClientFactoryOptions> respectively. #2928
+- Various implementation classes have been deprecated in favor of static factory methods: #2875 #2890
+  - <type://MetricCollectingCircuitBreakerListener> → <type://CircuitBreakerListener#metricCollecting(MeterRegistry)>
+  - <type://RateLimitingThrottlingStrategy> → <type://ThrottlingStrategy#rateLimiting(double)>
+  - <type://ConnectionPoolLoggingListener> → <type://ConnectionPoolListener#logging()>
+  - <type://StickyEndpointSelectionStrategy> → <type://EndpointSelectionStrategy#sticky(ToLongFunction)>
+  - <type://TTextProtocol> → <type://TTextProtocolFactory#getProtocol(TTransport)>
+- <type://Route#meterTag()> and <type://Route#loggerName()> have been deprecated in favor of
+  <type://Route#patternString()>. #2933
+- <type://ClientRequestContext#responseTimeoutHandler()>,
+  <type://ClientRequestContext#setResponseTimeoutHandler(Runnable)>,
+  <type://ServiceRequestContext#requestTimeoutHandler()> and
+  <type://ServiceRequestContext#setRequestTimeoutHandler(Runnable)> have been deprecated in favor of
+  <type://ClientRequestContext#whenResponseTimedOut()> and
+  <type://ServiceRequestContext#whenRequestTimedOut()>. #2939
+
+## ☢️ Breaking changes
+
+- Added `final` to the various classes and methods so that a user doesn't extend them beyond the devs'
+  intention. #2927
+- `com.linecorp.armeria.common.util.NonNullByDefault` and `UnstableApi` have been moved to
+  `com.linecorp.armeria.common.annotation`. #2890
+- `KeyedCircuitBreakerMapping` and its inner class are now package-private. #2890
+  - Use the static factory methods in <type://CircuitBreakerMapping>.
+- A `Host` header isn't automatically translated into the `:authority` header anymore, so that you can preserve
+  the original headers when writing a proxy server with Armeria. #2877 #2878
+- `req.serviceName` in <type://BuiltInProperties> has been renamed to `req.service_name` for the consistency
+  with other property names. #2958
+- Various classes and methods that were previously deprecated have been removed. #2926
+- The new `Pooled*` API introduced in the previous release has been reverted due to design and performance
+  issues. #2882 #2892
+  - See <type://PooledObjects> for the new API.
+- `ClientFactoryOption.PROXY_CONFIG` has been replaced with <type://ClientFactoryOptions#PROXY_CONFIG_SELECTOR>.
+  #2752
+
+## ⛓ Dependencies
+
+- Bouncy Castle 1.65.01 → 1.66
+- Brave 5.12.3 → 5.12.4
+- Dropwizard 2.0.10 → 2.0.12, 1.3.23 → 1.3.24
+- Dropwizard Metrics 4.1.9 → 4.1.11
+- gRPC 1.30.2 → 1.31.0
+- Jackson 2.11.1 → 2.11.2
+- Jetty 9.4.30 → 9.4.31
+- Micrometer 1.5.2 → 1.5.3, 1.3.10 → 1.3.11
+- Netty 4.1.50 → 4.1.51
+  - netty-tcnative-boringssl-static 2.0.30 → 2.0.31
+- Reactor 3.3.7 → 3.3.8
+- RxJava 3.0.4 → 3.0.5
+- Spring Boot 2.3.1 → 2.3.2
+- Tomcat 9.0.36 → 9.0.37, 8.5.56 → 8.5.57
+- Shaded dependencies:
+  - completable-futures 0.3.2 → 0.3.3
+  - fastutil 8.3.1 → 8.4.0
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'adriancole',
+    'anuraaga',
+    'ghkim3221',
+    'heowc',
+    'ikhoon',
+    'imasahiro',
+    'jrhee17',
+    'KarboniteKream',
+    'kojilin',
+    'm50d',
+    'mauhiz',
+    'matsumana',
+    'minwoox',
+    'okue',
+    'smax48',
+    'tobias-',
+    'trustin',
+  ]}
+/>
