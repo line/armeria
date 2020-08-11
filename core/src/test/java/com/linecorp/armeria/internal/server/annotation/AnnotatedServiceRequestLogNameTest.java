@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -160,9 +159,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     private static class FooService {
         @Get("/ok")
-        public String foo(ServiceRequestContext ctx) {
-            // assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
-            //         .isEqualTo(FooService.class.getName());
+        public String foo() {
             return "OK";
         }
 
@@ -181,9 +178,7 @@ class AnnotatedServiceRequestLogNameTest {
 
         @ServiceName("SecuredBarService")
         @Get("/bar")
-        public String secured(ServiceRequestContext ctx) {
-            // assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
-            //         .isEqualTo("SecuredBarService");
+        public String secured() {
             return "OK";
         }
     }
