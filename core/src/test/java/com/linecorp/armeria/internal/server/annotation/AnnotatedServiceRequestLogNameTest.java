@@ -59,7 +59,7 @@ class AnnotatedServiceRequestLogNameTest {
             sb.annotatedService()
               .pathPrefix("/configured")
               .defaultServiceName("ConfiguredService")
-              .build(new BazService());
+              .build(new BarService());
 
             sb.decorator((delegate, ctx, req) -> {
                 logs.add(ctx.log());
@@ -145,13 +145,15 @@ class AnnotatedServiceRequestLogNameTest {
 
         RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("ConfiguredService");
+        assertThat(log.name()).isEqualTo("foo");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
 
         response = client.get("/configured/bar").aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("OK");
 
         log = logs.take().whenComplete().join();
-        assertThat(log.serviceName()).isEqualTo("AnnotatedBazService");
+        assertThat(log.serviceName()).isEqualTo("ConfiguredService");
+        assertThat(log.name()).isEqualTo("secured");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
     }
 
@@ -181,21 +183,6 @@ class AnnotatedServiceRequestLogNameTest {
         public String secured(ServiceRequestContext ctx) {
             // assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
             //         .isEqualTo("SecuredBarService");
-            return "OK";
-        }
-    }
-
-    private static class BazService {
-        @Get("/foo")
-        public String foo(ServiceRequestContext ctx) {
-            // assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
-            //         .isEqualTo("ConfiguredService");
-            return "OK";
-        }
-
-        @ServiceName("AnnotatedBazService")
-        @Get("/bar")
-        public String bar() {
             return "OK";
         }
     }

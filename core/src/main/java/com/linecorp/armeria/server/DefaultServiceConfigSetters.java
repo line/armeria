@@ -137,7 +137,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         if (defaultServiceName != null) {
             serviceConfigBuilder.defaultServiceName(defaultServiceName);
         } else {
-            if (annotatedService != null && annotatedService.serviceName() != null) {
+            if (annotatedService != null) {
                 serviceConfigBuilder.defaultServiceName(annotatedService.serviceName());
             }
         }

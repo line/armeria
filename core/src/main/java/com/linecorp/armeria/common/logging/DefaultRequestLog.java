@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -1062,18 +1061,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             } else if (ctx instanceof ServiceRequestContext) {
                 final ServiceConfig config = ((ServiceRequestContext) ctx).config();
                 newServiceName = config.defaultServiceName();
-                final Unwrappable innermost = getInnermostInstance(config.service());
-                if (innermost instanceof AnnotatedService) {
-                    final AnnotatedService annotatedService = (AnnotatedService) innermost;
-
-                    if (annotatedService.serviceName() != null) {
-                        newServiceName = annotatedService.serviceName();
-                    } else if (newServiceName == null) {
-                        newServiceName = annotatedService.object().getClass().getName();
-                    }
-                }
                 if (newServiceName == null) {
-                    newServiceName = innermost.getClass().getName();
+                    newServiceName = getInnermostServiceName(config.service());
                 }
                 newName = config.defaultLogName();
             }
@@ -1089,7 +1078,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
-    private static Unwrappable getInnermostInstance(HttpService service) {
+    private static String getInnermostServiceName(HttpService service) {
         Unwrappable unwrappable = service;
         while (true) {
             final Unwrappable delegate = unwrappable.unwrap();
@@ -1097,7 +1086,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 unwrappable = delegate;
                 continue;
             }
-            return delegate;
+            return delegate.getClass().getName();
         }
     }
 

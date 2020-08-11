@@ -109,8 +109,7 @@ public final class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
-    @Nullable
-    private final String serviceName;
+    private final String defaultServiceName;
 
     AnnotatedService(Object object, Method method,
                      List<AnnotatedValueResolver> resolvers,
@@ -148,9 +147,9 @@ public final class AnnotatedService implements HttpService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            this.serviceName = serviceName.value();
+            defaultServiceName = serviceName.value();
         } else {
-            this.serviceName = null;
+            defaultServiceName = object.getClass().getName();
         }
 
         this.method.setAccessible(true);
@@ -208,16 +207,15 @@ public final class AnnotatedService implements HttpService {
         }
     }
 
-    @Nullable
     public String serviceName() {
-        return serviceName;
+        return defaultServiceName;
     }
 
     public String methodName() {
         return method.getName();
     }
 
-    public Object object() {
+    Object object() {
         return object;
     }
 
