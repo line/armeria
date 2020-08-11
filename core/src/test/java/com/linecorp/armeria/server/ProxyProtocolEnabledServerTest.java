@@ -136,6 +136,8 @@ class ProxyProtocolEnabledServerTest {
 
             final BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
             assertThat(reader.readLine()).isEqualToIgnoringCase("HTTP/1.1 200 OK");
+        } finally {
+           haProxyMessage.release();
         }
     }
 
