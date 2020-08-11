@@ -109,7 +109,8 @@ public final class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
-    private final String defaultServiceName;
+    @Nullable
+    private final String serviceName;
 
     AnnotatedService(Object object, Method method,
                      List<AnnotatedValueResolver> resolvers,
@@ -118,8 +119,7 @@ public final class AnnotatedService implements HttpService {
                      Route route,
                      ResponseHeaders defaultHttpHeaders,
                      HttpHeaders defaultHttpTrailers,
-                     boolean useBlockingTaskExecutor,
-                     @Nullable String defaultServiceName) {
+                     boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -148,11 +148,9 @@ public final class AnnotatedService implements HttpService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            this.defaultServiceName = serviceName.value();
-        } else if (defaultServiceName != null) {
-            this.defaultServiceName = defaultServiceName;
+            this.serviceName = serviceName.value();
         } else {
-            this.defaultServiceName = object.getClass().getName();
+            this.serviceName = null;
         }
 
         this.method.setAccessible(true);
@@ -210,15 +208,16 @@ public final class AnnotatedService implements HttpService {
         }
     }
 
+    @Nullable
     public String serviceName() {
-        return defaultServiceName;
+        return serviceName;
     }
 
     public String methodName() {
         return method.getName();
     }
 
-    Object object() {
+    public Object object() {
         return object;
     }
 
@@ -245,8 +244,6 @@ public final class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        ctx.logBuilder().name(serviceName(), methodName());
-
         final CompletableFuture<AggregatedHttpRequest> f;
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
             f = req.aggregate();
