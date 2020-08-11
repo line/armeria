@@ -16,7 +16,7 @@
 
 @file:JvmName("CoroutineUtil")
 
-package com.linecorp.armeria.kotlin
+package com.linecorp.armeria.internal.common.kotlin
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope

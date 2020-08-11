@@ -14,9 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.kotlin;
+package com.linecorp.armeria.common.kotlin;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.kotlin.CoroutineContextService;
 
 import kotlin.coroutines.CoroutineContext;
 
