@@ -51,11 +51,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         this.service = requireNonNull(service, "service");
     }
 
-    public ServiceConfigSetters defaultLogName(String defaultLogName) {
-        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
-        return this;
-    }
-
     @Override
     public ServiceConfigBuilder requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requestTimeout.toMillis());
@@ -105,6 +100,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
         this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
         return this;
     }
 

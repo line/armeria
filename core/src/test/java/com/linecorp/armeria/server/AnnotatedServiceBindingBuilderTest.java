@@ -111,6 +111,7 @@ class AnnotatedServiceBindingBuilderTest {
         final AccessLogWriter accessLogWriter = AccessLogWriter.common();
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
         final String defaultServiceName = "TestService";
+        final String defaultLogName = "TestLog";
 
         final Server server = Server.builder()
                                     .annotatedService()
@@ -121,6 +122,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .accessLogWriter(accessLogWriter, shutdownOnStop)
                                     .verboseResponses(verboseResponse)
                                     .defaultServiceName(defaultServiceName)
+                                    .defaultLogName(defaultLogName)
                                     .build(new TestService())
                                     .build();
 
@@ -132,6 +134,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeFoo.verboseResponses()).isTrue();
         assertThat(homeFoo.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(homeFoo.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
         assertThat(homeBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(homeBar.maxRequestLength()).isEqualTo(maxRequestLength);
@@ -139,6 +142,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeBar.verboseResponses()).isTrue();
         assertThat(homeBar.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
     }
 
     @Test

@@ -59,6 +59,7 @@ class AnnotatedServiceRequestLogNameTest {
             sb.annotatedService()
               .pathPrefix("/configured")
               .defaultServiceName("ConfiguredService")
+              .defaultLogName("ConfiguredLog")
               .build(new BarService());
 
             sb.decorator((delegate, ctx, req) -> {
@@ -145,7 +146,7 @@ class AnnotatedServiceRequestLogNameTest {
 
         RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("ConfiguredService");
-        assertThat(log.name()).isEqualTo("foo");
+        assertThat(log.name()).isEqualTo("ConfiguredLog");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
 
         response = client.get("/configured/bar").aggregate().join();
@@ -153,7 +154,7 @@ class AnnotatedServiceRequestLogNameTest {
 
         log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("ConfiguredService");
-        assertThat(log.name()).isEqualTo("secured");
+        assertThat(log.name()).isEqualTo("ConfiguredLog");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
     }
 

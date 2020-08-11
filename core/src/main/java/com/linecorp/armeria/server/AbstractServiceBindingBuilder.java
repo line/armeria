@@ -22,8 +22,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -92,12 +90,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
-    /**
-     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
-     * {@link RequestLogBuilder#name(String, String)}.
-     *
-     * @param defaultLogName the default log name.
-     */
+    @Override
     public AbstractServiceBindingBuilder defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
         return this;

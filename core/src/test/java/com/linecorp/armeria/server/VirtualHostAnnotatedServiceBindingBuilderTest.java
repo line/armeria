@@ -84,6 +84,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         final AccessLogWriter accessLogWriter = AccessLogWriter.common();
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
         final String defaultServiceName = "TestService";
+        final String defaultLogName = "TestLog";
 
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), false)
                 .annotatedService()
@@ -94,6 +95,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .accessLogWriter(accessLogWriter, shutdownOnStop)
                 .verboseResponses(verboseResponse)
                 .defaultServiceName(defaultServiceName)
+                .defaultLogName(defaultLogName)
                 .build(new TestService())
                 .build(template);
 
@@ -106,6 +108,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathBar.verboseResponses()).isTrue();
         assertThat(pathBar.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(pathBar.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig pathFoo = virtualHost.serviceConfigs().get(1);
         assertThat(pathFoo.route().paths()).allMatch("/path/foo"::equals);
         assertThat(pathFoo.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
@@ -114,6 +117,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathFoo.verboseResponses()).isTrue();
         assertThat(pathFoo.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(pathFoo.defaultLogName()).isEqualTo(defaultLogName);
     }
 
     @Test
