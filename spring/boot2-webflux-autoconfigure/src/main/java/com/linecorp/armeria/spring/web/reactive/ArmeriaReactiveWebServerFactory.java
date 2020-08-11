@@ -220,7 +220,8 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         final ArmeriaWebServer armeriaWebServer = new ArmeriaWebServer(server, protocol, address, port,
                                                                        beanFactory);
         if (!isManagementPortEqualsToServerPort()) {
-            // Since this method will be called twice, need to reuse ArmeriaWebServer
+            // The management port is set to the Server in ArmeriaSpringActuatorAutoConfiguration.
+            // Since this method will be called twice, need to reuse ArmeriaWebServer.
             beanFactory.registerSingleton("armeriaWebServer", armeriaWebServer);
         }
 
