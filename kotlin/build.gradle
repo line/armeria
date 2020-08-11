@@ -1,0 +1,9 @@
+apply plugin: 'kotlin'
+
+dependencies {
+    implementation project(':core')
+
+    // kotlin
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8"
+    implementation "org.jetbrains.kotlin:kotlin-reflect"
+}

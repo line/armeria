@@ -86,7 +86,6 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
-import kotlin.coroutines.Continuation;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
@@ -177,7 +176,7 @@ final class AnnotatedValueResolver {
                                                    boolean isServiceMethod) {
         final ImmutableList<Parameter> parameters =
                 Arrays.stream(constructorOrMethod.getParameters())
-                      .filter(it -> !Continuation.class.isAssignableFrom(it.getType()))
+                      .filter(it -> !KotlinUtil.isContinuation(it.getType()))
                       .collect(toImmutableList());
         if (parameters.isEmpty()) {
             throw new NoParameterException(constructorOrMethod.toGenericString());

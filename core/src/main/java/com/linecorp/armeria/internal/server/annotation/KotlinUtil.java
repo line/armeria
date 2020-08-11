@@ -17,12 +17,17 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import kotlin.reflect.jvm.ReflectJvmMapping;
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.RequestContext;
 
 @SuppressWarnings("unchecked")
 final class KotlinUtil {
@@ -32,19 +37,64 @@ final class KotlinUtil {
     @Nullable
     private static Class<? extends Annotation> metadataClass;
 
+    @Nullable
+    private static MethodHandle callKotlinSuspendingMethod;
+
+    @Nullable
+    private static Method isSuspendingFunction;
+
+    @Nullable
+    private static Method isContinuation;
+
+    @Nullable
+    private static Method isReturnTypeUnit;
+
     static {
         try {
-            Class.forName("kotlin.reflect.full.KClasses", false, KotlinUtil.class.getClassLoader());
+            final Class<?> coroutineUtilClass =
+                    getClass("com.linecorp.armeria.internal.common.kotlin.CoroutineUtil");
+
+            callKotlinSuspendingMethod = MethodHandles.lookup().findStatic(
+                    coroutineUtilClass, "callKotlinSuspendingMethod",
+                    MethodType.methodType(
+                            CompletableFuture.class,
+                            ImmutableList.of(Method.class, Object.class, Object[].class, RequestContext.class))
+            );
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+            // ignore
+        }
+
+        try {
+            final Class<?> kotlinUtilClass =
+                    getClass("com.linecorp.armeria.internal.common.kotlin.KotlinUtil");
+
+            isContinuation = kotlinUtilClass.getMethod("isContinuation", Class.class);
+            isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
+            isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            // ignore
+        }
+
+        try {
+            getClass("kotlin.reflect.full.KClasses");
             isKotlinReflectionPresent = true;
         } catch (ClassNotFoundException e) {
             // ignore
         }
+
         try {
-            metadataClass = (Class<? extends Annotation>) Class.forName("kotlin.Metadata", false,
-                                                                        KotlinUtil.class.getClassLoader());
+            metadataClass = (Class<? extends Annotation>) getClass("kotlin.Metadata");
         } catch (ClassNotFoundException e) {
             // ignore
         }
+    }
+
+    /**
+     * Returns a method which invokes Kotlin suspending functions.
+     */
+    @Nullable
+    static MethodHandle getCallKotlinSuspendingMethod() {
+        return callKotlinSuspendingMethod;
     }
 
     /**
@@ -59,23 +109,45 @@ final class KotlinUtil {
      * Returns true if a method is a suspending function.
      */
     static boolean isSuspendingFunction(Method method) {
-        return isKotlinMethod(method) &&
-               isKotlinReflectionPresent &&
-               ReflectJvmMapping.getKotlinFunction(method).isSuspend();
+        try {
+            return isKotlinMethod(method) &&
+                   isKotlinReflectionPresent &&
+                   isSuspendingFunction != null &&
+                   (Boolean) isSuspendingFunction.invoke(null, method);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns true if a class is kotlin.coroutines.Continuation.
+     */
+    static boolean isContinuation(Class<?> type) {
+        try {
+            return isContinuation != null &&
+                   (boolean) isContinuation.invoke(null, type);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
      * Returns true if a method is suspending function and it returns kotlin.Unit.
      */
     static boolean isSuspendingAndReturnTypeUnit(Method method) {
-        if (!isSuspendingFunction(method)) {
+        try {
+            return isSuspendingFunction(method) &&
+                   isReturnTypeUnit != null &&
+                   (boolean) isReturnTypeUnit.invoke(null, method);
+        } catch (Exception e) {
             return false;
         }
-        final Type returnType = ReflectJvmMapping.getJavaType(
-                ReflectJvmMapping.getKotlinFunction(method).getReturnType()
-        );
-        return "kotlin.Unit".equals(returnType.getTypeName());
     }
 
-    private KotlinUtil() {}
+    private static Class<?> getClass(String name) throws ClassNotFoundException {
+        return Class.forName(name, true, KotlinUtil.class.getClassLoader());
+    }
+
+    private KotlinUtil() {
+    }
 }

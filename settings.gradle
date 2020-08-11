@@ -16,6 +16,7 @@ includeWithFlags ':jetty9',                              'java', 'publish', 'rel
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
+includeWithFlags ':kotlin',                              'java', 'publish', 'relocate'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                           'java', 'publish', 'relocate'
 includeWithFlags ':rxjava2',                             'java', 'publish', 'relocate'

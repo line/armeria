@@ -18,12 +18,13 @@
 
 package com.linecorp.armeria.internal.common.kotlin
 
+import com.linecorp.armeria.common.RequestContext
+import com.linecorp.armeria.common.kotlin.CoroutineContextUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.future.future
 import java.lang.reflect.Method
 import java.util.concurrent.CompletableFuture
-import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.jvm.kotlinFunction
@@ -31,14 +32,15 @@ import kotlin.reflect.jvm.kotlinFunction
 /**
  * Invokes a suspending function and returns [CompletableFuture].
  */
-internal fun invokeSuspendingFunction(
+fun callKotlinSuspendingMethod(
     method: Method,
     obj: Any,
     args: Array<Any>,
-    context: CoroutineContext? = null
+    ctx: RequestContext
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not suspending function" }
-    val newContext = Dispatchers.Unconfined + (context ?: EmptyCoroutineContext)
+    val coroutineContext = CoroutineContextUtil.getCoroutineContext(ctx)
+    val newContext = Dispatchers.Unconfined + (coroutineContext ?: EmptyCoroutineContext)
     return GlobalScope.future(newContext) {
         kFunction
             .callSuspend(obj, *args)

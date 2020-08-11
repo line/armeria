@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -54,10 +55,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.kotlin.CoroutineContextUtil;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.kotlin.CoroutineUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpResponseException;
@@ -99,6 +98,8 @@ public final class AnnotatedService implements HttpService {
 
     private final Object object;
     private final Method method;
+    @Nullable
+    private final MethodHandle callKotlinSuspendingMethod;
     private final boolean isKotlinSuspendingMethod;
     private final List<AnnotatedValueResolver> resolvers;
 
@@ -147,6 +148,7 @@ public final class AnnotatedService implements HttpService {
         } else {
             responseType = ResponseType.OTHER_OBJECTS;
         }
+        callKotlinSuspendingMethod = KotlinUtil.getCallKotlinSuspendingMethod();
 
         ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
         if (serviceName == null) {
@@ -307,10 +309,8 @@ public final class AnnotatedService implements HttpService {
             final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
-                return CoroutineUtil.invokeSuspendingFunction(
-                        method, object, arguments,
-                        CoroutineContextUtil.getCoroutineContext(ctx)
-                );
+                assert callKotlinSuspendingMethod != null;
+                return callKotlinSuspendingMethod.invoke(method, object, arguments, ctx);
             } else {
                 return method.invoke(object, arguments);
             }
