@@ -30,13 +30,14 @@ import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.server.Server;
 
 /**
- * Builds a new {@link ConsulUpdatingListener}, which registers the server to a Consul cluster.
- * <h2>Examples</h2>
+ * Builds a new {@link ConsulUpdatingListener}, which registers the server to Consul cluster.
+ * <h3>Examples</h3>
  * <pre>{@code
- * ConsulUpdatingListener listener =
- *     ConsulUpdatingListener.builder("myService").consulUri("http://myConsulHost:8500").build();
- * ServerBuilder sb = Server.builder();
- * sb.addListener(listener);
+ * ConsulUpdatingListener listener = ConsulUpdatingListener.builder("myService")
+ *                                                         .consulUri("http://myConsulHost:8500")
+ *                                                         .build();
+ * Server.builder()
+ *       .addListener(listener);
  * }</pre>
  */
 public final class ConsulUpdatingListenerBuilder {
@@ -68,10 +69,10 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the specified Consul's URL.
+     * Sets the specified Consul's URI.
      * If not set, {@code "http://127.0.0.1:8500/v1"} is used by default.
      *
-     * @param consulUri the URL of consul agent, e.g.: http://127.0.0.1:8500
+     * @param consulUri the URI of Consul agent, e.g.: http://127.0.0.1:8500
      */
     public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
         this.consulUri = requireNonNull(consulUri, "consulUri");
@@ -82,7 +83,7 @@ public final class ConsulUpdatingListenerBuilder {
      * Sets the specified Consul's URI.
      * If not set, {@code "http://127.0.0.1:8500/v1"} is used by default.
      *
-     * @param consulUri the URI of consul agent, e.g.: http://127.0.0.1:8500
+     * @param consulUri the URI of Consul agent, e.g.: http://127.0.0.1:8500
      */
     public ConsulUpdatingListenerBuilder consulUri(String consulUri) {
         requireNonNull(consulUri, "consulUri");
@@ -92,7 +93,7 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets URL for checking health by consul agent.
+     * Sets URI for checking health by Consul agent.
      *
      * @param checkUri the URI for checking health of service
      */
@@ -102,7 +103,7 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets URL for checking health by consul agent.
+     * Sets URI for checking health by Consul agent.
      *
      * @param checkUri the URI for checking health of service
      */
@@ -113,7 +114,7 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets HTTP method for checking health by consul agent.
+     * Sets HTTP method for checking health by Consul agent.
      *
      * <p>Note that the {@code checkMethod} should be configured with {@link #checkUri(String)}.
      * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.

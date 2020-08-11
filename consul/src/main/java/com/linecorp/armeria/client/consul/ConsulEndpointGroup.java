@@ -35,8 +35,8 @@ import com.linecorp.armeria.internal.consul.ConsulClient;
 import io.netty.channel.EventLoop;
 
 /**
- * A Consul-based {@link EndpointGroup} implementation that retrieves the list of
- * {@link Endpoint}s from Consul using <a href="https://www.consul.io/api">Consul's RESTful HTTP API</a> and
+ * A Consul-based {@link EndpointGroup} implementation that retrieves the list of {@link Endpoint}s
+ * from Consul using <a href="https://www.consul.io/api">Consul's RESTful HTTP API</a> and
  * updates the {@link Endpoint}s periodically.
  */
 public final class ConsulEndpointGroup extends DynamicEndpointGroup {
@@ -46,7 +46,7 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
     /**
      * Returns a {@link ConsulEndpointGroup} with the specified {@code serviceName}.
      * The returned {@link ConsulEndpointGroup} will retrieve the list of {@link Endpoint}s from
-     * a local Consul agent(using default consul service port).
+     * a local Consul agent(using default Consul service port).
      */
     public static ConsulEndpointGroup of(String serviceName) {
         return builder(serviceName).build();
@@ -70,7 +70,7 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
     /**
      * Creates a Consul-based {@link EndpointGroup}, endpoints will be retrieved by service name using
      * {@code ConsulClient}.
-     * @param consulClient the consul client
+     * @param consulClient the Consul client
      * @param serviceName the service name to retrieve
      * @param intervalMillis the health check interval on milliseconds to check
      * @param useHealthyEndpoints whether to use healthy endpoints

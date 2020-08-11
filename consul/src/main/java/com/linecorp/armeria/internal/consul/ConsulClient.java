@@ -33,7 +33,7 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * The Consul Client for accessing to consul agent API server.
+ * A client for accessing to Consul agent API server.
  */
 public final class ConsulClient {
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -61,7 +61,7 @@ public final class ConsulClient {
     }
 
     /**
-     * Returns an {@link ObjectMapper} that is used to encode and decode consul requests and responses.
+     * Returns an {@link ObjectMapper} that is used to encode and decode Consul requests and responses.
      */
     public ObjectMapper getObjectMapper() {
         return objectMapper;
@@ -92,28 +92,28 @@ public final class ConsulClient {
     }
 
     /**
-     * Get registered endpoints with service name from consul agent.
+     * Get registered endpoints with service name from Consul agent.
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
         return CatalogClient.of(this).endpoints(serviceName);
     }
 
     /**
-     * Returns the registered endpoints with the specified service name from consul agent.
+     * Returns the registered endpoints with the specified service name from Consul agent.
      */
     public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
         return healthClient.healthyEndpoints(serviceName);
     }
 
     /**
-     * Returns a {@code WebClient} for accessing to consul server.
+     * Returns a {@code WebClient} for accessing to Consul server.
      */
     public WebClient consulWebClient() {
         return webClient;
     }
 
     /**
-     * Returns the {@link URI} of consul agent.
+     * Returns the {@link URI} of Consul agent.
      */
     public URI uri() {
         return webClient.uri();

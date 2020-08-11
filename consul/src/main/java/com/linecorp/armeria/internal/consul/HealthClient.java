@@ -38,8 +38,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
 
 /**
- * A {@code HealthClient} that is responsible for the <a href="https://www.consul.io/api/health.html">
- * healthy endpoint of Consul API</a>.
+ * A Consul client that is responsible for
+ * <a href="https://www.consul.io/api/health.html">Health Endpoint API</a>.
  */
 final class HealthClient {
 

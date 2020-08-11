@@ -33,20 +33,11 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * Consul API client to register, deregister service and get list of services.
- * {@code AgentServiceClient} is responsible for endpoint of Consul API:
- * {@code `/agent/service`}(https://www.consul.io/api/agent/service.html)
- *
- * <p>GET /agent/services
- * GET /agent/service/:service_id
- * PUT /agent/service/register
- * PUT /agent/service/deregister/:service_id
+ * A Consul client that is responsible for
+ * <a href="https://www.consul.io/api/agent/service.html">Agent HTTP API</a>.
  */
 final class AgentServiceClient {
 
-    /**
-     * Builds an AgentServiceClient with a ConsulClient.
-     */
     static AgentServiceClient of(ConsulClient consulClient) {
         return new AgentServiceClient(consulClient);
     }
@@ -60,7 +51,7 @@ final class AgentServiceClient {
     }
 
     /**
-     * Registers a service into the consul agent.
+     * Registers a service into the Consul agent.
      */
     HttpResponse register(String serviceId, String serviceName, String address, int port,
                           @Nullable Check check) {
@@ -83,7 +74,7 @@ final class AgentServiceClient {
     }
 
     /**
-     * De-registers a service from the consul agent.
+     * De-registers a service from the Consul agent.
      */
     HttpResponse deregister(String serviceId) {
         requireNonNull(serviceId, "serviceId");

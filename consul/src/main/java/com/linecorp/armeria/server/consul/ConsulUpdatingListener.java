@@ -46,7 +46,7 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(ConsulUpdatingListener.class);
 
     /**
-     * Returns a {@link ConsulUpdatingListener} which registers the {@link Server} into Consul.
+     * Returns a newly-created {@link ConsulUpdatingListener} which registers the {@link Server} into Consul.
      *
      * <p>If you need a fully customized {@link ConsulUpdatingListener} instance, use
      * {@link #builder()} or {@link #builder(String)} instead.
@@ -59,7 +59,7 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
     }
 
     /**
-     * Returns a {@link ConsulUpdatingListener} which registers the {@link Server} into Consul.
+     * Returns a newly-created {@link ConsulUpdatingListener} which registers the {@link Server} into Consul.
      *
      * <p>If you need a fully customized {@link ConsulUpdatingListener} instance, use
      * {@link #builder()} or {@link #builder(String)} instead.

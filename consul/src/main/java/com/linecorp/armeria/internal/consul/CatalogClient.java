@@ -39,18 +39,14 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * Consul's catalog API client to registers a service, to deregisters a service and to gets list of services.
- * {@code CatalogClient} is responsible for endpoint of Consul API:
- * {@code `/catalog`}(https://www.consul.io/api/catalog.html)
+ * A Consul client that is responsible for
+ * <a href="https://www.consul.io/api/catalog.html">Catalog HTTP API</a>.
  */
 public final class CatalogClient {
 
     private static final CollectionType collectionTypeForNode =
             TypeFactory.defaultInstance().constructCollectionType(List.class, Node.class);
 
-    /**
-     * Builds CatalogClient with a ConsulClient.
-     */
     static CatalogClient of(ConsulClient consulClient) {
         return new CatalogClient(consulClient);
     }

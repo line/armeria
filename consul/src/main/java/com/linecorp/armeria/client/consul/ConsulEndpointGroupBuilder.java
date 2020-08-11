@@ -29,7 +29,7 @@ import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
 /**
- * Builder class for {@link ConsulEndpointGroup}. It helps to build {@link ConsulEndpointGroup}.
+ * A builder class for {@link ConsulEndpointGroup}.
  */
 public final class ConsulEndpointGroupBuilder {
 
@@ -47,9 +47,6 @@ public final class ConsulEndpointGroupBuilder {
 
     private boolean useHealthyEndpoints;
 
-    /**
-     * Constructor of {@link ConsulEndpointGroupBuilder}.
-     */
     ConsulEndpointGroupBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
     }
@@ -103,7 +100,7 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Sets whether to use <a href="https://www.consul.io/api/health.html">Health HTTP endpoint</a>
+     * Sets whether to use <a href="https://www.consul.io/api/health.html">Health HTTP endpoint</a>.
      * Before enabling this feature, make sure that your target endpoints are health-checked by Consul.
      *
      * @see ConsulUpdatingListenerBuilder#checkUri(URI)
