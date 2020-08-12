@@ -27,9 +27,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
 
 import io.netty.channel.Channel;
@@ -43,7 +40,6 @@ import io.netty.handler.proxy.ProxyConnectionEvent;
 import io.netty.util.NetUtil;
 
 final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(HAProxyHandler.class);
 
     private final HAProxyConfig haProxyConfig;
     private static final String PROTOCOL = "haproxy";
