@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.ResponseHeaders
-import com.linecorp.armeria.internal.common.RequestContextUtil
 import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.annotation.Delete
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
@@ -37,22 +36,20 @@ import com.linecorp.armeria.server.annotation.ProducesJson
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
 import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ThreadContextElement
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.slf4j.LoggerFactory
-import kotlin.coroutines.AbstractCoroutineContextElement
-import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 
 class SuspendingAnnotatedServiceTest {
 
     @Test
-    fun test_default() {
+    fun test_response_compatible() {
         get("/default/string").let {
             assertThat(it.status().code()).isEqualTo(200)
             assertThat(it.contentUtf8()).isEqualTo("OK")
@@ -88,15 +85,15 @@ class SuspendingAnnotatedServiceTest {
     }
 
     @Test
-    fun test_coroutineContext() {
-        val result = get("/kotlinDispatcher/foo")
+    fun test_coroutineDispatcher_contextAware_byDefault() {
+        val result = get("/default/context")
         assertThat(result.status().code()).isEqualTo(200)
         assertThat(result.contentUtf8()).isEqualTo("OK")
     }
 
     @Test
-    fun test_coroutineContext_dispatchEventLoop() {
-        val result = get("/armeriaDispatcher/bar")
+    fun test_coroutineDispatcher_userSpecified() {
+        val result = get("/customContext/foo")
         assertThat(result.status().code()).isEqualTo(200)
         assertThat(result.contentUtf8()).isEqualTo("OK")
     }
@@ -160,37 +157,27 @@ class SuspendingAnnotatedServiceTest {
                         suspend fun noContent() {
                             RequestContext.current<ServiceRequestContext>()
                         }
-                    })
-                    .annotatedService("/kotlinDispatcher", object {
-                        @Get("/foo")
-                        suspend fun foo(): String {
-                            RequestContext.current<ServiceRequestContext>()
-                            withContext(Dispatchers.IO) {
-                                RequestContext.current<ServiceRequestContext>()
-                                withContext(Dispatchers.Default) {
-                                    RequestContext.current<ServiceRequestContext>()
-                                }
-                            }
-                            RequestContext.current<ServiceRequestContext>()
-                            return "OK"
-                        }
-                    })
-                    .decoratorUnder("/kotlinDispatcher", CoroutineContextService.newDecorator { ctx ->
-                        ArmeriaRequestContext(ctx) + Dispatchers.Default
-                    })
-                    .annotatedService("/armeriaDispatcher", object {
-                        @Get("/bar")
+
+                        @Get("/context")
                         suspend fun bar(): String {
                             assertInEventLoop()
-                            withContext(Dispatchers.IO) {
-                                delay(50)
+                            withContext(Dispatchers.Default) {
+                                delay(1)
                             }
                             assertInEventLoop()
                             return "OK"
                         }
                     })
-                    .decoratorUnder("/armeriaDispatcher", CoroutineContextService.newDecorator { ctx ->
-                        ctx.eventLoop().asCoroutineDispatcher()
+                    .annotatedService("/customContext", object {
+                        @Get("/foo")
+                        suspend fun foo(): String {
+                            assertThat(RequestContext.currentOrNull<ServiceRequestContext>()).isNull()
+                            assertThat(coroutineContext[CoroutineName]?.name).isEqualTo("test")
+                            return "OK"
+                        }
+                    })
+                    .decoratorUnder("/customContext", CoroutineContextService.newDecorator { ctx ->
+                        Dispatchers.Default + CoroutineName("test")
                     })
                     .annotatedService("/blocking", object {
                         @Blocking
@@ -233,27 +220,5 @@ class SuspendingAnnotatedServiceTest {
         }
 
         private data class MyResponse(val a: String, val b: Int)
-    }
-}
-
-/**
- * Propagates [ServiceRequestContext] over coroutines.
- */
-class ArmeriaRequestContext(
-    private val requestContext: ServiceRequestContext?
-) : ThreadContextElement<ServiceRequestContext?>, AbstractCoroutineContextElement(Key) {
-
-    companion object Key : CoroutineContext.Key<ArmeriaRequestContext>
-
-    override fun updateThreadContext(context: CoroutineContext): ServiceRequestContext? {
-        if (requestContext == null) return null
-
-        return RequestContextUtil.getAndSet(requestContext)
-    }
-
-    override fun restoreThreadContext(context: CoroutineContext, oldState: ServiceRequestContext?) {
-        if (oldState != null) {
-            RequestContextUtil.getAndSet<ServiceRequestContext>(oldState)
-        }
     }
 }

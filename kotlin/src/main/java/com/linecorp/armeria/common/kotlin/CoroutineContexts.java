@@ -59,6 +59,5 @@ public final class CoroutineContexts {
         return ctx.attr(COROUTINE_CONTEXT_KEY);
     }
 
-    private CoroutineContexts() {
-    }
+    private CoroutineContexts() {}
 }

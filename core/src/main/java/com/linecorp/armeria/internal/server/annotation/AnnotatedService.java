@@ -310,7 +310,10 @@ public final class AnnotatedService implements HttpService {
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
-                return callKotlinSuspendingMethod.invoke(method, object, arguments, ctx);
+                return callKotlinSuspendingMethod.invoke(
+                        method, object, arguments,
+                        useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
+                        ctx);
             } else {
                 return method.invoke(object, arguments);
             }

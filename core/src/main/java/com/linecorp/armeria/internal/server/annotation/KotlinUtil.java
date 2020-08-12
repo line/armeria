@@ -22,6 +22,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nullable;
 
@@ -58,7 +59,9 @@ final class KotlinUtil {
                     coroutineUtilClass, "callKotlinSuspendingMethod",
                     MethodType.methodType(
                             CompletableFuture.class,
-                            ImmutableList.of(Method.class, Object.class, Object[].class, RequestContext.class))
+                            ImmutableList.of(Method.class, Object.class,
+                                             Object[].class, ExecutorService.class,
+                                             RequestContext.class))
             );
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
             // ignore

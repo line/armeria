@@ -20,11 +20,12 @@ package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.future.future
 import java.lang.reflect.Method
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutorService
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.jvm.kotlinFunction
@@ -36,11 +37,12 @@ fun callKotlinSuspendingMethod(
     method: Method,
     obj: Any,
     args: Array<Any>,
+    executorService: ExecutorService,
     ctx: RequestContext
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not a suspending function" }
-    val coroutineContext = CoroutineContexts.getCoroutineContext(ctx)
-    val newContext = Dispatchers.Unconfined + (coroutineContext ?: EmptyCoroutineContext)
+    val coroutineContext = CoroutineContexts.getCoroutineContext(ctx) ?: EmptyCoroutineContext
+    val newContext = executorService.asCoroutineDispatcher() + coroutineContext
     return GlobalScope.future(newContext) {
         kFunction
             .callSuspend(obj, *args)
