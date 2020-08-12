@@ -18,7 +18,6 @@ package com.linecorp.armeria.spring.web.reactive;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.function.Consumer;
 
@@ -437,11 +436,11 @@ class ArmeriaReactiveWebServerFactoryTest {
             "65536",
     })
     void isManagementPortEqualsToServerPortThrows(String managementPort) {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThatThrownBy(() -> {
             final ArmeriaReactiveWebServerFactory factory = new ArmeriaReactiveWebServerFactory(
                     beanFactory, new MockEnvironment().withProperty("management.server.port", managementPort));
             factory.isManagementPortEqualsToServerPort();
-        });
+        }).isInstanceOf(IllegalArgumentException.class);
     }
 
     @SpringBootApplication
@@ -497,7 +496,7 @@ class ArmeriaReactiveWebServerFactoryTest {
         }
 
         @Test
-        void testManagementPort() {
+        void testManagementPort() throws JsonProcessingException {
             final WebClient client = WebClient.builder("http://127.0.0.1:" + MANAGEMENT_PORT)
                                               .factory(clientFactory)
                                               .build();
@@ -506,19 +505,15 @@ class ArmeriaReactiveWebServerFactoryTest {
                                                      .join();
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
 
-            try {
-                final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-                assertThat(actualJson.path("services")
-                                     .path(0)
-                                     .path("methods")
-                                     .path(0)
-                                     .path("examplePaths")
-                                     .path(0)
-                                     .textValue())
-                        .isEqualTo("/hello/foo");
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+            assertThat(actualJson.path("services")
+                                 .path(0)
+                                 .path("methods")
+                                 .path(0)
+                                 .path("examplePaths")
+                                 .path(0)
+                                 .textValue())
+                    .isEqualTo("/hello/foo");
         }
     }
 }
