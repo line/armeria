@@ -20,6 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+
 /**
  * Test for {@link ClientBuilder}.
  */
@@ -49,5 +52,12 @@ class ClientBuilderTest {
         final WebClient client = Clients.builder("http", Endpoint.of("127.0.0.1"), "/foo")
                                         .build(WebClient.class);
         assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/foo");
+    }
+
+    @Test
+    void leak() {
+        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(100);
+        byteBuf.writeByte(0);
+        assertThat(byteBuf.isReadable()).isTrue();
     }
 }

@@ -33,10 +33,21 @@ if (javaTestHome) {
 def hasLeak = new AtomicBoolean()
 gradle.buildFinished({ result ->
     if (hasLeak.get()) {
-        throw new TestExecutionException('Found a leak while testing. ' +
-                "Specify '-Pleak' option to record the detail and " +
-                'find it using the following command: \n\n' +
-                "    find . -type f -name 'TEST-*.xml' -exec grep -Fl 'LEAK: ' {} ';'\n")
+        if ("True".equals(System.getenv('CI'))) {
+            println('Found a leak while testing. ')
+            def proc = "find . -type f -name 'TEST-*.xml' -exec grep -Fl 'LEAK: ' {} ';'".execute()
+            proc.waitFor()
+            if (proc.exitValue() != 0) {
+                throw new IOException(
+                        "'${command}' exited with a non-zero exit code: ${proc.exitValue()}:" +
+                                "${System.lineSeparator()}${proc.err.text}")
+            }
+        } else {
+            throw new TestExecutionException('Found a leak while testing. ' +
+                    "Specify '-Pleak' option to record the detail and " +
+                    'find it using the following command: \n\n' +
+                    "    find . -type f -name 'TEST-*.xml' -exec grep -Fl 'LEAK: ' {} ';'\n")
+        }
     }
 })
 
