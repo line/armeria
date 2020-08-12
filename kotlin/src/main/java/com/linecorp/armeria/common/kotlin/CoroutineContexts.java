@@ -32,14 +32,14 @@ import kotlin.coroutines.CoroutineContext;
  *
  * @see CoroutineContextService
  */
-public final class CoroutineContextUtil {
+public final class CoroutineContexts {
 
     /**
      * {@link AnnotatedService} uses a coroutine context associated with this attribute
      * when calling suspending functions.
      */
-    public static final AttributeKey<CoroutineContext> COROUTINE_CONTEXT_KEY =
-            AttributeKey.valueOf(CoroutineContextUtil.class, "COROUTINE_CONTEXT_KEY");
+    private static final AttributeKey<CoroutineContext> COROUTINE_CONTEXT_KEY =
+            AttributeKey.valueOf(CoroutineContexts.class, "COROUTINE_CONTEXT_KEY");
 
     /**
      * Associates the given coroutine context with {@code COROUTINE_CONTEXT_KEY} attribute in the context.
@@ -59,5 +59,6 @@ public final class CoroutineContextUtil {
         return ctx.attr(COROUTINE_CONTEXT_KEY);
     }
 
-    private CoroutineContextUtil() {}
+    private CoroutineContexts() {
+    }
 }

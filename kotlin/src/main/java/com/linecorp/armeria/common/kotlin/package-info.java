@@ -15,7 +15,7 @@
  */
 
 /**
- * Various classes used internally. Anything in this package can be changed or removed at any time.
+ * Kotlin-related common classes.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.kotlin;
