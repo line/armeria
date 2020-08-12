@@ -33,7 +33,7 @@ if (javaTestHome) {
 def hasLeak = new AtomicBoolean()
 gradle.buildFinished({ result ->
     if (hasLeak.get()) {
-        if ("True".equals(System.getenv('CI'))) {
+        if ("true".equals(System.getenv('CI'))) {
             println('Found a leak while testing. ')
             def proc = "find . -type f -name 'TEST-*.xml' -exec grep -Fl 'LEAK: ' {} ';'".execute()
             proc.waitFor()
