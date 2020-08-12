@@ -122,6 +122,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 class GrpcClientTest {
@@ -1587,5 +1588,21 @@ class GrpcClientTest {
     private interface RequestLogErrorChecker {
         void check(HttpHeaders headers, @Nullable RpcRequest rpcReq,
                    @Nullable Throwable cause) throws Exception;
+    }
+
+    @Test
+    void leak() {
+        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(1000);
+        byteBuf.writeByte(0);
+        assertThat(byteBuf.isReadable()).isTrue();
+        byteBuf.touch();
+    }
+
+    @Test
+    void leak2() {
+        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(1000);
+        byteBuf.writeByte(0);
+        assertThat(byteBuf.isReadable()).isTrue();
+        byteBuf.touch();
     }
 }

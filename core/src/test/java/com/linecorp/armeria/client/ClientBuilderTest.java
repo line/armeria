@@ -56,8 +56,33 @@ class ClientBuilderTest {
 
     @Test
     void leak() {
-        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(100);
+        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(1000);
         byteBuf.writeByte(0);
         assertThat(byteBuf.isReadable()).isTrue();
+        byteBuf.touch();
+    }
+
+    @Test
+    void leak2() {
+        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(1000);
+        byteBuf.writeByte(0);
+        assertThat(byteBuf.isReadable()).isTrue();
+        byteBuf.touch();
+    }
+
+    @Test
+    void leak3() {
+        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(1000);
+        byteBuf.writeByte(0);
+        assertThat(byteBuf.isReadable()).isTrue();
+        byteBuf.touch();
+    }
+
+    @Test
+    void leak4() {
+        final ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(1000);
+        byteBuf.writeByte(0);
+        assertThat(byteBuf.isReadable()).isTrue();
+        byteBuf.touch();
     }
 }
