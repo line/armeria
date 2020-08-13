@@ -106,7 +106,7 @@ public class GrpcMetricsIntegrationTest {
 
     @AfterClass
     public static void closeClientFactory() {
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Rule

@@ -92,7 +92,7 @@ class RetrofitMeterIdPrefixFunctionTest {
 
     @AfterAll
     static void closeClientFactory() {
-        CompletableFuture.runAsync(clientFactory::close);
+        clientFactory.closeAsync();
     }
 
     @Test

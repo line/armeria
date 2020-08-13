@@ -488,7 +488,7 @@ class ProxyClientIntegrationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test

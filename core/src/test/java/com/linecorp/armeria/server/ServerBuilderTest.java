@@ -91,7 +91,7 @@ class ServerBuilderTest {
 
     @AfterAll
     static void destroy() {
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     private static Server newServerWithKeepAlive(long idleTimeoutMillis, long pingIntervalMillis) {

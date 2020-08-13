@@ -19,8 +19,6 @@ package com.linecorp.armeria.server.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterEach;
@@ -89,7 +87,7 @@ class HttpServiceLogNameTest {
 
     @AfterEach
     void closeClientFactory() {
-        CompletableFuture.runAsync(client.options().factory()::close);
+        client.options().factory().closeAsync();
     }
 
     @Test

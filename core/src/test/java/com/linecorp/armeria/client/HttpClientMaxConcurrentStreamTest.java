@@ -139,7 +139,7 @@ public class HttpClientMaxConcurrentStreamTest {
         }
 
         if (clientFactory != null) {
-            clientFactory.close();
+            clientFactory.closeAsync();
         }
 
         await().until(() -> server.server().numConnections() == 0);

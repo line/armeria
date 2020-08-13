@@ -17,7 +17,6 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -114,7 +113,7 @@ public class ArmeriaSslConfigurationTest {
 
     @AfterClass
     public static void closeClientFactory() {
-        CompletableFuture.runAsync(clientFactory::close);
+        clientFactory.closeAsync();
     }
 
     @Test

@@ -17,8 +17,6 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.inject.Inject;
 
 import org.junit.AfterClass;
@@ -71,7 +69,7 @@ public class LocalArmeriaPortHttpsTest {
 
     @AfterClass
     public static void closeClientFactory() {
-        CompletableFuture.runAsync(clientFactory::close);
+        clientFactory.closeAsync();
     }
 
     @Test

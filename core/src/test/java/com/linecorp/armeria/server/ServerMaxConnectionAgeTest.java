@@ -172,7 +172,7 @@ class ServerMaxConnectionAgeTest {
                             "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
                             value -> assertThat(value).isEqualTo(maxClosedConnection));
         });
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
