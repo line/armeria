@@ -19,8 +19,11 @@ package com.linecorp.armeria.server.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.Nullable;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -82,6 +85,11 @@ class HttpServiceLogNameTest {
                           .decorator(
                                   MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("test")))
                           .build();
+    }
+
+    @AfterEach
+    void closeClientFactory() {
+        CompletableFuture.runAsync(client.options().factory()::close);
     }
 
     @Test

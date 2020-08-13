@@ -70,5 +70,6 @@ public class ClientAuthIntegrationTest {
                                           .decorator(LoggingClient.builder().newDecorator())
                                           .build();
         assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        clientFactory.close();
     }
 }

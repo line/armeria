@@ -19,38 +19,27 @@ package com.linecorp.armeria.internal.testing;
 import javax.annotation.Nullable;
 
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
-@Sharable
-public final class DynamicBehaviorHandler extends ChannelDuplexHandler {
+final class SimpleChannelHandler extends ChannelDuplexHandler {
 
     @Nullable
-    private volatile ThrowingBiConsumer<ChannelHandlerContext, Object> channelReadCustomizer;
+    private final ThrowingBiConsumer<ChannelHandlerContext, Object> onChannelRead;
     @Nullable
-    private volatile ThrowingTriConsumer<ChannelHandlerContext, Object, ChannelPromise> writeCustomizer;
+    private final ThrowingTriConsumer<ChannelHandlerContext, Object, ChannelPromise> onWrite;
 
-    public void reset() {
-        channelReadCustomizer = null;
-        writeCustomizer = null;
-    }
-
-    public void setChannelReadCustomizer(
-            ThrowingBiConsumer<ChannelHandlerContext, Object> channelReadCustomizer) {
-        this.channelReadCustomizer = channelReadCustomizer;
-    }
-
-    public void setWriteCustomizer(
-            ThrowingTriConsumer<ChannelHandlerContext, Object, ChannelPromise> writeCustomizer) {
-        this.writeCustomizer = writeCustomizer;
+    SimpleChannelHandler(
+            @Nullable ThrowingBiConsumer<ChannelHandlerContext, Object> onChannelRead,
+            @Nullable ThrowingTriConsumer<ChannelHandlerContext, Object, ChannelPromise> onWrite) {
+        this.onChannelRead = onChannelRead;
+        this.onWrite = onWrite;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        final ThrowingBiConsumer<ChannelHandlerContext, Object> customizerRef = channelReadCustomizer;
-        if (customizerRef != null) {
-            customizerRef.accept(ctx, msg);
+        if (onChannelRead != null) {
+            onChannelRead.accept(ctx, msg);
         } else {
             super.channelRead(ctx, msg);
         }
@@ -58,10 +47,8 @@ public final class DynamicBehaviorHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        final ThrowingTriConsumer<ChannelHandlerContext, Object, ChannelPromise>
-                customizerRef = writeCustomizer;
-        if (customizerRef != null) {
-            customizerRef.accept(ctx, msg, promise);
+        if (onWrite != null) {
+            onWrite.accept(ctx, msg, promise);
         } else {
             super.write(ctx, msg, promise);
         }
