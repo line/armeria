@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -35,17 +36,24 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class ProxyProtocolEnabledServerTest {
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.haproxy.HAProxyCommand;
+import io.netty.handler.codec.haproxy.HAProxyMessage;
+import io.netty.handler.codec.haproxy.HAProxyProtocolVersion;
+import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol;
+
+class ProxyProtocolEnabledServerTest {
 
     private static final TrustManager[] trustAllCerts = {
             new X509TrustManager() {
@@ -62,8 +70,8 @@ public class ProxyProtocolEnabledServerTest {
             }
     };
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, PROXY, HTTP);
@@ -82,13 +90,21 @@ public class ProxyProtocolEnabledServerTest {
                                                          dst.get(0).getHostString(), dst.get(0).getPort()));
                 }
             });
+
+            sb.service("/null-proxyaddr", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    assert ctx.proxiedAddresses().destinationAddresses().isEmpty();
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
             sb.disableServerHeader();
             sb.disableDateHeader();
         }
     };
 
     @Test
-    public void http() throws Exception {
+    void http() throws Exception {
         try (Socket sock = new Socket("127.0.0.1", server.httpPort())) {
             final PrintWriter writer = new PrintWriter(sock.getOutputStream());
             writer.print("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n");
@@ -106,7 +122,27 @@ public class ProxyProtocolEnabledServerTest {
     }
 
     @Test
-    public void https() throws Exception {
+    void shouldAcceptUnknownProtocol() throws IOException {
+        final HAProxyMessage haProxyMessage = new HAProxyMessage(
+                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNKNOWN,
+                null, null, 0, 0);
+        final byte[] encoded = encodeV2UnknownProtocol(haProxyMessage);
+
+        try (Socket sock = new Socket("127.0.0.1", server.httpPort())) {
+            final OutputStream os = sock.getOutputStream();
+            os.write(encoded);
+            os.write("GET /null-proxyaddr HTTP/1.1\r\n\r\n".getBytes());
+            os.flush();
+
+            final BufferedReader reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+            assertThat(reader.readLine()).isEqualToIgnoringCase("HTTP/1.1 200 OK");
+        } finally {
+           haProxyMessage.release();
+        }
+    }
+
+    @Test
+    void https() throws Exception {
         try (Socket sock = new Socket("127.0.0.1", server.httpsPort())) {
             final PrintWriter writer = new PrintWriter(sock.getOutputStream());
             writer.print("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n");
@@ -131,7 +167,7 @@ public class ProxyProtocolEnabledServerTest {
     }
 
     @Test
-    public void builder() throws Exception {
+    void builder() throws Exception {
         final Object service = new Object() {
             @Get("/")
             public String get() {
@@ -163,5 +199,24 @@ public class ProxyProtocolEnabledServerTest {
         reader.readLine();
 
         assertThat(reader.readLine()).isEqualToIgnoringCase("192.168.0.1:56324 -> 192.168.0.11:443");
+    }
+
+    private static byte[] encodeV2UnknownProtocol(HAProxyMessage msg) {
+        final byte[] binaryPrefix = {
+                (byte) 0x0D, (byte) 0x0A, (byte) 0x0D, (byte) 0x0A, (byte) 0x00, (byte) 0x0D,
+                (byte) 0x0A, (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
+        };
+        final int v2VersionBitmask = 0x02 << 4;
+
+        final ByteBuf buf = Unpooled.buffer();
+        buf.writeBytes(binaryPrefix);
+        buf.writeByte(v2VersionBitmask | msg.command().byteValue());
+        buf.writeByte(msg.proxiedProtocol().byteValue());
+        buf.writeShort(0);
+
+        final byte[] out = new byte[buf.readableBytes()];
+        buf.writeBytes(out);
+        buf.release();
+        return out;
     }
 }

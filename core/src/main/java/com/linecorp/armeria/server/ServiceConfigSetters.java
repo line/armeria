@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 interface ServiceConfigSetters {
@@ -91,4 +93,20 @@ interface ServiceConfigSetters {
         }
         return ret;
     }
+
+    /**
+     * Sets the default value of the {@link RequestLog#serviceName()} property which is used when
+     * no service name was set via {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultServiceName the default service name.
+     */
+    ServiceConfigSetters defaultServiceName(String defaultServiceName);
+
+    /**
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
+     * {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultLogName the default log name.
+     */
+    ServiceConfigSetters defaultLogName(String defaultLogName);
 }

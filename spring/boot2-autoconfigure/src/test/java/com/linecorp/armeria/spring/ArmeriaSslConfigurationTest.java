@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -108,6 +109,11 @@ public class ArmeriaSslConfigurationTest {
                                                     .get("/ok").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("ok");
+    }
+
+    @AfterClass
+    public static void closeClientFactory() {
+        clientFactory.closeAsync();
     }
 
     @Test

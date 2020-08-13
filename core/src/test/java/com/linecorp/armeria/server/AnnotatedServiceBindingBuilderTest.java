@@ -110,6 +110,8 @@ class AnnotatedServiceBindingBuilderTest {
         final long maxRequestLength = 2 * 1024;
         final AccessLogWriter accessLogWriter = AccessLogWriter.common();
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
+        final String defaultServiceName = "TestService";
+        final String defaultLogName = "TestLog";
 
         final Server server = Server.builder()
                                     .annotatedService()
@@ -119,6 +121,8 @@ class AnnotatedServiceBindingBuilderTest {
                                     .pathPrefix("/home")
                                     .accessLogWriter(accessLogWriter, shutdownOnStop)
                                     .verboseResponses(verboseResponse)
+                                    .defaultServiceName(defaultServiceName)
+                                    .defaultLogName(defaultLogName)
                                     .build(new TestService())
                                     .build();
 
@@ -129,12 +133,16 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeFoo.verboseResponses()).isTrue();
+        assertThat(homeFoo.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(homeFoo.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
         assertThat(homeBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(homeBar.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeBar.verboseResponses()).isTrue();
+        assertThat(homeBar.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
     }
 
     @Test

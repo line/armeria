@@ -134,9 +134,9 @@ public class ArmeriaConfiguration {
         // Customize the client using the given WebClientBuilder. For example:
         return builder -> {
             // Use a circuit breaker for each remote host.
-            final CircuitBreakerStrategy strategy =
-                    CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(CircuitBreakerClient.builder(strategy)
+            final CircuitBreakerRule rule =
+                    CircuitBreakerRule.onServerErrorStatus();
+            builder.decorator(CircuitBreakerClient.builder(rule)
                                                   .newDecorator());
 
             // Set a custom client factory.

@@ -51,8 +51,10 @@ import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.core.env.Environment;
 import org.springframework.http.server.reactive.HttpHandler;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -87,12 +89,15 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
 
     private final ConfigurableListableBeanFactory beanFactory;
+    private final Environment environment;
 
     /**
      * Creates a new factory instance with the specified {@link ConfigurableListableBeanFactory}.
      */
-    public ArmeriaReactiveWebServerFactory(ConfigurableListableBeanFactory beanFactory) {
+    public ArmeriaReactiveWebServerFactory(ConfigurableListableBeanFactory beanFactory,
+                                           Environment environment) {
         this.beanFactory = requireNonNull(beanFactory, "beanFactory");
+        this.environment = environment;
     }
 
     private static com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
@@ -131,6 +136,11 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     @Override
     public WebServer getWebServer(HttpHandler httpHandler) {
+        final ArmeriaWebServer armeriaWebServerBean = findBean(ArmeriaWebServer.class);
+        if (armeriaWebServerBean != null) {
+            return armeriaWebServerBean;
+        }
+
         final ServerBuilder sb = Server.builder();
         sb.disableServerHeader();
         sb.disableDateHeader();
@@ -207,7 +217,28 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        return new ArmeriaWebServer(server, protocol, address, port, beanFactory);
+        final ArmeriaWebServer armeriaWebServer = new ArmeriaWebServer(server, protocol, address, port,
+                                                                       beanFactory);
+        if (!isManagementPortEqualsToServerPort()) {
+            // The management port is set to the Server in ArmeriaSpringActuatorAutoConfiguration.
+            // Since this method will be called twice, need to reuse ArmeriaWebServer.
+            beanFactory.registerSingleton("armeriaWebServer", armeriaWebServer);
+        }
+
+        return armeriaWebServer;
+    }
+
+    @VisibleForTesting
+    boolean isManagementPortEqualsToServerPort() {
+        final Integer managementPort = environment.getProperty("management.server.port", Integer.class);
+        if (managementPort == null) {
+            // The management port is disable
+            return true;
+        }
+        final Integer ensuredManagementPort = ensureValidPort(managementPort);
+        final Integer serverPort = environment.getProperty("server.port", Integer.class);
+        return (serverPort == null && ensuredManagementPort.equals(8080)) ||
+               (ensuredManagementPort != 0 && ensuredManagementPort.equals(serverPort));
     }
 
     private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,

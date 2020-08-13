@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -64,6 +65,11 @@ public class LocalArmeriaPortHttpsTest {
 
     private String newUrl(String scheme) {
         return scheme + "://127.0.0.1:" + port;
+    }
+
+    @AfterClass
+    public static void closeClientFactory() {
+        clientFactory.closeAsync();
     }
 
     @Test

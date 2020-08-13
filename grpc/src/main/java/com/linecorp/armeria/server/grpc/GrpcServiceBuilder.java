@@ -305,7 +305,7 @@ public final class GrpcServiceBuilder {
      * processing. If disabled, the request timeout will be the one configured for the Armeria server, e.g.,
      * using {@link ServerBuilder#requestTimeout(Duration)}.
      *
-     * <p>It is recommended to disable this when clients are not trusted code, e.g., for grpc-web clients that
+     * <p>It is recommended to disable this when clients are not trusted code, e.g., for gRPC-Web clients that
      * can come from arbitrary browsers.
      */
     public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {

@@ -16,9 +16,9 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
+import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
 import static java.util.Objects.requireNonNull;
 
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CancellationException;
@@ -32,8 +32,6 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.ByteStreams;
-
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -45,6 +43,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -77,7 +76,6 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufOutputStream;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -321,27 +319,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Override
     public void messageRead(DeframedMessage message) {
         if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
-            // grpc-web trailers
-            final ByteBuf messageBuf = message.buf();
             final ByteBuf buf;
-            if (messageBuf != null) {
-                buf = messageBuf;
-            } else {
-                // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
-                buf = ctx.alloc().compositeBuffer();
-                boolean success = false;
-                try (ByteBufOutputStream os = new ByteBufOutputStream(buf);
-                     InputStream stream = message.stream()) {
-                    assert stream != null;
-                    ByteStreams.copy(stream, os);
-                    success = true;
-                } catch (Throwable t) {
-                    if (!success) {
-                        buf.release();
-                    }
-                    cancel(null, t);
-                    return;
-                }
+            try {
+                buf = messageBuf(message, ctx.alloc());
+            } catch (Throwable t) {
+                cancel(null, t);
+                return;
             }
             try {
                 final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
@@ -352,6 +335,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                           buf.toString(StandardCharsets.UTF_8)),
                           new Metadata());
                 } else {
+                    GrpcWebTrailers.set(ctx, trailers);
                     GrpcStatus.reportStatus(trailers, responseReader, this);
                 }
             } finally {
