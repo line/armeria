@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.Environment;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSettings;
@@ -46,7 +47,7 @@ public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
      */
     @Bean
     public ArmeriaReactiveWebServerFactory armeriaReactiveWebServerFactory(
-            ConfigurableListableBeanFactory beanFactory) {
-        return new ArmeriaReactiveWebServerFactory(beanFactory);
+            ConfigurableListableBeanFactory beanFactory, Environment environment) {
+        return new ArmeriaReactiveWebServerFactory(beanFactory, environment);
     }
 }
