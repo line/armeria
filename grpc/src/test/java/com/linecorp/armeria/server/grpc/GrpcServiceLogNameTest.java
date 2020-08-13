@@ -61,10 +61,18 @@ class GrpcServiceLogNameTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            final GrpcService grpcService =
+                    GrpcService.builder()
+                               .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                               .build();
+
             sb.accessLogWriter(AccessLogWriter.combined(), true);
-            sb.service(GrpcService.builder()
-                                  .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
-                                  .build());
+            sb.serviceUnder("/grpc/", grpcService);
+            sb.route()
+              .pathPrefix("/default-names")
+              .defaultServiceName("DefaultServiceName")
+              .defaultLogName("DefaultName")
+              .build(grpcService);
             sb.decorator((delegate, ctx, req) -> {
                 capturedCtx = ctx;
                 return delegate.serve(ctx, req);
@@ -89,8 +97,9 @@ class GrpcServiceLogNameTest {
 
     @Test
     void logName() {
-        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                                      .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/grpc/"))
+                       .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
         final RequestLog log = capturedCtx.log().partial();
@@ -100,23 +109,38 @@ class GrpcServiceLogNameTest {
     }
 
     @Test
+    void defaultNames() {
+        final TestServiceBlockingStub client =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/default-names/"))
+                       .build(TestServiceBlockingStub.class);
+        client.emptyCall(Empty.newBuilder().build());
+
+        final RequestLog log = capturedCtx.log().partial();
+        assertThat(log.serviceName()).isEqualTo("DefaultServiceName");
+        assertThat(log.name()).isEqualTo("DefaultName");
+        assertThat(log.fullName()).isEqualTo("DefaultServiceName/DefaultName");
+    }
+
+    @Test
     void logNameInAccessLog() {
-        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                                      .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/grpc/"))
+                       .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
         await().untilAsserted(() -> {
             verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
             assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
-                return evt.getMessage().contains("POST /armeria.grpc.testing.TestService/EmptyCall h2c");
+                return evt.getMessage().contains("POST /grpc/armeria.grpc.testing.TestService/EmptyCall h2c");
             });
         });
     }
 
     @Test
     void logNameInClientSide() {
-        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                                      .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/grpc/"))
+                       .build(TestServiceBlockingStub.class);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.emptyCall(Empty.newBuilder().build());
             final ClientRequestContext ctx = captor.get();
