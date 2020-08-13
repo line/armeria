@@ -22,7 +22,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
-final class SimpleChannelHandler extends ChannelDuplexHandler {
+public final class SimpleChannelHandler extends ChannelDuplexHandler {
 
     @Nullable
     private final ThrowingBiConsumer<ChannelHandlerContext, Object> onChannelRead;
