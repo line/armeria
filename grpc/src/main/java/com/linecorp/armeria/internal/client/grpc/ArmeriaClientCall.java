@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcWebUtil;
+import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -335,7 +335,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                           buf.toString(StandardCharsets.UTF_8)),
                           new Metadata());
                 } else {
-                    GrpcWebUtil.setTrailers(ctx, trailers);
+                    GrpcWebTrailers.set(ctx, trailers);
                     GrpcStatus.reportStatus(trailers, responseReader, this);
                 }
             } finally {

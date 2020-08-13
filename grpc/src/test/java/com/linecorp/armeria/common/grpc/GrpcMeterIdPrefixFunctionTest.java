@@ -120,7 +120,7 @@ class GrpcMeterIdPrefixFunctionTest {
             final ClientRequestContext ctx = captor.get();
             final HttpHeaders trailers;
             if (GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
-                trailers = GrpcWebUtil.trailers(ctx);
+                trailers = GrpcWebTrailers.get(ctx);
             } else {
                 await().until(() -> ctx.log().isAvailable(RequestLogProperty.RESPONSE_TRAILERS));
                 trailers = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_TRAILERS).responseTrailers();

@@ -39,7 +39,6 @@ public final class InternalGrpcWebUtil {
     private static final ByteProcessor FIND_COLON = new IndexOfProcessor((byte) ':');
 
     public static ByteBuf messageBuf(DeframedMessage message, ByteBufAllocator alloc) throws IOException {
-        // grpc-web trailers
         final ByteBuf messageBuf = message.buf();
         final ByteBuf buf;
         if (messageBuf != null) {

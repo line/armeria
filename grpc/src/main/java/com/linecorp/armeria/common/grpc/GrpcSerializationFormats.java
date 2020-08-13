@@ -40,12 +40,12 @@ public final class GrpcSerializationFormats {
     public static final SerializationFormat JSON = SerializationFormat.of("gjson");
 
     /**
-     * gRPC-web protobuf serialization format.
+     * gRPC-Web protobuf serialization format.
      */
     public static final SerializationFormat PROTO_WEB = SerializationFormat.of("gproto-web");
 
     /**
-     * gRPC-web JSON serialization format.
+     * gRPC-Web JSON serialization format.
      */
     public static final SerializationFormat JSON_WEB = SerializationFormat.of("gjson-web");
 
@@ -88,7 +88,7 @@ public final class GrpcSerializationFormats {
     }
 
     /**
-     * Returns whether the specified {@link SerializationFormat} is gRPC-web, the subset of gRPC that supports
+     * Returns whether the specified {@link SerializationFormat} is gRPC-Web, the subset of gRPC that supports
      * browsers.
      */
     public static boolean isGrpcWeb(SerializationFormat format) {

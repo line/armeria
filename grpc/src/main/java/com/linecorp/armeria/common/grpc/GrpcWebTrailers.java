@@ -30,17 +30,17 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import io.netty.util.AttributeKey;
 
 /**
- * Utilities for working with <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a>.
+ * Retrieves <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a> trailers.
  */
 @UnstableApi
-public final class GrpcWebUtil {
+public final class GrpcWebTrailers {
 
     private static final AttributeKey<HttpHeaders> GRPC_WEB_TRAILERS = AttributeKey.valueOf(
-            GrpcWebUtil.class, "GRPC_WEB_TRAILERS");
+            GrpcWebTrailers.class, "GRPC_WEB_TRAILERS");
 
     /**
-     * Returns the gRPC trailers which was set to the specified {@link RequestContext} using
-     * {@link #setTrailers(RequestContext, HttpHeaders)}.
+     * Returns the gRPC-Web trailers which was set to the specified {@link RequestContext} using
+     * {@link #set(RequestContext, HttpHeaders)}.
      *
      * <p>A gRPC-Web response does not contain a separated trailers according to the
      * <a href="https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2">
@@ -60,7 +60,7 @@ public final class GrpcWebUtil {
      *                RetryRuleWithContent.onResponse((ctx, response) -> {
      *                    // Note that we should aggregate the response to get the trailers.
      *                    return response.aggregate().thenApply(aggregated -> {
-     *                        HttpHeaders trailers = GrpcWebUtil.trailers(ctx);
+     *                        HttpHeaders trailers = GrpcWebUtil.get(ctx);
      *                        // Retry if the 'grpc-status' is not equal to 0.
      *                        return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
      *                    });
@@ -69,19 +69,19 @@ public final class GrpcWebUtil {
      * }</pre>
      */
     @Nullable
-    public static HttpHeaders trailers(RequestContext ctx) {
+    public static HttpHeaders get(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return ctx.attr(GRPC_WEB_TRAILERS);
     }
 
     /**
-     * Sets the specified gRPC trailers to the {@link RequestContext}.
+     * Sets the specified gRPC-Web trailers to the {@link RequestContext}.
      */
-    public static void setTrailers(RequestContext ctx, HttpHeaders trailers) {
+    public static void set(RequestContext ctx, HttpHeaders trailers) {
         requireNonNull(ctx, "ctx");
         requireNonNull(trailers, "trailers");
         ctx.setAttr(GRPC_WEB_TRAILERS, trailers);
     }
 
-    private GrpcWebUtil() {}
+    private GrpcWebTrailers() {}
 }

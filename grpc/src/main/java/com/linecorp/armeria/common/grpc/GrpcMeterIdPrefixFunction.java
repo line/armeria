@@ -88,7 +88,7 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
             return;
         }
 
-        final HttpHeaders trailers = GrpcWebUtil.trailers(log.context());
+        final HttpHeaders trailers = GrpcWebTrailers.get(log.context());
         if (trailers != null) {
             status = trailers.get(GrpcHeaderNames.GRPC_STATUS);
             if (status != null) {

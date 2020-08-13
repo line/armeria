@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.grpc.GrpcWebUtil;
+import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
@@ -85,7 +85,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                         if (trailers == null) {
                             return;
                         }
-                        GrpcWebUtil.setTrailers(ctx, trailers);
+                        GrpcWebTrailers.set(ctx, trailers);
                     } finally {
                         buf.release();
                     }

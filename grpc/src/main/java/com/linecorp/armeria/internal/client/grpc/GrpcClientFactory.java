@@ -128,7 +128,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     }
 
     /**
-     * Adds the {@link GrpcWebTrailersExtractor} if the specified {@link SerializationFormat} is a grpc-web and
+     * Adds the {@link GrpcWebTrailersExtractor} if the specified {@link SerializationFormat} is a gRPC-Web and
      * {@link RetryingClient} exists in the {@link ClientDecoration}.
      */
     private static ClientBuilderParams addTrailersExtractor(
