@@ -2,7 +2,6 @@ package example.armeria.contextpropagation.manual;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
