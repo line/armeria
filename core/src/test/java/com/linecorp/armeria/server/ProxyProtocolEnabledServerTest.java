@@ -216,6 +216,7 @@ class ProxyProtocolEnabledServerTest {
 
         final byte[] out = new byte[buf.readableBytes()];
         buf.writeBytes(out);
+        buf.release();
         return out;
     }
 }

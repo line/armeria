@@ -50,7 +50,7 @@ public class HttpClientTimeoutTest {
 
     @AfterClass
     public static void destroy() {
-        factory.close();
+        factory.closeAsync();
     }
 
     @Rule

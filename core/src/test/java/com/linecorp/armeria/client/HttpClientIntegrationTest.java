@@ -649,7 +649,7 @@ class HttpClientIntegrationTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -665,7 +665,7 @@ class HttpClientIntegrationTest {
                 AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -681,7 +681,7 @@ class HttpClientIntegrationTest {
                 AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @ParameterizedTest

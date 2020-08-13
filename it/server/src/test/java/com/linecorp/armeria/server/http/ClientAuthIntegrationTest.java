@@ -59,16 +59,17 @@ public class ClientAuthIntegrationTest {
 
     @Test
     public void normal() {
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .tlsCustomizer(ctx -> ctx.keyManager(clientCert.certificateFile(),
-                                                                  clientCert.privateKeyFile()))
-                             .tlsNoVerify()
-                             .build();
-        final WebClient client = WebClient.builder(rule.httpsUri())
-                                          .factory(clientFactory)
-                                          .decorator(LoggingClient.builder().newDecorator())
-                                          .build();
-        assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .tlsCustomizer(ctx -> ctx.keyManager(clientCert.certificateFile(),
+                                                                       clientCert.privateKeyFile()))
+                                  .tlsNoVerify()
+                                  .build()) {
+            final WebClient client = WebClient.builder(rule.httpsUri())
+                                              .factory(clientFactory)
+                                              .decorator(LoggingClient.builder().newDecorator())
+                                              .build();
+            assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        }
     }
 }

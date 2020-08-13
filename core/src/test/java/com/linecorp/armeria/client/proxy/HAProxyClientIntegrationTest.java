@@ -49,8 +49,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
+import com.linecorp.armeria.internal.testing.SimpleChannelHandlerFactory;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -75,7 +75,11 @@ import io.netty.util.ReferenceCountUtil;
 
 class HAProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
-    private static final DynamicBehaviorHandler DYNAMIC_HANDLER = new DynamicBehaviorHandler();
+
+    private static final SimpleChannelHandlerFactory NOOP_CHANNEL_HANDLER_FACTORY =
+            new SimpleChannelHandlerFactory(null, null);
+
+    private static SimpleChannelHandlerFactory channelHandlerFactory = NOOP_CHANNEL_HANDLER_FACTORY;
 
     @RegisterExtension
     static ServerExtension backendServer = new ServerExtension() {
@@ -101,7 +105,7 @@ class HAProxyClientIntegrationTest {
             ch.pipeline().addLast(new HAProxyMessageDecoder());
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
-            ch.pipeline().addLast(DYNAMIC_HANDLER);
+            ch.pipeline().addLast(channelHandlerFactory.newHandler());
         }
     };
 
@@ -270,7 +274,7 @@ class HAProxyClientIntegrationTest {
         final InetSocketAddress proxyAddr = new InetSocketAddress(proxyEndpoint.ipAddr(), proxyEndpoint.port());
 
         final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof HAProxyMessage) {
                 msgRef.set((HAProxyMessage) msg);
                 return;
@@ -328,7 +332,7 @@ class HAProxyClientIntegrationTest {
         final InetSocketAddress proxyAddr = new InetSocketAddress(proxyEndpoint.ipAddr(), proxyEndpoint.port());
 
         final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof HAProxyMessage) {
                 msgRef.set((HAProxyMessage) msg);
                 return;
