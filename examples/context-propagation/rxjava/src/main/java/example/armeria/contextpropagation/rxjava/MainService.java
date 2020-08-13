@@ -1,16 +1,10 @@
 package example.armeria.contextpropagation.rxjava;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -25,8 +19,6 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainService implements HttpService {
-
-    private static final Splitter NUM_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private final WebClient backendClient;
 
@@ -45,11 +37,16 @@ public class MainService implements HttpService {
                         () -> {
                             // The context is mounted in a thread-local, meaning it is available to all
                             // logic such as tracing.
-                            checkState(ServiceRequestContext.current() == ctx);
-                            checkState(!ctx.eventLoop().inEventLoop());
+                            assert ServiceRequestContext.current() == ctx;
+                            assert !ctx.eventLoop().inEventLoop();
 
-                            Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
-                            return ImmutableList.of(23L, -23L);
+                            try {
+                                // Simulate a blocking API call.
+                                Thread.sleep(50);
+                            } catch (Exception ignored) {
+                                // Do nothing.
+                            }
+                            return Arrays.asList(23L, -23L);
                         })
                       // Always run blocking logic on the blocking task executor. By using
                       // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
@@ -66,15 +63,16 @@ public class MainService implements HttpService {
                                .flatMapPublisher(request -> {
                                    // The context is mounted in a thread-local, meaning it is available to all
                                    // logic such as tracing.
-                                   checkState(ServiceRequestContext.current() == ctx);
-                                   checkState(ctx.eventLoop().inEventLoop());
+                                   assert ServiceRequestContext.current() == ctx;
+                                   assert ctx.eventLoop().inEventLoop();
 
                                    final List<Long> nums = new ArrayList<>();
-                                   for (String token : Iterables.concat(
-                                           NUM_SPLITTER.split(request.path().substring(1)),
-                                           NUM_SPLITTER.split(request.contentUtf8()))) {
+                                   Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
                                        nums.add(Long.parseLong(token));
-                                   }
+                                   });
+                                   Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
+                                       nums.add(Long.parseLong(token));
+                                   });
 
                                    return Flowable.fromIterable(nums);
                                });
@@ -91,8 +89,8 @@ public class MainService implements HttpService {
                         .flatMapSingle(num -> {
                             // The context is mounted in a thread-local, meaning it is available to all logic
                             // such as tracing.
-                            checkState(ServiceRequestContext.current() == ctx);
-                            checkState(ctx.eventLoop().inEventLoop());
+                            assert ServiceRequestContext.current() == ctx;
+                            assert ctx.eventLoop().inEventLoop();
 
                             return Single.fromCompletionStage(backendClient.get("/square/" + num).aggregate());
                         })

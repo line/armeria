@@ -1,20 +1,15 @@
 package example.armeria.contextpropagation.manual;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.WebClient;
@@ -26,8 +21,6 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 public class MainService implements HttpService {
-
-    private static final Splitter NUM_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private final WebClient backendClient;
 
@@ -47,11 +40,16 @@ public class MainService implements HttpService {
                 () -> {
                     // The context is mounted in a thread-local, meaning it is available to all logic such
                     // as tracing.
-                    checkState(ServiceRequestContext.current() == ctx);
-                    checkState(!ctx.eventLoop().inEventLoop());
+                    assert ServiceRequestContext.current() == ctx;
+                    assert !ctx.eventLoop().inEventLoop();
 
-                    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
-                    return ImmutableList.of(23L, -23L);
+                    try {
+                        // Simulate a blocking API call.
+                        Thread.sleep(50);
+                    } catch (Exception ignored) {
+                        // Do nothing.
+                    }
+                    return Arrays.asList(23L, -23L);
                 },
                 // Always run blocking logic on the blocking task executor. By using
                 // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted inside the
@@ -64,22 +62,23 @@ public class MainService implements HttpService {
                         unused -> {
                             // The context is mounted in a thread-local, meaning it is available to all logic
                             // such as tracing.
-                            checkState(ServiceRequestContext.current() == ctx);
-                            checkState(ctx.eventLoop().inEventLoop());
+                            assert ServiceRequestContext.current() == ctx;
+                            assert ctx.eventLoop().inEventLoop();
 
                             final AggregatedHttpRequest request = aggregated.join();
 
                             final Stream.Builder<Long> nums = Stream.builder();
-                            for (String token : Iterables.concat(
-                                    NUM_SPLITTER.split(request.path().substring(1)),
-                                    NUM_SPLITTER.split(request.contentUtf8()))) {
+                            Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
                                 nums.add(Long.parseLong(token));
-                            }
+                            });
+                            Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
+                                nums.add(Long.parseLong(token));
+                            });
                             fetchFromFakeDb.join().forEach(nums::add);
 
                             return nums.build()
                                        .map(num -> backendClient.get("/square/" + num).aggregate())
-                                       .collect(toImmutableList());
+                                       .collect(Collectors.toList());
                         },
                         // Unless you know what you're doing, always use then*Async type methods with the
                         // context executor to have the context mounted and stay on a single thread to reduce
@@ -93,11 +92,11 @@ public class MainService implements HttpService {
                 fetchFromBackend.thenApply(CompletableFutures::allAsList)
                                 .thenCompose(u -> u)
                                 .thenApplyAsync(
-                                        (backendResponse) -> {
+                                        backendResponse -> {
                                             // The context is mounted in a thread-local, meaning it is
                                             // available to all logic such as tracing.
-                                            checkState(ServiceRequestContext.current() == ctx);
-                                            checkState(ctx.eventLoop().inEventLoop());
+                                            assert ServiceRequestContext.current() == ctx;
+                                            assert ctx.eventLoop().inEventLoop();
                                             return HttpResponse.of(
                                                     backendResponse.stream()
                                                                    .map(AggregatedHttpResponse::contentUtf8)
