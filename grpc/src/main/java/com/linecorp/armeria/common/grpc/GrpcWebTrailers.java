@@ -60,7 +60,7 @@ public final class GrpcWebTrailers {
      *                RetryRuleWithContent.onResponse((ctx, response) -> {
      *                    // Note that we should aggregate the response to get the trailers.
      *                    return response.aggregate().thenApply(aggregated -> {
-     *                        HttpHeaders trailers = GrpcWebUtil.get(ctx);
+     *                        HttpHeaders trailers = GrpcWebTrailers.get(ctx);
      *                        // Retry if the 'grpc-status' is not equal to 0.
      *                        return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
      *                    });
