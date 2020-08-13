@@ -350,6 +350,11 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ArmeriaRetrofitBuilder clearDecorators() {
+        return (ArmeriaRetrofitBuilder) super.clearDecorators();
+    }
+
+    @Override
     public ArmeriaRetrofitBuilder rpcDecorator(
             Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (ArmeriaRetrofitBuilder) super.rpcDecorator(decorator);

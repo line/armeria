@@ -93,7 +93,7 @@ class ClientOptionsBuilderTest {
         b.option(ClientOptions.DECORATION.newValue(ClientDecoration.builder()
                                                                    .add(decorator2)
                                                                    .build()));
-        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+        assertThat(b.build().decoration().decorators()).containsSequence(decorator, decorator2);
 
         // Add an RPC decorator.
         final Function<? super RpcClient, ? extends RpcClient> rpcDecorator =
@@ -102,8 +102,21 @@ class ClientOptionsBuilderTest {
                                                                    .addRpc(rpcDecorator)
                                                                    .build()));
 
-        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+        assertThat(b.build().decoration().decorators()).containsSequence(decorator, decorator2);
         assertThat(b.build().decoration().rpcDecorators()).containsExactly(rpcDecorator);
+
+        final Function<? super HttpClient, ? extends HttpClient> decorator3 =
+                DecodingClient.newDecorator();
+        // Insert decorator at first.
+        final ClientDecoration decoration = b.build().decoration();
+        b.clearDecorators();
+        assertThat(b.build().decoration().decorators()).isEmpty();
+        assertThat(b.build().decoration().rpcDecorators()).isEmpty();
+
+        b.decorator(decorator3);
+        decoration.decorators().forEach(b::decorator);
+        assertThat(b.build().decoration().decorators()).containsSequence(decorator3, decorator, decorator2);
+        assertThat(b.build().decoration().rpcDecorators()).isEmpty();
     }
 
     @Test

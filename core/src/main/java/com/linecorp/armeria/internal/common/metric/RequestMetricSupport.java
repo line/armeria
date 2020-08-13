@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.metric;
 
 import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSummary;
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
-import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -26,12 +25,9 @@ import java.util.concurrent.atomic.LongAdder;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
@@ -44,7 +40,6 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.netty.util.AttributeKey;
 
@@ -71,23 +66,6 @@ public final class RequestMetricSupport {
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server));
-    }
-
-    /**
-     * Appends {@link HttpStatus} to {@link Tag}.
-     */
-    public static void appendHttpStatusTag(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
-        requireNonNull(tagListBuilder, "tagListBuilder");
-        requireNonNull(log, "log");
-        // Add the 'httpStatus' tag.
-        final HttpStatus status;
-        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            status = log.responseHeaders().status();
-        } else {
-            status = HttpStatus.UNKNOWN;
-        }
-        tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "httpStatus" : "http.status",
-                                  status.codeAsText()));
     }
 
     private static void onRequest(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
