@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -101,17 +100,14 @@ public final class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction
         } else {
             status = HttpStatus.UNKNOWN;
         }
-        tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "httpStatus" : "http.status",
-                                  status.codeAsText()));
+        tagListBuilder.add(Tag.of("http.status", status.codeAsText()));
     }
 
     private static void addHostnamePattern(Builder<Tag> tagListBuilder, RequestOnlyLog log) {
         final RequestContext ctx = log.context();
         if (ctx instanceof ServiceRequestContext) {
             final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-            tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "hostnamePattern"
-                                                                  : "hostname.pattern",
-                                      sCtx.config().virtualHost().hostnamePattern()));
+            tagListBuilder.add(Tag.of("hostname.pattern", sCtx.config().virtualHost().hostnamePattern()));
         }
     }
 

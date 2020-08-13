@@ -80,19 +80,19 @@ interface ServiceConfigSetters {
     ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
 
     /**
-     * Decorates an {@link HttpService} with the given {@code decorators},
-     * as though they had been passed sequentially to {@link #decorator(Function)}.
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
      *
      * @param decorators the {@link Function}s that decorate the {@link HttpService}
      */
-    default ServiceConfigSetters decorators(
-            Function<? super HttpService, ? extends HttpService>... decorators) {
-        ServiceConfigSetters ret = this;
-        for (Function<? super HttpService, ? extends HttpService> decorator : decorators) {
-            ret = ret.decorator(decorator);
-        }
-        return ret;
-    }
+    ServiceConfigSetters decorators(Function<? super HttpService, ? extends HttpService>... decorators);
+
+    /**
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
+     *
+     * @param decorators the {@link Function}s that decorate the {@link HttpService}
+     */
+    ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
 
     /**
      * Sets the default value of the {@link RequestLog#serviceName()} property which is used when

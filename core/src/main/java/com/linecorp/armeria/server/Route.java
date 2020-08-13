@@ -21,10 +21,6 @@ import java.util.Set;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.logging.RequestLog;
-
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Tag;
 
 /**
  * {@link Route} maps from an incoming HTTP request to an {@link HttpService} based on its path, method,
@@ -71,26 +67,6 @@ public interface Route {
      * Returns the names of the path parameters extracted by this mapping.
      */
     Set<String> paramNames();
-
-    /**
-     * Returns the logger name.
-     *
-     * @return the logger name whose components are separated by a dot (.)
-     *
-     * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#patternString()}.
-     */
-    @Deprecated
-    String loggerName();
-
-    /**
-     * Returns the value of the {@link Tag} in a {@link Meter} of this {@link Route}.
-     *
-     * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#patternString()}.
-     */
-    @Deprecated
-    String meterTag();
 
     /**
      * Returns the path pattern of this {@link Route}. The returned path pattern is different according to

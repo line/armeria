@@ -230,12 +230,12 @@ class DefaultRequestLogTest {
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 
-        log.deferRequestContent();
-        log.deferRequestContentPreview();
+        log.defer(RequestLogProperty.REQUEST_CONTENT);
+        log.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
         log.endRequest();
 
-        log.deferResponseContent();
-        log.deferResponseContentPreview();
+        log.defer(RequestLogProperty.RESPONSE_CONTENT);
+        log.defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         log.endResponse();
 
         assertThat(completeFuture.isDone()).isFalse();
@@ -254,14 +254,14 @@ class DefaultRequestLogTest {
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 
-        log.deferRequestContent();
-        log.deferRequestContentPreview();
+        log.defer(RequestLogProperty.REQUEST_CONTENT);
+        log.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
         log.requestContent(null, null);
         log.requestContentPreview(null);
         log.endRequest();
 
-        log.deferResponseContent();
-        log.deferResponseContentPreview();
+        log.defer(RequestLogProperty.RESPONSE_CONTENT);
+        log.defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         log.responseContent(null, null);
         log.responseContentPreview(null);
         assertThat(completeFuture.isDone()).isFalse();
@@ -295,7 +295,7 @@ class DefaultRequestLogTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
 
-        log.deferRequestContent();
+        log.defer(RequestLogProperty.REQUEST_CONTENT);
         log.endRequest();
         assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
         assertThat(log.whenRequestComplete()).isNotDone();
@@ -312,7 +312,7 @@ class DefaultRequestLogTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
 
-        log.deferRequestContent();
+        log.defer(RequestLogProperty.REQUEST_CONTENT);
         assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
         log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
         assertThat(log.whenRequestComplete()).isNotDone();

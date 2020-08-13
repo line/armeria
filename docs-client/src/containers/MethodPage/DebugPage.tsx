@@ -171,12 +171,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
 
-    if (urlParams.has('http_headers_sticky')) {
+    if (urlParams.has('headers_sticky')) {
       toggleStickyHeaders(true);
     }
 
-    let headers = urlParams.has('http_headers')
-      ? jsonPrettify(urlParams.get('http_headers')!)
+    let headers = urlParams.has('headers')
+      ? jsonPrettify(urlParams.get('headers')!)
       : undefined;
 
     if (!headers) {
@@ -392,7 +392,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         }
       }
 
-      const headersText = params.get('http_headers');
+      const headersText = params.get('headers');
       const headers = headersText ? JSON.parse(headersText) : {};
 
       const transport = TRANSPORTS.getDebugTransport(method)!;
@@ -451,7 +451,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
           minifiedHeaders = '';
         }
         if (minifiedHeaders.length > 0) {
-          params.set('http_headers', minifiedHeaders);
+          params.set('headers', minifiedHeaders);
         }
       }
     } catch (e) {
@@ -460,9 +460,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
     }
 
     if (stickyHeaders) {
-      params.set('http_headers_sticky', 'true');
+      params.set('headers_sticky', 'true');
     } else {
-      params.delete('http_headers_sticky');
+      params.delete('headers_sticky');
     }
 
     const serializedParams = `?${params.toString()}`;

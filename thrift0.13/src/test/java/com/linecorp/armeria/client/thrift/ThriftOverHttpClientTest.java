@@ -54,7 +54,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
-import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -207,7 +206,7 @@ class ThriftOverHttpClientTest {
     @BeforeAll
     static void init() throws Exception {
         final ConnectionPoolListener connectionPoolListener =
-                ENABLE_CONNECTION_POOL_LOGGING ? new ConnectionPoolLoggingListener()
+                ENABLE_CONNECTION_POOL_LOGGING ? ConnectionPoolListener.logging()
                                                : ConnectionPoolListener.noop();
 
         clientFactoryWithUseHttp2Preface = ClientFactory.builder()
@@ -564,7 +563,7 @@ class ThriftOverHttpClientTest {
         assertThat(clientA.header(AUTHORIZATION)).isEqualTo(TOKEN_A);
         assertThat(clientB.header(AUTHORIZATION)).isEqualTo(TOKEN_B);
 
-        // Ensure that the parent client's HTTP_HEADERS option did not change:
+        // Ensure that the parent client's HEADERS option did not change:
         assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
     }
 
@@ -734,7 +733,7 @@ class ThriftOverHttpClientTest {
     }
 
     private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {
-        return ClientOptions.HTTP_HEADERS.newValue(HttpHeaders.of(name, value));
+        return ClientOptions.HEADERS.newValue(HttpHeaders.of(name, value));
     }
 
     private static class ParametersProvider implements ArgumentsProvider {

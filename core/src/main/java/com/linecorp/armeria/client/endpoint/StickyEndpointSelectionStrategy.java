@@ -43,11 +43,8 @@ import com.linecorp.armeria.common.HttpRequest;
  * };
  * final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
  * }</pre>
- *
- * @deprecated Use {@link EndpointSelectionStrategy#sticky(ToLongFunction)}.
  */
-@Deprecated
-public final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy {
+final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy {
 
     private final ToLongFunction<? super ClientRequestContext> requestContextHasher;
 
@@ -56,11 +53,8 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
      * with provided hash function to hash a {@link ClientRequestContext} to a {@code long}.
      *
      * @param requestContextHasher The default {@link ToLongFunction} of {@link ClientRequestContext}
-     *
-     * @deprecated Use {@link EndpointSelectionStrategy#sticky(ToLongFunction)}.
      */
-    @Deprecated
-    public StickyEndpointSelectionStrategy(ToLongFunction<? super ClientRequestContext> requestContextHasher) {
+    StickyEndpointSelectionStrategy(ToLongFunction<? super ClientRequestContext> requestContextHasher) {
         this.requestContextHasher = requireNonNull(requestContextHasher, "requestContextHasher");
     }
 

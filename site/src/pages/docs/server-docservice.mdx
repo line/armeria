@@ -130,17 +130,17 @@ import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 
 ServerBuilder sb = Server.builder();
 ...
-sb.serviceUnder("/docs", DocService.builder()
-                                   // HTTP headers for all services
-                                   .exampleHttpHeaders(
-                                        HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"))
-                                   // Thrift example request for 'ThriftHelloService.hello()'
-                                   .exampleRequest(new ThriftHelloService.hello_args("Armeria"))
-                                   // gRPC example request for 'GrpcHelloService.Hello()'
-                                   .exampleRequestForMethod(GrpcHelloServiceGrpc.SERVICE_NAME,
-                                        "Hello", // Method name
-                                        HelloRequest.newBuilder().setName("Armeria").build())
-                                   .build());
+sb.serviceUnder(
+    "/docs",
+    DocService.builder()
+              // HTTP headers for all services
+              .exampleHeaders(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"))
+              // Thrift example request for 'ThriftHelloService.hello()'
+              .exampleRequests(List.of(new ThriftHelloService.hello_args("Armeria")))
+              // gRPC example request for 'GrpcHelloService.Hello()'
+              .exampleRequests(GrpcHelloServiceGrpc.SERVICE_NAME, "Hello", // Method name
+                               HelloRequest.newBuilder().setName("Armeria").build())
+              .build());
 ...
 ```
 

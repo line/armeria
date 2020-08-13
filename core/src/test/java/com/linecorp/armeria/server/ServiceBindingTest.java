@@ -73,9 +73,7 @@ class ServiceBindingTest {
                   });
                   return delegate.serve(ctx, req);
               })
-              .decorator(decorator1)
-              .decorator(decorator2)
-              .decorator(decorator3)
+              .decorators(decorator1, decorator2, decorator3)
               .build((ctx, req) -> {
                   if (req.method() == HttpMethod.GET) {
                       return HttpResponse.of(ctx.pathParam("name"));

@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.AtomicDouble;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Counter;
@@ -59,9 +58,7 @@ final class CircuitBreakerMetrics {
         transitionsToClosed = parent.counter(transitions, idPrefix.tags("state", CLOSED.name()));
         transitionsToOpen = parent.counter(transitions, idPrefix.tags("state", OPEN.name()));
         transitionsToHalfOpen = parent.counter(transitions, idPrefix.tags("state", HALF_OPEN.name()));
-        rejectedRequests = parent.counter(idPrefix.name(Flags.useLegacyMeterNames() ? "rejectedRequests"
-                                                                                    : "rejected.requests"),
-                                          idPrefix.tags());
+        rejectedRequests = parent.counter(idPrefix.name("rejected.requests"), idPrefix.tags());
     }
 
     void onStateChanged(CircuitState state) {

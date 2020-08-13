@@ -51,12 +51,9 @@ function getExampleHeaders(
   method: Method,
 ): Option[] {
   const exampleHeaders: Option[] = [];
-  addExampleHeadersIfExists(exampleHeaders, method.exampleHttpHeaders);
-  addExampleHeadersIfExists(exampleHeaders, service.exampleHttpHeaders);
-  addExampleHeadersIfExists(
-    exampleHeaders,
-    specification.getExampleHttpHeaders(),
-  );
+  addExampleHeadersIfExists(exampleHeaders, method.exampleHeaders);
+  addExampleHeadersIfExists(exampleHeaders, service.exampleHeaders);
+  addExampleHeadersIfExists(exampleHeaders, specification.getExampleHeaders());
   return exampleHeaders;
 }
 

@@ -60,15 +60,15 @@ object Main {
             .serviceUnder(
                 "/docs",
                 DocService.builder()
-                    .exampleRequestForMethod(
+                    .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
                         "Hello", exampleRequest
                     )
-                    .exampleRequestForMethod(
+                    .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
                         "LazyHello", exampleRequest
                     )
-                    .exampleRequestForMethod(
+                    .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
                         "BlockingHello", exampleRequest
                     )

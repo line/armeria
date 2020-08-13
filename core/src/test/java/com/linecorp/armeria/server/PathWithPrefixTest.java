@@ -34,30 +34,6 @@ class PathWithPrefixTest {
     }
 
     @Test
-    void testLoggerName() {
-        Route route = Route.builder().path("/foo/", "glob:/bar/**").build();
-        assertThat(route.loggerName()).isEqualTo("foo.bar.__");
-
-        route = Route.builder().path("/foo/", "glob:bar").build();
-        assertThat(route.loggerName()).isEqualTo("foo.__.bar");
-
-        route = Route.builder().path("/foo/", "regex:/(foo|bar)").build();
-        assertThat(route.loggerName()).isEqualTo("foo.regex.__foo_bar_");
-    }
-
-    @Test
-    void testMetricName() {
-        Route route = Route.builder().path("/foo/", "glob:/bar/**").build();
-        assertThat(route.meterTag()).isEqualTo("glob:/foo/bar/**");
-
-        route = Route.builder().path("/foo/", "glob:bar").build();
-        assertThat(route.meterTag()).isEqualTo("glob:/foo/**/bar");
-
-        route = Route.builder().path("/foo/", "regex:/(foo|bar)").build();
-        assertThat(route.meterTag()).isEqualTo("prefix:/foo/,regex:/(foo|bar)");
-    }
-
-    @Test
     void patternString() {
         Route route = Route.builder().path("/foo/", "glob:/bar/**").build();
         assertThat(route.patternString()).isEqualTo("/foo/bar/**");

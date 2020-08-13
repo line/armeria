@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -29,9 +28,9 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 
 /**
- * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its key. {@link KeySelector} is used
- * to resolve the key from a {@link Request}. If there is no circuit breaker bound to the key, a new one is
- * created by using the given circuit breaker factory.
+ * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its {@link MappingKey}.
+ * If there is no circuit breaker bound to the key, a new one is created by using the given circuit breaker
+ * factory.
  */
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
@@ -44,7 +43,7 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
     private final BiFunction<String, String, ? extends CircuitBreaker> factory;
 
     /**
-     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link KeySelector} and
+     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link MappingKey} and
      * {@link CircuitBreaker} factory.
      */
     KeyedCircuitBreakerMapping(MappingKey mappingKey,
@@ -60,16 +59,16 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         final String method;
         switch (mappingKey) {
             case HOST:
-                key = host = KeySelector.HOST.get(ctx, req);
+                key = host = host(ctx);
                 method = null;
                 break;
             case METHOD:
                 host = null;
-                key = method = KeySelector.METHOD.get(ctx, req);
+                key = method = method(ctx);
                 break;
             case HOST_AND_METHOD:
-                host = KeySelector.HOST.get(ctx, req);
-                method = KeySelector.METHOD.get(ctx, req);
+                host = host(ctx);
+                method = method(ctx);
                 key = host + '#' + method;
                 break;
             default:
@@ -83,66 +82,28 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method));
     }
 
-    /**
-     * Returns the mapping key of the given {@link Request}.
-     *
-     * @deprecated Use static methods in {@link CircuitBreakerMapping}.
-     */
-    @Deprecated
-    @FunctionalInterface
-    public interface KeySelector<K> {
+    private static String host(ClientRequestContext ctx) {
+        final Endpoint endpoint = ctx.endpoint();
+        if (endpoint == null) {
+            return "UNKNOWN";
+        } else {
+            final String ipAddr = endpoint.ipAddr();
+            if (ipAddr == null || endpoint.isIpAddrOnly()) {
+                return endpoint.authority();
+            } else {
+                return endpoint.authority() + '/' + ipAddr;
+            }
+        }
+    }
 
-        /**
-         * A {@link KeySelector} that returns remote method name as a key.
-         *
-         * @deprecated Use {@link CircuitBreakerMapping#perMethod(Function)}.
-         */
-        @Deprecated
-        KeySelector<String> METHOD = (ctx, req) -> {
-            final RpcRequest rpcReq = ctx.rpcRequest();
-            return rpcReq != null ? rpcReq.method() : ctx.method().name();
-        };
-
-        /**
-         * A {@link KeySelector} that returns a key consisted of remote host name, IP address and port number.
-         *
-         * @deprecated Use {@link CircuitBreakerMapping#perHost(Function)}.
-         */
-        @Deprecated
-        KeySelector<String> HOST =
-                (ctx, req) -> {
-                    final Endpoint endpoint = ctx.endpoint();
-                    if (endpoint == null) {
-                        return "UNKNOWN";
-                    } else {
-                        final String ipAddr = endpoint.ipAddr();
-                        if (ipAddr == null || endpoint.isIpAddrOnly()) {
-                            return endpoint.authority();
-                        } else {
-                            return endpoint.authority() + '/' + ipAddr;
-                        }
-                    }
-                };
-
-        /**
-         * A {@link KeySelector} that returns a key consisted of remote host name, IP address, port number
-         * and method name.
-         *
-         * @deprecated Use {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
-         */
-        @Deprecated
-        KeySelector<String> HOST_AND_METHOD =
-                (ctx, req) -> HOST.get(ctx, req) + '#' + METHOD.get(ctx, req);
-
-        /**
-         * Returns the mapping key of the given {@link Request}.
-         */
-        K get(ClientRequestContext ctx, Request req) throws Exception;
+    private static String method(ClientRequestContext ctx) {
+        final RpcRequest rpcReq = ctx.rpcRequest();
+        return rpcReq != null ? rpcReq.method() : ctx.method().name();
     }
 
     enum MappingKey {
         HOST,
         METHOD,
-        HOST_AND_METHOD;
+        HOST_AND_METHOD
     }
 }

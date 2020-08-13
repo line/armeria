@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.spring.web;
+package com.linecorp.armeria.spring.web.reactive;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -34,17 +34,15 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.ArmeriaBeanPostProcessor;
-import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 
 /**
  * A {@link WebServer} that can be used to control an Armeria server.
  *
  * @see ArmeriaReactiveWebServerFactory to create a {@link WebServer} with the reactive stack
  *
- * @deprecated Use {@link ArmeriaReactiveWebServerFactory#getWebServer(HttpHandler)}.
+ * @see ArmeriaReactiveWebServerFactory#getWebServer(HttpHandler)
  */
-@Deprecated
-public final class ArmeriaWebServer implements WebServer {
+final class ArmeriaWebServer implements WebServer {
 
     private final Server server;
     private final SessionProtocol protocol;
@@ -64,12 +62,9 @@ public final class ArmeriaWebServer implements WebServer {
      * @param port the primary local port that the server will be bound to
      * @param beanFactory the bean factory that adding {@link ArmeriaBeanPostProcessor} to
      *                    the application context.
-     *
-     * @deprecated Use {@link ArmeriaReactiveWebServerFactory#getWebServer(HttpHandler)}.
      */
-    @Deprecated
-    public ArmeriaWebServer(Server server, SessionProtocol protocol, @Nullable InetAddress address, int port,
-                            ConfigurableListableBeanFactory beanFactory) {
+    ArmeriaWebServer(Server server, SessionProtocol protocol, @Nullable InetAddress address, int port,
+                     ConfigurableListableBeanFactory beanFactory) {
         this.server = requireNonNull(server, "server");
         this.protocol = requireNonNull(protocol, "protocol");
         this.address = address;

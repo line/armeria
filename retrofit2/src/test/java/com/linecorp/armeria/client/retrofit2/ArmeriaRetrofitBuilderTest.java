@@ -122,7 +122,7 @@ class ArmeriaRetrofitBuilderTest {
     void build_clientOptions() {
         final Service secretService = ArmeriaRetrofit
                 .builder(server.httpUri())
-                .addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Bearer: access-token")
+                .addHeader(HttpHeaderNames.AUTHORIZATION, "Bearer: access-token")
                 .addConverterFactory(converterFactory)
                 .build()
                 .create(Service.class);

@@ -159,7 +159,6 @@ public final class DropwizardMeterRegistries {
             }
         });
 
-        meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
         return meterRegistry;
     }
 

@@ -97,7 +97,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         return new DocServiceBuilder();
     }
 
-    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
+    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
     private final Map<String, ListMultimap<String, String>> examplePaths;
     private final Map<String, ListMultimap<String, String>> exampleQueries;
@@ -111,7 +111,7 @@ public final class DocService extends SimpleDecoratingHttpService {
      * Creates a new instance.
      */
     public DocService() {
-        this(/* exampleHttpHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
+        this(/* exampleHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
              /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
              /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES);
     }
@@ -119,7 +119,7 @@ public final class DocService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance with example HTTP headers and example requests and injected scripts.
      */
-    DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders,
+    DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders,
                Map<String, ListMultimap<String, String>> exampleRequests,
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
@@ -128,7 +128,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         super(FileService.of(new DocServiceVfs()));
 
-        this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
+        this.exampleHeaders = immutableCopyOf(exampleHeaders, "exampleHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
         this.examplePaths = immutableCopyOf(examplePaths, "examplePaths");
         this.exampleQueries = immutableCopyOf(exampleQueries, "exampleQueries");
@@ -214,7 +214,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 spec.exceptions().stream()
                     .map(e -> addExceptionDocStrings(e, docStrings))
                     .collect(toImmutableList()),
-                spec.exampleHttpHeaders());
+                spec.exampleHeaders());
     }
 
     private static ServiceInfo addServiceDocStrings(ServiceInfo service, Map<String, String> docStrings) {
@@ -223,7 +223,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 service.methods().stream()
                        .map(method -> addMethodDocStrings(service, method, docStrings))
                        .collect(toImmutableList()),
-                service.exampleHttpHeaders(),
+                service.exampleHeaders(),
                 docString(service.name(), service.docString(), docStrings));
     }
 
@@ -236,7 +236,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                                     .collect(toImmutableList()),
                               method.exceptionTypeSignatures(),
                               method.endpoints(),
-                              method.exampleHttpHeaders(),
+                              method.exampleHeaders(),
                               method.exampleRequests(),
                               method.examplePaths(),
                               method.exampleQueries(),
@@ -308,13 +308,13 @@ public final class DocService extends SimpleDecoratingHttpService {
                     .map(this::addServiceExamples)
                     .collect(toImmutableList()),
                 spec.enums(), spec.structs(), spec.exceptions(),
-                Iterables.concat(spec.exampleHttpHeaders(),
-                                 exampleHttpHeaders.getOrDefault("", ImmutableListMultimap.of()).get("")));
+                Iterables.concat(spec.exampleHeaders(),
+                                 exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get("")));
     }
 
     private ServiceInfo addServiceExamples(ServiceInfo service) {
-        final ListMultimap<String, HttpHeaders> exampleHttpHeaders =
-                this.exampleHttpHeaders.getOrDefault(service.name(), ImmutableListMultimap.of());
+        final ListMultimap<String, HttpHeaders> exampleHeaders =
+                this.exampleHeaders.getOrDefault(service.name(), ImmutableListMultimap.of());
         final ListMultimap<String, String> exampleRequests =
                 this.exampleRequests.getOrDefault(service.name(), ImmutableListMultimap.of());
         final ListMultimap<String, String> examplePaths =
@@ -331,13 +331,13 @@ public final class DocService extends SimpleDecoratingHttpService {
                         m.endpoints(),
                         // Show the examples added via `DocServiceBuilder` before the examples
                         // generated by the plugin.
-                        concatAndDedup(exampleHttpHeaders.get(m.name()), m.exampleHttpHeaders()),
+                        concatAndDedup(exampleHeaders.get(m.name()), m.exampleHeaders()),
                         concatAndDedup(exampleRequests.get(m.name()), m.exampleRequests()),
                         examplePaths.get(m.name()),
                         exampleQueries.get(m.name()),
                         m.httpMethod(), m.docString()))::iterator,
-                Iterables.concat(service.exampleHttpHeaders(),
-                                 exampleHttpHeaders.get("")),
+                Iterables.concat(service.exampleHeaders(),
+                                 exampleHeaders.get("")),
                 service.docString());
     }
 

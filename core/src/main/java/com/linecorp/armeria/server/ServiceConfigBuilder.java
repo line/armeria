@@ -93,7 +93,15 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigBuilder decorators(Function<? super HttpService, ? extends HttpService>... decorators) {
+    @SafeVarargs
+    public final ServiceConfigBuilder decorators(
+            Function<? super HttpService, ? extends HttpService>... decorators) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         throw new UnsupportedOperationException();
     }
 

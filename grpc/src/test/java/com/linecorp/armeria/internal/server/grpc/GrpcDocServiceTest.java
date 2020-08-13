@@ -117,7 +117,7 @@ class GrpcDocServiceTest {
                                        .build());
             sb.serviceUnder("/docs/",
                             DocService.builder()
-                                      .exampleRequestForMethod(
+                                      .exampleRequests(
                                             TestServiceGrpc.SERVICE_NAME,
                                             "UnaryCall",
                                             SimpleRequest.newBuilder()
@@ -125,7 +125,7 @@ class GrpcDocServiceTest {
                                                              Payload.newBuilder()
                                                                     .setBody(ByteString.copyFromUtf8("world")))
                                                          .build())
-                                      .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
+                                      .injectedScripts(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
                                       .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
                                       .exclude(DocServiceFilter.ofMethodName(
                                                         TestServiceGrpc.SERVICE_NAME,

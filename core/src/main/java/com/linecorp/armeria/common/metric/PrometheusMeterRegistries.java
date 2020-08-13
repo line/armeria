@@ -71,9 +71,8 @@ public final class PrometheusMeterRegistries {
      * @return the specified {@link PrometheusMeterRegistry}
      */
     public static <T extends PrometheusMeterRegistry> T configureRegistry(T meterRegistry) {
-        requireNonNull(meterRegistry, "meterRegistry");
-        meterRegistry.config().namingConvention(MoreNamingConventions.prometheus());
-        return meterRegistry;
+        // This method currently does nothing, but we may do something in the future.
+        return requireNonNull(meterRegistry, "meterRegistry");
     }
 
     private PrometheusMeterRegistries() {}

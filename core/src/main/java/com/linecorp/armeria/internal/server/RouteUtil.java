@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal.server;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.server.Route;
 
 /**
@@ -47,10 +45,6 @@ public final class RouteUtil {
      */
     public static final String REGEX = "regex:";
 
-    public static final String UNKNOWN_LOGGER_NAME = "__UNKNOWN__";
-
-    public static final String ROOT_LOGGER_NAME = "__ROOT__";
-
     /**
      * Ensures that the specified {@code path} is an absolute path that starts with {@code "/"}.
      *
@@ -66,61 +60,6 @@ public final class RouteUtil {
                                                " (expected: an absolute path starting with '/')");
         }
         return path;
-    }
-
-    /**
-     * Returns the logger name from the specified {@code pathish}.
-     */
-    public static String newLoggerName(@Nullable String pathish) {
-        if (pathish == null) {
-            return UNKNOWN_LOGGER_NAME;
-        }
-
-        String normalized = pathish;
-        if ("/".equals(normalized)) {
-            return ROOT_LOGGER_NAME;
-        }
-
-        if (normalized.startsWith("/")) {
-            normalized = normalized.substring(1); // Strip the first slash.
-        }
-
-        final int end;
-        if (normalized.endsWith("/")) {
-            end = normalized.length() - 1;
-        } else {
-            end = normalized.length();
-        }
-
-        final StringBuilder buf = new StringBuilder(end);
-        boolean start = true;
-        for (int i = 0; i < end; i++) {
-            final char ch = normalized.charAt(i);
-            if (ch != '/') {
-                if (start) {
-                    start = false;
-                    if (Character.isJavaIdentifierStart(ch)) {
-                        buf.append(ch);
-                    } else {
-                        buf.append('_');
-                        if (Character.isJavaIdentifierPart(ch)) {
-                            buf.append(ch);
-                        }
-                    }
-                } else {
-                    if (Character.isJavaIdentifierPart(ch)) {
-                        buf.append(ch);
-                    } else {
-                        buf.append('_');
-                    }
-                }
-            } else {
-                start = true;
-                buf.append('.');
-            }
-        }
-
-        return buf.toString();
     }
 
     private RouteUtil() {}

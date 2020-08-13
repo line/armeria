@@ -48,7 +48,7 @@ public interface MeterIdPrefixFunction {
      * <ul>
      *   <li>Server-side tags:<ul>
      *     <li>{@code hostnamePattern} - {@link VirtualHost#hostnamePattern()}
-     *     <li>{@code route} - {@link Route#meterTag()}</li>
+     *     <li>{@code route} - {@link Route#patternString()}</li>
      *     <li>{@code method} - RPC method name or {@link HttpMethod#name()} if RPC method name is not
      *                          available</li>
      *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
@@ -121,18 +121,6 @@ public interface MeterIdPrefixFunction {
     default MeterIdPrefixFunction withTags(Iterable<Tag> tags) {
         requireNonNull(tags, "tags");
         return andThen((registry, log, meterIdPrefix) -> meterIdPrefix.withTags(tags));
-    }
-
-    /**
-     * Returns a {@link MeterIdPrefixFunction} that applies transformation on the {@link MeterIdPrefix}
-     * returned by this function.
-     *
-     * @deprecated Use {@link #andThen(MeterIdPrefixFunctionCustomizer)} instead.
-     */
-    @Deprecated
-    default MeterIdPrefixFunction andThen(BiFunction<MeterRegistry, MeterIdPrefix, MeterIdPrefix> function) {
-        requireNonNull(function, "function");
-        return andThen((registry, log, meterIdPrefix) -> function.apply(registry, meterIdPrefix));
     }
 
     /**
