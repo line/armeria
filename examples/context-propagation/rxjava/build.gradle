@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation project(':core')
     implementation project(':rxjava3')
+    runtimeOnly 'org.slf4j:slf4j-simple'
 }
 
 application {
