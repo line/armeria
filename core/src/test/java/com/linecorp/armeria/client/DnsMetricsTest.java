@@ -23,13 +23,16 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 public class DnsMetricsTest {
 
     @Test
     void dns_metric_test_for_successful_query_writes() throws ExecutionException, InterruptedException {
         final ClientFactory factory = ClientFactory.builder()
+                .meterRegistry(PrometheusMeterRegistries.newRegistry())
                 .build();
 
         final WebClient client2 = WebClient.builder()
@@ -37,8 +40,9 @@ public class DnsMetricsTest {
                 .build();
 
         client2.execute(RequestHeaders.of(HttpMethod.GET, "http://wikipedia.com")).aggregate().get();
-        System.out.println(MoreMeters.measureAll(factory.dnsMetricRegistry()));
-        final double count = factory.dnsMetricRegistry().getPrometheusRegistry()
+
+        final double count = ((PrometheusMeterRegistry) factory.meterRegistry())
+                .getPrometheusRegistry()
                 .getSampleValue("armeria_client_dns_queries_total",
                         new String[] {"cause","name","result"},
                         new String[] {"","wikipedia.com.", "success"});
@@ -48,6 +52,7 @@ public class DnsMetricsTest {
     @Test
     void dns_metric_test_for_query_failures() throws ExecutionException, InterruptedException {
         final ClientFactory factory = ClientFactory.builder()
+                .meterRegistry(PrometheusMeterRegistries.newRegistry())
                 .build();
         try {
             final WebClient client2 = WebClient.builder()
@@ -55,7 +60,8 @@ public class DnsMetricsTest {
                     .build();
             client2.execute(RequestHeaders.of(HttpMethod.GET, "http://googleusercontent.com")).aggregate().get();
         } catch (Exception ex) {
-            final double count = factory.dnsMetricRegistry().getPrometheusRegistry()
+            final double count = ((PrometheusMeterRegistry) factory.meterRegistry())
+                    .getPrometheusRegistry()
                     .getSampleValue("armeria_client_dns_queries_total",
                             new String[] {"cause","name","result"},
                             new String[] {"No matching record type found","googleusercontent.com.", "failure"});

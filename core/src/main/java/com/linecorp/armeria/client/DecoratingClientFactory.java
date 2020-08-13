@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
@@ -92,11 +91,6 @@ public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> 
     @Override
     public MeterRegistry meterRegistry() {
         return unwrap().meterRegistry();
-    }
-
-    @Override
-    public PrometheusMeterRegistry dnsMetricRegistry() {
-        return unwrap().dnsMetricRegistry();
     }
 
     @Override

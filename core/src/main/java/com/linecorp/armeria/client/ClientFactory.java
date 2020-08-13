@@ -46,7 +46,6 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import reactor.core.scheduler.NonBlocking;
@@ -177,11 +176,6 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * Returns the {@link MeterRegistry} that collects various stats.
      */
     MeterRegistry meterRegistry();
-
-    /**
-     * Returns the {@link PrometheusMeterRegistry} that collects various DNS stats.
-     */
-    PrometheusMeterRegistry dnsMetricRegistry();
 
     /**
      * Sets the {@link MeterRegistry} that collects various stats. Note that this method is intended to be

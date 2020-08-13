@@ -92,7 +92,7 @@ public final class DnsResolverGroupBuilder {
     @Nullable
     private Boolean decodeIdn;
     @Nullable
-    private PrometheusMeterRegistry dnsMeterRegistry;
+    private PrometheusMeterRegistry metricRegistry;
 
     DnsResolverGroupBuilder() {}
 
@@ -297,11 +297,11 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets MeterRegistry.
-     * @param dnsMeterRegistry {@link PrometheusMeterRegistry}.
+     * @param metricRegistry {@link PrometheusMeterRegistry}.
      * @return DnsResolverGroupBuilder.
      */
-    public DnsResolverGroupBuilder dnsMeterRegistry(PrometheusMeterRegistry dnsMeterRegistry) {
-        this.dnsMeterRegistry = dnsMeterRegistry;
+    public DnsResolverGroupBuilder metricRegistry(PrometheusMeterRegistry metricRegistry) {
+        this.metricRegistry = metricRegistry;
         return this;
     }
 
@@ -357,6 +357,6 @@ public final class DnsResolverGroupBuilder {
         };
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
                                                   queryTimeoutMillis, refreshBackoff,
-                                                    resolvedAddressTypes, dnsMeterRegistry);
+                                                    resolvedAddressTypes, metricRegistry);
     }
 }

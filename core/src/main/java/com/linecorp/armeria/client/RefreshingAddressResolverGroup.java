@@ -102,13 +102,13 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
-    private final PrometheusMeterRegistry dnsMeterRegistry;
+    private final PrometheusMeterRegistry metricRegistry;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                                    Backoff refreshBackoff,
                                    @Nullable ResolvedAddressTypes resolvedAddressTypes,
-                                   @Nonnull PrometheusMeterRegistry dnsMeterRegistry) {
+                                   @Nonnull PrometheusMeterRegistry metricRegistry) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
@@ -121,7 +121,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
 
-        this.dnsMeterRegistry = dnsMeterRegistry;
+        this.metricRegistry = metricRegistry;
     }
 
     @VisibleForTesting
@@ -135,7 +135,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         final EventLoop eventLoop = (EventLoop) executor;
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
         builder.dnsQueryLifecycleObserverFactory(
-                new DefaultDnsQueryLifecycleObserverFactory(dnsMeterRegistry,
+                new DefaultDnsQueryLifecycleObserverFactory(metricRegistry,
                         new MeterIdPrefix("armeria.client.dns.queries")));
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,

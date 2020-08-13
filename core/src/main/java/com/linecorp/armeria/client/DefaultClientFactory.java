@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolverGroup;
@@ -142,11 +141,6 @@ final class DefaultClientFactory implements ClientFactory {
     @Override
     public MeterRegistry meterRegistry() {
         return httpClientFactory.meterRegistry();
-    }
-
-    @Override
-    public PrometheusMeterRegistry dnsMetricRegistry() {
-        return httpClientFactory.dnsMetricRegistry();
     }
 
     @Override

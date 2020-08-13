@@ -33,12 +33,10 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -179,9 +177,6 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
             ClientFactoryOption.define("METER_REGISTRY", Metrics.globalRegistry);
-
-    public static final ClientFactoryOption<PrometheusMeterRegistry> DNS_METRIC_REGISTRY =
-            ClientFactoryOption.define("DNS_METER_REGISTRY", PrometheusMeterRegistries.newRegistry());
 
     /**
      * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
@@ -443,13 +438,6 @@ public final class ClientFactoryOptions
      */
     public MeterRegistry meterRegistry() {
         return get(METER_REGISTRY);
-    }
-
-    /**
-     * Returns the {@link PrometheusMeterRegistry} which collects various stats.
-     */
-    public PrometheusMeterRegistry dnsRegistry() {
-        return get(DNS_METRIC_REGISTRY);
     }
 
     /**
