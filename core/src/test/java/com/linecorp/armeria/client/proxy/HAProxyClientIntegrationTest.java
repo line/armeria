@@ -28,8 +28,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -78,8 +76,10 @@ import io.netty.util.ReferenceCountUtil;
 class HAProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
 
-    @Nullable
-    private static SimpleChannelHandlerFactory channelHandlerFactory;
+    private static final SimpleChannelHandlerFactory NOOP_CHANNEL_HANDLER_FACTORY =
+            new SimpleChannelHandlerFactory(null, null);
+
+    private static SimpleChannelHandlerFactory channelHandlerFactory = NOOP_CHANNEL_HANDLER_FACTORY;
 
     @RegisterExtension
     static ServerExtension backendServer = new ServerExtension() {
