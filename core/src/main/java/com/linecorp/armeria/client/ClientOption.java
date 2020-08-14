@@ -19,11 +19,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.util.AbstractOption;
 
 /**
@@ -32,74 +28,6 @@ import com.linecorp.armeria.common.util.AbstractOption;
  * @param <T> the type of the option value
  */
 public final class ClientOption<T> extends AbstractOption<ClientOption<T>, ClientOptionValue<T>, T> {
-
-    /**
-     * The {@link ClientFactory} used for creating a client.
-     *
-     * @deprecated Use {@link ClientOptions#FACTORY}.
-     */
-    @Deprecated
-    public static final ClientOption<ClientFactory> FACTORY = ClientOptions.FACTORY;
-
-    /**
-     * The timeout of a socket write.
-     *
-     * @deprecated Use {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
-     */
-    @Deprecated
-    public static final ClientOption<Long> WRITE_TIMEOUT_MILLIS = ClientOptions.WRITE_TIMEOUT_MILLIS;
-
-    /**
-     * The timeout of a server reply to a client call.
-     *
-     * @deprecated Use {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
-     */
-    @Deprecated
-    public static final ClientOption<Long> RESPONSE_TIMEOUT_MILLIS = ClientOptions.RESPONSE_TIMEOUT_MILLIS;
-
-    /**
-     * The maximum allowed length of a server response.
-     *
-     * @deprecated Use {@link ClientOptions#MAX_RESPONSE_LENGTH}.
-     */
-    @Deprecated
-    public static final ClientOption<Long> MAX_RESPONSE_LENGTH = ClientOptions.MAX_RESPONSE_LENGTH;
-
-    /**
-     * The additional HTTP headers to send with requests.
-     *
-     * @deprecated Use {@link ClientOptions#HTTP_HEADERS}.
-     */
-    @Deprecated
-    public static final ClientOption<HttpHeaders> HTTP_HEADERS = ClientOptions.HTTP_HEADERS;
-
-    /**
-     * The {@link Function} that decorates the client components.
-     *
-     * @deprecated Use {@link ClientOptions#DECORATION}.
-     */
-    @Deprecated
-    public static final ClientOption<ClientDecoration> DECORATION = ClientOptions.DECORATION;
-
-    /**
-     * The {@link Supplier} that generates a {@link RequestId}.
-     *
-     * @deprecated Use {@link ClientOptions#REQUEST_ID_GENERATOR}.
-     */
-    @Deprecated
-    public static final ClientOption<Supplier<RequestId>> REQUEST_ID_GENERATOR =
-            ClientOptions.REQUEST_ID_GENERATOR;
-
-    /**
-     * A {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
-     *
-     * @deprecated Use {@link ClientOptions#ENDPOINT_REMAPPER}.
-     *
-     * @see ClientBuilder#endpointRemapper(Function)
-     */
-    @Deprecated
-    public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
-            ClientOptions.ENDPOINT_REMAPPER;
 
     /**
      * Returns the all available {@link ClientOption}s.

@@ -145,7 +145,7 @@ class HttpClientSniTest {
         final WebClient client = WebClient.builder("https://127.0.0.1:" + httpsPort)
                                           .factory(clientFactory)
                                           .build();
-        try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
+        try (SafeCloseable unused = Clients.withHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response = client.get("/").aggregate().get();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");

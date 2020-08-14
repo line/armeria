@@ -82,7 +82,7 @@ public class ThriftHttpHeaderTest {
     @Test
     public void testSimpleManipulation() throws Exception {
         final HelloService.Iface client = newClient();
-        try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, SECRET)) {
+        try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, SECRET)) {
             assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");
         }
 
@@ -97,10 +97,10 @@ public class ThriftHttpHeaderTest {
         final String secretB = SECRET.substring(secretA.length());
 
         final HelloService.Iface client = newClient();
-        try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, secretA)) {
+        try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, secretA)) {
             // Should fail with the first half of the secret.
             assertAuthorizationFailure(client, secretA);
-            try (SafeCloseable ignored2 = Clients.withHttpHeaders(builder -> {
+            try (SafeCloseable ignored2 = Clients.withHeaders(builder -> {
                 builder.set(AUTHORIZATION, builder.get(AUTHORIZATION) + secretB);
             })) {
                 // Should pass if both manipulators worked.
@@ -122,7 +122,7 @@ public class ThriftHttpHeaderTest {
         final BlockingQueue<Object> result = new ArrayBlockingQueue<>(1);
         final Callback callback = new Callback(result);
 
-        try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, SECRET)) {
+        try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, SECRET)) {
             client.hello("armeria", callback);
         }
 
@@ -159,7 +159,7 @@ public class ThriftHttpHeaderTest {
                            };
                        })
                        .build(Iface.class);
-        try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, SECRET)) {
+        try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, SECRET)) {
             assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");
         }
     }

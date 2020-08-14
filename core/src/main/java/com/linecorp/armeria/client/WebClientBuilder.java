@@ -169,25 +169,25 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public WebClientBuilder addHttpHeader(CharSequence name, Object value) {
-        return (WebClientBuilder) super.addHttpHeader(name, value);
+    public WebClientBuilder addHeader(CharSequence name, Object value) {
+        return (WebClientBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public WebClientBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (WebClientBuilder) super.addHttpHeaders(httpHeaders);
+    public WebClientBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (WebClientBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public WebClientBuilder setHttpHeader(CharSequence name, Object value) {
-        return (WebClientBuilder) super.setHttpHeader(name, value);
+    public WebClientBuilder setHeader(CharSequence name, Object value) {
+        return (WebClientBuilder) super.setHeader(name, value);
     }
 
     @Override
-    public WebClientBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (WebClientBuilder) super.setHttpHeaders(httpHeaders);
+    public WebClientBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (WebClientBuilder) super.setHeaders(headers);
     }
 
     @Override

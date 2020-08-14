@@ -162,52 +162,6 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void requestContentPreview(@Nullable String requestContentPreview);
 
     /**
-     * Allows setting the request content using {@link #requestContent(Object, Object)} even after
-     * {@link #endRequest()} is called.
-     *
-     * <p>Note, however, the request content is not set if {@link #endRequest(Throwable)} was called.
-     *
-     * @deprecated Use {@link #defer(RequestLogProperty)}.
-     */
-    @Deprecated
-    default void deferRequestContent() {
-        defer(RequestLogProperty.REQUEST_CONTENT);
-    }
-
-    /**
-     * Returns {@code true} if {@link #deferRequestContent()} is called.
-     *
-     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
-     */
-    @Deprecated
-    default boolean isDeferRequestContentSet() {
-        return isDeferred(RequestLogProperty.REQUEST_CONTENT);
-    }
-
-    /**
-     * Allows setting the request content preview using {@link #requestContentPreview(String)} even after
-     * {@link #endRequest()} is called.
-     *
-     * <p>Note, however, the request content preview is not set if {@link #endRequest(Throwable)} was called.
-     *
-     * @deprecated Use {@link #defer(RequestLogProperty)}.
-     */
-    @Deprecated
-    default void deferRequestContentPreview() {
-        defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
-    }
-
-    /**
-     * Returns {@code true} if {@link #deferRequestContentPreview()} is called.
-     *
-     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
-     */
-    @Deprecated
-    default boolean isDeferRequestContentPreviewSet() {
-        return isDeferred(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
-    }
-
-    /**
      * Sets the {@link RequestLog#requestTrailers()}.
      */
     void requestTrailers(HttpHeaders requestTrailers);
@@ -325,52 +279,6 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * Sets the {@link RequestLog#responseContentPreview()}.
      */
     void responseContentPreview(@Nullable String responseContentPreview);
-
-    /**
-     * Allows setting the response content using {@link #responseContent(Object, Object)} even after
-     * {@link #endResponse()} is called.
-     *
-     * <p>Note, however, the response content is not set if {@link #endResponse(Throwable)} was called.
-     *
-     * @deprecated Use {@link #defer(RequestLogProperty)}.
-     */
-    @Deprecated
-    default void deferResponseContent() {
-        defer(RequestLogProperty.RESPONSE_CONTENT);
-    }
-
-    /**
-     * Returns {@code true} if {@link #deferResponseContent()} is called.
-     *
-     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
-     */
-    @Deprecated
-    default boolean isDeferResponseContentSet() {
-        return isDeferred(RequestLogProperty.RESPONSE_CONTENT);
-    }
-
-    /**
-     * Allows setting the response content preview using {@link #responseContentPreview(String)} even after
-     * {@link #endResponse()} is called.
-     *
-     * <p>Note, however, the response content preview is not set if {@link #endResponse(Throwable)} was called.
-     *
-     * @deprecated Use {@link #defer(RequestLogProperty)}.
-     */
-    @Deprecated
-    default void deferResponseContentPreview() {
-        defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
-    }
-
-    /**
-     * Returns {@code true} if {@link #deferResponseContentPreview()} is called.
-     *
-     * @deprecated Use {@link #isDeferred(RequestLogProperty)}.
-     */
-    @Deprecated
-    default boolean isDeferResponseContentPreviewSet() {
-        return isDeferred(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
-    }
 
     /**
      * Sets the {@link RequestLog#responseTrailers()}.

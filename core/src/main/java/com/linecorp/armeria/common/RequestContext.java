@@ -379,19 +379,6 @@ public interface RequestContext {
     boolean isTimedOut();
 
     /**
-     * Returns the {@link Executor} that is handling the current {@link Request}.
-     *
-     * @deprecated Use {@code eventLoop().withoutContext()}.
-     */
-    @Deprecated
-    default Executor executor() {
-        // The implementation is the same as eventLoop but we expose as an Executor as well given
-        // how much easier it is to write tests for an Executor (i.e.,
-        // when(ctx.executor()).thenReturn(MoreExecutors.directExecutor()));
-        return eventLoop();
-    }
-
-    /**
      * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.
      * The {@link ContextAwareEventLoop} sets this {@link RequestContext} as the current context
      * before executing any submitted tasks. If you want to use {@link EventLoop} without setting this context,
@@ -408,34 +395,6 @@ public interface RequestContext {
      */
     default ByteBufAllocator alloc() {
         throw new UnsupportedOperationException("No ByteBufAllocator available for this RequestContext.");
-    }
-
-    /**
-     * Returns an {@link Executor} that will make sure this {@link RequestContext} is set as the current
-     * context before executing any callback. This should almost always be used for executing asynchronous
-     * callbacks in service code to make sure features that require the {@link RequestContext} work properly.
-     * Most asynchronous libraries like {@link CompletableFuture} provide methods that accept an
-     * {@link Executor} to run callbacks on.
-     *
-     * @deprecated Use {@link #eventLoop()}.
-     */
-    @Deprecated
-    default Executor contextAwareExecutor() {
-        // The implementation is the same as contextAwareEventLoop but we expose as an Executor as well given
-        // how common it is to use only as an Executor and it becomes much easier to write tests for an
-        // Executor (i.e., when(ctx.contextAwareExecutor()).thenReturn(MoreExecutors.directExecutor()));
-        return eventLoop();
-    }
-
-    /**
-     * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current
-     * context before executing any submitted tasks.
-     *
-     * @deprecated Use {@link #eventLoop()}.
-     */
-    @Deprecated
-    default EventLoop contextAwareEventLoop() {
-        return eventLoop();
     }
 
     /**

@@ -114,10 +114,9 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *
  * <p>TODO: Support string values for enums that have been typedef'd.
  *
- * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}.
+ * @see TTextProtocolFactory#getProtocol(TTransport)
  */
-@Deprecated
-public final class TTextProtocol extends TProtocol {
+final class TTextProtocol extends TProtocol {
 
     private static final String SEQUENCE_AS_KEY_ILLEGAL =
             "Can't have a sequence (list or set) as a key in a map!";
@@ -141,22 +140,16 @@ public final class TTextProtocol extends TProtocol {
     /**
      * Create a parser which can read from trans, and create the output writer
      * that can write to a TTransport.
-     *
-     * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
      */
-    @Deprecated
-    public TTextProtocol(TTransport trans) {
+    TTextProtocol(TTransport trans) {
         this(trans, false);
     }
 
     /**
      * Create a parser which can read from trans, and create the output writer
      * that can write to a TTransport, optionally enabling serialization of named enums.
-     *
-     * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
      */
-    @Deprecated
-    public TTextProtocol(TTransport trans, boolean useNamedEnums) {
+    TTextProtocol(TTransport trans, boolean useNamedEnums) {
         super(trans);
 
         writers = new Stack<>();

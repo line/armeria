@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.MediaType.ANY_TYPE;
 import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
-import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -141,65 +140,7 @@ class RouteTest {
     }
 
     @Test
-    void testLoggerName() {
-        Route route;
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .consumes(PLAIN_TEXT_UTF_8)
-                     .produces(JSON_UTF_8)
-                     .build();
-        assertThat(route.loggerName())
-                .isEqualTo("test.GET.consumes.text_plain.produces.application_json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .produces(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.loggerName())
-                .isEqualTo("test.GET.produces.text_plain.application_json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET, HttpMethod.POST)
-                     .consumes(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.loggerName())
-                .isEqualTo("test.GET_POST.consumes.text_plain.application_json");
-    }
-
-    @Test
-    void testMetricName() {
-        Route route;
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .consumes(PLAIN_TEXT_UTF_8)
-                     .produces(JSON_UTF_8)
-                     .build();
-        assertThat(route.meterTag())
-                .isEqualTo("exact:/test,methods:GET,consumes:text/plain,produces:application/json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .produces(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.meterTag())
-                .isEqualTo("exact:/test,methods:GET,produces:text/plain,application/json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET, HttpMethod.POST)
-                     .consumes(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.meterTag())
-                .isEqualTo("exact:/test,methods:GET,POST,consumes:text/plain,application/json");
-    }
-
-    @Test
-    void testHttpHeader() {
+    void testHeader() {
         final Route route = Route.builder()
                                  .path(PATH)
                                  .methods(HttpMethod.GET, HttpMethod.POST)

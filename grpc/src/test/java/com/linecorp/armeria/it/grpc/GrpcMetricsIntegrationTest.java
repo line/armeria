@@ -240,7 +240,7 @@ public class GrpcMetricsIntegrationTest {
         final WebClient client =
                 Clients.builder(server.httpUri())
                        .factory(clientFactory)
-                       .addHttpHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
+                       .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
                        .build(WebClient.class);
 
         final SimpleRequest request =

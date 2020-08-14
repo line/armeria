@@ -84,10 +84,10 @@ class ThriftDocServicePluginTest {
 
         // Ensure each service contains the endpoint and does not have example HTTP headers.
         final ServiceInfo helloServiceInfo = services.get(HELLO_NAME);
-        assertThat(helloServiceInfo.exampleHttpHeaders()).isEmpty();
+        assertThat(helloServiceInfo.exampleHeaders()).isEmpty();
 
         final ServiceInfo fooServiceInfo = services.get(FOO_NAME);
-        assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
+        assertThat(fooServiceInfo.exampleHeaders()).isEmpty();
 
         // Ensure the example request is empty as well.
         final Map<String, MethodInfo> methods =
@@ -290,8 +290,8 @@ class ThriftDocServicePluginTest {
         assertThat(bar6.exceptionTypeSignatures()).isEmpty();
         assertThat(bar6.exampleRequests()).isEmpty();
 
-        final List<HttpHeaders> exampleHttpHeaders = service.exampleHttpHeaders();
-        assertThat(exampleHttpHeaders).isEmpty();
+        final List<HttpHeaders> exampleHeaders = service.exampleHeaders();
+        assertThat(exampleHeaders).isEmpty();
     }
 
     @Test

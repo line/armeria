@@ -16,11 +16,15 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -85,6 +89,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
         return this;
@@ -99,8 +110,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
-        final List<Route> routes = buildRouteList();
+        final ServiceWithRoutes<?, ?> serviceWithRoutes = service.as(ServiceWithRoutes.class);
+        final Set<Route> fallbackRoutes =
+                firstNonNull(serviceWithRoutes != null ? serviceWithRoutes.routes() : null,
+                             ImmutableSet.of());
 
+        final List<Route> routes = buildRouteList(fallbackRoutes);
         for (Route route : routes) {
             final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
             final ServiceConfigBuilder serviceConfigBuilder =

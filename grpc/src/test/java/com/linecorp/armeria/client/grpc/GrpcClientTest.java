@@ -870,7 +870,7 @@ class GrpcClientTest {
         TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOptions.HTTP_HEADERS.newValue(
+                        ClientOptions.HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
@@ -1089,7 +1089,7 @@ class GrpcClientTest {
         final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
-                        ClientOptions.HTTP_HEADERS.newValue(
+                        ClientOptions.HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);

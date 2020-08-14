@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.server.RouteUtil.newLoggerName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -83,8 +82,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      */
     private final Set<String> paramNames;
 
-    private final String loggerName;
-
     /**
      * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
      *
@@ -142,8 +139,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         paths = ImmutableList.of(skeleton, skeleton);
         paramNameArray = paramNames.toArray(EMPTY_NAMES);
         this.paramNames = ImmutableSet.copyOf(paramNames);
-
-        loggerName = newLoggerName(pathPattern);
     }
 
     /**
@@ -178,16 +173,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     @Override
     public Set<String> paramNames() {
         return paramNames;
-    }
-
-    @Override
-    public String loggerName() {
-        return loggerName;
-    }
-
-    @Override
-    public String meterTag() {
-        return pathPattern;
     }
 
     @Override

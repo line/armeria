@@ -334,6 +334,7 @@ org.apache.curator:
   curator-recipes:
     version: &CURATOR_VERSION '4.3.0'
     javadocs:
+    - https://www.javadoc.io/doc/org.apache.curator/curator-framework/4.3.0/
     - https://www.javadoc.io/doc/org.apache.curator/curator-recipes/4.3.0/
     exclusions:
     - org.apache.zookeeper:zookeeper

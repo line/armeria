@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.logging;
+package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.Ticker;
@@ -33,11 +32,8 @@ import io.netty.util.AttributeMap;
 
 /**
  * Decorates a {@link ConnectionPoolListener} to log the connection pool events.
- *
- * @deprecated Use {@link ConnectionPoolListener#logging()} or {@link ConnectionPoolListener#logging(Ticker)}.
  */
-@Deprecated
-public final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
+final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionPoolLoggingListener.class);
 
     private static final AttributeKey<Long> OPEN_NANOS =
@@ -48,11 +44,8 @@ public final class ConnectionPoolLoggingListener implements ConnectionPoolListen
 
     /**
      * Creates a new instance with a {@linkplain Ticker#systemTicker() system ticker}.
-     *
-     * @deprecated Use {@link ConnectionPoolListener#logging()}.
      */
-    @Deprecated
-    public ConnectionPoolLoggingListener() {
+    ConnectionPoolLoggingListener() {
         this(Ticker.systemTicker());
     }
 
@@ -60,11 +53,8 @@ public final class ConnectionPoolLoggingListener implements ConnectionPoolListen
      * Creates a new instance with an alternative {@link Ticker}.
      *
      * @param ticker an alternative {@link Ticker}
-     *
-     * @deprecated Use {@link ConnectionPoolListener#logging(Ticker)}.
      */
-    @Deprecated
-    public ConnectionPoolLoggingListener(Ticker ticker) {
+    ConnectionPoolLoggingListener(Ticker ticker) {
         this.ticker = requireNonNull(ticker, "ticker");
     }
 

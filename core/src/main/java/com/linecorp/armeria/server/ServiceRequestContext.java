@@ -40,8 +40,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -414,43 +412,6 @@ public interface ServiceRequestContext extends RequestContext {
      * }</pre>
      */
     void setRequestTimeout(TimeoutMode mode, Duration requestTimeout);
-
-    /**
-     * Returns {@link Request} timeout handler which is executed when
-     * receiving the current {@link Request} and sending the corresponding {@link Response}
-     * is not completely received within the allowed {@link #requestTimeoutMillis()}.
-     *
-     * @deprecated Use {@link #whenRequestTimingOut()} or {@link #whenRequestTimedOut()}
-     */
-    @Deprecated
-    @Nullable
-    default Runnable requestTimeoutHandler() {
-        return null;
-    }
-
-    /**
-     * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
-     * e.g., by calling {@link HttpResponseWriter#close()}. If not set, the response will be closed with
-     * {@link HttpStatus#SERVICE_UNAVAILABLE}.
-     *
-     * <p>For example,
-     * <pre>{@code
-     *   HttpResponseWriter res = HttpResponse.streaming();
-     *   ctx.setRequestTimeoutHandler(() -> {
-     *      res.write(ResponseHeaders.of(HttpStatus.OK,
-     *                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
-     *      res.write(HttpData.ofUtf8("Request timed out."));
-     *      res.close();
-     *   });
-     *   ...
-     * }</pre>
-     *
-     * @deprecated Use {@link #whenRequestTimingOut()} or {@link #whenRequestTimedOut()}.
-     */
-    @Deprecated
-    default void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
-        whenRequestTimingOut().thenRun(requestTimeoutHandler);
-    }
 
     /**
      * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} is about to

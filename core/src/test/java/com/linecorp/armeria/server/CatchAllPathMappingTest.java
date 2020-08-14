@@ -22,16 +22,6 @@ import org.junit.jupiter.api.Test;
 
 class CatchAllPathMappingTest {
     @Test
-    void testLoggerName() {
-        assertThat(Route.ofCatchAll().loggerName()).isEqualTo("__ROOT__");
-    }
-
-    @Test
-    void testMetricName() {
-        assertThat(Route.ofCatchAll().meterTag()).isEqualTo("catch-all");
-    }
-
-    @Test
     void patternString() {
         assertThat(Route.ofCatchAll().patternString()).isEqualTo("/*");
     }

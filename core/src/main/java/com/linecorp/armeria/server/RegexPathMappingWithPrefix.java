@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.server.RouteUtil.PREFIX;
-import static com.linecorp.armeria.internal.server.RouteUtil.newLoggerName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -32,8 +31,6 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
     private final String pathPrefix;
     private final PathMapping mapping;
     private final String pathPattern;
-    private final String loggerName;
-    private final String meterTag;
     private final List<String> regexAndPrefix;
 
     RegexPathMappingWithPrefix(String pathPrefix, PathMapping mapping) {
@@ -50,12 +47,9 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
         if (pathPrefix.endsWith("/") && patternString.startsWith("/")) {
             normalizedPathPrefix = pathPrefix.substring(0, pathPrefix.length() - 1);
         } else {
-           normalizedPathPrefix = pathPrefix;
+            normalizedPathPrefix = pathPrefix;
         }
         pathPattern = normalizedPathPrefix + patternString;
-
-        loggerName = newLoggerName(pathPrefix) + '.' + mapping.loggerName();
-        meterTag = PREFIX + pathPrefix + ',' + mapping.meterTag();
     }
 
     @Nullable
@@ -79,16 +73,6 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
     @Override
     public Set<String> paramNames() {
         return mapping.paramNames();
-    }
-
-    @Override
-    public String loggerName() {
-        return loggerName;
-    }
-
-    @Override
-    public String meterTag() {
-        return meterTag;
     }
 
     @Override

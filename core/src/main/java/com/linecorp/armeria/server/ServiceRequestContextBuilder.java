@@ -15,10 +15,12 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -182,7 +184,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (this.proxiedAddresses != null) {
             proxiedAddresses = this.proxiedAddresses;
         } else {
-            proxiedAddresses = ProxiedAddresses.of(remoteAddress());
+            proxiedAddresses = ProxiedAddresses.of((InetSocketAddress) remoteAddress());
         }
 
         // Build a fake server which never starts up.
@@ -219,7 +221,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
-                localAddress().getHostString(),
+                ((InetSocketAddress) localAddress()).getHostString(),
                 path(),
                 query(),
                 req.headers(),
@@ -296,12 +298,18 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     @Override
-    public ServiceRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
+    public ServiceRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
+        requireNonNull(remoteAddress, "remoteAddress");
+        checkArgument(remoteAddress instanceof InetSocketAddress,
+                      "remoteAddress: %s (expected: an InetSocketAddress)", remoteAddress);
         return (ServiceRequestContextBuilder) super.remoteAddress(remoteAddress);
     }
 
     @Override
-    public ServiceRequestContextBuilder localAddress(InetSocketAddress localAddress) {
+    public ServiceRequestContextBuilder localAddress(SocketAddress localAddress) {
+        requireNonNull(localAddress, "remoteAddress");
+        checkArgument(localAddress instanceof InetSocketAddress,
+                      "localAddress: %s (expected: an InetSocketAddress)", localAddress);
         return (ServiceRequestContextBuilder) super.localAddress(localAddress);
     }
 

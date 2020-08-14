@@ -50,7 +50,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A built-in property exported by {@link RequestContextExporter}.
  *
- * @see RequestContextExporterBuilder#addBuiltIn(BuiltInProperty)
+ * @see RequestContextExporterBuilder#builtIn(BuiltInProperty)
  */
 public enum BuiltInProperty {
     /**

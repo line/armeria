@@ -19,11 +19,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureTls;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.contentEncodingDecorator;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.parseDataSize;
@@ -68,14 +64,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
-import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
-import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
-import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
-import com.linecorp.armeria.spring.web.ArmeriaWebServer;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -266,20 +257,6 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     private void configureArmeriaService(ServerBuilder sb, DocServiceBuilder docServiceBuilder,
                                          ArmeriaSettings settings) {
         configurePorts(sb, settings.getPorts());
-        configureThriftServices(sb,
-                                docServiceBuilder,
-                                findBeans(ThriftServiceRegistrationBean.class),
-                                settings.getDocsPath());
-        configureGrpcServices(sb,
-                              docServiceBuilder,
-                              findBeans(GrpcServiceRegistrationBean.class),
-                              settings.getDocsPath());
-        configureHttpServices(sb,
-                              findBeans(HttpServiceRegistrationBean.class));
-        configureAnnotatedServices(sb,
-                                   docServiceBuilder,
-                                   findBeans(AnnotatedServiceRegistrationBean.class),
-                                   settings.getDocsPath());
         configureServerWithArmeriaSettings(sb, settings,
                                            firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
                                            findBeans(HealthChecker.class));

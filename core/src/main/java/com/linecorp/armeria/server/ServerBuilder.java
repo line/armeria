@@ -931,8 +931,8 @@ public final class ServerBuilder {
             checkNotNull(decorated, "A decorator returned null: %s", d);
         }
 
-        final HttpService decorator = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, decorator));
+        final HttpService finalDecorated = decorated;
+        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
         return this;
     }
 

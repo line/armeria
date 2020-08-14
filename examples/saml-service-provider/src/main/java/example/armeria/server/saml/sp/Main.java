@@ -55,8 +55,8 @@ public class Main {
                         .type("PKCS12")
                         .password("N5^X[hvG")
                         // You need to specify your key pair and its password here.
-                        .addKeyPassword("signing", "N5^X[hvG")
-                        .addKeyPassword("encryption", "N5^X[hvG")
+                        .keyPassword("signing", "N5^X[hvG")
+                        .keyPassword("encryption", "N5^X[hvG")
                         .build();
 
         return SamlServiceProvider.builder()

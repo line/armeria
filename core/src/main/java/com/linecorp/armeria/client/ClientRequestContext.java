@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -424,40 +423,6 @@ public interface ClientRequestContext extends RequestContext {
      */
     default void setResponseTimeout(Duration responseTimeout) {
         setResponseTimeout(TimeoutMode.SET_FROM_NOW, responseTimeout);
-    }
-
-    /**
-     * Returns {@link Response} timeout handler which is executed when
-     * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
-     * or the default {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
-     *
-     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
-     */
-    @Deprecated
-    @Nullable
-    default Runnable responseTimeoutHandler() {
-        return null;
-    }
-
-    /**
-     * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must abort
-     * the response, e.g., by calling {@link HttpResponseWriter#abort(Throwable)}.
-     * If not set, the response will be closed with {@link ResponseTimeoutException}.
-     *
-     * <p>For example,
-     * <pre>{@code
-     * HttpResponseWriter res = HttpResponse.streaming();
-     * ctx.setResponseTimeoutHandler(() -> {
-     *    res.abort(new IllegalStateException("Server is in a bad state."));
-     * });
-     * ...
-     * }</pre>
-     *
-     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
-     */
-    @Deprecated
-    default void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
-        whenResponseTimingOut().thenRun(responseTimeoutHandler);
     }
 
     /**

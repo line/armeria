@@ -34,8 +34,10 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
+import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -348,30 +350,41 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     @Override
+    public EurekaUpdatingListenerBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator) {
+        return (EurekaUpdatingListenerBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+        return (EurekaUpdatingListenerBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
     public EurekaUpdatingListenerBuilder clearDecorators() {
         return (EurekaUpdatingListenerBuilder) super.clearDecorators();
     }
 
     @Override
-    public EurekaUpdatingListenerBuilder addHttpHeader(CharSequence name, Object value) {
-        return (EurekaUpdatingListenerBuilder) super.addHttpHeader(name, value);
+    public EurekaUpdatingListenerBuilder addHeader(CharSequence name, Object value) {
+        return (EurekaUpdatingListenerBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public EurekaUpdatingListenerBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (EurekaUpdatingListenerBuilder) super.addHttpHeaders(httpHeaders);
+    public EurekaUpdatingListenerBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (EurekaUpdatingListenerBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public EurekaUpdatingListenerBuilder setHttpHeader(CharSequence name, Object value) {
-        return (EurekaUpdatingListenerBuilder) super.setHttpHeader(name, value);
+    public EurekaUpdatingListenerBuilder setHeader(CharSequence name, Object value) {
+        return (EurekaUpdatingListenerBuilder) super.setHeader(name, value);
     }
 
     @Override
-    public EurekaUpdatingListenerBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (EurekaUpdatingListenerBuilder) super.setHttpHeaders(httpHeaders);
+    public EurekaUpdatingListenerBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (EurekaUpdatingListenerBuilder) super.setHeaders(headers);
     }
 
     @Override

@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -118,8 +119,8 @@ class RetryingClientWithLoggingTest {
                                               final RequestLogBuilder logBuilder = ctx.logBuilder();
                                               logBuilder.name("FooService", "foo");
                                               logBuilder.requestContent("bar", null);
-                                              logBuilder.deferRequestContentPreview();
-                                              logBuilder.deferResponseContent();
+                                              logBuilder.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+                                              logBuilder.defer(RequestLogProperty.RESPONSE_CONTENT);
                                               return delegate.execute(ctx, req);
                                           })
                                           .build();
