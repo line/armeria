@@ -61,7 +61,7 @@ public interface CircuitBreakerListener {
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#HALF_OPEN}.</td>
      * </tr>
      * <tr>
-     *   <td>{@code armeria.client.circuit.breaker.rejectedRequests{name="<circuit breaker name>"}}</td>
+     *   <td>{@code armeria.client.circuit.breaker.rejected.requests{name="<circuit breaker name>"}}</td>
      *   <td>The number of requests rejected by the circuit breaker.</td>
      * </tr>
      * </table>
@@ -100,7 +100,7 @@ public interface CircuitBreakerListener {
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#HALF_OPEN}.</td>
      * </tr>
      * <tr>
-     *   <td>{@code <name>.rejectedRequests{name="<circuit breaker name>"}}</td>
+     *   <td>{@code <name>.rejected.requests{name="<circuit breaker name>"}}</td>
      *   <td>The number of requests rejected by the circuit breaker.</td>
      * </tr>
      * </table>
