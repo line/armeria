@@ -44,7 +44,7 @@ public final class CoroutineContexts {
     /**
      * Associates the given coroutine context with {@code COROUTINE_CONTEXT_KEY} attribute in the context.
      */
-    public static void setCoroutineContext(RequestContext ctx, CoroutineContext coroutineContext) {
+    public static void set(RequestContext ctx, CoroutineContext coroutineContext) {
         requireNonNull(ctx, "ctx");
         requireNonNull(coroutineContext, "coroutineContext");
         ctx.setAttr(COROUTINE_CONTEXT_KEY, coroutineContext);
@@ -54,7 +54,7 @@ public final class CoroutineContexts {
      * Returns the coroutine context mapped to {@code COROUTINE_CONTEXT_KEY} in the context.
      */
     @Nullable
-    public static CoroutineContext getCoroutineContext(RequestContext ctx) {
+    public static CoroutineContext get(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return ctx.attr(COROUTINE_CONTEXT_KEY);
     }

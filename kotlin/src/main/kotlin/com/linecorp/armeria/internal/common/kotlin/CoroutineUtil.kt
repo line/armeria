@@ -41,7 +41,7 @@ fun callKotlinSuspendingMethod(
     ctx: RequestContext
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not a suspending function" }
-    val coroutineContext = CoroutineContexts.getCoroutineContext(ctx) ?: EmptyCoroutineContext
+    val coroutineContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
     // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
     val newContext = executorService.asCoroutineDispatcher() + coroutineContext
     return GlobalScope.future(newContext) {
