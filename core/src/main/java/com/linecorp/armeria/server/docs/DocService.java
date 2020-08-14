@@ -336,8 +336,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                         examplePaths.get(m.name()),
                         exampleQueries.get(m.name()),
                         m.httpMethod(), m.docString()))::iterator,
-                Iterables.concat(service.exampleHeaders(),
-                                 exampleHeaders.get("")),
+                Iterables.concat(service.exampleHeaders(), exampleHeaders.get("")),
                 service.docString());
     }
 

@@ -230,8 +230,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * {@link HealthCheckedEndpointGroup} with the default meter names.
      */
     public MeterBinder newMeterBinder(String groupName) {
-        return newMeterBinder(new MeterIdPrefix("armeria.client.endpoint.group",
-                                                "name", groupName));
+        return newMeterBinder(new MeterIdPrefix("armeria.client.endpoint.group", "name", groupName));
     }
 
     /**
