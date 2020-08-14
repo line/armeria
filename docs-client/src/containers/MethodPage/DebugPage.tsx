@@ -171,7 +171,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
 
-    if (urlParams.has('headers_sticky')) {
+    if (urlParams.has('sticky_headers')) {
       toggleStickyHeaders(true);
     }
 
@@ -460,9 +460,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
     }
 
     if (stickyHeaders) {
-      params.set('headers_sticky', 'true');
+      params.set('sticky_headers', 'true');
     } else {
-      params.delete('headers_sticky');
+      params.delete('sticky_headers');
     }
 
     const serializedParams = `?${params.toString()}`;
