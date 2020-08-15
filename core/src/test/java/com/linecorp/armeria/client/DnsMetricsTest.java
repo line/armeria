@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.prometheus.PrometheusMeterRegistry;
@@ -67,5 +68,21 @@ public class DnsMetricsTest {
                             new String[] {"No matching record type found","googleusercontent.com.", "failure"});
             assertThat(count > 1.0).isTrue();
         }
+    }
+
+    @Test
+    void no_dns_registry_used_when_not_provided_externally() throws ExecutionException, InterruptedException {
+        final ClientFactory factory = ClientFactory.builder()
+                .build();
+
+        final WebClient client2 = WebClient.builder()
+                .factory(factory)
+                .build();
+
+        client2.execute(RequestHeaders.of(HttpMethod.GET, "http://wikipedia.com")).aggregate().get();
+
+        assertThat(factory.meterRegistry() instanceof PrometheusMeterRegistry).isFalse();
+        assertThat(MoreMeters.measureAll(factory.meterRegistry())
+                   .toString().contains("armeria.client.connections.lifespan")).isTrue();
     }
 }
