@@ -48,7 +48,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * }
  * </pre>
  */
-final public class CoroutineContextService extends SimpleDecoratingHttpService {
+public final class CoroutineContextService extends SimpleDecoratingHttpService {
 
     /**
      * Returns a new {@link HttpService} decorator that injects into annotated services the coroutine context
@@ -68,8 +68,7 @@ final public class CoroutineContextService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        CoroutineContexts.set(ctx, requireNonNull(provider.provide(ctx),
-                                                                  "provider returned null"));
+        CoroutineContexts.set(ctx, requireNonNull(provider.provide(ctx), "provider returned null"));
         return unwrap().serve(ctx, req);
     }
 }

@@ -23,7 +23,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.ResponseHeaders
 import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.annotation.Delete
@@ -149,13 +148,13 @@ class SuspendingAnnotatedServiceTest {
 
                         @Get("/throwException")
                         suspend fun throwException(): HttpResponse {
-                            RequestContext.current<ServiceRequestContext>()
+                            ServiceRequestContext.current()
                             throw RuntimeException()
                         }
 
                         @Delete("/noContent")
                         suspend fun noContent() {
-                            RequestContext.current<ServiceRequestContext>()
+                            ServiceRequestContext.current()
                         }
 
                         @Get("/context")
@@ -171,7 +170,7 @@ class SuspendingAnnotatedServiceTest {
                     .annotatedService("/customContext", object {
                         @Get("/foo")
                         suspend fun foo(): String {
-                            assertThat(RequestContext.currentOrNull<ServiceRequestContext>()).isNull()
+                            assertThat(ServiceRequestContext.currentOrNull()).isNull()
                             assertThat(coroutineContext[CoroutineName]?.name).isEqualTo("test")
                             return "OK"
                         }
@@ -183,7 +182,7 @@ class SuspendingAnnotatedServiceTest {
                         @Blocking
                         @Get("/baz")
                         suspend fun baz(): String {
-                            RequestContext.current<ServiceRequestContext>()
+                            ServiceRequestContext.current()
                             assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
                             return "OK"
                         }
@@ -215,7 +214,7 @@ class SuspendingAnnotatedServiceTest {
 
         private fun assertInEventLoop() {
             assertThat(
-                RequestContext.current<ServiceRequestContext>().eventLoop().inEventLoop()
+                ServiceRequestContext.current().eventLoop().inEventLoop()
             ).isTrue()
         }
 

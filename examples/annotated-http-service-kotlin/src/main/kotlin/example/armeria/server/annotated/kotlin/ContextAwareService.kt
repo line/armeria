@@ -1,6 +1,5 @@
 package example.armeria.server.annotated.kotlin
 
-import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.Param
@@ -17,7 +16,7 @@ class ContextAwareService {
     suspend fun foo(@Param("name") name: String, @Param("id") id: Int): FooResponse {
         log.info("Hello $name")
         // Make sure that current thread is request context aware
-        RequestContext.current<ServiceRequestContext>()
+        ServiceRequestContext.current()
 
         // Propagate armeria request context
         withContext(ArmeriaRequestContext()) {
@@ -26,11 +25,11 @@ class ContextAwareService {
             log.info("Finished blocking task for $name")
 
             // Make sure that current thread is request context aware
-            RequestContext.current<ServiceRequestContext>()
+            ServiceRequestContext.current()
         }
 
         // Make sure that current thread is request context aware
-        RequestContext.current<ServiceRequestContext>()
+        ServiceRequestContext.current()
 
         return FooResponse(id = id, name = name)
     }
@@ -49,7 +48,7 @@ object BusinessLogic {
     suspend fun blockingTask() {
         return withContext(myDispatcher) {
             // Make sure that current thread is request context aware
-            RequestContext.current<ServiceRequestContext>()
+            ServiceRequestContext.current()
 
             Thread.sleep(1000)
         }
