@@ -182,7 +182,7 @@ public class OAuth2ClientCredentialsGrantTest {
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
-                .withExecutor(executor).build();
+                .executor(executor).build();
         try (Server server = resourceServer.start()) {
 
             final WebClient client = WebClient.builder(resourceServer.httpUri())

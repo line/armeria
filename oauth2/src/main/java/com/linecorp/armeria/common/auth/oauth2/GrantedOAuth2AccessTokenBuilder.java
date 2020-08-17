@@ -42,7 +42,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  * Builds an instance of {@link GrantedOAuth2AccessToken}.
  */
-public class GrantedOAuth2AccessTokenBuilder {
+public final class GrantedOAuth2AccessTokenBuilder {
 
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};

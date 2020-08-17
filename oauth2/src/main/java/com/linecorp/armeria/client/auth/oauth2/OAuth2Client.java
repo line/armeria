@@ -23,7 +23,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -56,16 +55,11 @@ public class OAuth2Client extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(authorizationGrant.getAccessToken().thenApply(accessToken -> {
-            // Create a new request with an additional 'Authorization' header
-            final HttpRequest newReq =
-                req.withHeaders(req.headers().toBuilder()
-                                   .set(HttpHeaderNames.AUTHORIZATION, accessToken.authorization())
-                                   .build());
+        return HttpResponse.from(authorizationGrant.withAuthorization(req).thenApply(reqWithAuth -> {
             // Update the ctx.request
-            ctx.updateRequest(newReq);
+            ctx.updateRequest(reqWithAuth);
             try {
-                return unwrap().execute(ctx, newReq);
+                return unwrap().execute(ctx, reqWithAuth);
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(Exceptions.peel(e));
             }

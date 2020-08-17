@@ -16,12 +16,11 @@
 
 package com.linecorp.armeria.server.auth.oauth2;
 
-import java.util.Map;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.auth.oauth2.AbstractTokenOperationRequest;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
@@ -30,7 +29,7 @@ import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
  * Implements Token Introspection request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc7662#section-2">[RFC7662], Section 2</a>.
  */
-class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAuth2TokenDescriptor> {
+final class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAuth2TokenDescriptor> {
 
     /**
      * Implements Token Introspection request/response flow,
@@ -54,7 +53,7 @@ class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAuth2Toke
      */
     @Override
     protected OAuth2TokenDescriptor extractOkResults(AggregatedHttpResponse response,
-                                                     Map<String, String> requestData) {
+                                                     QueryParams requestFormData) {
         return OAuth2TokenDescriptor.of(response.contentUtf8());
     }
 }

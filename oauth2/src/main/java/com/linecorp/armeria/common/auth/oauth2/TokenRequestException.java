@@ -25,14 +25,12 @@ public class TokenRequestException extends RuntimeException {
 
   private static final long serialVersionUID = 3324433572773111913L;
 
-  private static final TokenRequestExceptionBuilder BUILDER = new TokenRequestExceptionBuilder();
-
   /**
    * Returns a {@link TokenRequestExceptionBuilder} to build error-specific types
    * of {@link TokenRequestException}.
    */
-  public static TokenRequestExceptionBuilder builder() {
-    return BUILDER;
+  public static TokenRequestException of(String rawResponse) {
+    return TokenRequestExceptionBuilder.parse(rawResponse);
   }
 
   @Nullable

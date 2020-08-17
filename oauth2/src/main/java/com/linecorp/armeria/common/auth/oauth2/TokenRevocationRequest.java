@@ -16,18 +16,17 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import java.util.Map;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.QueryParams;
 
 /**
  * Implements Token Revocation request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>.
  */
-public class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolean> {
+final class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolean> {
 
     /**
      * Implements Token Revocation request/response flow,
@@ -40,8 +39,8 @@ public class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolea
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    public TokenRevocationRequest(WebClient revocationEndpoint, String revocationEndpointPath,
-                                  @Nullable ClientAuthorization clientAuthorization) {
+    TokenRevocationRequest(WebClient revocationEndpoint, String revocationEndpointPath,
+                           @Nullable ClientAuthorization clientAuthorization) {
         super(revocationEndpoint, revocationEndpointPath, clientAuthorization);
     }
 
@@ -50,7 +49,7 @@ public class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolea
      * type {@code TokenDescriptor}.
      */
     @Override
-    protected Boolean extractOkResults(AggregatedHttpResponse response, Map<String, String> requestData) {
+    protected Boolean extractOkResults(AggregatedHttpResponse response, QueryParams requestFormData) {
         return true;
     }
 }

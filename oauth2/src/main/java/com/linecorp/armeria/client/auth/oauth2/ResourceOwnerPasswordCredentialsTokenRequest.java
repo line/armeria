@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.auth.oauth2;
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -27,6 +26,8 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
@@ -37,7 +38,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
  * Implements Resource Owner Password Credentials Grant request
  * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.3">[RFC6749], Section 4.3</a>.
  */
-class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccessTokenRequest {
+final class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
     private static final String USERNAME = "username";
     private static final String PASSWORD = "password";
@@ -90,24 +91,24 @@ class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccessTokenRe
      *                                       (JSON).
      */
     public CompletableFuture<GrantedOAuth2AccessToken> make(@Nullable String scope) {
-        final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(4);
+        final QueryParamsBuilder requestFormBuilder = QueryParams.builder();
 
         // populate request form data
         // MANDATORY grant_type
-        requestFormItems.put(GRANT_TYPE, PASSWORD_GRANT_TYPE);
+        requestFormBuilder.add(GRANT_TYPE, PASSWORD_GRANT_TYPE);
         // MANDATORY user credentials
         final Map.Entry<String, String> userCredentials =
                 requireNonNull(userCredentialsSupplier.get(), "userCredentials");
         final String userName = requireNonNull(userCredentials.getKey(), USERNAME);
         final String userPassword = requireNonNull(userCredentials.getValue(), PASSWORD);
-        requestFormItems.put(USERNAME, userName);
-        requestFormItems.put(PASSWORD, userPassword);
+        requestFormBuilder.add(USERNAME, userName);
+        requestFormBuilder.add(PASSWORD, userPassword);
         // OPTIONAL scope
         if (scope != null) {
-            requestFormItems.put(SCOPE, scope);
+            requestFormBuilder.add(SCOPE, scope);
         }
 
         // make actual access token request
-        return executeWithParameters(requestFormItems);
+        return executeWithParameters(requestFormBuilder.build());
     }
 }

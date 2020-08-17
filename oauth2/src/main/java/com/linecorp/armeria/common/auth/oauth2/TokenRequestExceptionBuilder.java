@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * A builder of a {@link TokenRequestException}.
  */
-public class TokenRequestExceptionBuilder {
+final class TokenRequestExceptionBuilder {
 
     private static final String ERROR = "error";
     private static final String ERROR_DESCRIPTION = "error_description";
@@ -46,13 +46,16 @@ public class TokenRequestExceptionBuilder {
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
 
+    private TokenRequestExceptionBuilder() {
+    }
+
     /**
      * Parses {@code JSON} error response body and created a new instance of {@link TokenRequestException}
      * using the response data.
      * @param rawResponse {@code JSON} formatted error response body.
      * @return a new instance of {@link TokenRequestException}
      */
-    public TokenRequestException of(String rawResponse) {
+    static TokenRequestException parse(String rawResponse) {
         final LinkedHashMap<String, String> map;
         try {
             map = JSON.readValue(rawResponse, MAP_TYPE);

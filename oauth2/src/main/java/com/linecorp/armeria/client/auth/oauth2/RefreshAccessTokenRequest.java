@@ -20,12 +20,13 @@ import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.R
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
 
-import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
@@ -36,7 +37,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
  * Implements Access Token Refresh request
  * as per <a href="https://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
  */
-class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
+final class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
 
     /**
      * Implements Client Credentials Grant request/response flow,
@@ -79,22 +80,21 @@ class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
      *                                       (JSON).
      */
     public CompletableFuture<GrantedOAuth2AccessToken> make(String refreshToken, @Nullable String scope) {
-
         requireNonNull(refreshToken, REFRESH_TOKEN);
-        final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(3);
+        final QueryParamsBuilder requestFormBuilder = QueryParams.builder();
 
         // populate request form data
         // MANDATORY grant_type
-        requestFormItems.put(GRANT_TYPE, REFRESH_TOKEN);
+        requestFormBuilder.add(GRANT_TYPE, REFRESH_TOKEN);
         // MANDATORY refresh_token
-        requestFormItems.put(REFRESH_TOKEN, refreshToken);
+        requestFormBuilder.add(REFRESH_TOKEN, refreshToken);
         // OPTIONAL scope
         if (scope != null) {
-            requestFormItems.put(SCOPE, scope);
+            requestFormBuilder.add(SCOPE, scope);
         }
 
         // make actual access token request
-        return executeWithParameters(requestFormItems);
+        return executeWithParameters(requestFormBuilder.build());
     }
 
     /**

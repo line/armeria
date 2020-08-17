@@ -18,12 +18,11 @@ package com.linecorp.armeria.client.auth.oauth2;
 
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
 
-import java.util.Map;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.auth.oauth2.AbstractOAuth2Request;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
@@ -34,7 +33,7 @@ import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
  */
 abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedOAuth2AccessToken> {
 
-    protected static final String GRANT_TYPE = "grant_type";
+    static final String GRANT_TYPE = "grant_type";
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -47,8 +46,8 @@ abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedO
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    protected AbstractAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
-                                         @Nullable ClientAuthorization clientAuthorization) {
+    AbstractAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
+                               @Nullable ClientAuthorization clientAuthorization) {
         super(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 
@@ -58,10 +57,10 @@ abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedO
      */
     @Override
     protected GrantedOAuth2AccessToken extractOkResults(AggregatedHttpResponse response,
-                                                        Map<String, String> requestData) {
+                                                        QueryParams requestFormData) {
         // if scope was added to the request the response may not include the scope
         // in such case - use the requested scope for the token
-        final String scope = requestData.get(SCOPE);
+        final String scope = requestFormData.get(SCOPE);
         return GrantedOAuth2AccessToken.of(response.contentUtf8(), scope);
     }
 }

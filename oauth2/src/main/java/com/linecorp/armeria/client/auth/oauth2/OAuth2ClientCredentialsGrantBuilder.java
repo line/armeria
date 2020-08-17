@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 /**
  * Builds {@link OAuth2ClientCredentialsGrant}.
  */
-public class OAuth2ClientCredentialsGrantBuilder
+public final class OAuth2ClientCredentialsGrantBuilder
         extends AbstractOAuth2AuthorizationGrantBuilder<OAuth2ClientCredentialsGrantBuilder> {
 
     /**
@@ -55,6 +55,6 @@ public class OAuth2ClientCredentialsGrantBuilder
     public OAuth2ClientCredentialsGrant build() {
         return new OAuth2ClientCredentialsGrant((ClientCredentialsTokenRequest) buildObtainRequest(),
                                                 buildRefreshRequest(), refreshBefore(),
-                                                tokenSupplier(), tokenConsumer(), withExecutor());
+                                                tokenSupplier(), tokenConsumer(), executor());
     }
 }

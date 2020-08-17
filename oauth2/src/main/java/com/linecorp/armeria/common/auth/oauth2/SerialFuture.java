@@ -52,7 +52,7 @@ public class SerialFuture {
      * Constructs {@link SerialFuture}.
      */
     public SerialFuture() {
-        executor = null;
+        this(null);
     }
 
     /**
@@ -69,7 +69,7 @@ public class SerialFuture {
             final CompletionStage<V> future;
             try {
                 future = action.call();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 result.completeExceptionally(Exceptions.peel(e));
                 executeNext();
                 return;
@@ -102,9 +102,9 @@ public class SerialFuture {
         actions.add(() -> {
             try {
                 result.complete(action.call());
-                executeNext();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 result.completeExceptionally(Exceptions.peel(e));
+            } finally {
                 executeNext();
             }
         });

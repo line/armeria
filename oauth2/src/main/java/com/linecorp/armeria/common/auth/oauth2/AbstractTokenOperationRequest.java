@@ -18,13 +18,14 @@ package com.linecorp.armeria.common.auth.oauth2;
 
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ACCESS_TOKEN;
 
-import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 
 /**
  * A common abstraction for the requests implementing various Token operations request/response flows,
@@ -74,18 +75,18 @@ public abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Req
      *                                       (JSON).
      */
     public CompletableFuture<T> make(String token, @Nullable String tokenType) {
-        final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(2);
+        final QueryParamsBuilder requestFormBuilder = QueryParams.builder();
 
         // populate request form data
         // MANDATORY token
-        requestFormItems.put(TOKEN, Objects.requireNonNull(token, TOKEN));
+        requestFormBuilder.add(TOKEN, Objects.requireNonNull(token, TOKEN));
         // OPTIONAL token_type_hint
         if (tokenType != null) {
-            requestFormItems.put(TOKEN_TYPE_HINT, tokenType);
+            requestFormBuilder.add(TOKEN_TYPE_HINT, tokenType);
         }
 
         // make actual operational request
-        return executeWithParameters(requestFormItems);
+        return executeWithParameters(requestFormBuilder.build());
     }
 
     /**

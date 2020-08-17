@@ -91,7 +91,7 @@ import com.linecorp.armeria.server.auth.Authorizer;
  *
  * @see AuthServiceBuilder#onFailure(AuthFailureHandler)
  */
-public class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
+class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
 
     static final Logger logger = LoggerFactory.getLogger(OAuth2AuthorizationFailureHandler.class);
 

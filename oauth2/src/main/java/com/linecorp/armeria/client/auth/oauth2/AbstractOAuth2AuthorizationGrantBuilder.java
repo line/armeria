@@ -139,13 +139,8 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
         return (T) this;
     }
 
-    public final Duration refreshBefore() {
+    final Duration refreshBefore() {
         return refreshBefore;
-    }
-
-    @Nullable
-    public final Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier() {
-        return tokenSupplier;
     }
 
     /**
@@ -158,8 +153,8 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     }
 
     @Nullable
-    public final Consumer<? super GrantedOAuth2AccessToken> tokenConsumer() {
-        return tokenConsumer;
+    final Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier() {
+        return tokenSupplier;
     }
 
     /**
@@ -171,16 +166,22 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
         return (T) this;
     }
 
+    @Nullable
+    final Consumer<? super GrantedOAuth2AccessToken> tokenConsumer() {
+        return tokenConsumer;
+    }
+
     /**
      * An optional {@link Executor} that facilitates asynchronous access token obtain and refresh operations.
      */
     @SuppressWarnings("unchecked")
-    public final T withExecutor(Executor executor) {
+    public final T executor(Executor executor) {
         this.executor = requireNonNull(executor, "executor");
         return (T) this;
     }
 
-    public final Executor withExecutor() {
+    @Nullable
+    final Executor executor() {
         return executor;
     }
 

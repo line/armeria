@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
@@ -93,7 +90,7 @@ public abstract class AbstractOAuth2Request<T> {
     /**
      * Extracts data from OK response and converts it to the target type {@code T}.
      */
-    protected abstract T extractOkResults(AggregatedHttpResponse response, Map<String, String> requestData);
+    protected abstract T extractOkResults(AggregatedHttpResponse response, QueryParams requestFormData);
 
     /**
      * Returns the value for the {@link HttpHeaderNames#AUTHORIZATION}.
@@ -117,39 +114,35 @@ public abstract class AbstractOAuth2Request<T> {
      * Makes a request to the authorization endpoint using supplied {@code requestForm} parameters and converts
      * the result to the given type {@code T}.
      */
-    protected CompletableFuture<T> executeWithParameters(LinkedHashMap<String, String> requestFormData) {
-        final Map<String, String> requestData = Collections.unmodifiableMap(requestFormData);
-        final HttpResponse response = endpoint().execute(createHttpRequest(endpointPath, requestData));
+    protected CompletableFuture<T> executeWithParameters(QueryParams requestFormData) {
+        final HttpResponse response = endpoint().execute(createHttpRequest(endpointPath, requestFormData));
         // when response aggregated, then extract the results...
-        return response.aggregate().thenApply(r -> extractResults(r, Collections.unmodifiableMap(requestData)));
+        return response.aggregate().thenApply(r -> extractResults(r, requestFormData));
     }
 
     /**
      * Produces {@link HttpRequest} based on this object.
      */
-    private HttpRequest createHttpRequest(String endpointPath, Map<String, String> requestFormData) {
-        final QueryParamsBuilder requestFormBuilder = QueryParams.builder();
-        requestFormBuilder.add(requestFormData.entrySet());
-
+    private HttpRequest createHttpRequest(String endpointPath, QueryParams requestFormData) {
         final RequestHeadersBuilder headersBuilder =
                 RequestHeaders.of(HttpMethod.POST, endpointPath).toBuilder();
         final String authorizationHeaderValue = authorizationHeaderValue();
         if (authorizationHeaderValue != null) {
             headersBuilder.add(HttpHeaderNames.AUTHORIZATION, authorizationHeaderValue);
         } else {
-            setCredentialsAsBodyParameters(requestFormBuilder);
+            requestFormData = requestFormData.withMutations(this::setCredentialsAsBodyParameters);
         }
         headersBuilder.add(HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA.toString());
 
-        return HttpRequest.of(headersBuilder.build(), HttpData.ofUtf8(requestFormBuilder.toQueryString()));
+        return HttpRequest.of(headersBuilder.build(), HttpData.ofUtf8(requestFormData.toQueryString()));
     }
 
     /**
      * Extracts the result and convert it to the target type {@code T} or throw an error in case of an error
      * result.
      * @param response An {@link AggregatedHttpResponse} returned by the authorization endpoint.
-     * @param requestData A {@link Map} that contains all the elements of the request form sent with the
-     *                    request.
+     * @param requestFormData A {@link QueryParams} that contains all the elements of the request form sent with
+     *                        the request.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.
      * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
@@ -160,13 +153,13 @@ public abstract class AbstractOAuth2Request<T> {
      *                                       (JSON).
      */
     @Nullable
-    protected T extractResults(AggregatedHttpResponse response, Map<String, String> requestData) {
+    protected T extractResults(AggregatedHttpResponse response, QueryParams requestFormData) {
         final HttpStatus status = response.status();
         switch (status.code()) {
             case 200: // OK
                 // expected Content-Type: application/json;charset=UTF-8
                 validateContentType(response, MediaType.JSON);
-                return extractOkResults(response, requestData);
+                return extractOkResults(response, requestFormData);
             case 400: // Bad Request
                 // expected Content-Type: application/json;charset=UTF-8
                 validateContentType(response, MediaType.JSON);
@@ -174,7 +167,7 @@ public abstract class AbstractOAuth2Request<T> {
             case 401: // Unauthorized
                 throw onUnauthorizedError(response);
         }
-        throw new UnsupportedResponseException(status.code(), status.toString(), response.contentUtf8());
+        throw new UnsupportedResponseException(status, response.contentUtf8());
     }
 
     /**
@@ -184,7 +177,7 @@ public abstract class AbstractOAuth2Request<T> {
      * @return an instance of {@link TokenRequestException}
      */
     protected TokenRequestException onBadRequestError(AggregatedHttpResponse errorResponse) {
-        return TokenRequestException.builder().of(errorResponse.contentUtf8());
+        return TokenRequestException.of(errorResponse.contentUtf8());
     }
 
     /**

@@ -15,7 +15,7 @@
  */
 
 /**
- * Client-side OAuth 2.0 implementation.
+ * Client-side <a href="https://en.wikipedia.org/wiki/OAuth#OAuth_2.0">OAuth 2.0</a> implementation.
  */
 @NonNullByDefault
 package com.linecorp.armeria.client.auth.oauth2;

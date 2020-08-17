@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 /**
  * Builds {@link OAuth2ClientCredentialsGrant}.
  */
-public class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
+public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
         extends AbstractOAuth2AuthorizationGrantBuilder<OAuth2ResourceOwnerPasswordCredentialsGrantBuilder> {
 
     @Nullable
@@ -73,6 +73,6 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
         return new OAuth2ResourceOwnerPasswordCredentialsGrant(
                 (ResourceOwnerPasswordCredentialsTokenRequest) buildObtainRequest(),
                 buildRefreshRequest(), refreshBefore(),
-                tokenSupplier(), tokenConsumer(), withExecutor());
+                tokenSupplier(), tokenConsumer(), executor());
     }
 }

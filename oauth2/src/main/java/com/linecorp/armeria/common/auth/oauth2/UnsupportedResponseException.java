@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.auth.oauth2;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpStatus;
+
 /**
  * A response type in not supported by the given request/response flow.
  */
@@ -25,31 +27,29 @@ public class UnsupportedResponseException extends RuntimeException {
 
     private static final long serialVersionUID = 4982498806675787821L;
 
-    private final int statusCode;
+    private final HttpStatus status;
 
     /**
      * Constructs new {@link UnsupportedMediaTypeException}.
-     * @param statusCode A status code of the response.
-     * @param status An HTTP status of the response.
+     * @param status An {@link HttpStatus} of the response.
      * @param message A response content
      */
-    public UnsupportedResponseException(int statusCode, String status, @Nullable String message) {
-        super(join(status, message));
-        this.statusCode = statusCode;
+    public UnsupportedResponseException(HttpStatus status, @Nullable String message) {
+        super(join(status.toString(), message));
+        this.status = status;
     }
 
     /**
      * Constructs new {@link UnsupportedMediaTypeException}.
-     * @param statusCode A status code of the response.
-     * @param status An HTTP status of the response.
+     * @param status An {@link HttpStatus} of the response.
      * @param message A response content
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
      *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
      */
-    public UnsupportedResponseException(int statusCode, String status,
-                                        @Nullable String message, @Nullable Throwable cause) {
-        super(join(status, message), cause);
-        this.statusCode = statusCode;
+    public UnsupportedResponseException(HttpStatus status, @Nullable String message,
+                                        @Nullable Throwable cause) {
+        super(join(status.toString(), message), cause);
+        this.status = status;
     }
 
     private static String join(String status, @Nullable String message) {
@@ -59,7 +59,7 @@ public class UnsupportedResponseException extends RuntimeException {
     /**
      * A status code of the response.
      */
-    public int getStatusCode() {
-        return statusCode;
+    public HttpStatus getStatus() {
+        return status;
     }
 }

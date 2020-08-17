@@ -19,12 +19,13 @@ package com.linecorp.armeria.client.auth.oauth2;
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
 import static java.util.Objects.requireNonNull;
 
-import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
@@ -35,7 +36,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
  * Implements Client Credentials Grant request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
  */
-class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
+final class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
     private static final String CLIENT_CREDENTIALS_GRANT_TYPE = "client_credentials";
 
@@ -51,7 +52,7 @@ class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     ClientCredentialsTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
-                                         ClientAuthorization clientAuthorization) {
+                                  ClientAuthorization clientAuthorization) {
         super(accessTokenEndpoint, accessTokenEndpointPath,
               // client authorization is MANDATORY for this type of grant
               requireNonNull(clientAuthorization, "clientAuthorization"));
@@ -81,19 +82,19 @@ class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      *                                       (JSON).
      */
     public CompletableFuture<GrantedOAuth2AccessToken> make(@Nullable String scope) {
-        final LinkedHashMap<String, String> requestFormItems = new LinkedHashMap<>(2);
+        final QueryParamsBuilder requestFormBuilder = QueryParams.builder();
 
         // populate request form data
         // MANDATORY grant_type
-        requestFormItems.put(GRANT_TYPE, CLIENT_CREDENTIALS_GRANT_TYPE);
+        requestFormBuilder.add(GRANT_TYPE, CLIENT_CREDENTIALS_GRANT_TYPE);
         // OPTIONAL scope
         if (scope != null) {
-            requestFormItems.put(SCOPE, scope);
+            requestFormBuilder.add(SCOPE, scope);
         }
         // this grant uses client credentials supplied in the {@link HttpHeaderNames#AUTHORIZATION} header,
         // so no other request parameters required here
 
         // make actual access token request
-        return executeWithParameters(requestFormItems);
+        return executeWithParameters(requestFormBuilder.build());
     }
 }

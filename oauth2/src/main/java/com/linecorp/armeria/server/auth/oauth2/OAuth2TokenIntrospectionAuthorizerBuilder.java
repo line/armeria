@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.auth.Authorizer;
 /**
  * Builds a {@link OAuth2TokenIntrospectionAuthorizer} instance.
  */
-public class OAuth2TokenIntrospectionAuthorizerBuilder {
+public final class OAuth2TokenIntrospectionAuthorizerBuilder {
 
     private static final long DEFAULT_CACHE_MAX_SIZE = 1000;
     private static final Duration DEFAULT_CACHE_MAX_AGE = Duration.ofHours(1L);

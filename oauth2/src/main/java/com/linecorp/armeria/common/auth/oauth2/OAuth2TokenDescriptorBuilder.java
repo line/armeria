@@ -46,7 +46,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  * Builds an instance of {@link OAuth2TokenDescriptor}.
  */
-public class OAuth2TokenDescriptorBuilder {
+public final class OAuth2TokenDescriptorBuilder {
 
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
