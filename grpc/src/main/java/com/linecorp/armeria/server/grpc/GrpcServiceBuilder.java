@@ -68,9 +68,10 @@ public final class GrpcServiceBuilder {
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
             GrpcSerializationFormats.values();
 
-    private static boolean useCoroutineContextInterceptor;
+    private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
 
     static {
+        boolean useCoroutineContextInterceptor;
         try {
             Class.forName("io.grpc.kotlin.CoroutineContextServerInterceptor", false,
                           GrpcServiceBuilder.class.getClassLoader());
@@ -78,6 +79,7 @@ public final class GrpcServiceBuilder {
         } catch (Throwable ignored) {
             useCoroutineContextInterceptor = false;
         }
+        USE_COROUTINE_CONTEXT_INTERCEPTOR = useCoroutineContextInterceptor;
     }
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
@@ -335,7 +337,7 @@ public final class GrpcServiceBuilder {
      */
     public GrpcService build() {
         final HandlerRegistry handlerRegistry;
-        if (useCoroutineContextInterceptor) {
+        if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
             final HandlerRegistry registry = registryBuilder.build();
             final ServerInterceptor coroutineContextInterceptor =
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
