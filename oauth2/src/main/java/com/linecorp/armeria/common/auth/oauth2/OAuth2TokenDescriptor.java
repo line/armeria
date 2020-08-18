@@ -28,6 +28,7 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.S
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SUBJECT;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.USER_NAME;
+import static com.linecorp.armeria.internal.common.auth.oauth2.ResponseParserUtil.JSON;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
@@ -42,7 +43,6 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -76,8 +76,6 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     static final String SCOPE_SEPARATOR = " ";
-
-    static final ObjectMapper JSON = new ObjectMapper();
 
     /**
      * {@value OAuth2Constants#ACTIVE} Token Introspection Response field,

@@ -17,13 +17,13 @@
 package com.linecorp.armeria.common.auth.oauth2;
 
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ISSUED_AT;
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.JSON;
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACCESS_TOKEN;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.EXPIRES_IN;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REFRESH_TOKEN;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.ResponseParserUtil.JSON;
 import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 import static java.util.Objects.requireNonNull;
 

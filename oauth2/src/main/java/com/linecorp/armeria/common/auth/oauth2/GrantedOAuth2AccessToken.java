@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.E
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REFRESH_TOKEN;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.ResponseParserUtil.JSON;
 import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 import static java.util.Objects.requireNonNull;
 
@@ -36,7 +37,6 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -86,8 +86,6 @@ public class GrantedOAuth2AccessToken implements Serializable {
 
     static final String SCOPE_SEPARATOR = " ";
     static final char AUTHORIZATION_SEPARATOR = ' ';
-
-    static final ObjectMapper JSON = new ObjectMapper();
 
     /**
      * {@value OAuth2Constants#ACCESS_TOKEN} Access Token response field,

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.JSON;
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACTIVE;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.AUDIENCE;
@@ -30,6 +29,7 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.S
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SUBJECT;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.USER_NAME;
+import static com.linecorp.armeria.internal.common.auth.oauth2.ResponseParserUtil.JSON;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;

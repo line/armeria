@@ -26,19 +26,18 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.I
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNAUTHORIZED_CLIENT;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_GRANT_TYPE;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_TOKEN_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.ResponseParserUtil.JSON;
 
 import java.util.LinkedHashMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * A builder of a {@link TokenRequestException}.
  */
 final class TokenRequestExceptionBuilder {
 
-    static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
 
