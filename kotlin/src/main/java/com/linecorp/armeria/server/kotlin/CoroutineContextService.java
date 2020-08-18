@@ -42,11 +42,14 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * >         }
  * >     })
  * >     .decorator(CoroutineContextService.newDecorator { ctx ->
- * >         ctx.eventLoop().asCoroutineDispatcher() +
- * >             CoroutineName(ctx.config().defaultServiceName() ?: "none")
+ * >         CoroutineName(ctx.config().defaultServiceName() ?: "none")
  * >     })
  * }
  * </pre>
+ *
+ * <p>Note that {@code ctx.eventLoop()} is used as coroutine dispatcher by default,
+ * and {@code ctx.blockingTaskExecutor()} is used if `useBlockingTaskExecutor` is set to true
+ * or methods are annotated with {@code @Blocking}.
  */
 public final class CoroutineContextService extends SimpleDecoratingHttpService {
 
