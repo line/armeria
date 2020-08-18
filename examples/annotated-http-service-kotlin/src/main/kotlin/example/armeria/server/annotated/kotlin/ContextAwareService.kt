@@ -18,7 +18,10 @@ class ContextAwareService {
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()
 
-        // Propagate armeria request context
+        // Propagate armeria request context.
+        // `BusinessLogic.blockingTask()` is designed to be dispatched to `BusinessLogic.myDispatcher`
+        // to limit the number of parallel executions.
+        // Thus, we have to pass a request context as `ThreadContextElement`.
         withContext(ArmeriaRequestContext()) {
             log.info("Start blocking task for $name")
             BusinessLogic.blockingTask()
@@ -43,11 +46,13 @@ class ContextAwareService {
 
 // Assume that this logic may be used by non-armeria application
 object BusinessLogic {
+    // To limit the number of parallel executions
     private val myDispatcher = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
 
     suspend fun blockingTask() {
         return withContext(myDispatcher) {
             // Make sure that current thread is request context aware
+            // Propagating RequestContext is needed for logging, tracing.
             ServiceRequestContext.current()
 
             Thread.sleep(1000)
