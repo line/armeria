@@ -128,7 +128,7 @@ public final class RequestContextHooks {
             //               https://github.com/reactor/reactor-core/issues/2328 is addressed.
             if (!warnedParallelFluxUnsupported) {
                 warnedParallelFluxUnsupported = true;
-                logger.warn("Hooks for {} are not supported yet.", ParallelFlux.class.getName());
+                logger.warn("Hooks for {} are not supported yet.", ParallelFlux.class.getSimpleName());
             }
             return source;
         }
