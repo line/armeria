@@ -19,6 +19,8 @@ import java.util.function.Consumer;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.RequestContext;
@@ -42,11 +44,15 @@ import reactor.util.context.Context;
  */
 public final class RequestContextHooks {
 
+    private static final Logger logger = LoggerFactory.getLogger(RequestContextHooks.class);
+
     private static final String ON_EACH_OPERATOR_HOOK_KEY =
             RequestContextHooks.class.getName() + "#ON_EACH_OPERATOR_HOOK_KEY";
 
     private static final String ON_LAST_OPERATOR_HOOK_KEY =
             RequestContextHooks.class.getName() + "#ON_LAST_OPERATOR_HOOK_KEY";
+
+    private static boolean warnedParallelFluxUnsupported;
 
     private static boolean enabled;
 
@@ -60,7 +66,7 @@ public final class RequestContextHooks {
      * <p>However, please note that {@link Mono#doOnCancel(Runnable)}, {@link Mono#doFinally(Consumer)},
      * {@link Flux#doOnCancel(Runnable)} and {@link Flux#doFinally(Consumer)} will not propagate the context.
      *
-     * <p>Also, note that this method does not have any relevance to {@link Context} API.
+     * <p>Also, note that this method does not have any relevance to Reactor's own {@link Context} API.
      */
     public static synchronized void enable() {
         if (enabled) {
@@ -120,6 +126,10 @@ public final class RequestContextHooks {
         if (source instanceof ParallelFlux) {
             // TODO(minwoox) Support ParallelFlux after
             //               https://github.com/reactor/reactor-core/issues/2328 is addressed.
+            if (!warnedParallelFluxUnsupported) {
+                warnedParallelFluxUnsupported = true;
+                logger.warn("Hooks for {} are not supported yet.", ParallelFlux.class.getName());
+            }
             return source;
         }
         if (source instanceof Flux) {
