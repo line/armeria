@@ -33,24 +33,25 @@ import com.linecorp.armeria.common.RequestContext;
 @SuppressWarnings("unchecked")
 final class KotlinUtil {
 
-    private static boolean isKotlinReflectionPresent;
+    private static final boolean IS_KOTLIN_REFLECTION_PRESENT;
 
     @Nullable
-    private static Class<? extends Annotation> metadataClass;
+    private static final Class<? extends Annotation> METADATA_CLASS;
 
     @Nullable
-    private static MethodHandle callKotlinSuspendingMethod;
+    private static final MethodHandle CALL_KOTLIN_SUSPENDING_METHOD;
 
     @Nullable
-    private static Method isSuspendingFunction;
+    private static final Method IS_SUSPENDING_FUNCTION;
 
     @Nullable
-    private static Method isContinuation;
+    private static final Method IS_CONTINUATION;
 
     @Nullable
-    private static Method isReturnTypeUnit;
+    private static final Method IS_RETURN_TYPE_UNIT;
 
     static {
+        MethodHandle callKotlinSuspendingMethod = null;
         try {
             final Class<?> coroutineUtilClass =
                     getClass("com.linecorp.armeria.internal.common.kotlin.CoroutineUtil");
@@ -65,8 +66,13 @@ final class KotlinUtil {
             );
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
             // ignore
+        } finally {
+            CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
         }
 
+        Method isContinuation = null;
+        Method isSuspendingFunction = null;
+        Method isReturnTypeUnit = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass("com.linecorp.armeria.internal.common.kotlin.KotlinUtil");
@@ -76,19 +82,29 @@ final class KotlinUtil {
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
+        } finally {
+            IS_CONTINUATION = isContinuation;
+            IS_SUSPENDING_FUNCTION = isSuspendingFunction;
+            IS_RETURN_TYPE_UNIT = isReturnTypeUnit;
         }
 
+        boolean isKotlinReflectionPresent = false;
         try {
             getClass("kotlin.reflect.full.KClasses");
             isKotlinReflectionPresent = true;
         } catch (ClassNotFoundException e) {
             // ignore
+        } finally {
+            IS_KOTLIN_REFLECTION_PRESENT = isKotlinReflectionPresent;
         }
 
+        Class<? extends Annotation> metadataClass = null;
         try {
             metadataClass = (Class<? extends Annotation>) getClass("kotlin.Metadata");
         } catch (ClassNotFoundException e) {
             // ignore
+        } finally {
+            METADATA_CLASS = metadataClass;
         }
     }
 
@@ -97,15 +113,15 @@ final class KotlinUtil {
      */
     @Nullable
     static MethodHandle getCallKotlinSuspendingMethod() {
-        return callKotlinSuspendingMethod;
+        return CALL_KOTLIN_SUSPENDING_METHOD;
     }
 
     /**
      * Returns true if a method is written in Kotlin.
      */
     static boolean isKotlinMethod(Method method) {
-        return metadataClass != null &&
-               method.getDeclaringClass().getAnnotation(metadataClass) != null;
+        return METADATA_CLASS != null &&
+               method.getDeclaringClass().getAnnotation(METADATA_CLASS) != null;
     }
 
     /**
@@ -114,9 +130,9 @@ final class KotlinUtil {
     static boolean isSuspendingFunction(Method method) {
         try {
             return isKotlinMethod(method) &&
-                   isKotlinReflectionPresent &&
-                   isSuspendingFunction != null &&
-                   (Boolean) isSuspendingFunction.invoke(null, method);
+                   IS_KOTLIN_REFLECTION_PRESENT &&
+                   IS_SUSPENDING_FUNCTION != null &&
+                   (Boolean) IS_SUSPENDING_FUNCTION.invoke(null, method);
         } catch (Exception e) {
             return false;
         }
@@ -127,8 +143,8 @@ final class KotlinUtil {
      */
     static boolean isContinuation(Class<?> type) {
         try {
-            return isContinuation != null &&
-                   (boolean) isContinuation.invoke(null, type);
+            return IS_CONTINUATION != null &&
+                   (boolean) IS_CONTINUATION.invoke(null, type);
         } catch (Exception e) {
             return false;
         }
@@ -140,8 +156,8 @@ final class KotlinUtil {
     static boolean isSuspendingAndReturnTypeUnit(Method method) {
         try {
             return isSuspendingFunction(method) &&
-                   isReturnTypeUnit != null &&
-                   (boolean) isReturnTypeUnit.invoke(null, method);
+                   IS_RETURN_TYPE_UNIT != null &&
+                   (boolean) IS_RETURN_TYPE_UNIT.invoke(null, method);
         } catch (Exception e) {
             return false;
         }
