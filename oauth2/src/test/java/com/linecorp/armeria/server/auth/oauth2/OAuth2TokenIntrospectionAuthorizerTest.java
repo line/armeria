@@ -20,8 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -41,6 +41,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 public class OAuth2TokenIntrospectionAuthorizerTest {
 
@@ -59,8 +60,8 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
         }
     };
 
-    @Rule
-    public ServerRule authServerRule = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension authServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/introspect", new MockOAuth2IntrospectionService()
@@ -73,7 +74,7 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
     private final ServerRule resourceServerRule = new ServerRule(false) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final WebClient introspectClient = WebClient.of(authServerRule.httpUri());
+            final WebClient introspectClient = WebClient.of(authServer.httpUri());
             sb.service("/resource-read-write/",
                        OAuth2TokenIntrospectionAuthorizer.builder(introspectClient, "/introspect/token/")
                                                          .realm("protected resource read-write")

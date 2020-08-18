@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 public class TokenIntrospectionRequestTest {
 
@@ -44,8 +44,8 @@ public class TokenIntrospectionRequestTest {
         MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(3L),
                                        ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
 
-    @Rule
-    public ServerRule serverRule = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/introspect", new MockOAuth2IntrospectionService()
@@ -57,7 +57,7 @@ public class TokenIntrospectionRequestTest {
 
     @Test
     public void testIntrospect() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
+        final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders requestHeaders1 = RequestHeaders.of(
                 HttpMethod.POST, "/introspect/token/",
@@ -103,7 +103,7 @@ public class TokenIntrospectionRequestTest {
 
     @Test
     public void testAuthError() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
+        final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders requestHeaders1 = RequestHeaders.of(
                 HttpMethod.POST, "/introspect/token/",
@@ -145,7 +145,7 @@ public class TokenIntrospectionRequestTest {
 
     @Test
     public void testError() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
+        final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders requestHeaders1 = RequestHeaders.of(
                 HttpMethod.POST, "/introspect/token/",
