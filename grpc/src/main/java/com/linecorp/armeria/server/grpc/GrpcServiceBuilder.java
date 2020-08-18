@@ -54,6 +54,7 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
@@ -66,6 +67,21 @@ public final class GrpcServiceBuilder {
 
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
             GrpcSerializationFormats.values();
+
+    @Nullable
+    private static final ServerInterceptor coroutineContextInterceptor;
+
+    static {
+        ArmeriaCoroutineContextInterceptor interceptor;
+        try {
+            Class.forName("io.grpc.kotlin.CoroutineContextServerInterceptor", false,
+                          GrpcServiceBuilder.class.getClassLoader());
+            interceptor = new ArmeriaCoroutineContextInterceptor();
+        } catch (Throwable ignored) {
+            interceptor = null;
+        }
+        coroutineContextInterceptor = interceptor;
+    }
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 
@@ -102,7 +118,11 @@ public final class GrpcServiceBuilder {
      * what's returned by {@link BindableService#bindService()}.
      */
     public GrpcServiceBuilder addService(ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(service, "service"));
+        ServerServiceDefinition serviceDefinition = requireNonNull(service, "service");
+        if (coroutineContextInterceptor != null) {
+            serviceDefinition = ServerInterceptors.intercept(serviceDefinition, coroutineContextInterceptor);
+        }
+        registryBuilder.addService(serviceDefinition);
         return this;
     }
 
