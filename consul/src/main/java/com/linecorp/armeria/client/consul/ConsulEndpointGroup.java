@@ -61,25 +61,17 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
     private final ConsulClient consulClient;
     private final String serviceName;
-    private final long intervalMillis;
+    private final long registryFetchIntervalSeconds;
     private final boolean useHealthyEndpoints;
 
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
 
-    /**
-     * Creates a Consul-based {@link EndpointGroup}, endpoints will be retrieved by service name using
-     * {@code ConsulClient}.
-     * @param consulClient the Consul client
-     * @param serviceName the service name to retrieve
-     * @param intervalMillis the health check interval on milliseconds to check
-     * @param useHealthyEndpoints whether to use healthy endpoints
-     */
-    ConsulEndpointGroup(ConsulClient consulClient, String serviceName, long intervalMillis,
+    ConsulEndpointGroup(ConsulClient consulClient, String serviceName, long registryFetchIntervalSeconds,
                         boolean useHealthyEndpoints) {
         this.consulClient = consulClient;
         this.serviceName = serviceName;
-        this.intervalMillis = intervalMillis;
+        this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
         this.useHealthyEndpoints = useHealthyEndpoints;
 
         update();
@@ -109,9 +101,7 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
                 setEndpoints(endpoints);
             }
 
-            scheduledFuture = eventLoop.schedule(this::update,
-                                                 intervalMillis,
-                                                 TimeUnit.MILLISECONDS);
+            scheduledFuture = eventLoop.schedule(this::update, registryFetchIntervalSeconds, TimeUnit.SECONDS);
             return null;
         });
     }

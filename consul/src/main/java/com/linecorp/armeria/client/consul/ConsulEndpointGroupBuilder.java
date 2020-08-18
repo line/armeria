@@ -81,7 +81,7 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Sets the interval between fetching registry requests.
+     * Sets the interval between fetching registry requests.he interval between fetching registry requests.
      * If not set {@value #DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS} is used by default.
      */
     public ConsulEndpointGroupBuilder registryFetchIntervalSeconds(long registryFetchIntervalSeconds) {

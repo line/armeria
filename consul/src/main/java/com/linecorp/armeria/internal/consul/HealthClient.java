@@ -45,15 +45,17 @@ final class HealthClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthClient.class);
 
+    private static final String PASSING_PARAM = QueryParams.of("passing", true).toQueryString();
+
     static HealthClient of(ConsulClient consulClient) {
         return new HealthClient(consulClient);
     }
 
-    private final ConsulClient client;
+    private final WebClient client;
     private final ObjectMapper mapper;
 
     private HealthClient(ConsulClient client) {
-        this.client = client;
+        this.client = client.consulWebClient();
         mapper = client.getObjectMapper();
     }
 
@@ -61,14 +63,13 @@ final class HealthClient {
      * Returns a healthy endpoint list with service name.
      */
     CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
-        final WebClient webClient = client.consulWebClient();
-        return webClient
-                .get("/health/service/" + serviceName + '?' + QueryParams.of("passing", true).toQueryString())
+        return client
+                .get("/health/service/" + serviceName + '?' + PASSING_PARAM)
                 .aggregate()
                 .handle((response, cause) -> {
                     if (cause != null) {
                         logger.warn("Unexpected exception while fetching the registry from Consul: {}." +
-                                    " (serviceName: {})", webClient.uri(), serviceName,
+                                    " (serviceName: {})", client.uri(), serviceName,
                                     cause);
                         return null;
                     }
@@ -77,7 +78,7 @@ final class HealthClient {
                     final String content = response.contentUtf8();
                     if (!status.isSuccess()) {
                         logger.warn("Unexpected response from Consul: {}. (status: {}, content: {}, " +
-                                    "serviceName: {})", webClient.uri(), status,
+                                    "serviceName: {})", client.uri(), status,
                                     content, serviceName);
                         return null;
                     }
@@ -89,7 +90,7 @@ final class HealthClient {
                     } catch (IOException e) {
                         logger.warn("Unexpected exception while parsing a response from Consul: {}. " +
                                     "(content: {}, serviceName: {})",
-                                    webClient.uri(), content, serviceName, e);
+                                    client.uri(), content, serviceName, e);
                         return null;
                     }
                 });

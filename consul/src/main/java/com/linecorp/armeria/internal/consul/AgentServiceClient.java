@@ -30,6 +30,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
@@ -42,11 +43,11 @@ final class AgentServiceClient {
         return new AgentServiceClient(consulClient);
     }
 
-    private final ConsulClient client;
+    private final WebClient client;
     private final ObjectMapper mapper;
 
     private AgentServiceClient(ConsulClient client) {
-        this.client = client;
+        this.client = client.consulWebClient();
         mapper = client.getObjectMapper();
     }
 
@@ -65,9 +66,7 @@ final class AgentServiceClient {
         }
 
         try {
-            return client.consulWebClient()
-                         .put("/agent/service/register",
-                              mapper.writeValueAsString(service));
+            return client.put("/agent/service/register", mapper.writeValueAsString(service));
         } catch (JsonProcessingException e) {
             return HttpResponse.ofFailure(e);
         }
@@ -78,8 +77,7 @@ final class AgentServiceClient {
      */
     HttpResponse deregister(String serviceId) {
         requireNonNull(serviceId, "serviceId");
-        return client.consulWebClient()
-                     .put("/agent/service/deregister/" + serviceId, "");
+        return client.put("/agent/service/deregister/" + serviceId, "");
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

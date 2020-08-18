@@ -36,6 +36,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -51,11 +52,11 @@ public final class CatalogClient {
         return new CatalogClient(consulClient);
     }
 
-    private final ConsulClient client;
+    private final WebClient client;
     private final ObjectMapper mapper;
 
     private CatalogClient(ConsulClient client) {
-        this.client = client;
+        this.client = client.consulWebClient();
         mapper = client.getObjectMapper();
     }
 
@@ -90,8 +91,7 @@ public final class CatalogClient {
     CompletableFuture<List<Node>> service(String serviceName) {
         requireNonNull(serviceName, "serviceName");
 
-        return client.consulWebClient()
-                     .get("/catalog/service/" + serviceName)
+        return client.get("/catalog/service/" + serviceName)
                      .aggregate()
                      .thenApply(response -> {
                          try {
@@ -99,7 +99,7 @@ public final class CatalogClient {
                          } catch (JsonProcessingException e) {
                              return Exceptions.throwUnsafely(e);
                          }
-                    });
+                     });
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
