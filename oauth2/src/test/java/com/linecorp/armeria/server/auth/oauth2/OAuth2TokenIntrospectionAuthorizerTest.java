@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
-import com.linecorp.armeria.common.auth.oauth2.MockOAuth2IntrospectionService;
+import com.linecorp.armeria.internal.server.auth.oauth2.MockOAuth2IntrospectionService;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;

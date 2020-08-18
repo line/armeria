@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
@@ -37,14 +37,15 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 
 public abstract class MockOAuth2Service {
 
-    static final String INVALID_REQUEST = "{\"error\":\"invalid_request\"}";
-    static final String INVALID_CLIENT = "{\"error\":\"invalid_client\"}";
-    static final String NOT_ACTIVE_RESPONSE = "{\"active\":false}";
-    static final String UNSUPPORTED_GRANT_TYPE = "{\"error\":\"unsupported_grant_type\"}";
-    static final String UNAUTHORIZED_CLIENT = "{\"error\":\"unauthorized_client\"}";
+    public static final String INVALID_REQUEST = "{\"error\":\"invalid_request\"}";
+    public static final String INVALID_CLIENT = "{\"error\":\"invalid_client\"}";
+    public static final String NOT_ACTIVE_RESPONSE = "{\"active\":false}";
+    public static final String UNSUPPORTED_GRANT_TYPE = "{\"error\":\"unsupported_grant_type\"}";
+    public static final String UNAUTHORIZED_CLIENT = "{\"error\":\"unauthorized_client\"}";
 
     private static final Pattern CREDENTIALS_PATTERN = Pattern.compile(
             "(?<clientId>.+):(?<clientSecret>.*)");
@@ -116,7 +117,7 @@ public abstract class MockOAuth2Service {
         return this;
     }
 
-    Set<String> findClientTokens(String clientId) {
+    public Set<String> findClientTokens(String clientId) {
         final Set<String> tokens = new HashSet<>();
         for (Map.Entry<String, String> clientToken : clientTokens.entrySet()) {
             if (clientId.equals(clientToken.getValue())) {

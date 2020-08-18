@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import java.util.Optional;
 
@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 
 @LoggingDecorator
-public class MockOAuth2IntrospectionService extends MockOAuth2Service {
+public class MockOAuth2RevocationService extends MockOAuth2Service {
 
     @Post("/token/")
     @Consumes("application/x-www-form-urlencoded")
@@ -39,7 +39,7 @@ public class MockOAuth2IntrospectionService extends MockOAuth2Service {
             @Param("token_type_hint") @Default("access_token") String tokenTypeHint) {
 
         // first, check "Authorization"
-        final HttpResponse response = verifyClientCredentials(auth, "token introspection");
+        final HttpResponse response = verifyClientCredentials(auth, "token revocation");
         if (response != null) {
             return response; // UNAUTHORIZED or BAD_REQUEST
         }
@@ -48,11 +48,6 @@ public class MockOAuth2IntrospectionService extends MockOAuth2Service {
         if (!token.isPresent()) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, INVALID_REQUEST);
         }
-        final MockOAuth2AccessToken accessToken = findToken(token.get());
-        if (accessToken == null || !accessToken.tokenDescriptor().isActive()) {
-            return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, NOT_ACTIVE_RESPONSE);
-        }
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                               accessToken.tokenDescriptor().rawResponse());
+        return HttpResponse.of(HttpStatus.OK);
     }
 }

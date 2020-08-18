@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.server.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,10 +33,12 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class ClientCredentialsTokenRequestTest {
+public class TokenIntrospectionRequestTest {
 
     static final String CLIENT_CREDENTIALS = "dGVzdF9jbGllbnQ6Y2xpZW50X3NlY3JldA=="; //test_client:client_secret
     static final String SERVER_CREDENTIALS = "dGVzdF9zZXJ2ZXI6c2VydmVyX3NlY3JldA=="; //test_server:server_secret
@@ -48,7 +50,7 @@ public class ClientCredentialsTokenRequestTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/token", new MockOAuth2ClientCredentialsService()
+            sb.annotatedService("/introspect", new MockOAuth2IntrospectionService()
                     .withAuthorizedClient("test_client", "client_secret")
                     .withAuthorizedClient("test_server", "server_secret")
                     .withClientToken("test_client", token));
@@ -56,21 +58,49 @@ public class ClientCredentialsTokenRequestTest {
     };
 
     @Test
-    public void testGrant() throws Exception {
+    public void testIntrospect() throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders requestHeaders1 = RequestHeaders.of(
-                HttpMethod.POST, "/token/client/",
+                HttpMethod.POST, "/introspect/token/",
+                HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
+                HttpHeaderNames.ACCEPT, MediaType.JSON,
+                HttpHeaderNames.AUTHORIZATION, "Basic " + SERVER_CREDENTIALS);
+        final AggregatedHttpResponse response1 = client.execute(
+                requestHeaders1, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
+        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        final OAuth2TokenDescriptor tokenDescriptor1 = OAuth2TokenDescriptor.of(response1.contentUtf8());
+        assertThat(tokenDescriptor1.isActive()).isTrue();
+        assertThat(tokenDescriptor1).isEqualTo(token.tokenDescriptor());
+
+        final RequestHeaders requestHeaders2 = RequestHeaders.of(
+                HttpMethod.POST, "/introspect/token/",
+                HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
+                HttpHeaderNames.ACCEPT, MediaType.JSON,
+                HttpHeaderNames.AUTHORIZATION, "Basic " + SERVER_CREDENTIALS);
+        final AggregatedHttpResponse response2 = client.execute(
+                requestHeaders2, "token=ABC&token_type_hint=access_token").aggregate().join();
+        assertThat(response2.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response2.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        final OAuth2TokenDescriptor tokenDescriptor2 = OAuth2TokenDescriptor.of(response2.contentUtf8());
+        assertThat(tokenDescriptor2.isActive()).isFalse();
+        assertThat(tokenDescriptor2).isEqualTo(MockOAuth2AccessToken.INACTIVE_TOKEN);
+
+        final RequestHeaders requestHeaders3 = RequestHeaders.of(
+                HttpMethod.POST, "/introspect/token/",
                 HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
-        final AggregatedHttpResponse response1 = client.execute(
-                requestHeaders1, "grant_type=client_credentials").aggregate().join();
-        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        final GrantedOAuth2AccessToken grantedToken1 =
-                GrantedOAuth2AccessToken.of(response1.contentUtf8(), null);
-        assertThat(grantedToken1).isEqualTo(token.grantedToken());
+        final AggregatedHttpResponse response3 = client.execute(
+                requestHeaders3, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
+        assertThat(response3.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response3.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        final OAuth2TokenDescriptor tokenDescriptor3 = OAuth2TokenDescriptor.of(response3.contentUtf8());
+        assertThat(tokenDescriptor3.isActive()).isTrue();
+        assertThat(tokenDescriptor3).isEqualTo(token.tokenDescriptor());
     }
 
     @Test
@@ -78,35 +108,38 @@ public class ClientCredentialsTokenRequestTest {
         final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders requestHeaders1 = RequestHeaders.of(
-                HttpMethod.POST, "/token/client/",
+                HttpMethod.POST, "/introspect/token/",
                 HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
                 HttpHeaderNames.ACCEPT, MediaType.JSON);
         final AggregatedHttpResponse response1 = client.execute(
-                requestHeaders1, "grant_type=client_credentials").aggregate().join();
+                requestHeaders1, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response1.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response1.headers())
                 .contains(new SimpleImmutableEntry<>(
-                        HttpHeaderNames.WWW_AUTHENTICATE, "Basic realm=\"token grant\""));
+                        HttpHeaderNames.WWW_AUTHENTICATE, "Basic realm=\"token introspection\""));
 
         final RequestHeaders requestHeaders2 = RequestHeaders.of(
-                HttpMethod.POST, "/token/client/",
+                HttpMethod.POST, "/introspect/token/",
                 HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic");
         final AggregatedHttpResponse response2 = client.execute(
-                requestHeaders2, "grant_type=client_credentials").aggregate().join();
+                requestHeaders2, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response2.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response2.headers())
                 .contains(new SimpleImmutableEntry<>(
-                        HttpHeaderNames.WWW_AUTHENTICATE, "Basic realm=\"token grant\""));
+                        HttpHeaderNames.WWW_AUTHENTICATE, "Basic realm=\"token introspection\""));
 
         final RequestHeaders requestHeaders3 = RequestHeaders.of(
-                HttpMethod.POST, "/token/client/",
+                HttpMethod.POST, "/introspect/token/",
                 HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic Zm9vOmJhcg=="); // foo:bar
         final AggregatedHttpResponse response3 = client.execute(
-                requestHeaders3, "grant_type=client_credentials").aggregate().join();
+                requestHeaders3, "token=" + token.grantedToken().accessToken() +
+                                 "&token_type_hint=access_token").aggregate().join();
         assertThat(response3.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response3.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response3.contentUtf8()).isEqualTo("{\"error\":\"invalid_client\"}");
@@ -117,36 +150,14 @@ public class ClientCredentialsTokenRequestTest {
         final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders requestHeaders1 = RequestHeaders.of(
-                HttpMethod.POST, "/token/client/",
-                HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
-                HttpHeaderNames.ACCEPT, MediaType.JSON,
-                HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
-        final AggregatedHttpResponse response1 = client.execute(
-                requestHeaders1, "").aggregate().join();
-        assertThat(response1.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThat(response1.contentUtf8()).isEqualTo("{\"error\":\"invalid_request\"}");
-
-        final RequestHeaders requestHeaders2 = RequestHeaders.of(
-                HttpMethod.POST, "/token/client/",
+                HttpMethod.POST, "/introspect/token/",
                 HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
                 HttpHeaderNames.ACCEPT, MediaType.JSON,
                 HttpHeaderNames.AUTHORIZATION, "Basic " + SERVER_CREDENTIALS);
-        final AggregatedHttpResponse response2 = client.execute(
-                requestHeaders2, "grant_type=client_credentials").aggregate().join();
-        assertThat(response2.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response2.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThat(response2.contentUtf8()).isEqualTo("{\"error\":\"invalid_client\"}");
-
-        final RequestHeaders requestHeaders3 = RequestHeaders.of(
-                HttpMethod.POST, "/token/client/",
-                HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA,
-                HttpHeaderNames.ACCEPT, MediaType.JSON,
-                HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
-        final AggregatedHttpResponse response3 = client.execute(
-                requestHeaders3, "grant_type=password").aggregate().join();
-        assertThat(response3.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response3.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThat(response3.contentUtf8()).isEqualTo("{\"error\":\"unsupported_grant_type\"}");
+        final AggregatedHttpResponse response1 = client.execute(
+                requestHeaders1, "token_type_hint=access_token").aggregate().join();
+        assertThat(response1.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(response1.contentUtf8()).isEqualTo("{\"error\":\"invalid_request\"}");
     }
 }

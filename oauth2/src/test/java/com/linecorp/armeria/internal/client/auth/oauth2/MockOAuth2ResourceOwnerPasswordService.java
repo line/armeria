@@ -14,16 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.client.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
+import com.linecorp.armeria.internal.common.auth.oauth2.MockOAuth2Service;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -31,13 +35,29 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 
 @LoggingDecorator
-public class MockOAuth2ClientCredentialsService extends MockOAuth2Service {
+public class MockOAuth2ResourceOwnerPasswordService extends MockOAuth2Service {
 
-    @Post("/client/")
+    private final Map<String, String> authorizedUsers = new HashMap<>(); // username -> password
+    private final Map<String, String> clientUsers = new HashMap<>(); // clientId -> username
+
+    public MockOAuth2ResourceOwnerPasswordService withAuthorizedUser(String clientId,
+        String username, String password) {
+      authorizedUsers.put(username, password);
+      clientUsers.put(clientId, username);
+      return this;
+    }
+
+    private boolean isAuthorizedUser(String clientId, String username, String password) {
+        return password.equals(authorizedUsers.get(username)) && username.equals(clientUsers.get(clientId));
+    }
+
+    @Post("/user/")
     @Consumes("application/x-www-form-urlencoded")
     public HttpResponse handleTokenGet(
             @Header("Authorization") Optional<String> auth,
             @Param("grant_type") Optional<String> grantType,
+            @Param("username") Optional<String> username,
+            @Param("password") Optional<String> password,
             @Param("scope") Optional<String> scope) {
 
         // first, check "Authorization"
@@ -52,12 +72,20 @@ public class MockOAuth2ClientCredentialsService extends MockOAuth2Service {
         if (!grantType.isPresent()) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, INVALID_REQUEST);
         }
-        if (!"client_credentials".equals(grantType.get())) {
+        if (!"password".equals(grantType.get())) {
             // in case the authenticated client is not authorized to use this authorization grant type
-            //return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, UNAUTHORIZED_CLIENT);
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, UNAUTHORIZED_CLIENT);
 
             // in case the authorization grant type is not supported by the authorization server
-            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, UNSUPPORTED_GRANT_TYPE);
+            //return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, UNSUPPORTED_GRANT_TYPE);
+        }
+
+        // check user credentials
+        if (!username.isPresent() || !password.isPresent()) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, INVALID_REQUEST);
+        }
+        if (!isAuthorizedUser(clientId, username.get(), password.get())) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, INVALID_CLIENT);
         }
 
         // check for client access tokens

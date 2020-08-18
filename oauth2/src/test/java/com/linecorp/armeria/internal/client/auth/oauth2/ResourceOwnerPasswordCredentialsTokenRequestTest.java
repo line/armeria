@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.client.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,6 +33,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
+import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
