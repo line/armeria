@@ -49,7 +49,7 @@ object Main {
             .enableUnframedRequests(true)
             // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
             // methods in the blockingTaskExecutor thread pool.
-             .useBlockingTaskExecutor(useBlockingTaskExecutor)
+            .useBlockingTaskExecutor(useBlockingTaskExecutor)
             .build()
         return Server.builder()
             .http(httpPort)
