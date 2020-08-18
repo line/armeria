@@ -140,7 +140,7 @@ public final class RequestContextHooks {
 
     private RequestContextHooks() {}
 
-    private static class ContextAwareMono extends Mono<Object> implements ContextHolder {
+    private static final class ContextAwareMono extends Mono<Object> implements ContextHolder {
 
         private final Mono<Object> source;
         private final RequestContext ctx;
@@ -167,7 +167,7 @@ public final class RequestContextHooks {
         }
     }
 
-    private static class ContextAwareFlux extends Flux<Object> implements ContextHolder {
+    private static final class ContextAwareFlux extends Flux<Object> implements ContextHolder {
 
         private final Flux<Object> source;
         private final RequestContext ctx;
@@ -194,7 +194,7 @@ public final class RequestContextHooks {
         }
     }
 
-    private static class ContextAwareConnectableFlux extends ConnectableFlux<Object> implements ContextHolder {
+    private static final class ContextAwareConnectableFlux extends ConnectableFlux<Object> implements ContextHolder {
 
         private final ConnectableFlux<Object> source;
         private final RequestContext ctx;
@@ -228,7 +228,7 @@ public final class RequestContextHooks {
         }
     }
 
-    private static class ContextAwareCoreSubscriber implements CoreSubscriber<Object> {
+    private static final class ContextAwareCoreSubscriber implements CoreSubscriber<Object> {
 
         private final CoreSubscriber<? super Object> subscriber;
         private final RequestContext ctx;
