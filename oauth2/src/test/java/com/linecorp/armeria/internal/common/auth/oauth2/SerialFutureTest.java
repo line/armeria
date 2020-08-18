@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -14,9 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ACCESS_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACCESS_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE_HINT;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -26,6 +28,10 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
+import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
+import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 
 /**
  * A common abstraction for the requests implementing various Token operations request/response flows,
@@ -35,9 +41,6 @@ import com.linecorp.armeria.common.QueryParamsBuilder;
  * @param <T> the type of the authorization result.
  */
 public abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Request<T> {
-
-    private static final String TOKEN = "token";
-    private static final String TOKEN_TYPE_HINT = "token_type_hint";
 
     /**
      * A common abstraction for the requests implementing various Token operations request/response flows,

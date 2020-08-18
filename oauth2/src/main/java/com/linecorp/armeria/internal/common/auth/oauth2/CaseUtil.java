@@ -14,16 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 
-final class CaseUtil {
+public final class CaseUtil {
 
   @Nullable
-  static String firstUpperCase(@Nullable String word) {
+  public static String firstUpperCase(@Nullable String word) {
     if (word == null || word.isEmpty()) {
       return word;
     }
@@ -31,7 +31,7 @@ final class CaseUtil {
   }
 
   @Nullable
-  static String firstUpperAllLowerCase(@Nullable String word) {
+  public static String firstUpperAllLowerCase(@Nullable String word) {
     if (word == null || word.isEmpty()) {
       return word;
     }

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -74,13 +74,18 @@ public class SerialFuture {
                 executeNext();
                 return;
             }
-            future.whenComplete((v, ex) -> {
+            // replaced CompletableFuture.whenComplete() with CompletableFuture.handle()
+            // due to performance issue described at
+            // <a href="https://github.com/line/armeria/pull/1440">#1440</a>.
+            future.handle((v, ex) -> {
                 if (ex == null) {
                     result.complete(v);
                 } else {
                     result.completeExceptionally(ex);
                 }
                 executeNext();
+                //noinspection ReturnOfNull
+                return null;
             });
         });
 

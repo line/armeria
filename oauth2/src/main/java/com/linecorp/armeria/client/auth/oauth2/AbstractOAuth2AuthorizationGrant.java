@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
+import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
 
 /**
  * Base implementation of OAuth 2.0 Access Token Grant flow to obtain Access Token.

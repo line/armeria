@@ -14,12 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.auth.oauth2;
+package com.linecorp.armeria.internal.client.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.GRANT_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.PASSWORD;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.PASSWORD_GRANT_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.USER_NAME;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -33,16 +39,16 @@ import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 
 /**
- * Implements Client Credentials Grant request/response flow,
- * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
+ * Implements Resource Owner Password Credentials Grant request
+ * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.3">[RFC6749], Section 4.3</a>.
  */
-final class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
+public final class ResourceOwnerPasswordCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
-    private static final String CLIENT_CREDENTIALS_GRANT_TYPE = "client_credentials";
+    private final Supplier<? extends Map.Entry<String, String>> userCredentialsSupplier;
 
     /**
-     * Implements Client Credentials Grant request/response flow,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
+     * Implements Resource Owner Password Credentials Grant request/response flow,
+     * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.3">[RFC6749], Section 4.3</a>.
      *
      * @param accessTokenEndpoint A {@link WebClient} to facilitate an Access Token request. Must correspond to
      *                            the Access Token endpoint of the OAuth 2 system.
@@ -50,17 +56,20 @@ final class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
      *                                OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * @param userCredentialsSupplier A supplier of user credentials: "username" and "password" used to grant
+     *                                the Access Token.
      */
-    ClientCredentialsTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
-                                  ClientAuthorization clientAuthorization) {
-        super(accessTokenEndpoint, accessTokenEndpointPath,
-              // client authorization is MANDATORY for this type of grant
-              requireNonNull(clientAuthorization, "clientAuthorization"));
+    public ResourceOwnerPasswordCredentialsTokenRequest(
+            WebClient accessTokenEndpoint, String accessTokenEndpointPath,
+            @Nullable ClientAuthorization clientAuthorization,
+            Supplier<? extends Map.Entry<String, String>> userCredentialsSupplier) {
+        super(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
+        this.userCredentialsSupplier = requireNonNull(userCredentialsSupplier, "userCredentialsSupplier");
     }
 
     /**
-     * Makes Client Credentials Grant request and handles the response converting the result data
-     * to {@link GrantedOAuth2AccessToken}.
+     * Makes Resource Owner Password Credentials Grant request and handles the response converting the result
+     * data to {@link GrantedOAuth2AccessToken}.
      * @param scope OPTIONAL. Scope to request for the token. A list of space-delimited,
      *              case-sensitive strings. The strings are defined by the authorization server.
      *              The authorization server MAY fully or partially ignore the scope requested by the
@@ -86,13 +95,18 @@ final class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
         // populate request form data
         // MANDATORY grant_type
-        requestFormBuilder.add(GRANT_TYPE, CLIENT_CREDENTIALS_GRANT_TYPE);
+        requestFormBuilder.add(GRANT_TYPE, PASSWORD_GRANT_TYPE);
+        // MANDATORY user credentials
+        final Map.Entry<String, String> userCredentials =
+                requireNonNull(userCredentialsSupplier.get(), "userCredentials");
+        final String userName = requireNonNull(userCredentials.getKey(), USER_NAME);
+        final String userPassword = requireNonNull(userCredentials.getValue(), PASSWORD);
+        requestFormBuilder.add(USER_NAME, userName);
+        requestFormBuilder.add(PASSWORD, userPassword);
         // OPTIONAL scope
         if (scope != null) {
             requestFormBuilder.add(SCOPE, scope);
         }
-        // this grant uses client credentials supplied in the {@link HttpHeaderNames#AUTHORIZATION} header,
-        // so no other request parameters required here
 
         // make actual access token request
         return executeWithParameters(requestFormBuilder.build());

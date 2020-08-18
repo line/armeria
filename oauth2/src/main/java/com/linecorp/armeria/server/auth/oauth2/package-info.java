@@ -15,7 +15,7 @@
  */
 
 /**
- * Server-side <a href="https://en.wikipedia.org/wiki/OAuth#OAuth_2.0">OAuth 2.0</a> implementation.
+ * Server-side <a href="https://en.wikipedia.org/wiki/OAuth#OAuth_2.0">OAuth 2.0</a> implementation artifacts.
  */
 @NonNullByDefault
 package com.linecorp.armeria.server.auth.oauth2;

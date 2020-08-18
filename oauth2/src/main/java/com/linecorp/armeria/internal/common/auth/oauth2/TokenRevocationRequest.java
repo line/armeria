@@ -14,19 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 
 /**
  * Implements Token Revocation request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>.
  */
-final class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolean> {
+public final class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolean> {
 
     /**
      * Implements Token Revocation request/response flow,
@@ -39,8 +40,8 @@ final class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolean
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    TokenRevocationRequest(WebClient revocationEndpoint, String revocationEndpointPath,
-                           @Nullable ClientAuthorization clientAuthorization) {
+    public TokenRevocationRequest(WebClient revocationEndpoint, String revocationEndpointPath,
+                                  @Nullable ClientAuthorization clientAuthorization) {
         super(revocationEndpoint, revocationEndpointPath, clientAuthorization);
     }
 

@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ACCESS_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.EXPIRES_IN;
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ISSUED_AT;
 import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.JSON;
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.REFRESH_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.TOKEN_TYPE;
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACCESS_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.EXPIRES_IN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REFRESH_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
 import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 import static java.util.Objects.requireNonNull;
 
@@ -38,6 +38,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
 /**
  * Builds an instance of {@link GrantedOAuth2AccessToken}.
@@ -112,8 +114,8 @@ public final class GrantedOAuth2AccessTokenBuilder {
 
     /**
      * Constructs a new instance of {@link GrantedOAuth2AccessTokenBuilder} given the mandatory value
-     * {@code access_token} of the access token issued by the authorization server.
-     * @param accessToken {@code access_token} Access Token response field,
+     * {@value OAuth2Constants#ACCESS_TOKEN} of the access token issued by the authorization server.
+     * @param accessToken {@value OAuth2Constants#ACCESS_TOKEN} Access Token response field,
      *                    REQUIRED. The access token issued by the authorization server.
      */
     GrantedOAuth2AccessTokenBuilder(String accessToken) {
@@ -121,7 +123,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     }
 
     /**
-     * {@code token_type}  Access Token response field,
+     * {@value OAuth2Constants#TOKEN_TYPE} Access Token response field,
      * REQUIRED. The type of the token issued as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      * Value is case insensitive.
@@ -132,7 +134,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     }
 
     /**
-     * {@code expires_in} Access Token response field,
+     * {@value OAuth2Constants#EXPIRES_IN} Access Token response field,
      * RECOMMENDED. {@link Duration} indicating the lifetime of the access token. For example,
      * the value 3600 seconds denotes that the access token will expire in one hour from the time
      * the response was generated. If omitted, the authorization server SHOULD provide the expiration
@@ -146,7 +148,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     /**
      * An {@link Instant} indicating when the Access Token was issued,
      * OPTIONAL. The value is NOT supplied with the Access Token response and calculated approximately using
-     * {@code expires_in} field.
+     * {@value OAuth2Constants#EXPIRES_IN} field.
      */
     public GrantedOAuth2AccessTokenBuilder issuedAt(Instant issuedAt) {
         this.issuedAt = requireNonNull(issuedAt, "issuedAt");
@@ -154,7 +156,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     }
 
     /**
-     * {@code refresh_token} Access Token response field,
+     * {@value OAuth2Constants#REFRESH_TOKEN} Access Token response field,
      * OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
      * authorization grant as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
@@ -165,7 +167,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     }
 
     /**
-     * {@code scope} Access Token Response field,
+     * {@value OAuth2Constants#SCOPE} Access Token Response field,
      * OPTIONAL. An {@link Iterable} of individual scope values.
      */
     public GrantedOAuth2AccessTokenBuilder scope(Iterable<String> scope) {
@@ -174,7 +176,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     }
 
     /**
-     * {@code scope} Access Token Response field,
+     * {@value OAuth2Constants#SCOPE} Access Token Response field,
      * OPTIONAL. An array of individual scope values.
      */
     public GrantedOAuth2AccessTokenBuilder scope(String... scope) {

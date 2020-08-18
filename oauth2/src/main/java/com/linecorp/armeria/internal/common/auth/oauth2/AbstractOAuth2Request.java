@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.auth.oauth2;
+package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +34,11 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
+import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
+import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
+import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
+import com.linecorp.armeria.common.auth.oauth2.UnsupportedResponseException;
 
 /**
  * A common abstraction for the requests implementing various OAuth 2.0 request/response flows,

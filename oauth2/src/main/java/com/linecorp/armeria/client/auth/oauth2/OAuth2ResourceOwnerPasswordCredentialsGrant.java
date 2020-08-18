@@ -28,6 +28,8 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
+import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
+import com.linecorp.armeria.internal.client.auth.oauth2.ResourceOwnerPasswordCredentialsTokenRequest;
 
 /**
  * An implementation of OAuth 2.0 Resource Owner Password Credentials Grant flow to obtain Access Token,

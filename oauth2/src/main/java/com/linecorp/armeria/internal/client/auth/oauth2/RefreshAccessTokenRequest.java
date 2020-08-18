@@ -14,10 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.auth.oauth2;
+package com.linecorp.armeria.internal.client.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.REFRESH_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.GRANT_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REFRESH_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -37,7 +38,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
  * Implements Access Token Refresh request
  * as per <a href="https://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
  */
-final class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
+public final class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
 
     /**
      * Implements Client Credentials Grant request/response flow,
@@ -50,8 +51,8 @@ final class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    RefreshAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
-                              @Nullable ClientAuthorization clientAuthorization) {
+    public RefreshAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
+                                     @Nullable ClientAuthorization clientAuthorization) {
         super(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 

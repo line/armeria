@@ -16,14 +16,15 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.ACCESS_TOKEN;
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.REFRESH_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACCESS_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REFRESH_TOKEN;
 
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.internal.common.auth.oauth2.TokenRevocationRequest;
 
 /**
  * Implements Token Revocation request/response flow,

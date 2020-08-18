@@ -32,8 +32,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.auth.oauth2.SerialFuture;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.auth.oauth2.SerialFuture;
 
 /**
  * Holds a token object and facilitates its lifecycle based on a number of procedures,

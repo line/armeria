@@ -14,26 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.auth.oauth2;
+package com.linecorp.armeria.internal.client.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.auth.oauth2.AbstractOAuth2Request;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
+import com.linecorp.armeria.internal.common.auth.oauth2.AbstractOAuth2Request;
 
 /**
  * A common abstraction for the requests implementing various Access Token request/response flows,
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
  */
-abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedOAuth2AccessToken> {
-
-    static final String GRANT_TYPE = "grant_type";
+public abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedOAuth2AccessToken> {
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -46,8 +44,8 @@ abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedO
      * @param clientAuthorization Provides client authorization for the OAuth requests,
      *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    AbstractAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
-                               @Nullable ClientAuthorization clientAuthorization) {
+    protected AbstractAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
+                                         @Nullable ClientAuthorization clientAuthorization) {
         super(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 

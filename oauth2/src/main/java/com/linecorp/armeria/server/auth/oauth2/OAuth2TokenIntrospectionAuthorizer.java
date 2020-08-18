@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.auth.oauth2;
 
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_TOKEN_TYPE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
@@ -31,6 +32,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
+import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthFailureHandler;
@@ -61,7 +63,6 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
 
     static final AttributeKey<Integer> ERROR_CODE = AttributeKey.valueOf("x-oauth2-error");
     static final AttributeKey<String> ERROR_TYPE = AttributeKey.valueOf("x-oauth2-error-type");
-    static final String UNSUPPORTED_TOKEN_TYPE = "unsupported_token_type";
     static final String INVALID_TOKEN = "invalid_token";
     static final String INSUFFICIENT_SCOPE = "insufficient_scope";
 

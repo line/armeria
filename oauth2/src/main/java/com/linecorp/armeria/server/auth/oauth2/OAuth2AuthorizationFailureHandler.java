@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server.auth.oauth2;
 
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.BEARER;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REALM;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
 import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer.ERROR_CODE;
 import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer.ERROR_TYPE;
 
@@ -94,11 +98,6 @@ import com.linecorp.armeria.server.auth.Authorizer;
 class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
 
     static final Logger logger = LoggerFactory.getLogger(OAuth2AuthorizationFailureHandler.class);
-
-    private static final String BEARER = "Bearer";
-    private static final String REALM = "realm";
-    private static final String ERROR = "error";
-    private static final String SCOPE = "scope";
 
     @Nullable
     private final String accessTokenType;

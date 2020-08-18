@@ -29,6 +29,8 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
+import com.linecorp.armeria.internal.client.auth.oauth2.AbstractAccessTokenRequest;
+import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
 
 @SuppressWarnings("rawtypes")
 abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2AuthorizationGrantBuilder> {

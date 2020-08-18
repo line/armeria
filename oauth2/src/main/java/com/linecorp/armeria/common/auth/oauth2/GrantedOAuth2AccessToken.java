@@ -16,6 +16,12 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACCESS_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.DEFAULT_TOKEN_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.EXPIRES_IN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REFRESH_TOKEN;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
 import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 import static java.util.Objects.requireNonNull;
 
@@ -36,6 +42,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
+import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
 /**
  * Defines a structure of the Access Token Response, as per
@@ -74,29 +82,21 @@ public class GrantedOAuth2AccessToken implements Serializable {
         return new GrantedOAuth2AccessTokenBuilder(accessToken);
     }
 
-    public static final String ACCESS_TOKEN = "access_token";
-    public static final String REFRESH_TOKEN = "refresh_token";
-    public static final String SCOPE = "scope";
-    public static final String TOKEN_TYPE = "token_type";
-    public static final String EXPIRES_IN = "expires_in";
-
     static final String ISSUED_AT = "issued_at";
 
     static final String SCOPE_SEPARATOR = " ";
     static final char AUTHORIZATION_SEPARATOR = ' ';
 
-    static final String DEFAULT_TOKEN_TYPE = "bearer";
-
     static final ObjectMapper JSON = new ObjectMapper();
 
     /**
-     * {@code access_token} Access Token response field,
+     * {@value OAuth2Constants#ACCESS_TOKEN} Access Token response field,
      * REQUIRED. The access token issued by the authorization server.
      */
     private final String accessToken;
 
     /**
-     * {@code token_type} Access Token response field,
+     * {@value OAuth2Constants#TOKEN_TYPE} Access Token response field,
      * REQUIRED. The type of the token issued as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>, e.g. "bearer".
      * Value is case insensitive.
@@ -105,7 +105,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     private final String tokenType;
 
     /**
-     * {@code expires_in} Access Token response field,
+     * {@value OAuth2Constants#EXPIRES_IN} Access Token response field,
      * RECOMMENDED. The lifetime in seconds of the access token. For example, the value "3600" denotes
      * that the access token will expire in one hour from the time the response was generated. If
      * omitted, the authorization server SHOULD provide the expiration time via other means or
@@ -115,7 +115,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     private final Duration expiresIn;
 
     /**
-     * {@code refresh_token} Access Token response field,
+     * {@value OAuth2Constants#REFRESH_TOKEN} Access Token response field,
      * OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
      * authorization grant as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
@@ -124,7 +124,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     private final String refreshToken;
 
     /**
-     * {@code scope} Access Token response field,
+     * {@value OAuth2Constants#SCOPE} Access Token response field,
      * OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The scope of
      * the access token as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
@@ -186,7 +186,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     }
 
     /**
-     * {@code access_token} Access Token response field,
+     * {@value OAuth2Constants#ACCESS_TOKEN} Access Token response field,
      * REQUIRED. The access token issued by the authorization server.
      */
     public String accessToken() {
@@ -194,7 +194,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     }
 
     /**
-     * {@code token_type}  Access Token response field,
+     * {@value OAuth2Constants#TOKEN_TYPE}  Access Token response field,
      * REQUIRED. The type of the token issued as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      * Value is case insensitive.
@@ -205,7 +205,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     }
 
     /**
-     * {@code expires_in} Access Token response field,
+     * {@value OAuth2Constants#EXPIRES_IN} Access Token response field,
      * RECOMMENDED. {@link Duration} indicating the lifetime of the access token. For example,
      * the value 3600 seconds denotes that the access token will expire in one hour from the time
      * the response was generated. If omitted, the authorization server SHOULD provide the expiration
@@ -219,14 +219,14 @@ public class GrantedOAuth2AccessToken implements Serializable {
     /**
      * An {@link Instant} indicating when the Access Token was issued.
      * The value is NOT supplied with the Access Token response and calculated approximately using
-     * {@code expires_in} field.
+     * {@value OAuth2Constants#EXPIRES_IN} field.
      */
     public Instant issuedAt() {
         return issuedAt;
     }
 
     /**
-     * An {@link Instant} representing a derived value using {@code issuedAt + expiresIn}.
+     * An {@link Instant} representing a derived value using {@code issuedAt() + expiresIn()}.
      */
     @Nullable
     public Instant expiresAt() {
@@ -256,7 +256,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     }
 
     /**
-     * {@code refresh_token} Access Token response field,
+     * {@value OAuth2Constants#REFRESH_TOKEN} Access Token response field,
      * OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
      * authorization grant as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
@@ -267,7 +267,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     }
 
     /**
-     * {@code scope} Access Token response field,
+     * {@value OAuth2Constants#SCOPE} Access Token response field,
      * OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The scope of
      * the access token as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
@@ -287,7 +287,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     }
 
     /**
-     * {@code scope} Access Token response field,
+     * {@value OAuth2Constants#SCOPE} Access Token response field,
      * OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The scope of
      * the access token as described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
@@ -331,8 +331,8 @@ public class GrantedOAuth2AccessToken implements Serializable {
      */
     public String rawResponse() {
         if (rawResponse == null) {
-            // WARNING: do not include {@code issuedAt} to the raw response
-            // as {@code issuedAt} is a derived field and it's not part of the OAuth2 server response
+            // WARNING: do not include {@code issuedAt()} to the raw response
+            // as {@code issuedAt()} is a derived field and it's not part of the OAuth2 server response
             rawResponse = composeRawResponse(accessToken, tokenType,
                                              null, expiresIn, refreshToken, scope, extras);
         }
@@ -342,7 +342,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     @Override
     public String toString() {
         if (toString == null) {
-            // include {@code issuedAt} to toString()
+            // include {@code issuedAt()} to toString()
             toString = composeRawResponse(accessToken, tokenType, issuedAt, expiresIn,
                                           refreshToken, scope, extras);
         }

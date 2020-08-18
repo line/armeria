@@ -16,20 +16,20 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.ACTIVE;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.AUDIENCE;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.CLIENT_ID;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.EXPIRES_AT;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.ISSUED_AT;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.ISSUER;
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.JSON;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.JWT_ID;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.NOT_BEFORE;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE;
 import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SCOPE_SEPARATOR;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.SUBJECT;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.TOKEN_TYPE;
-import static com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor.USER_NAME;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACTIVE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.AUDIENCE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.CLIENT_ID;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.EXPIRES_AT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ISSUED_AT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ISSUER;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.JWT_ID;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.NOT_BEFORE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SUBJECT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.USER_NAME;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;

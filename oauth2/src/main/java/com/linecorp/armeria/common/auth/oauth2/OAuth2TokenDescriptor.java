@@ -16,6 +16,18 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACTIVE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.AUDIENCE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.CLIENT_ID;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.EXPIRES_AT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ISSUED_AT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ISSUER;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.JWT_ID;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.NOT_BEFORE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SUBJECT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.USER_NAME;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
@@ -34,6 +46,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
 /**
  * Defines a structure of the Token Introspection Response, as per
@@ -61,25 +75,12 @@ public class OAuth2TokenDescriptor implements Serializable {
         return new OAuth2TokenDescriptorBuilder(active);
     }
 
-    static final String ACTIVE = "active";
-    static final String SCOPE = "scope";
-    static final String CLIENT_ID = "client_id";
-    static final String USER_NAME = "username";
-    static final String TOKEN_TYPE = "token_type";
-    static final String EXPIRES_AT = "exp";
-    static final String ISSUED_AT = "iat";
-    static final String NOT_BEFORE = "nbf";
-    static final String SUBJECT = "sub";
-    static final String AUDIENCE = "aud";
-    static final String ISSUER = "iss";
-    static final String JWT_ID = "jti";
-
     static final String SCOPE_SEPARATOR = " ";
 
     static final ObjectMapper JSON = new ObjectMapper();
 
     /**
-     * {@code active} Token Introspection Response field,
+     * {@value OAuth2Constants#ACTIVE} Token Introspection Response field,
      * REQUIRED. Boolean indicator of whether or not the presented token is currently active. The
      * specifics of a token's "active" state will vary depending on the implementation of the
      * authorization server and the information it keeps about its tokens, but a "true" value return
@@ -90,7 +91,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final boolean active;
 
     /**
-     * {@code scope} Token Introspection Response field,
+     * {@value OAuth2Constants#SCOPE} Token Introspection Response field,
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token,
      * in the format described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
@@ -105,21 +106,21 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final Set<String> scopeSet;
 
     /**
-     * {@code client_id} Token Introspection Response field,
+     * {@value OAuth2Constants#CLIENT_ID} Token Introspection Response field,
      * OPTIONAL. Client identifier for the OAuth 2.0 client that requested this token.
      */
     @Nullable
     private final String clientId;
 
     /**
-     * {@code username} Token Introspection Response field,
+     * {@value OAuth2Constants#USER_NAME} Token Introspection Response field,
      * OPTIONAL. Human-readable identifier for the resource owner who authorized this token.
      */
     @Nullable
     private final String userName;
 
     /**
-     * {@code token_type} Token Introspection Response field,
+     * {@value OAuth2Constants#TOKEN_TYPE} Token Introspection Response field,
      * OPTIONAL. Type of the token as defined at
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      */
@@ -127,7 +128,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final String tokenType;
 
     /**
-     * {@code exp} Token Introspection Response field,
+     * {@value OAuth2Constants#EXPIRES_AT} Token Introspection Response field,
      * OPTIONAL. Integer timestamp, measured in the number of seconds since January 1 1970 UTC,
      * indicating when this token will expire, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
@@ -136,7 +137,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final Instant expiresAt;
 
     /**
-     * {@code iat} Token Introspection Response field,
+     * {@value OAuth2Constants#ISSUED_AT} Token Introspection Response field,
      * OPTIONAL. Integer timestamp, measured in the number of seconds since January 1 1970 UTC,
      * indicating when this token was originally issued, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
@@ -145,7 +146,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final Instant issuedAt;
 
     /**
-     * {@code nbf} Token Introspection Response field,
+     * {@value OAuth2Constants#NOT_BEFORE} Token Introspection Response field,
      * OPTIONAL. Integer timestamp, measured in the number of seconds since January 1 1970 UTC,
      * indicating when this token is not to be used before, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
@@ -154,7 +155,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final Instant notBefore;
 
     /**
-     * {@code sub} Token Introspection Response field,
+     * {@value OAuth2Constants#SUBJECT} Token Introspection Response field,
      * OPTIONAL. Subject of the token. Usually a machine-readable
      * identifier of the resource owner who authorized this token. As defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
@@ -163,7 +164,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final String subject;
 
     /**
-     * {@code aud} Token Introspection Response field,
+     * {@value OAuth2Constants#AUDIENCE} Token Introspection Response field,
      * OPTIONAL. Service-specific string identifier or list of string identifiers representing the
      * intended audience for this token, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
@@ -172,7 +173,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final String audience;
 
     /**
-     * {@code iss} Token Introspection Response field,
+     * {@value OAuth2Constants#ISSUER} Token Introspection Response field,
      * OPTIONAL. String representing the issuer of this token, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
@@ -180,7 +181,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     private final String issuer;
 
     /**
-     * {@code jti} Token Introspection Response field,
+     * {@value OAuth2Constants#JWT_ID} Token Introspection Response field,
      * OPTIONAL. String identifier for the token - JWT ID, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
@@ -225,7 +226,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code active} Token Introspection Response field,
+     * {@value OAuth2Constants#ACTIVE} Token Introspection Response field,
      * REQUIRED. Boolean indicator of whether or not the presented token is currently active. The
      * specifics of a token's "active" state will vary depending on the implementation of the
      * authorization server and the information it keeps about its tokens, but a "true" value return
@@ -262,7 +263,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code scope} Token Introspection Response field,
+     * {@value OAuth2Constants#SCOPE} Token Introspection Response field,
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token,
      * in the format described at
      * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
@@ -273,7 +274,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code scope} Token Introspection Response field,
+     * {@value OAuth2Constants#SCOPE} Token Introspection Response field,
      * OPTIONAL. A {@link Set} of case-sensitive scope strings. The strings are defined by the authorization
      * server.
      */
@@ -282,7 +283,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code client_id} Token Introspection Response field,
+     * {@value OAuth2Constants#CLIENT_ID} Token Introspection Response field,
      * OPTIONAL. Client identifier for the OAuth 2.0 client that requested this token.
      */
     @Nullable
@@ -291,7 +292,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code username} Token Introspection Response field,
+     * {@value OAuth2Constants#USER_NAME} Token Introspection Response field,
      * OPTIONAL. Human-readable identifier for the resource owner who authorized this token.
      */
     @Nullable
@@ -300,7 +301,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code token_type} Token Introspection Response field,
+     * {@value OAuth2Constants#TOKEN_TYPE} Token Introspection Response field,
      * OPTIONAL. Type of the token as defined at
      * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      */
@@ -310,7 +311,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code exp} Token Introspection Response field,
+     * {@value OAuth2Constants#EXPIRES_AT} Token Introspection Response field,
      * OPTIONAL. {@link Instant} timestamp, indicating when this token will expire, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
@@ -320,7 +321,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code iat} Token Introspection Response field,
+     * {@value OAuth2Constants#ISSUED_AT} Token Introspection Response field,
      * OPTIONAL. {@link Instant} timestamp, indicating when this token was originally issued, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
@@ -331,8 +332,8 @@ public class OAuth2TokenDescriptor implements Serializable {
 
     /**
      * {@link Duration} indicating the lifetime of the access token. The value is NOT supplied with the
-     * Token Introspection response and calculated based on {@code iat} and {@code exp} response fields every
-     * time this method invoked.
+     * Token Introspection response and calculated based on {@value OAuth2Constants#ISSUED_AT} and
+     * {@value OAuth2Constants#EXPIRES_AT} response fields every time this method invoked.
      */
     @Nullable
     public Duration expiresIn() {
@@ -343,7 +344,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code nbf} Token Introspection Response field,
+     * {@value OAuth2Constants#NOT_BEFORE} Token Introspection Response field,
      * OPTIONAL. {@link Instant} timestamp, indicating when this token is not to be used before, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
@@ -353,7 +354,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code sub} Token Introspection Response field,
+     * {@value OAuth2Constants#SUBJECT} Token Introspection Response field,
      * OPTIONAL. Subject of the token. Usually a machine-readable
      * identifier of the resource owner who authorized this token. As defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
@@ -364,7 +365,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code aud} Token Introspection Response field,
+     * {@value OAuth2Constants#AUDIENCE} Token Introspection Response field,
      * OPTIONAL. Service-specific string identifier or list of string identifiers representing the
      * intended audience for this token, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
@@ -375,7 +376,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code iss} Token Introspection Response field,
+     * {@value OAuth2Constants#ISSUER} Token Introspection Response field,
      * OPTIONAL. String representing the issuer of this token, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */
@@ -385,7 +386,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     }
 
     /**
-     * {@code jti} Token Introspection Response field,
+     * {@value OAuth2Constants#JWT_ID} Token Introspection Response field,
      * OPTIONAL. String identifier for the token - JWT ID, as defined at
      * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
      */

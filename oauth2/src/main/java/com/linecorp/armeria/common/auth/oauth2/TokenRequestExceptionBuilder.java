@@ -16,6 +16,17 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR_DESCRIPTION;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR_URI;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_CLIENT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_GRANT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_REQUEST;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNAUTHORIZED_CLIENT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_GRANT_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_TOKEN_TYPE;
+
 import java.util.LinkedHashMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -26,21 +37,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * A builder of a {@link TokenRequestException}.
  */
 final class TokenRequestExceptionBuilder {
-
-    private static final String ERROR = "error";
-    private static final String ERROR_DESCRIPTION = "error_description";
-    private static final String ERROR_URI = "error_uri";
-
-    // RFC6749 (The OAuth 2.0 Authorization Framework) - https://tools.ietf.org/html/rfc6749#section-5.2
-    private static final String INVALID_REQUEST = "invalid_request";
-    private static final String INVALID_CLIENT = "invalid_client";
-    private static final String INVALID_GRANT = "invalid_grant";
-    private static final String UNAUTHORIZED_CLIENT = "unauthorized_client";
-    private static final String UNSUPPORTED_GRANT_TYPE = "unsupported_grant_type";
-    private static final String INVALID_SCOPE = "invalid_scope";
-
-    // RFC7009 (OAuth 2.0 Token Revocation) - https://tools.ietf.org/html/rfc7009
-    private static final String UNSUPPORTED_TOKEN_TYPE = "unsupported_token_type";
 
     static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
