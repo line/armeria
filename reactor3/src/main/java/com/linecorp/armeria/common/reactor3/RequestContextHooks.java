@@ -157,45 +157,6 @@ public final class RequestContextHooks {
         }
     }
 
-    private static class ContextAwareCoreSubscriber implements CoreSubscriber<Object> {
-
-        private final CoreSubscriber<? super Object> subscriber;
-        private final RequestContext ctx;
-
-        ContextAwareCoreSubscriber(CoreSubscriber<? super Object> subscriber, RequestContext ctx) {
-            this.subscriber = subscriber;
-            this.ctx = ctx;
-        }
-
-        @Override
-        public void onSubscribe(Subscription s) {
-            try (SafeCloseable ignored = ctx.push()) {
-                subscriber.onSubscribe(s);
-            }
-        }
-
-        @Override
-        public void onNext(Object o) {
-            try (SafeCloseable ignored = ctx.push()) {
-                subscriber.onNext(o);
-            }
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            try (SafeCloseable ignored = ctx.push()) {
-                subscriber.onError(t);
-            }
-        }
-
-        @Override
-        public void onComplete() {
-            try (SafeCloseable ignored = ctx.push()) {
-                subscriber.onComplete();
-            }
-        }
-    }
-
     private static class ContextAwareFlux extends Flux<Object> implements ContextHolder {
 
         private final Flux<Object> source;
@@ -253,6 +214,45 @@ public final class RequestContextHooks {
                 } else {
                     source.subscribe(new ContextAwareCoreSubscriber(subscriber, ctx));
                 }
+            }
+        }
+    }
+
+    private static class ContextAwareCoreSubscriber implements CoreSubscriber<Object> {
+
+        private final CoreSubscriber<? super Object> subscriber;
+        private final RequestContext ctx;
+
+        ContextAwareCoreSubscriber(CoreSubscriber<? super Object> subscriber, RequestContext ctx) {
+            this.subscriber = subscriber;
+            this.ctx = ctx;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            try (SafeCloseable ignored = ctx.push()) {
+                subscriber.onSubscribe(s);
+            }
+        }
+
+        @Override
+        public void onNext(Object o) {
+            try (SafeCloseable ignored = ctx.push()) {
+                subscriber.onNext(o);
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            try (SafeCloseable ignored = ctx.push()) {
+                subscriber.onError(t);
+            }
+        }
+
+        @Override
+        public void onComplete() {
+            try (SafeCloseable ignored = ctx.push()) {
+                subscriber.onComplete();
             }
         }
     }
