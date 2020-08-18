@@ -34,6 +34,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ParallelFlux;
+import reactor.util.context.Context;
 
 /**
  * Utility class to keep {@link RequestContext} during
@@ -55,8 +56,11 @@ public final class RequestContextHooks {
      * {@link RequestContext} which is in the {@link RequestContextStorage} when the {@link Publisher}s
      * are created. Then, the {@link RequestContext} is propagated during the
      * operations so that you can get the context using {@link RequestContext#current()}.
-     * However, please note that {@link Mono#doOnCancel(Runnable)}, {@link Mono#doFinally(Consumer)},
+     *
+     * <p>However, please note that {@link Mono#doOnCancel(Runnable)}, {@link Mono#doFinally(Consumer)},
      * {@link Flux#doOnCancel(Runnable)} and {@link Flux#doFinally(Consumer)} will not propagate the context.
+     *
+     * <p>Also, note that this method does not have any relevance to {@link Context} API.
      */
     public static synchronized void enable() {
         if (enabled) {
