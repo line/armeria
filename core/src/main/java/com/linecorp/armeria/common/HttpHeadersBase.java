@@ -33,6 +33,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.BitSet;
@@ -264,7 +265,7 @@ class HttpHeadersBase
 
         try {
             return ContentDisposition.parse(contentDispositionString);
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | UnsupportedEncodingException ex) {
             throw new IllegalStateException(ex);
         }
     }

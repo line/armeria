@@ -49,6 +49,10 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Ascii;
+
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+
 /**
  * Representation of the Content-Disposition type and parameters as defined in RFC 6266.
  *
@@ -130,7 +134,8 @@ public final class ContentDisposition {
      * @return the parsed content disposition
      * @see #asHeaderValue()
      */
-    public static ContentDisposition parse(String contentDisposition) {
+    public static ContentDisposition parse(String contentDisposition) throws UnsupportedEncodingException {
+        requireNonNull(contentDisposition, "contentDisposition");
         final List<String> parts = tokenize(contentDisposition);
         final String type = parts.get(0);
         String name = null;
@@ -323,7 +328,7 @@ public final class ContentDisposition {
         final String type = (index >= 0 ? headerValue.substring(0, index) : headerValue).trim();
         checkArgument(!type.isEmpty(), "Content-Disposition header must not be empty");
 
-        final List<String> parts = new ArrayList<>();
+        final List<String> parts = new ArrayList<>(4);
         parts.add(type);
         if (index >= 0) {
             do {
@@ -361,9 +366,11 @@ public final class ContentDisposition {
      * @param filename the filename
      * @param charset the charset for the filename
      * @return the encoded header field param
+     * @throws UnsupportedEncodingException if the specified charset is not supported
+     *
      * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
      */
-    private static String decodeFilename(String filename, Charset charset) {
+    private static String decodeFilename(String filename, Charset charset) throws UnsupportedEncodingException {
         final byte[] value = filename.getBytes(charset);
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         int index = 0;
@@ -388,11 +395,7 @@ public final class ContentDisposition {
                         filename + " (charset: " + charset + ')');
             }
         }
-        try {
-            return baos.toString(charset.name());
-        } catch (UnsupportedEncodingException ex) {
-            throw new RuntimeException("Failed to copy contents of ByteArrayOutputStream into a String", ex);
-        }
+        return baos.toString(charset.name());
     }
 
     private static boolean isRFC5987AttrChar(byte c) {
@@ -443,8 +446,8 @@ public final class ContentDisposition {
                 sb.append((char) b);
             } else {
                 sb.append('%');
-                final char hex1 = Character.toUpperCase(Character.forDigit((b >> 4) & 0xF, 16));
-                final char hex2 = Character.toUpperCase(Character.forDigit(b & 0xF, 16));
+                final char hex1 = Ascii.toUpperCase(Character.forDigit((b >> 4) & 0xF, 16));
+                final char hex2 = Ascii.toUpperCase(Character.forDigit(b & 0xF, 16));
                 sb.append(hex1);
                 sb.append(hex2);
             }
@@ -473,15 +476,7 @@ public final class ContentDisposition {
 
     @Override
     public int hashCode() {
-        int result = type.hashCode();
-        result = 31 * result + Objects.hashCode(name);
-        result = 31 * result + Objects.hashCode(filename);
-        result = 31 * result + Objects.hashCode(charset);
-        result = 31 * result + Objects.hashCode(size);
-        result = 31 * result + (creationDate != null ? creationDate.hashCode() : 0);
-        result = 31 * result + (modificationDate != null ? modificationDate.hashCode() : 0);
-        result = 31 * result + (readDate != null ? readDate.hashCode() : 0);
-        return result;
+        return Objects.hash(type, name, filename, charset, size, creationDate, modificationDate, readDate);
     }
 
     /**
@@ -493,10 +488,9 @@ public final class ContentDisposition {
             return strVal;
         }
 
-        final StringBuilder sb = new StringBuilder();
-        if (type != null) {
-            sb.append(type);
-        }
+        final StringBuilder sb = TemporaryThreadLocals.get().stringBuilder();
+        sb.append(type);
+
         if (name != null) {
             sb.append("; name=\"");
             sb.append(name).append('\"');

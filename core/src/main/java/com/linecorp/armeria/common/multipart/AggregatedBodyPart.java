@@ -19,7 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.AggregatedHttpContent;
+import com.linecorp.armeria.common.AggregatedHttpObject;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 /**
  * A complete body part whose headers and content are readily available.
  */
-public interface AggregatedBodyPart extends AggregatedHttpContent {
+public interface AggregatedBodyPart extends AggregatedHttpObject {
 
     /**
      * Returns a new {@link AggregatedBodyPart}.

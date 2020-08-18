@@ -53,9 +53,6 @@ public class ConcatArrayStreamMessageTck1Test extends PublisherVerification<Inte
 
     @Override
     public Publisher<Integer> createPublisher(long l) {
-        final PublisherBasedStreamMessage<Integer> integerPublisherBasedStreamMessage =
-                new PublisherBasedStreamMessage<>(Flux.range(0, (int) l / 2));
-
         @SuppressWarnings("unchecked")
         final StreamMessage<Integer>[] streamMessages = new StreamMessage[2];
         streamMessages[0] = new PublisherBasedStreamMessage<>(Flux.range(0, (int) l / 2));

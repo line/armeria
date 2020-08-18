@@ -34,8 +34,6 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class DefaultMultipart implements Multipart {
 
-    private static final BodyPart[] EMPTY_BODY_PARTS = new BodyPart[0];
-
     /**
      * The default boundary used for encoding multipart messages.
      */

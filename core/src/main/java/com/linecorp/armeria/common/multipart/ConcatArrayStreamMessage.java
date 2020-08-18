@@ -40,6 +40,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
@@ -105,20 +106,25 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
     }
 
     private static final class ConcatArraySubscriber<T> extends SubscriptionArbiter implements Subscriber<T> {
+
+        @SuppressWarnings("rawtypes")
+        private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> cancelledUpdater =
+                AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "cancelled");
+
         @SuppressWarnings("rawtypes")
         private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> wipUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "wip");
 
         private static final long serialVersionUID = -9184116713095894096L;
 
-        private final Subscriber<? super T> downstream;
+        private Subscriber<? super T> downstream;
         private final StreamMessage<? extends T>[] sources;
         private final boolean notifyCancellation;
 
         private int index;
         private long produced;
         private volatile int wip;
-        private boolean cancelRequested;
+        private volatile int cancelled;
 
         ConcatArraySubscriber(Subscriber<? super T> downstream, StreamMessage<? extends T>[] sources,
                               boolean notifyCancellation) {
@@ -129,7 +135,7 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            if (cancelRequested) {
+            if (cancelled != 0) {
                 subscription.cancel();
             } else {
                 setSubscription(subscription);
@@ -181,10 +187,12 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
 
         @Override
         public void cancel() {
-            cancelRequested = true;
-            super.cancel();
-            if (notifyCancellation) {
-                downstream.onError(CancelledSubscriptionException.get());
+            if (cancelledUpdater.compareAndSet(this, 0, 1)) {
+                super.cancel();
+                if (notifyCancellation) {
+                    downstream.onError(CancelledSubscriptionException.get());
+                }
+                downstream = NoopSubscriber.get();
             }
         }
     }

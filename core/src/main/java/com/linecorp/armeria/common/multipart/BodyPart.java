@@ -32,6 +32,8 @@ package com.linecorp.armeria.common.multipart;
 
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -59,6 +61,7 @@ public interface BodyPart {
     /**
      * Returns the reactive representation of the part content.
      */
+    @CheckReturnValue
     StreamMessage<HttpData> content();
 
     /**

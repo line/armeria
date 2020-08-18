@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 /**
  * A complete HTTP headers and content that are readily available.
  */
-public interface AggregatedHttpContent {
+public interface AggregatedHttpObject {
 
     /**
      * Returns the HTTP headers.

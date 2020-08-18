@@ -40,6 +40,7 @@ import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -266,7 +267,8 @@ public interface Multipart extends Publisher<HttpData> {
      * } </pre>
      * If you don't know what this means, use {@link #aggregate()}.
      */
-    Publisher<BodyPart> bodyParts();
+    @CheckReturnValue
+    StreamMessage<BodyPart> bodyParts();
 
     /**
      * Aggregates this {@link Multipart}. The returned {@link CompletableFuture} will be notified when
