@@ -194,7 +194,8 @@ public final class RequestContextHooks {
         }
     }
 
-    private static final class ContextAwareConnectableFlux extends ConnectableFlux<Object> implements ContextHolder {
+    private static final class ContextAwareConnectableFlux extends ConnectableFlux<Object>
+            implements ContextHolder {
 
         private final ConnectableFlux<Object> source;
         private final RequestContext ctx;
