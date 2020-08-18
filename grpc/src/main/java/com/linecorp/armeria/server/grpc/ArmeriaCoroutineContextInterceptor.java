@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
@@ -26,8 +26,18 @@ import kotlinx.coroutines.ExecutorsKt;
 
 final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInterceptor {
 
+    private final boolean useBlockingTaskExecutor;
+
+    ArmeriaCoroutineContextInterceptor(boolean useBlockingTaskExecutor) {
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+    }
+
     @Override
     public CoroutineContext coroutineContext(ServerCall<?, ?> serverCall, Metadata metadata) {
-        return ExecutorsKt.from(RequestContext.current().eventLoop());
+        if (useBlockingTaskExecutor) {
+            return ExecutorsKt.from(ServiceRequestContext.current().blockingTaskExecutor());
+        } else {
+            return ExecutorsKt.from(ServiceRequestContext.current().eventLoop());
+        }
     }
 }

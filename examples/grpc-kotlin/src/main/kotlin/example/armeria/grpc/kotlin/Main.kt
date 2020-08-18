@@ -39,7 +39,7 @@ object Main {
 
     private val logger = LoggerFactory.getLogger(Main::class.java)
 
-    fun newServer(httpPort: Int, httpsPort: Int): Server {
+    fun newServer(httpPort: Int, httpsPort: Int, useBlockingTaskExecutor: Boolean = false): Server {
         val exampleRequest: HelloRequest = HelloRequest.newBuilder().setName("Armeria").build()
         val grpcService = GrpcService.builder()
             .addService(HelloServiceImpl())
@@ -49,7 +49,7 @@ object Main {
             .enableUnframedRequests(true)
             // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
             // methods in the blockingTaskExecutor thread pool.
-            // .useBlockingTaskExecutor(true)
+             .useBlockingTaskExecutor(useBlockingTaskExecutor)
             .build()
         return Server.builder()
             .http(httpPort)

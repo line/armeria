@@ -153,6 +153,7 @@ class HelloServiceTest {
     companion object {
 
         private lateinit var server: Server
+        private lateinit var blockingServer: Server
         private lateinit var helloService: HelloServiceCoroutineStub
 
         @BeforeAll
@@ -160,6 +161,9 @@ class HelloServiceTest {
         fun beforeClass() {
             server = Main.newServer(0, 0)
             server.start().join()
+
+            blockingServer = Main.newServer(0, 0, true)
+            blockingServer.start().join()
             helloService = Clients.newClient(protoUri(), HelloServiceCoroutineStub::class.java)
         }
 
@@ -167,13 +171,12 @@ class HelloServiceTest {
         @JvmStatic
         fun afterClass() {
             server.stop().join()
+            blockingServer.stop().join()
         }
 
         @JvmStatic
-        fun uris() = listOf(
-            Arguments.of(protoUri()),
-            Arguments.of(jsonUri())
-        )
+        fun uris() = listOf(protoUri(), jsonUri(), blockingProtoUri(), blockingJsonUri())
+            .map { Arguments.of(it) }
 
         private fun protoUri(): String {
             return "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/'
@@ -181,6 +184,14 @@ class HelloServiceTest {
 
         private fun jsonUri(): String {
             return "gjson+http://127.0.0.1:" + server.activeLocalPort() + '/'
+        }
+
+        private fun blockingProtoUri(): String {
+            return "gproto+http://127.0.0.1:" + blockingServer.activeLocalPort() + '/'
+        }
+
+        private fun blockingJsonUri(): String {
+            return "gjson+http://127.0.0.1:" + blockingServer.activeLocalPort() + '/'
         }
     }
 }
