@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -199,26 +198,9 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     }
 
     @Override
-    public final <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
+    public final <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");
-        attrs.setAttr(key, value);
-    }
-
-    @Nullable
-    @Override
-    public final <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
-        requireNonNull(key, "key");
-        requireNonNull(value, "value");
-        return attrs.setAttrIfAbsent(key, value);
-    }
-
-    @Nullable
-    @Override
-    public final <V> V computeAttrIfAbsent(AttributeKey<V> key,
-                                           Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
-        requireNonNull(key, "key");
-        requireNonNull(mappingFunction, "mappingFunction");
-        return attrs.computeAttrIfAbsent(key, mappingFunction);
+        return attrs.setAttr(key, value);
     }
 
     @Override
