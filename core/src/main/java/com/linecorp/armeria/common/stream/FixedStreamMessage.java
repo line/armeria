@@ -150,6 +150,9 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     final void cancel() {
+        if (cancelled) {
+            return;
+        }
         cancelled = true;
         cancelOrAbort(CancelledSubscriptionException.get());
     }
