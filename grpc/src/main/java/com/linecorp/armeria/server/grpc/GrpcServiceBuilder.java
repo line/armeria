@@ -30,6 +30,8 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -68,17 +70,20 @@ public final class GrpcServiceBuilder {
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
             GrpcSerializationFormats.values();
 
+    private static final Logger logger = LoggerFactory.getLogger(GrpcServiceBuilder.class);
+
     private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
 
     static {
         boolean useCoroutineContextInterceptor;
+        final String className = "io.grpc.kotlin.CoroutineContextServerInterceptor";
         try {
-            Class.forName("io.grpc.kotlin.CoroutineContextServerInterceptor", false,
-                          GrpcServiceBuilder.class.getClassLoader());
+            Class.forName(className, false, GrpcServiceBuilder.class.getClassLoader());
             useCoroutineContextInterceptor = true;
         } catch (Throwable ignored) {
             useCoroutineContextInterceptor = false;
         }
+        logger.debug("{}: {}", className, useCoroutineContextInterceptor ? "available" : "unavailable");
         USE_COROUTINE_CONTEXT_INTERCEPTOR = useCoroutineContextInterceptor;
     }
 
