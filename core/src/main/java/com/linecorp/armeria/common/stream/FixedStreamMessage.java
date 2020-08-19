@@ -62,12 +62,8 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     final void cleanup(SubscriptionImpl subscription) {
         final CloseEvent closeEvent = this.closeEvent;
-        if (closeEvent != null) {
-            notifySubscriberOfCloseEvent(subscription, closeEvent);
-            // Close event will cleanup.
-            return;
-        }
-        cleanupObjects();
+        assert closeEvent != null;
+        notifySubscriberOfCloseEvent(subscription, closeEvent);
     }
 
     final int requested() {
