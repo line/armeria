@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -86,21 +85,8 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     }
 
     @Override
-    public <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
-        delegate().setAttr(key, value);
-    }
-
-    @Nullable
-    @Override
-    public <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
-        return delegate().setAttrIfAbsent(key, value);
-    }
-
-    @Nullable
-    @Override
-    public <V> V computeAttrIfAbsent(AttributeKey<V> key,
-                                     Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
-        return delegate().computeAttrIfAbsent(key, mappingFunction);
+    public <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
+        return delegate().setAttr(key, value);
     }
 
     @Override

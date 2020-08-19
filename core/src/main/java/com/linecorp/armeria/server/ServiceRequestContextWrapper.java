@@ -47,6 +47,11 @@ public class ServiceRequestContextWrapper
         super(delegate);
     }
 
+    @Override
+    public ServiceRequestContext root() {
+        return delegate().root();
+    }
+
     @Nonnull
     @Override
     public HttpRequest request() {
