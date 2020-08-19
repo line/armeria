@@ -1,0 +1,13 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':core')
+    implementation project(':reactor3')
+    runtimeOnly 'org.slf4j:slf4j-simple'
+}
+
+application {
+    mainClassName = 'example.armeria.contextpropagation.reactor.Main'
+}

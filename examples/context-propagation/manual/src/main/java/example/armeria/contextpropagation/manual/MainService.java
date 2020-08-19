@@ -68,10 +68,14 @@ public class MainService implements HttpService {
 
                             final Stream.Builder<Long> nums = Stream.builder();
                             Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
-                                nums.add(Long.parseLong(token));
+                                if (!token.isEmpty()) {
+                                    nums.add(Long.parseLong(token));
+                                }
                             });
                             Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
-                                nums.add(Long.parseLong(token));
+                                if (!token.isEmpty()) {
+                                    nums.add(Long.parseLong(token));
+                                }
                             });
                             fetchFromFakeDb.join().forEach(nums::add);
 

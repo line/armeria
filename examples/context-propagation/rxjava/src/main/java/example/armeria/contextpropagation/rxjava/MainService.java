@@ -56,26 +56,30 @@ public class MainService implements HttpService {
 
         final Flowable<Long> extractNumsFromRequest =
                 Single.fromCompletionStage(req.aggregate())
-                               // Unless you know what you're doing, always use subscribeOn with the context
-                               // executor to have the context mounted and stay on a single thread to reduce
-                               // concurrency issues.
-                               .subscribeOn(contextAwareScheduler)
-                               .flatMapPublisher(request -> {
-                                   // The context is mounted in a thread-local, meaning it is available to all
-                                   // logic such as tracing.
-                                   assert ServiceRequestContext.current() == ctx;
-                                   assert ctx.eventLoop().inEventLoop();
+                      // Unless you know what you're doing, always use subscribeOn with the context
+                      // executor to have the context mounted and stay on a single thread to reduce
+                      // concurrency issues.
+                      .subscribeOn(contextAwareScheduler)
+                      .flatMapPublisher(request -> {
+                          // The context is mounted in a thread-local, meaning it is available to all
+                          // logic such as tracing.
+                          assert ServiceRequestContext.current() == ctx;
+                          assert ctx.eventLoop().inEventLoop();
 
-                                   final List<Long> nums = new ArrayList<>();
-                                   Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
-                                       nums.add(Long.parseLong(token));
-                                   });
-                                   Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
-                                       nums.add(Long.parseLong(token));
-                                   });
+                          final List<Long> nums = new ArrayList<>();
+                          Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
+                              if (!token.isEmpty()) {
+                                  nums.add(Long.parseLong(token));
+                              }
+                          });
+                          Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
+                              if (!token.isEmpty()) {
+                                  nums.add(Long.parseLong(token));
+                              }
+                          });
 
-                                   return Flowable.fromIterable(nums);
-                               });
+                          return Flowable.fromIterable(nums);
+                      });
 
         final Single<HttpResponse> response =
                 Flowable.concatArrayEager(extractNumsFromRequest, fetchNumsFromFakeDb)

@@ -11,7 +11,9 @@
   - [`dagger`](https://dagger.dev/producers) provides an example using the Dagger asynchronous framework for
   automatic propagation.
   - `manual` provides an example manually propagating the context with Java's standard `CompletableFuture`.
-  - [`rxjava`](https://github.com/ReactiveX/RxJava/tree/2.x) provides an example using the RxJava2 asynchronous
+  - [`reactor`](https://github.com/reactor/reactor-core/tree/3.3.x) provides an example using the Reactor
+  asynchronous framework for automatic propagation.
+  - [`rxjava`](https://github.com/ReactiveX/RxJava/tree/3.x) provides an example using the RxJava3 asynchronous
   framework for automatic propagation.
 
 - `grpc` <a href="https://gitpod.io/#project=grpc/https://github.com/line/armeria-examples/tree/master/grpc/src/main/java/example/armeria/grpc/Main.java">
