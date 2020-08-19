@@ -178,9 +178,12 @@ final class AnnotatedValueResolver {
                 Arrays.stream(constructorOrMethod.getParameters())
                       .filter(it -> !KotlinUtil.isContinuation(it.getType()))
                       .collect(toImmutableList());
-        if (parameters.isEmpty()) {
+        final int parametersSize = parameters.size();
+        if (parametersSize == 0) {
             throw new NoParameterException(constructorOrMethod.toGenericString());
         }
+
+        final Parameter headParameter = parameters.get(0);
         //
         // Try to check whether it is an annotated constructor or method first. e.g.
         //
@@ -201,7 +204,7 @@ final class AnnotatedValueResolver {
             // @Param
             // void setter() { ... }
             //
-            if (parameters.size() != 1) {
+            if (parametersSize != 1) {
                 throw new IllegalArgumentException("Only one parameter is allowed to an annotated method: " +
                                                    constructorOrMethod.toGenericString());
             }
@@ -211,15 +214,15 @@ final class AnnotatedValueResolver {
             // @Param
             // void setter(@Header String name) { ... }
             //
-            if (isAnnotationPresent(parameters.get(0))) {
+            if (isAnnotationPresent(headParameter)) {
                 throw new IllegalArgumentException("Both a method and parameter are annotated: " +
                                                    constructorOrMethod.toGenericString());
             }
 
             resolver = of(constructorOrMethod,
-                          parameters.get(0), parameters.get(0).getType(), pathParams, objectResolvers,
+                          headParameter, headParameter.getType(), pathParams, objectResolvers,
                           implicitRequestObjectAnnotation);
-        } else if (!isServiceMethod && parameters.size() == 1 &&
+        } else if (!isServiceMethod && parametersSize == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
             // Filter out the cases like the following:
@@ -227,7 +230,7 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(@Header String name) { ... }
             //
-            if (isAnnotationPresent(parameters.get(0))) {
+            if (isAnnotationPresent(headParameter)) {
                 throw new IllegalArgumentException("Both a method and parameter are annotated: " +
                                                    constructorOrMethod.toGenericString());
             }
@@ -237,7 +240,7 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(Bean bean) { ... }
             //
-            resolver = of(parameters.get(0), pathParams, objectResolvers, true);
+            resolver = of(headParameter, pathParams, objectResolvers, true);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -275,7 +278,7 @@ final class AnnotatedValueResolver {
             throw new NoAnnotatedParameterException(constructorOrMethod.toGenericString());
         }
 
-        if (list.size() != parameters.size()) {
+        if (list.size() != parametersSize) {
             // There are parameters which cannot be resolved, so we cannot accept this constructor or method
             // as an annotated bean or method. We handle this case in two ways as follows.
             if (list.stream().anyMatch(r -> r.annotationType() != null)) {

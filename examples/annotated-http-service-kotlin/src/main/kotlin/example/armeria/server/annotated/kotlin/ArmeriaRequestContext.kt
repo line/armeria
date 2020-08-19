@@ -16,8 +16,7 @@ class ArmeriaRequestContext(
     companion object Key : CoroutineContext.Key<ArmeriaRequestContext>
 
     override fun updateThreadContext(context: CoroutineContext): SafeCloseable? {
-        if (requestContext == null) return null
-        return requestContext.push()
+        return requestContext?.push()
     }
 
     override fun restoreThreadContext(context: CoroutineContext, oldState: SafeCloseable?) {

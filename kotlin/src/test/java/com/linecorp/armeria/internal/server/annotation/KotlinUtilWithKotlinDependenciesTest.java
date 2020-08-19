@@ -32,13 +32,13 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import kotlin.coroutines.Continuation;
 
-public class KotlinUtilWithKotlinDependenciesTest {
+class KotlinUtilWithKotlinDependenciesTest {
     final ExampleService exampleService;
     final Method normal;
     final Method suspendingUnit;
     final Method suspendingInt;
 
-    public KotlinUtilWithKotlinDependenciesTest() throws NoSuchMethodException {
+    KotlinUtilWithKotlinDependenciesTest() throws NoSuchMethodException {
         exampleService = new ExampleService();
         normal = ExampleService.class.getDeclaredMethod("normal");
         suspendingUnit = ExampleService.class.getDeclaredMethod("suspendingUnit", Continuation.class);
@@ -69,7 +69,7 @@ public class KotlinUtilWithKotlinDependenciesTest {
         final CompletableFuture<?> res =
                 (CompletableFuture<?>) callSuspendingMethod.invoke(suspendingUnit, exampleService,
                                                                    new Object[0], ctx.eventLoop(), ctx);
-        assertThat(res.get()).isEqualTo(null);
+        assertThat(res.get()).isNull();
     }
 
     @Test
@@ -99,7 +99,7 @@ public class KotlinUtilWithKotlinDependenciesTest {
         assertThat(KotlinUtil.isSuspendingAndReturnTypeUnit(suspendingUnit)).isTrue();
     }
 
-    private RequestContext getRequestContext() {
+    private static RequestContext getRequestContext() {
         return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
     }
 }

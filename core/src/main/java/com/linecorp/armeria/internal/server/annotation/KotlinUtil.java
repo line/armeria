@@ -129,10 +129,10 @@ final class KotlinUtil {
      */
     static boolean isSuspendingFunction(Method method) {
         try {
-            return isKotlinMethod(method) &&
-                   IS_KOTLIN_REFLECTION_PRESENT &&
+            return IS_KOTLIN_REFLECTION_PRESENT &&
                    IS_SUSPENDING_FUNCTION != null &&
-                   (Boolean) IS_SUSPENDING_FUNCTION.invoke(null, method);
+                   isKotlinMethod(method) &&
+                   (boolean) IS_SUSPENDING_FUNCTION.invoke(null, method);
         } catch (Exception e) {
             return false;
         }
@@ -167,6 +167,5 @@ final class KotlinUtil {
         return Class.forName(name, true, KotlinUtil.class.getClassLoader());
     }
 
-    private KotlinUtil() {
-    }
+    private KotlinUtil() {}
 }
