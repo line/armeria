@@ -50,6 +50,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     private volatile CloseEvent closeEvent;
 
     private int requested;
+    private volatile boolean cancelled;
 
     abstract void cleanupObjects();
 
@@ -84,6 +85,12 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
         final SubscriptionImpl subscription = this.subscription;
         // A user cannot access subscription without subscribing.
         assert subscription != null;
+
+        if (cancelled) {
+            // The subscription has been cancelled. An additional request should be ignored.
+            // https://github.com/reactive-streams/reactive-streams-jvm#3.6
+            return;
+        }
 
         if (subscription.needsDirectInvocation()) {
             doRequest(subscription, n);
@@ -143,6 +150,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     final void cancel() {
+        cancelled = true;
         cancelOrAbort(CancelledSubscriptionException.get());
     }
 
