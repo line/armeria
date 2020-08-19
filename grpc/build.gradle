@@ -9,6 +9,10 @@ dependencies {
     [ 'grpc-core', 'grpc-protobuf', 'grpc-services', 'grpc-stub' ].each {
         api "io.grpc:$it"
     }
+    // gRPC-Kotlin
+    optionalImplementation 'io.grpc:grpc-kotlin-stub'
+    optionalImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+
 
     api 'org.curioswitch.curiostack:protobuf-jackson'
 
