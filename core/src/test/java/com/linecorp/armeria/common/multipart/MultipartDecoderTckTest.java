@@ -90,7 +90,7 @@ public class MultipartDecoderTckTest extends PublisherVerification<BodyPart> {
     @Override
     @Test(enabled = false)
     public void required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue() throws Throwable {
-        // Long.MAX_VALUE is too not suitable size to parse data. MimeParser will throws OutOfMemoryError.
+        // Long.MAX_VALUE is not suitable size to parse data. MimeParser will throw OutOfMemoryError.
         notVerified();
     }
 }

@@ -126,8 +126,8 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
                 return;
             }
 
-            // If inner subscribe is not complete, let complete when inner subscriber receiving `onComplete`
-            // signal.
+            // If 'innerSubscriber' is not complete, 'downstream' will be completed
+            // when 'innerSubscriber' receives `onComplete` signal.
             completed = true;
             if (!inSubscribe && innerSubscriber.completed) {
                 innerSubscriber.onComplete();

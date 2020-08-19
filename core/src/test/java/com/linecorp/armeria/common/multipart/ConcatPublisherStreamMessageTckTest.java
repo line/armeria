@@ -26,12 +26,9 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import reactor.core.publisher.Flux;
 
 @Test
-public class ConcatPublisherStreamMessageTck extends PublisherVerification<Integer> {
+public class ConcatPublisherStreamMessageTckTest extends PublisherVerification<Integer> {
 
-    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common
-    // /reactive/src/test/java/io/helidon/common/reactive/MultiConcatArrayTck2Test.java
-
-    public ConcatPublisherStreamMessageTck() {
+    public ConcatPublisherStreamMessageTckTest() {
         super(new TestEnvironment(200));
     }
 
