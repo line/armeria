@@ -44,6 +44,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -91,48 +92,64 @@ public class ArmeriaAutoConfigurationTest {
     @Import(ArmeriaOkServiceConfiguration.class)
     public static class TestConfiguration {
         @Bean
-        public AnnotatedServiceRegistrationBean annotatedService() {
-            return new AnnotatedServiceRegistrationBean()
-                    .setServiceName("annotatedService")
-                    .setService(new AnnotatedService())
-                    .setPathPrefix("/annotated")
-                    .setDecorators(LoggingService.newDecorator())
-                    .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()))
-                    .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
-                    .setResponseConverters(ImmutableList.of(new StringResponseConverter()))
-                    .addExampleRequests("post", "{\"foo\":\"bar\"}")
-                    .addExampleHeaders("x-additional-header", "headerVal")
-                    .addExampleHeaders("get", "x-additional-header", "headerVal");
+        public ArmeriaServerConfigurator annotatedService() {
+            return sb -> sb.annotatedService()
+                           .pathPrefix("/annotated")
+                           .defaultServiceName("annotatedService")
+                           .decorators(LoggingService.newDecorator())
+                           .exceptionHandlers(new IllegalArgumentExceptionHandler())
+                           .requestConverters(new StringRequestConverterFunction())
+                           .responseConverters(new StringResponseConverter())
+                           .build(new AnnotatedService());
         }
 
         @Bean
-        public ThriftServiceRegistrationBean helloThriftService() {
-            return new ThriftServiceRegistrationBean()
-                    .setServiceName("helloThriftService")
-                    .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
-                    .setPath("/thrift")
-                    .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
-                    .addExampleRequests(new hello_args("nameVal"))
-                    .addExampleHeaders("x-additional-header", "headerVal")
-                    .addExampleHeaders("hello", "x-additional-header", "headerVal");
+        public DocServiceConfigurator annotatedServiceExamples() {
+            return dsb -> dsb.exampleHeaders(AnnotatedService.class,
+                                             HttpHeaders.of("x-additional-header", "headerVal"))
+                             .exampleHeaders(AnnotatedService.class, "get",
+                                             HttpHeaders.of("x-additional-header", "headerVal"))
+                             .exampleRequests(AnnotatedService.class, "post", "{\"foo\":\"bar\"}");
         }
 
         @Bean
-        public GrpcServiceRegistrationBean helloGrpcService() {
-            return new GrpcServiceRegistrationBean()
-                    .setServiceName("helloGrpcService")
-                    .setService(GrpcService.builder()
-                                           .addService(new HelloGrpcService())
-                                           .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                           .enableUnframedRequests(true)
-                                           .build())
-                    .setDecorators(LoggingService.newDecorator())
-                    .addExampleRequests(HelloServiceGrpc.SERVICE_NAME,
-                                        "Hello",
-                                        HelloRequest.newBuilder().setName("Armeria").build())
-                    .addExampleHeaders(HelloServiceGrpc.SERVICE_NAME, "x-additional-header", "headerVal")
-                    .addExampleHeaders(HelloServiceGrpc.SERVICE_NAME, "Hello", "x-additional-header",
-                                       "headerVal");
+        public ArmeriaServerConfigurator helloThriftService() {
+            return sb -> sb.route()
+                           .path("/thrift")
+                           .defaultServiceName("helloThriftService")
+                           .decorators(LoggingService.newDecorator())
+                           .build(THttpService.of((HelloService.Iface) name -> "hello " + name));
+        }
+
+        @Bean
+        public DocServiceConfigurator helloThriftServiceExamples() {
+            return dsb -> dsb.exampleRequests(ImmutableList.of(new hello_args("nameVal")))
+                             .exampleHeaders(HelloService.class,
+                                             HttpHeaders.of("x-additional-header", "headerVal"))
+                             .exampleHeaders(HelloService.class, "hello",
+                                             HttpHeaders.of("x-additional-header", "headerVal"));
+        }
+
+        @Bean
+        public ArmeriaServerConfigurator helloGrpcService() {
+            return sb -> sb.route()
+                           .defaultServiceName("helloGrpcService")
+                           .decorators(LoggingService.newDecorator())
+                           .build(GrpcService.builder()
+                                             .addService(new HelloGrpcService())
+                                             .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                             .enableUnframedRequests(true)
+                                             .build());
+        }
+
+        @Bean
+        public DocServiceConfigurator helloGrpcServiceExamples() {
+            return dsb -> dsb.exampleRequests(HelloServiceGrpc.SERVICE_NAME, "Hello",
+                                              HelloRequest.newBuilder().setName("Armeria").build())
+                             .exampleHeaders(HelloServiceGrpc.SERVICE_NAME,
+                                             HttpHeaders.of("x-additional-header", "headerVal"))
+                             .exampleHeaders(HelloServiceGrpc.SERVICE_NAME, "Hello",
+                                             HttpHeaders.of("x-additional-header", "headerVal"));
         }
     }
 
@@ -156,7 +173,7 @@ public class ArmeriaAutoConfigurationTest {
             if (result instanceof String) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.ANY_TEXT_TYPE,
-                                       result.toString(),
+                                       HttpData.ofUtf8(result.toString()),
                                        trailers);
             }
             return ResponseConverterFunction.fallthrough();
@@ -247,9 +264,9 @@ public class ArmeriaAutoConfigurationTest {
         assertThatJson(res.contentUtf8())
                 .node("services[0].methods[2].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
         assertThatJson(res.contentUtf8())
-                .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[0].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
-                .node("services[0].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .node("services[0].methods[0].exampleHeaders[0].x-additional-header")
                 .isStringEqualTo("headerVal");
     }
 
@@ -267,9 +284,9 @@ public class ArmeriaAutoConfigurationTest {
         assertThatJson(res.contentUtf8()).node("services[2].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.thrift.main.HelloService");
         assertThatJson(res.contentUtf8())
-                .node("services[2].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[2].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
-                .node("services[0].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .node("services[0].methods[0].exampleHeaders[0].x-additional-header")
                 .isStringEqualTo("headerVal");
     }
 
@@ -290,9 +307,9 @@ public class ArmeriaAutoConfigurationTest {
         assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.grpc.main.HelloService");
         assertThatJson(res.contentUtf8())
-                .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[1].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
-                .node("services[1].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .node("services[1].methods[0].exampleHeaders[0].x-additional-header")
                 .isStringEqualTo("headerVal");
     }
 

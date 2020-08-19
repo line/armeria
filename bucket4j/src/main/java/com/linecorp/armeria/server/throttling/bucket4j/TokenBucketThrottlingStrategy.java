@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.throttling.ThrottlingHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
@@ -39,6 +40,7 @@ import io.github.bucket4j.local.LocalBucketBuilder;
  * The throttling works by examining the number of requests from the beginning, and
  * throttling if the request rate exceed the configured bucket limits.
  */
+@UnstableApi
 public final class TokenBucketThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
 
     /**

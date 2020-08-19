@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
-import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -68,25 +67,6 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     private final BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer;
 
     private final Sampler<? super ClientRequestContext> sampler;
-
-    /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}.
-     */
-    AbstractLoggingClient(Client<I, O> delegate, LogLevel level) {
-        this(delegate,
-             null,
-             log -> level,
-             log -> level,
-             Functions.second(),
-             Functions.second(),
-             Functions.second(),
-             Functions.second(),
-             Functions.second(),
-             Functions.second(),
-             Functions.second(),
-             Sampler.always());
-    }
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
@@ -124,7 +104,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     }
 
     @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
+    public final O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
             ctx.log().whenRequestComplete().thenAccept(requestLogger);
             ctx.log().whenComplete().thenAccept(responseLogger);

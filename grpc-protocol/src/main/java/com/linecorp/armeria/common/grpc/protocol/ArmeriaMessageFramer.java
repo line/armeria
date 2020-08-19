@@ -55,8 +55,10 @@ import java.io.OutputStream;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -64,6 +66,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.handler.codec.base64.Base64;
 
 /**
  * A framer of messages for transport with the gRPC wire protocol. See
@@ -82,9 +85,14 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private static final int HEADER_LENGTH = 5;
     private static final byte UNCOMPRESSED = 0;
     private static final byte COMPRESSED = 1;
+    @VisibleForTesting
+    static final byte UNCOMPRESSED_TRAILERS = (byte) (1 << 7);
+    @VisibleForTesting
+    static final byte COMPRESSED_TRAILERS = (byte) ((1 << 7) | COMPRESSED);
 
     private final ByteBufAllocator alloc;
     private final int maxOutboundMessageSize;
+    private final boolean encodeBase64;
 
     private boolean messageCompression = true;
 
@@ -95,9 +103,10 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     /**
      * Constructs an {@link ArmeriaMessageFramer} to write messages to a gRPC request or response.
      */
-    public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize) {
+    public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize, boolean encodeBase64) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.maxOutboundMessageSize = maxOutboundMessageSize;
+        this.encodeBase64 = encodeBase64;
     }
 
     /**
@@ -105,26 +114,55 @@ public class ArmeriaMessageFramer implements AutoCloseable {
      *
      * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
      *
-     * @return a {@link PooledHttpData} with the framed payload. Ownership is passed to caller.
+     * @return an {@link HttpData} with the framed payload. Ownership is passed to caller.
      */
-    public PooledHttpData writePayload(ByteBuf message) {
+    public HttpData writePayload(ByteBuf message) {
+        return writePayload(message, false);
+    }
+
+    /**
+     * Writes out a payload message.
+     *
+     * @param message the message to be written out. Ownership is taken by {@link ArmeriaMessageFramer}.
+     * @param webTrailers tells whether the payload is web trailers
+     *
+     * @return an {@link HttpData} with the framed payload. Ownership is passed to caller. If the specified
+     *         {@code webTrailers} is {@code true}, {@link HttpData#isEndOfStream()} returns {@code true}.
+     */
+    public HttpData writePayload(ByteBuf message, boolean webTrailers) {
         verifyNotClosed();
         final boolean compressed = messageCompression && compressor != null;
         final int messageLength = message.readableBytes();
         try {
             final ByteBuf buf;
             if (messageLength != 0 && compressed) {
-                buf = writeCompressed(message);
+                buf = writeCompressed(message, webTrailers);
             } else {
-                buf = writeUncompressed(message);
+                buf = writeUncompressed(message, webTrailers);
             }
-            return PooledHttpData.wrap(buf);
+
+            final ByteBuf maybeEncodedBuf;
+            if (encodeBase64) {
+                try {
+                    maybeEncodedBuf = Base64.encode(buf, false);
+                } finally {
+                    buf.release();
+                }
+                final int length = maybeEncodedBuf.readableBytes();
+                if (maxOutboundMessageSize >= 0 && length > maxOutboundMessageSize) {
+                    maybeEncodedBuf.release();
+                    throw newMessageTooLargeException(length);
+                }
+            } else {
+                maybeEncodedBuf = buf;
+            }
+
+            return HttpData.wrap(maybeEncodedBuf).withEndOfStream(webTrailers);
+        } catch (ArmeriaStatusException e) {
+            throw e;
         } catch (IOException | RuntimeException e) {
             // IOException will not be thrown, since sink#deliverFrame doesn't throw.
-            throw new ArmeriaStatusException(
-                    StatusCodes.INTERNAL,
-                    "Failed to frame message",
-                    e);
+            throw new ArmeriaStatusException(StatusCodes.INTERNAL, "Failed to frame message", e);
         }
     }
 
@@ -144,31 +182,36 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         this.compressor = compressor;
     }
 
-    private ByteBuf writeCompressed(ByteBuf message) throws IOException {
+    private ByteBuf writeCompressed(ByteBuf message, boolean webTrailers) throws IOException {
         assert compressor != null;
 
-        final CompositeByteBuf compressed = alloc.compositeBuffer();
+        // There are not so much chance that the compressed data is bigger than the original data.
+        final ByteBuf compressed = alloc.buffer(message.readableBytes());
         try (OutputStream compressingStream = compressor.compress(new ByteBufOutputStream(compressed))) {
             compressingStream.write(ByteBufUtil.getBytes(message));
         } finally {
             message.release();
         }
 
-        return write(compressed, true);
+        return write(compressed, true, webTrailers);
     }
 
-    private ByteBuf writeUncompressed(ByteBuf message) {
-        return write(message, false);
+    private ByteBuf writeUncompressed(ByteBuf message, boolean webTrailers) {
+        return write(message, false, webTrailers);
     }
 
-    private ByteBuf write(ByteBuf message, boolean compressed) {
+    private ByteBuf write(ByteBuf message, boolean compressed, boolean webTrailers) {
         final int messageLength = message.readableBytes();
         if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
             message.release();
-            throw new ArmeriaStatusException(
-                    StatusCodes.RESOURCE_EXHAUSTED,
-                    String.format("message too large %d > %d", messageLength,
-                                  maxOutboundMessageSize));
+            throw newMessageTooLargeException(messageLength);
+        }
+
+        final byte flag;
+        if (webTrailers) {
+            flag = compressed ? COMPRESSED_TRAILERS : UNCOMPRESSED_TRAILERS;
+        } else {
+            flag = compressed ? COMPRESSED : UNCOMPRESSED;
         }
 
         // Here comes some heuristics.
@@ -177,7 +220,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             // Frame is so small that the cost of composition outweighs.
             try {
                 final ByteBuf buf = alloc.buffer(HEADER_LENGTH + messageLength);
-                buf.writeByte(compressed ? COMPRESSED : UNCOMPRESSED);
+                buf.writeByte(flag);
                 buf.writeInt(messageLength);
                 buf.writeBytes(message);
                 return buf;
@@ -189,9 +232,16 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         // Frame is fairly large that composition might reduce memory footprint.
         return new CompositeByteBuf(alloc, true, 2,
                                     alloc.buffer(HEADER_LENGTH)
-                                         .writeByte(compressed ? COMPRESSED : UNCOMPRESSED)
+                                         .writeByte(flag)
                                          .writeInt(messageLength),
                                     message);
+    }
+
+    private ArmeriaStatusException newMessageTooLargeException(int messageLength) {
+        return new ArmeriaStatusException(
+                StatusCodes.RESOURCE_EXHAUSTED,
+                String.format("message too large %d > %d", messageLength,
+                              maxOutboundMessageSize));
     }
 
     private void verifyNotClosed() {

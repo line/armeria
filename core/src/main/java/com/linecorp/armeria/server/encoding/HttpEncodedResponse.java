@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
  */
-class HttpEncodedResponse extends FilteredHttpResponse {
+final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpEncodedResponse.class);
 

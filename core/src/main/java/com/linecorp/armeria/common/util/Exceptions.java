@@ -71,6 +71,9 @@ public final class Exceptions {
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, Throwable cause) {
+        requireNonNull(logger, "logger");
+        requireNonNull(ch, "ch");
+        requireNonNull(cause, "cause");
         if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
@@ -82,7 +85,10 @@ public final class Exceptions {
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, String debugData, Throwable cause) {
-
+        requireNonNull(logger, "logger");
+        requireNonNull(ch, "ch");
+        requireNonNull(debugData, "debugData");
+        requireNonNull(cause, "cause");
         if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
@@ -95,6 +101,9 @@ public final class Exceptions {
      */
     public static void logIfUnexpected(Logger logger, Channel ch,
                                        @Nullable SessionProtocol protocol, Throwable cause) {
+        requireNonNull(logger, "logger");
+        requireNonNull(ch, "ch");
+        requireNonNull(cause, "cause");
         if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
@@ -108,7 +117,10 @@ public final class Exceptions {
      */
     public static void logIfUnexpected(Logger logger, Channel ch, @Nullable SessionProtocol protocol,
                                        String debugData, Throwable cause) {
-
+        requireNonNull(logger, "logger");
+        requireNonNull(ch, "ch");
+        requireNonNull(debugData, "debugData");
+        requireNonNull(cause, "cause");
         if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
@@ -135,6 +147,7 @@ public final class Exceptions {
      * @see Flags#verboseSocketExceptions()
      */
     public static boolean isExpected(Throwable cause) {
+        requireNonNull(cause, "cause");
         if (Flags.verboseSocketExceptions()) {
             return false;
         }
@@ -172,6 +185,7 @@ public final class Exceptions {
      * Returns {@code true} if the specified exception will cancel the current request or response stream.
      */
     public static boolean isStreamCancelling(Throwable cause) {
+        requireNonNull(cause, "cause");
         if (cause instanceof UnprocessedRequestException) {
             cause = cause.getCause();
         }
@@ -283,6 +297,7 @@ public final class Exceptions {
      * {@link Throwable#printStackTrace(PrintWriter)} or {@link Throwables#getStackTraceAsString(Throwable)}.
      */
     public static String traceText(Throwable exception) {
+        requireNonNull(exception, "exception");
         final StackTraceWriter writer = new StackTraceWriter();
         exception.printStackTrace(writer);
         return writer.toString();

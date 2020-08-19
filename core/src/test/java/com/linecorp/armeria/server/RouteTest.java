@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.MediaType.ANY_TYPE;
 import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
-import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -86,42 +85,52 @@ class RouteTest {
         route = Route.builder().path("/foo", "/bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
+        assertThat(route.patternString()).isEqualTo("/foo/bar");
 
         route = Route.builder().path("/foo", "/bar/{baz}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/foo/bar/:", "/foo/bar/:");
+        assertThat(route.patternString()).isEqualTo("/foo/bar/:baz");
 
         route = Route.builder().path("/bar", "/baz/:qux").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/baz/:", "/bar/baz/:");
+        assertThat(route.patternString()).isEqualTo("/bar/baz/:qux");
 
         route = Route.builder().path("/foo", "exact:/:bar/baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/:bar/baz", "/foo/:bar/baz");
+        assertThat(route.patternString()).isEqualTo("/foo/:bar/baz");
 
         route = Route.builder().path("/foo", "prefix:/").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
         assertThat(route.paths()).containsExactly("/foo/", "/foo/*");
+        assertThat(route.patternString()).isEqualTo("/foo/*");
 
         route = Route.builder().path("/foo", "prefix:/bar/baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
         assertThat(route.paths()).containsExactly("/foo/bar/baz/", "/foo/bar/baz/*");
+        assertThat(route.patternString()).isEqualTo("/foo/bar/baz/*");
 
         route = Route.builder().path("/foo", "glob:/bar/baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/bar/baz", "/foo/bar/baz");
+        assertThat(route.patternString()).isEqualTo("/foo/bar/baz");
 
         route = Route.builder().path("/foo", "glob:/home/*/files/**").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
         assertThat(route.paths()).containsExactly("^/foo/home/([^/]+)/files/(.*)$", "/foo/home/*/files/**");
+        assertThat(route.patternString()).isEqualTo("/foo/home/*/files/**");
 
         route = Route.builder().path("/foo", "glob:bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
         assertThat(route.paths()).containsExactly("^/foo/(?:.+/)?bar$", "/foo/**/bar");
+        assertThat(route.patternString()).isEqualTo("/foo/**/bar");
 
         route = Route.builder().path("/foo", "regex:^/files/(?<filePath>.*)$").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX_WITH_PREFIX);
         assertThat(route.paths()).containsExactly("^/files/(?<filePath>.*)$", "/foo/");
+        assertThat(route.patternString()).isEqualTo("/foo/^/files/(?<filePath>.*)$");
     }
 
     @Test
@@ -131,65 +140,7 @@ class RouteTest {
     }
 
     @Test
-    void testLoggerName() {
-        Route route;
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .consumes(PLAIN_TEXT_UTF_8)
-                     .produces(JSON_UTF_8)
-                     .build();
-        assertThat(route.loggerName())
-                .isEqualTo("test.GET.consumes.text_plain.produces.application_json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .produces(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.loggerName())
-                .isEqualTo("test.GET.produces.text_plain.application_json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET, HttpMethod.POST)
-                     .consumes(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.loggerName())
-                .isEqualTo("test.GET_POST.consumes.text_plain.application_json");
-    }
-
-    @Test
-    void testMetricName() {
-        Route route;
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .consumes(PLAIN_TEXT_UTF_8)
-                     .produces(JSON_UTF_8)
-                     .build();
-        assertThat(route.meterTag())
-                .isEqualTo("exact:/test,methods:GET,consumes:text/plain,produces:application/json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET)
-                     .produces(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.meterTag())
-                .isEqualTo("exact:/test,methods:GET,produces:text/plain,application/json");
-
-        route = Route.builder()
-                     .path(PATH)
-                     .methods(HttpMethod.GET, HttpMethod.POST)
-                     .consumes(PLAIN_TEXT_UTF_8, JSON_UTF_8)
-                     .build();
-        assertThat(route.meterTag())
-                .isEqualTo("exact:/test,methods:GET,POST,consumes:text/plain,application/json");
-    }
-
-    @Test
-    void testHttpHeader() {
+    void testHeader() {
         final Route route = Route.builder()
                                  .path(PATH)
                                  .methods(HttpMethod.GET, HttpMethod.POST)

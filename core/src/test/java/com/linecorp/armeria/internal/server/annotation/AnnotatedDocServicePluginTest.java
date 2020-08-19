@@ -300,14 +300,14 @@ class AnnotatedDocServicePluginTest {
     }
 
     private static void checkFooService(ServiceInfo fooServiceInfo) {
-        assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
+        assertThat(fooServiceInfo.exampleHeaders()).isEmpty();
         final Map<String, MethodInfo> methods =
                 fooServiceInfo.methods().stream()
                               .collect(toImmutableMap(MethodInfo::name, Function.identity()));
         assertThat(methods).containsKeys("fooMethod", "foo2Method");
 
         final MethodInfo fooMethod = methods.get("fooMethod");
-        assertThat(fooMethod.exampleHttpHeaders()).isEmpty();
+        assertThat(fooMethod.exampleHeaders()).isEmpty();
         assertThat(fooMethod.exampleRequests()).isEmpty();
 
         assertThat(fooMethod.parameters()).hasSize(2);
@@ -327,14 +327,14 @@ class AnnotatedDocServicePluginTest {
     }
 
     private static void checkBarService(ServiceInfo barServiceInfo) {
-        assertThat(barServiceInfo.exampleHttpHeaders()).isEmpty();
+        assertThat(barServiceInfo.exampleHeaders()).isEmpty();
         final Map<String, MethodInfo> methods =
                 barServiceInfo.methods().stream()
                               .collect(toImmutableMap(MethodInfo::name, Function.identity()));
         assertThat(methods).containsKeys("barMethod");
 
         final MethodInfo barMethod = methods.get("barMethod");
-        assertThat(barMethod.exampleHttpHeaders()).isEmpty();
+        assertThat(barMethod.exampleHeaders()).isEmpty();
         assertThat(barMethod.exampleRequests()).isEmpty();
         assertThat(barMethod.returnTypeSignature()).isEqualTo(VOID);
 

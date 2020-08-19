@@ -44,9 +44,9 @@ import com.linecorp.armeria.common.HttpRequest;
  * final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
  * }</pre>
  */
-public final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy {
+final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy {
 
-    private final ToLongFunction<ClientRequestContext> requestContextHasher;
+    private final ToLongFunction<? super ClientRequestContext> requestContextHasher;
 
     /**
      * Creates a new {@link StickyEndpointSelectionStrategy}
@@ -54,7 +54,7 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
      *
      * @param requestContextHasher The default {@link ToLongFunction} of {@link ClientRequestContext}
      */
-    public StickyEndpointSelectionStrategy(ToLongFunction<ClientRequestContext> requestContextHasher) {
+    StickyEndpointSelectionStrategy(ToLongFunction<? super ClientRequestContext> requestContextHasher) {
         this.requestContextHasher = requireNonNull(requestContextHasher, "requestContextHasher");
     }
 
@@ -71,10 +71,10 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
 
     private static final class StickyEndpointSelector extends AbstractEndpointSelector {
 
-        private final ToLongFunction<ClientRequestContext> requestContextHasher;
+        private final ToLongFunction<? super ClientRequestContext> requestContextHasher;
 
         StickyEndpointSelector(EndpointGroup endpointGroup,
-                               ToLongFunction<ClientRequestContext> requestContextHasher) {
+                               ToLongFunction<? super ClientRequestContext> requestContextHasher) {
             super(endpointGroup);
             this.requestContextHasher = requireNonNull(requestContextHasher, "requestContextHasher");
         }

@@ -134,7 +134,7 @@ public abstract class AbstractOptions<
      * Returns an immutable {@link Iterator} of user-specified options.
      */
     @Override
-    public Iterator<U> iterator() {
+    public final Iterator<U> iterator() {
         return Iterators.unmodifiableIterator(valueMap.values().iterator());
     }
 
@@ -146,7 +146,7 @@ public abstract class AbstractOptions<
     }
 
     @Override
-    public String toString() {
+    public final String toString() {
         return getClass().getSimpleName() + Iterators.toString(valueMap.values().iterator());
     }
 }

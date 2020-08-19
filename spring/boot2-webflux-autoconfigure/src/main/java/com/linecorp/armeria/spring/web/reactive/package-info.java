@@ -20,4 +20,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.spring.web.reactive;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

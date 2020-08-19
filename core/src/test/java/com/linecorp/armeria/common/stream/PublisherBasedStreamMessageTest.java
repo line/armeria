@@ -37,9 +37,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableSubscriber;
-
-import io.netty.buffer.ByteBufHolder;
 
 class PublisherBasedStreamMessageTest {
 
@@ -98,8 +97,8 @@ class PublisherBasedStreamMessageTest {
 
     @Test
     void notifyCancellation() {
-        final DefaultStreamMessage<ByteBufHolder> delegate = new DefaultStreamMessage<>();
-        final PublisherBasedStreamMessage<ByteBufHolder> p = new PublisherBasedStreamMessage<>(delegate);
+        final DefaultStreamMessage<HttpData> delegate = new DefaultStreamMessage<>();
+        final PublisherBasedStreamMessage<HttpData> p = new PublisherBasedStreamMessage<>(delegate);
         SubscriptionOptionTest.notifyCancellation(p);
     }
 

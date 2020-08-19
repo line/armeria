@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -42,9 +43,7 @@ public final class Socks5ProxyConfig extends ProxyConfig {
         this.password = password;
     }
 
-    /**
-     * Returns the configured proxy address.
-     */
+    @Override
     public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
@@ -71,13 +70,31 @@ public final class Socks5ProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final Socks5ProxyConfig that = (Socks5ProxyConfig) o;
+        return proxyAddress.equals(that.proxyAddress) &&
+               Objects.equals(username, that.username) &&
+               Objects.equals(password, that.password);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(proxyAddress, username, password);
+    }
+
+    @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .add("password", maskPassword(username(), password()))
-                          .omitNullValues()
                           .toString();
     }
 }

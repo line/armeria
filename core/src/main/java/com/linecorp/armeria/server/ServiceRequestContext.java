@@ -17,13 +17,12 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
-import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -32,24 +31,23 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.MustBeClosed;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -91,14 +89,7 @@ public interface ServiceRequestContext extends RequestContext {
             return null;
         }
 
-        final ServiceRequestContext root = ctx.root();
-        if (root != null) {
-            return root;
-        }
-
-        throw new IllegalStateException(
-                "The current context is not a server-side context and does not have a root " +
-                "which means that the context is not invoked by a server request. ctx: " + ctx);
+        return ctx.root();
     }
 
     /**
@@ -117,6 +108,14 @@ public interface ServiceRequestContext extends RequestContext {
         final ServiceRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
+        }
+
+        final ClientRequestContext clientRequestContext = ClientRequestContext.currentOrNull();
+        if (clientRequestContext != null) {
+            throw new IllegalStateException(
+                    "The current context is not a server-side context and does not have a root " +
+                    "which means that the context is not invoked by a server request. ctx: " +
+                    clientRequestContext);
         }
 
         if (defaultValueSupplier != null) {
@@ -210,6 +209,7 @@ public interface ServiceRequestContext extends RequestContext {
      * Otherwise, this method will throw an {@link IllegalStateException}.
      */
     @Override
+    @MustBeClosed
     default SafeCloseable push() {
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
@@ -230,47 +230,10 @@ public interface ServiceRequestContext extends RequestContext {
         throw newIllegalContextPushingException(this, oldCtx);
     }
 
-    @Deprecated
-    @Override
-    ServiceRequestContext newDerivedContext(RequestId id,
-                                            @Nullable HttpRequest req,
-                                            @Nullable RpcRequest rpcReq);
-
     /**
      * Returns the {@link ServiceConfig} of the {@link Service} that is handling the current {@link Request}.
      */
     ServiceConfig config();
-
-    /**
-     * Returns the {@link Server} that is handling the current {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default Server server() {
-        return config().server();
-    }
-
-    /**
-     * Returns the {@link VirtualHost} that is handling the current {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default VirtualHost virtualHost() {
-        return config().virtualHost();
-    }
-
-    /**
-     * Returns the {@link Route} associated with the {@link Service} that is handling the current
-     * {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default Route route() {
-        return config().route();
-    }
 
     /**
      * Returns the {@link RoutingContext} used to find the {@link Service}.
@@ -292,24 +255,14 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link HttpService} that is handling the current {@link Request}.
-     *
-     * @deprecated Access via {@link #config()}.
+     * Returns the {@link ContextAwareScheduledExecutorService} that could be used for executing
+     * a potentially long-running task. The {@link ContextAwareScheduledExecutorService}
+     * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
+     * If you want to use {@link ScheduledExecutorService} without setting this context,
+     * call {@link ContextAwareScheduledExecutorService#withoutContext()} and use the returned
+     * {@link ScheduledExecutorService}.
      */
-    @Deprecated
-    default HttpService service() {
-        return config().service();
-    }
-
-    /**
-     * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
-     * long-running task. The {@link ScheduledExecutorService} will propagate the {@link ServiceRequestContext}
-     * automatically when running a task.
-     *
-     * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
-     * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
-     */
-    ScheduledExecutorService blockingTaskExecutor();
+    ContextAwareScheduledExecutorService blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable
@@ -458,178 +411,21 @@ public interface ServiceRequestContext extends RequestContext {
      * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
      * }</pre>
      */
-    default void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
-        setRequestTimeoutMillis(mode, requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
+    void setRequestTimeout(TimeoutMode mode, Duration requestTimeout);
 
     /**
-     * Extends the previously scheduled request timeout by the specified amount of {@code adjustmentMillis}.
-     * This method does nothing if no request timeout was scheduled previously.
-     * Note that a negative {@code adjustment} reduces the current timeout.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
-     * ctx.extendRequestTimeoutMillis(1000);
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
-     * ctx.extendRequestTimeoutMillis(-500);
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
-     * }</pre>
-     *
-     * @param adjustmentMillis the amount of time in milliseconds to extend the current timeout by
-     *
-     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}} with {@link TimeoutMode#EXTEND}.
+     * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} is about to
+     * get timed out.
      */
-    @Deprecated
-    default void extendRequestTimeoutMillis(long adjustmentMillis) {
-        setRequestTimeoutMillis(TimeoutMode.EXTEND, adjustmentMillis);
-    }
+    CompletableFuture<Void> whenRequestTimingOut();
 
     /**
-     * Extends the previously scheduled request timeout by the specified amount of {@code adjustment}.
-     * This method does nothing if no response timeout was scheduled previously.
-     * Note that a negative {@code adjustment} reduces the current timeout.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
-     * ctx.extendRequestTimeout(Duration.ofSeconds(1));
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
-     * ctx.extendRequestTimeout(Duration.ofMillis(-500));
-     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
-     * }</pre>
-     *
-     * @param adjustment the amount of time to extend the current timeout by
-     *
-     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#EXTEND}.
+     * Returns a {@link CompletableFuture} which is completed after {@link ServiceRequestContext} has been
+     * timed out (e.g., when the corresponding request passes a deadline).
+     * {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed.
      */
-    @Deprecated
-    default void extendRequestTimeout(Duration adjustment) {
-        extendRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
-    }
-
-    /**
-     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely within the specified amount of time from now.
-     * Note that the specified {@code requestTimeoutMillis} must be positive.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * ctx.setRequestTimeoutAfterMillis(1000);
-     * }</pre>
-     *
-     * @param requestTimeoutMillis the amount of time allowed in milliseconds from now
-     *
-     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}}
-     *             with {@link TimeoutMode#SET_FROM_NOW}.
-     */
-    @Deprecated
-    default void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
-        setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
-    }
-
-    /**
-     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely within the specified amount time from now.
-     * Note that the specified {@code requestTimeout} must be positive.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * ctx.setRequestTimeoutAfter(Duration.ofSeconds(1));
-     * }</pre>
-     *
-     * @param requestTimeout the amount of time allowed from now
-     *
-     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#SET_FROM_NOW}.
-     */
-    @Deprecated
-    default void setRequestTimeoutAfter(Duration requestTimeout) {
-        setRequestTimeoutAfterMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
-
-    /**
-     * Schedules the request timeout that is triggered at the specified time represented
-     * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
-     * Note that the request will be timed out immediately if the specified time is before now.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * long responseTimeoutAt = Instant.now().plus(1, ChronoUnit.SECONDS).toEpochMilli();
-     * ctx.setRequestTimeoutAtMillis(responseTimeoutAt);
-     * }</pre>
-     *
-     * @param requestTimeoutAtMillis the request timeout represented as the number of milliseconds
-     *                               since the epoch ({@code 1970-01-01T00:00:00Z})
-     *
-     * @deprecated This method will be removed without a replacement.
-     *             Use {@link #setRequestTimeout(TimeoutMode, Duration)} or {@link #clearRequestTimeout()}.
-     */
-    @Deprecated
-    void setRequestTimeoutAtMillis(long requestTimeoutAtMillis);
-
-    /**
-     * Schedules the request timeout that is triggered at the specified time represented
-     * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
-     * Note that the request will be timed out immediately if the specified time is before now.
-     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * // Schedules timeout after 1 seconds from now.
-     * ctx.setRequestTimeoutAt(Instant.now().plus(1, ChronoUnit.SECONDS));
-     * }</pre>
-     *
-     * @param requestTimeoutAt the request timeout represented as the number of milliseconds
-     *                         since the epoch ({@code 1970-01-01T00:00:00Z})
-     *
-     * @deprecated This method will be removed without a replacement.
-     *             Use {@link #setRequestTimeout(TimeoutMode, Duration)} or {@link #clearRequestTimeout()}.
-     */
-    @Deprecated
-    default void setRequestTimeoutAt(Instant requestTimeoutAt) {
-        setRequestTimeoutAtMillis(requireNonNull(requestTimeoutAt, "requestTimeoutAt").toEpochMilli());
-    }
-
-    /**
-     * Returns {@link Request} timeout handler which is executed when
-     * receiving the current {@link Request} and sending the corresponding {@link Response}
-     * is not completely received within the allowed {@link #requestTimeoutMillis()}.
-     */
-    @Nullable
-    Runnable requestTimeoutHandler();
-
-    /**
-     * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
-     * e.g., by calling {@link HttpResponseWriter#close()}. If not set, the response will be closed with
-     * {@link HttpStatus#SERVICE_UNAVAILABLE}.
-     *
-     * <p>For example,
-     * <pre>{@code
-     *   HttpResponseWriter res = HttpResponse.streaming();
-     *   ctx.setRequestTimeoutHandler(() -> {
-     *      res.write(ResponseHeaders.of(HttpStatus.OK,
-     *                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
-     *      res.write(HttpData.ofUtf8("Request timed out."));
-     *      res.close();
-     *   });
-     *   ...
-     * }</pre>
-     */
-    void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
+    CompletableFuture<Void> whenRequestTimedOut();
 
     /**
      * Returns the maximum length of the current {@link Request}.
@@ -648,28 +444,6 @@ public interface ServiceRequestContext extends RequestContext {
      * @see ContentTooLargeException
      */
     void setMaxRequestLength(long maxRequestLength);
-
-    /**
-     * Returns whether the verbose response mode is enabled. When enabled, the service responses will contain
-     * the exception type and its full stack trace, which may be useful for debugging while potentially
-     * insecure. When disabled, the service responses will not expose such server-side details to the client.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default boolean verboseResponses() {
-        return config().verboseResponses();
-    }
-
-    /**
-     * Returns the {@link AccessLogWriter}.
-     *
-     * @deprecated Access via {@link #config()}.
-     */
-    @Deprecated
-    default AccessLogWriter accessLogWriter() {
-        return config().accessLogWriter();
-    }
 
     /**
      * Returns the {@link HttpHeaders} which will be included when a {@link Service} sends an

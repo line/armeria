@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 
 import io.netty.buffer.PooledByteBufAllocator;
 
@@ -59,14 +58,14 @@ class DefaultHttpRequestTest {
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
             if (withPooledObjects) {
-                future = PooledHttpRequest.of(req).aggregateWithPooledObjects(
+                future = req.aggregateWithPooledObjects(
                         CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
             } else {
                 future = req.aggregate(CommonPools.workerGroup().next());
             }
         } else {
             if (withPooledObjects) {
-                future = PooledHttpRequest.of(req).aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+                future = req.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
             } else {
                 future = req.aggregate();
             }

@@ -19,23 +19,23 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.file.HttpFileBuilder.ClassPathHttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpFileBuilder.FileSystemHttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpFileBuilder.HttpDataFileBuilder;
 import com.linecorp.armeria.server.file.HttpFileBuilder.NonExistentHttpFileBuilder;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -78,23 +78,23 @@ public interface HttpFile {
     }
 
     /**
-     * Creates a new {@link AggregatedHttpFile} which streams the specified {@link HttpData}. This method is
+     * Creates a new {@link HttpFile} which streams the specified {@link HttpData}. This method is
      * a shortcut for {@code HttpFile.of(data, System.currentTimeMillis()}.
      */
-    static AggregatedHttpFile of(HttpData data) {
-        return (AggregatedHttpFile) builder(data).build();
+    static HttpFile of(HttpData data) {
+        return builder(data).build();
     }
 
     /**
-     * Creates a new {@link AggregatedHttpFile} which streams the specified {@link HttpData} with the specified
+     * Creates a new {@link HttpFile} which streams the specified {@link HttpData} with the specified
      * {@code lastModifiedMillis}.
      *
      * @param data the data that provides the content of an HTTP response
      * @param lastModifiedMillis when the {@code data} has been last modified, represented as the number of
      *                           millisecond since the epoch
      */
-    static AggregatedHttpFile of(HttpData data, long lastModifiedMillis) {
-        return (AggregatedHttpFile) builder(data, lastModifiedMillis).build();
+    static HttpFile of(HttpData data, long lastModifiedMillis) {
+        return builder(data, lastModifiedMillis).build();
     }
 
     /**
@@ -116,10 +116,18 @@ public interface HttpFile {
     }
 
     /**
-     * Returns an {@link AggregatedHttpFile} which represents a non-existent file.
+     * Returns an {@link HttpFile} which represents a non-existent file.
      */
-    static AggregatedHttpFile nonExistent() {
+    static HttpFile nonExistent() {
         return NonExistentHttpFile.INSTANCE;
+    }
+
+    /**
+     * Returns an {@link HttpFile} that becomes readable when the specified {@link CompletionStage} is complete.
+     * All {@link HttpFile} operations will wait until the specified {@link CompletionStage} is completed.
+     */
+    static HttpFile from(CompletionStage<? extends HttpFile> stage) {
+        return new DeferredHttpFile(requireNonNull(stage, "stage"));
     }
 
     /**
@@ -135,31 +143,20 @@ public interface HttpFile {
      * {@link Path}.
      */
     static HttpFileBuilder builder(Path path) {
-        return new FileSystemHttpFileBuilder(path);
+        return new FileSystemHttpFileBuilder(requireNonNull(path, "path"));
     }
 
     /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
-     * {@link HttpData}. The last modified date of the file is set to 'now'. Note that the
-     * {@link HttpFileBuilder#build()} method of the returned builder will always return
-     * an {@link AggregatedHttpFile}, which guarantees a safe downcast:
-     * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo")).build();
-     * }</pre>
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified
+     * {@link HttpData}. The last modified date of the file is set to 'now'.
      */
     static HttpFileBuilder builder(HttpData data) {
         return builder(data, System.currentTimeMillis());
     }
 
     /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
-     * {@link HttpData} and {@code lastModifiedMillis}. Note that the {@link HttpFileBuilder#build()} method
-     * of the returned builder will always return an {@link AggregatedHttpFile}, which guarantees a safe
-     * downcast:
-     * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo"), 1546923055020)
-     *                                                     .build();
-     * }</pre>
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified
+     * {@link HttpData} and {@code lastModifiedMillis}.
      *
      * @param data the content of the file
      * @param lastModifiedMillis the last modified time represented as the number of milliseconds
@@ -209,21 +206,23 @@ public interface HttpFile {
     /**
      * Retrieves the attributes of this file.
      *
-     * @return the attributes of this file, or {@code null} if the file does not exist.
-     * @throws IOException if failed to retrieve the attributes of this file.
+     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
+     *
+     * @return the {@link CompletableFuture} that will be completed with the attributes of this file.
+     *         It will be completed with {@code null} if the file does not exist.
      */
-    @Nullable
-    HttpFileAttributes readAttributes() throws IOException;
+    CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor);
 
     /**
      * Reads the attributes of this file as {@link ResponseHeaders}, which could be useful for building
      * a response for a {@code HEAD} request.
      *
-     * @return the headers, or {@code null} if the file does not exist.
-     * @throws IOException if failed to retrieve the attributes of this file.
+     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
+     *
+     * @return the {@link CompletableFuture} that will be completed with the headers.
+     *         It will be completed with {@code null} if the file does not exist.
      */
-    @Nullable
-    ResponseHeaders readHeaders() throws IOException;
+    CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor);
 
     /**
      * Starts to stream this file into the returned {@link HttpResponse}.
@@ -231,10 +230,10 @@ public interface HttpFile {
      * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
      * @param alloc the {@link ByteBufAllocator} which will allocate the buffers that hold the content of
      *              the file
-     * @return the response, or {@code null} if the file does not exist.
+     * @return the {@link CompletableFuture} that will be completed with the response.
+     *         It will be completed with {@code null} if the file does not exist.
      */
-    @Nullable
-    HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc);
+    CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc);
 
     /**
      * Converts this file into an {@link AggregatedHttpFile}.
@@ -248,9 +247,9 @@ public interface HttpFile {
     CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor);
 
     /**
-     * Converts this file into an {@link AggregatedHttpFile}. {@link AggregatedHttpFile#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate(Executor)}.
+     * (Advanced users only) Converts this file into an {@link AggregatedHttpFile}.
+     * {@link AggregatedHttpFile#content()} will return a pooled {@link HttpData}, and the caller must
+     * ensure to release it. If you don't know what this means, use {@link #aggregate(Executor)}.
      *
      * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
@@ -258,7 +257,10 @@ public interface HttpFile {
      * @return a {@link CompletableFuture} which will complete when the aggregation process is finished, or
      *         a {@link CompletableFuture} successfully completed with {@code this}, if this file is already
      *         an {@link AggregatedHttpFile}.
+     *
+     * @see PooledObjects
      */
+    @UnstableApi
     CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(Executor fileReadExecutor,
                                                                      ByteBufAllocator alloc);
 

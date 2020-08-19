@@ -133,7 +133,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      *                                  {@link WebClient#builder(String)} or
      *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
-    protected WebClient buildWebClient() {
+    protected final WebClient buildWebClient() {
         final ClientOptions options = buildOptions();
         final ClientBuilderParams params = clientBuilderParams(options);
         final ClientFactory factory = options.factory();
@@ -147,7 +147,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      *                                  {@link WebClient#builder(String)} or
      *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
-    protected ClientBuilderParams clientBuilderParams(ClientOptions options) {
+    protected final ClientBuilderParams clientBuilderParams(ClientOptions options) {
         requireNonNull(options, "options");
         if (uri != null) {
             return ClientBuilderParams.of(uri, WebClient.class, options);
@@ -158,11 +158,19 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
         return ClientBuilderParams.of(scheme, endpointGroup, path, WebClient.class, options);
     }
 
+    /**
+     * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
+     * HTTP-level decorators.
+     */
     @Override
     public AbstractWebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
 
+    /**
+     * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
+     * HTTP-level decorators.
+     */
     @Override
     public AbstractWebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");

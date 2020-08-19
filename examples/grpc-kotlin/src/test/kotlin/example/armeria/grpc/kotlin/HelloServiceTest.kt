@@ -6,9 +6,9 @@ import com.linecorp.armeria.server.Server
 import example.armeria.grpc.kotlin.Hello.HelloReply
 import example.armeria.grpc.kotlin.Hello.HelloRequest
 import example.armeria.grpc.kotlin.HelloServiceGrpcKt.HelloServiceCoroutineStub
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.concurrent.TimeUnit
 
 class HelloServiceTest {
 
@@ -26,7 +27,7 @@ class HelloServiceTest {
         runBlocking {
             val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).message)
-                    .isEqualTo("Hello, Armeria!")
+                .isEqualTo("Hello, Armeria!")
         }
     }
 
@@ -47,8 +48,24 @@ class HelloServiceTest {
             val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             val watch = Stopwatch.createStarted()
             assertThat(helloService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build()).message)
-                    .isEqualTo("Hello, Armeria!")
+                .isEqualTo("Hello, Armeria!")
             assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3)
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("uris")
+    fun parallelReplyFromServerSideBlockingCall(uri: String) {
+        runBlocking {
+            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
+            repeat(30) {
+                launch {
+                    val message = helloService.shortBlockingHello(
+                        HelloRequest.newBuilder().setName("$it Armeria").build()
+                    ).message
+                    assertThat(message).isEqualTo("Hello, $it Armeria!")
+                }
+            }
         }
     }
 
@@ -57,10 +74,42 @@ class HelloServiceTest {
         runBlocking {
             var sequence = 0
             helloService.lotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
-                    .collect {
-                        assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
-                    }
+                .collect {
+                    assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
+                }
             assertThat(sequence).isEqualTo(5)
+        }
+    }
+
+    @Test
+    fun parallelBlockingLotsOfReplies() {
+        runBlocking {
+            repeat(30) {
+                launch {
+                    var sequence = 0
+                    helloService.blockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                        .collect {
+                            assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
+                        }
+                    assertThat(sequence).isEqualTo(5)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun parallelShortBlockingLotsOfReplies() {
+        runBlocking {
+            repeat(30) {
+                launch {
+                    var sequence = 0
+                    helloService.shortBlockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                        .collect {
+                            assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
+                        }
+                    assertThat(sequence).isEqualTo(5)
+                }
+            }
         }
     }
 
@@ -69,7 +118,7 @@ class HelloServiceTest {
         runBlocking {
             val replies = ArrayList<HelloReply>()
             helloService.lotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
-                    .collect { replies.add(it) }
+                .collect { replies.add(it) }
             for ((sequence, reply) in replies.withIndex()) {
                 assertThat(reply.message).isEqualTo("Hello, Armeria! (sequence: ${sequence + 1})")
             }
@@ -122,8 +171,8 @@ class HelloServiceTest {
 
         @JvmStatic
         fun uris() = listOf(
-                Arguments.of(protoUri()),
-                Arguments.of(jsonUri())
+            Arguments.of(protoUri()),
+            Arguments.of(jsonUri())
         )
 
         private fun protoUri(): String {

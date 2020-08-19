@@ -29,8 +29,8 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,11 +63,11 @@ import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
-public class GrpcDocServiceTest {
+class GrpcDocServiceTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
@@ -102,8 +102,8 @@ public class GrpcDocServiceTest {
         }
     }
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             if (TestUtil.isDocServiceDemoMode()) {
@@ -117,7 +117,7 @@ public class GrpcDocServiceTest {
                                        .build());
             sb.serviceUnder("/docs/",
                             DocService.builder()
-                                      .exampleRequestForMethod(
+                                      .exampleRequests(
                                             TestServiceGrpc.SERVICE_NAME,
                                             "UnaryCall",
                                             SimpleRequest.newBuilder()
@@ -125,7 +125,7 @@ public class GrpcDocServiceTest {
                                                              Payload.newBuilder()
                                                                     .setBody(ByteString.copyFromUtf8("world")))
                                                          .build())
-                                      .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
+                                      .injectedScripts(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
                                       .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
                                       .exclude(DocServiceFilter.ofMethodName(
                                                         TestServiceGrpc.SERVICE_NAME,
@@ -144,7 +144,7 @@ public class GrpcDocServiceTest {
     };
 
     @Test
-    public void testOk() throws Exception {
+    void testOk() throws Exception {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
@@ -155,13 +155,13 @@ public class GrpcDocServiceTest {
                                                         GrpcSerializationFormats.JSON.mediaType(),
                                                         GrpcSerializationFormats.PROTO_WEB.mediaType(),
                                                         GrpcSerializationFormats.JSON_WEB.mediaType(),
+                                                        GrpcSerializationFormats.PROTO_WEB_TEXT.mediaType(),
                                                         MediaType.PROTOBUF.withParameter("protocol", "gRPC"),
                                                         MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"))
                                     .build())),
                 new ServiceEntry(RECONNECT_SERVICE_DESCRIPTOR, ImmutableList.of(
                         EndpointInfo.builder("*", "/armeria.grpc.testing.ReconnectService/")
-                                    .availableFormats(GrpcSerializationFormats.PROTO,
-                                                      GrpcSerializationFormats.PROTO_WEB)
+                                    .availableFormats(GrpcSerializationFormats.values())
                                     .build())));
         final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(
                 entries, unifyFilter((plugin, service, method) -> true,
@@ -192,7 +192,7 @@ public class GrpcDocServiceTest {
     }
 
     @Test
-    public void excludeAllServices() throws IOException {
+    void excludeAllServices() throws IOException {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -206,7 +206,7 @@ public class GrpcDocServiceTest {
     }
 
     @Test
-    public void testMethodNotAllowed() throws Exception {
+    void testMethodNotAllowed() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpPost req = new HttpPost(server.httpUri() + "/docs/specification.json");
 

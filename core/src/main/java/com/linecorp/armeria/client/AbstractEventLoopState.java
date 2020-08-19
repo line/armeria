@@ -47,19 +47,19 @@ abstract class AbstractEventLoopState {
         this.scheduler = scheduler;
     }
 
-    List<EventLoop> eventLoops() {
+    final List<EventLoop> eventLoops() {
         return eventLoops;
     }
 
-    DefaultEventLoopScheduler scheduler() {
+    final DefaultEventLoopScheduler scheduler() {
         return scheduler;
     }
 
-    long lastActivityTimeNanos() {
+    final long lastActivityTimeNanos() {
         return lastActivityTimeNanos;
     }
 
-    void setLastActivityTimeNanos() {
+    final void setLastActivityTimeNanos() {
         lastActivityTimeNanos = System.nanoTime();
     }
 

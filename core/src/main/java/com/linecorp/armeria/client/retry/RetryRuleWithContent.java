@@ -20,8 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -51,7 +51,8 @@ public interface RetryRuleWithContent<T extends Response> {
      * with {@code true}.
      */
     static <T extends Response> RetryRuleWithContent<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> retryFunction) {
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> retryFunction) {
         return RetryRuleWithContent.<T>builder().onResponse(retryFunction).thenBackoff();
     }
 
@@ -76,7 +77,7 @@ public interface RetryRuleWithContent<T extends Response> {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "methods can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
-        return builder(headers -> httpMethods.contains(headers.method()));
+        return builder((ctx, headers) -> httpMethods.contains(headers.method()));
     }
 
     /**
@@ -84,7 +85,7 @@ public interface RetryRuleWithContent<T extends Response> {
      * {@code requestHeadersFilter}.
      */
     static <T extends Response> RetryRuleWithContentBuilder<T> builder(
-            Predicate<? super RequestHeaders> requestHeadersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         requireNonNull(requestHeadersFilter, "requestHeadersFilter");
         return new RetryRuleWithContentBuilder<>(requestHeadersFilter);
     }

@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.unsafe.grpc;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.util.IdentityHashMap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
@@ -31,6 +30,7 @@ import io.netty.util.AttributeKey;
 /**
  * Provides utility methods useful for storing and releasing the {@link ByteBuf} backing a {@link Message}.
  */
+@UnstableApi
 public final class GrpcUnsafeBufferUtil {
 
     /**
@@ -58,12 +58,14 @@ public final class GrpcUnsafeBufferUtil {
      */
     public static void releaseBuffer(Object message, RequestContext ctx) {
         final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
-        checkState(buffers != null,
-                   "Releasing buffer even though storeBuffer has not been called.");
+        if (buffers == null) {
+            return;
+        }
         final ByteBuf removed = buffers.remove(message);
         if (removed == null) {
-            throw new IllegalArgumentException("The provided message does not have a stored buffer.");
+            return;
         }
+
         removed.release();
     }
 

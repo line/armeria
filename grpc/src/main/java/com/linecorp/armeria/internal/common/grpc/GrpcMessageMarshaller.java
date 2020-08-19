@@ -93,6 +93,7 @@ public final class GrpcMessageMarshaller<I, O> {
                 final PrototypeMarshaller<I> marshaller = (PrototypeMarshaller<I>) requestMarshaller;
                 return serializeProto(marshaller, (Message) message);
             default:
+                // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
@@ -105,25 +106,26 @@ public final class GrpcMessageMarshaller<I, O> {
         }
     }
 
-    public I deserializeRequest(DeframedMessage message) throws IOException {
+    public I deserializeRequest(DeframedMessage message, boolean grpcWebText) throws IOException {
         InputStream messageStream = message.stream();
-        if (message.buf() != null) {
+        final ByteBuf buf = message.buf();
+        if (buf != null) {
             try {
                 switch (requestType) {
                     case PROTOBUF:
                         final PrototypeMarshaller<I> marshaller = (PrototypeMarshaller<I>) requestMarshaller;
                         // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
                         @SuppressWarnings("unchecked")
-                        final I msg = (I) deserializeProto(marshaller, message.buf());
+                        final I msg = (I) deserializeProto(marshaller, buf);
                         return msg;
                     default:
                         // Fallback to using the method's stream marshaller.
-                        messageStream = new ByteBufInputStream(message.buf().retain(), true);
+                        messageStream = new ByteBufInputStream(buf.retain(), true);
                         break;
                 }
             } finally {
-                if (!unsafeWrapDeserializedBuffer) {
-                    message.buf().release();
+                if (!unsafeWrapDeserializedBuffer || grpcWebText) {
+                    buf.release();
                 }
             }
         }
@@ -143,6 +145,7 @@ public final class GrpcMessageMarshaller<I, O> {
                         (PrototypeMarshaller<O>) method.getResponseMarshaller();
                 return serializeProto(marshaller, (Message) message);
             default:
+                // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
@@ -155,9 +158,10 @@ public final class GrpcMessageMarshaller<I, O> {
         }
     }
 
-    public O deserializeResponse(DeframedMessage message) throws IOException {
+    public O deserializeResponse(DeframedMessage message, boolean grpcWebText) throws IOException {
         InputStream messageStream = message.stream();
-        if (message.buf() != null) {
+        final ByteBuf buf = message.buf();
+        if (buf != null) {
             try {
                 switch (responseType) {
                     case PROTOBUF:
@@ -165,16 +169,16 @@ public final class GrpcMessageMarshaller<I, O> {
                                 (PrototypeMarshaller<O>) method.getResponseMarshaller();
                         // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
                         @SuppressWarnings("unchecked")
-                        final O msg = (O) deserializeProto(marshaller, message.buf());
+                        final O msg = (O) deserializeProto(marshaller, buf);
                         return msg;
                     default:
                         // Fallback to using the method's stream marshaller.
-                        messageStream = new ByteBufInputStream(message.buf().retain(), true);
+                        messageStream = new ByteBufInputStream(buf.retain(), true);
                         break;
                 }
             } finally {
-                if (!unsafeWrapDeserializedBuffer) {
-                    message.buf().release();
+                if (!unsafeWrapDeserializedBuffer || grpcWebText) {
+                    buf.release();
                 }
             }
         }
@@ -206,7 +210,8 @@ public final class GrpcMessageMarshaller<I, O> {
             }
             return buf;
         } else {
-            final ByteBuf buf = alloc.buffer();
+            // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
+            final ByteBuf buf = alloc.compositeBuffer();
             boolean success = false;
             try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
                 @SuppressWarnings("unchecked")

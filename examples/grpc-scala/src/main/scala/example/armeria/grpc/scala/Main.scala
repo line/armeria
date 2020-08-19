@@ -61,9 +61,9 @@ object Main {
           .service(grpcService)
           .serviceUnder("/docs",
             DocService.builder()
-                      .exampleRequestForMethod(serviceName, "Hello", exampleRequest)
-                      .exampleRequestForMethod(serviceName, "LazyHello", exampleRequest)
-                      .exampleRequestForMethod(serviceName, "BlockingHello", exampleRequest)
+                      .exampleRequests(serviceName, "Hello", exampleRequest)
+                      .exampleRequests(serviceName, "LazyHello", exampleRequest)
+                      .exampleRequests(serviceName, "BlockingHello", exampleRequest)
                       .exclude(DocServiceFilter.ofServiceName(ServerReflectionGrpc.SERVICE_NAME))
                       .build())
           .build()

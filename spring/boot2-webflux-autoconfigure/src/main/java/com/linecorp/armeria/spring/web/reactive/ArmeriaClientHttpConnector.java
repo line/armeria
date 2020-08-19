@@ -28,6 +28,7 @@ import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ClientHttpRequest;
 import org.springframework.http.client.reactive.ClientHttpResponse;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
@@ -39,19 +40,13 @@ import reactor.core.publisher.Mono;
 
 /**
  * A {@link ClientHttpConnector} implementation for the Armeria HTTP client.
+ *
+ * @see ArmeriaClientAutoConfiguration#clientHttpConnector(List, DataBufferFactoryWrapper)
  */
-public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
+final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
     private final List<ArmeriaClientConfigurator> configurators;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
-
-    /**
-     * Creates an {@link ArmeriaClientHttpConnector} with the default {@link ArmeriaClientConfigurator} and
-     * {@link DataBufferFactoryWrapper}.
-     */
-    public ArmeriaClientHttpConnector() {
-        this(ImmutableList.of(), DataBufferFactoryWrapper.DEFAULT);
-    }
 
     /**
      * Creates an {@link ArmeriaClientHttpConnector} with the specified
@@ -59,7 +54,8 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
      *
      * @param configurator the configurator to be used to build an {@link WebClient}
      */
-    public ArmeriaClientHttpConnector(ArmeriaClientConfigurator configurator) {
+    @VisibleForTesting
+    ArmeriaClientHttpConnector(ArmeriaClientConfigurator configurator) {
         this(ImmutableList.of(requireNonNull(configurator, "configurator")),
              DataBufferFactoryWrapper.DEFAULT);
     }
@@ -71,8 +67,8 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
      *                      {@link WebClient}
      * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
      */
-    public ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
-                                      DataBufferFactoryWrapper<?> factoryWrapper) {
+    ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
+                               DataBufferFactoryWrapper<?> factoryWrapper) {
         this.configurators = ImmutableList.copyOf(requireNonNull(configurators, "configurators"));
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
     }

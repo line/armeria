@@ -35,9 +35,8 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.common.util.PooledObjects;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
@@ -138,11 +137,12 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
-    T prepareObjectForNotification(SubscriptionImpl subscription, T o) {
-        ReferenceCountUtil.touch(o);
+    final T prepareObjectForNotification(SubscriptionImpl subscription, T o) {
         onRemoval(o);
         if (!subscription.withPooledObjects()) {
-            o = PooledObjects.toUnpooled(o);
+            o = PooledObjects.copyAndClose(o);
+        } else {
+            PooledObjects.touch(o);
         }
         return o;
     }

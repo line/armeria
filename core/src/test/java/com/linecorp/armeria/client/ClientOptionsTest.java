@@ -15,14 +15,13 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientOption.DECORATION;
-import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
-import static com.linecorp.armeria.client.ClientOption.FACTORY;
-import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
-import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
-import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
-import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
-import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
+import static com.linecorp.armeria.client.ClientOptions.DECORATION;
+import static com.linecorp.armeria.client.ClientOptions.ENDPOINT_REMAPPER;
+import static com.linecorp.armeria.client.ClientOptions.HEADERS;
+import static com.linecorp.armeria.client.ClientOptions.MAX_RESPONSE_LENGTH;
+import static com.linecorp.armeria.client.ClientOptions.REQUEST_ID_GENERATOR;
+import static com.linecorp.armeria.client.ClientOptions.RESPONSE_TIMEOUT_MILLIS;
+import static com.linecorp.armeria.client.ClientOptions.WRITE_TIMEOUT_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -49,27 +48,27 @@ class ClientOptionsTest {
     @Test
     void testAsMap() {
         final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
-        final ClientOptions options = ClientOptions.of(HTTP_HEADERS.newValue(httpHeader));
+        final ClientOptions options = ClientOptions.of(HEADERS.newValue(httpHeader));
         final Map<ClientOption<Object>, ClientOptionValue<Object>> map = options.asMap();
         assertThat(map).hasSize(1);
-        assertThat(map.get(HTTP_HEADERS).value()).isEqualTo(httpHeader);
+        assertThat(map.get(HEADERS).value()).isEqualTo(httpHeader);
     }
 
     @Test
-    void testSetHttpHeader() {
+    void testSetHeader() {
         final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
 
-        final ClientOptions options = ClientOptions.of(HTTP_HEADERS.newValue(httpHeader));
-        assertThat(options.get(HTTP_HEADERS)).isEqualTo(httpHeader);
+        final ClientOptions options = ClientOptions.of(HEADERS.newValue(httpHeader));
+        assertThat(options.get(HEADERS)).isEqualTo(httpHeader);
 
         final ClientOptions options2 = ClientOptions.of();
-        assertThat(options2.get(HTTP_HEADERS)).isEqualTo(HttpHeaders.of());
+        assertThat(options2.get(HEADERS)).isEqualTo(HttpHeaders.of());
     }
 
     @Test
     void testSetBlackListHeader() {
         assertThatThrownBy(() -> {
-            ClientOptions.of(HTTP_HEADERS.newValue(
+            ClientOptions.of(HEADERS.newValue(
                     HttpHeaders.of(HttpHeaderNames.HOST, "localhost")));
         }).isInstanceOf(IllegalArgumentException.class);
     }
@@ -109,13 +108,10 @@ class ClientOptionsTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             final Supplier<RequestId> requestIdGenerator = () -> () -> "1";
             return Stream.of(
-                    arguments(FACTORY,
-                              ClientFactory.builder().option(ClientFactoryOption.IDLE_TIMEOUT_MILLIS, 100L)
-                                           .build()),
                     arguments(WRITE_TIMEOUT_MILLIS, 10),
                     arguments(RESPONSE_TIMEOUT_MILLIS, 20),
                     arguments(MAX_RESPONSE_LENGTH, 123),
-                    arguments(HTTP_HEADERS, HttpHeaders.of(HttpHeaderNames.USER_AGENT, "armeria")),
+                    arguments(HEADERS, HttpHeaders.of(HttpHeaderNames.USER_AGENT, "armeria")),
                     arguments(DECORATION, ClientDecoration.of(LoggingClient.newDecorator())),
                     arguments(REQUEST_ID_GENERATOR, requestIdGenerator),
                     arguments(ENDPOINT_REMAPPER, Function.identity()));

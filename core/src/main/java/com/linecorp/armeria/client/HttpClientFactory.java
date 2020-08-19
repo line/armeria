@@ -40,7 +40,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -95,14 +95,15 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
-    private final ProxyConfig proxyConfig;
+    private final ProxyConfigSelector proxyConfigSelector;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
     private final HttpClientDelegate clientDelegate;
 
     private final EventLoopScheduler eventLoopScheduler;
     private final Supplier<EventLoop> eventLoopSupplier =
-            () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
+            () -> RequestContext.mapCurrent(
+                    ctx -> ctx.eventLoop().withoutContext(), () -> eventLoopGroup().next());
     private final ClientFactoryOptions options;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
@@ -146,7 +147,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
-        proxyConfig = options.proxyConfig();
+        proxyConfigSelector = options.proxyConfigSelector();
 
         this.options = options;
 
@@ -209,8 +210,8 @@ final class HttpClientFactory implements ClientFactory {
         return connectionPoolListener;
     }
 
-    ProxyConfig proxyConfig() {
-        return proxyConfig;
+    ProxyConfigSelector proxyConfigSelector() {
+        return proxyConfigSelector;
     }
 
     @VisibleForTesting

@@ -20,14 +20,16 @@ import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.JSON;
 import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.JSON_WEB;
 import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO;
 import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO_WEB;
+import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO_WEB_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class GrpcSerializationFormatsTest {
+class GrpcSerializationFormatsTest {
+
     @Test
-    public void allFormatsAreRegistered() {
+    void allFormatsAreRegistered() {
         assertThat(GrpcSerializationFormats.values())
-                .containsExactlyInAnyOrder(PROTO, JSON, PROTO_WEB, JSON_WEB);
+                .containsExactlyInAnyOrder(PROTO, JSON, PROTO_WEB, JSON_WEB, PROTO_WEB_TEXT);
     }
 }

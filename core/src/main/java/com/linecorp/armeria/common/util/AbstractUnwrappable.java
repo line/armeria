@@ -33,17 +33,6 @@ public abstract class AbstractUnwrappable<T extends Unwrappable> implements Unwr
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
-    /**
-     * Returns the object being decorated.
-     *
-     * @deprecated Use {@link #unwrap()} instead.
-     */
-    @Deprecated
-    @SuppressWarnings("unchecked")
-    protected final <U extends T> U delegate() {
-        return (U) unwrap();
-    }
-
     @Override
     public final <U> U as(Class<U> type) {
         final U result = Unwrappable.super.as(type);

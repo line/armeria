@@ -1,17 +1,11 @@
-import {
-  CloseOutlined,
-  GithubOutlined,
-  LeftOutlined,
-  RightOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons';
+import { GithubOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import loadable from '@loadable/component';
 import { MDXProvider } from '@mdx-js/react';
-import { globalHistory, RouteComponentProps } from '@reach/router';
-import { Button, Layout, Select, Tabs as AntdTabs } from 'antd';
-import { Link, navigate, withPrefix } from 'gatsby';
+import { RouteComponentProps } from '@reach/router';
+import { Button, Layout, Tabs as AntdTabs, Typography } from 'antd';
+import { Link, withPrefix } from 'gatsby';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React, { useLayoutEffect, useRef, useState, useCallback } from 'react';
+import React, { useLayoutEffect } from 'react';
 import StickyBox from 'react-sticky-box';
 import tocbot from 'tocbot';
 
@@ -22,6 +16,7 @@ import { TypeLink } from '../components/api-link';
 import AspectRatio from '../components/aspect-ratio';
 import CodeBlock from '../components/code-block';
 import Emoji from '../components/emoji';
+import Mailchimp from '../components/mailchimp';
 import MaxWidth from '../components/max-width';
 import NoWrap from '../components/nowrap';
 import BaseLayout from './base';
@@ -29,6 +24,7 @@ import pagePath from './page-path';
 import styles from './mdx.module.less';
 
 const { Content } = Layout;
+const { Paragraph, Title } = Typography;
 
 interface MdxLayoutProps extends RouteComponentProps {
   pageContext: any;
@@ -41,14 +37,6 @@ interface MdxLayoutProps extends RouteComponentProps {
   noEdit?: boolean;
 }
 
-enum ToCState {
-  CLOSED,
-  OPENING,
-  OPEN,
-  CLOSING,
-}
-
-const tocAnimationDurationMillis = 300;
 const pathPrefix = withPrefix('/');
 
 // Use our CodeBlock component for <a> and <pre>.
@@ -101,6 +89,10 @@ const mdxComponents: any = {
       <CodeBlock language={language}>{props.children.props.children}</CodeBlock>
     );
   },
+  h1: (props: any) => <Title level={1} {...props} />,
+  h2: (props: any) => <Title level={2} {...props} />,
+  h3: (props: any) => <Title level={3} {...props} />,
+  h4: (props: any) => <Title level={4} {...props} />,
   table: (props: any) => {
     return (
       <div className="ant-table ant-table-small ant-table-bordered">
@@ -130,7 +122,7 @@ const mdxComponents: any = {
   AspectRatio,
   CodeBlock,
   Emoji,
-  Mailchimp: loadable(() => import('../components/mailchimp')),
+  Mailchimp,
   MaxWidth,
   NoWrap,
   Tabs: (props: any) => {
@@ -259,12 +251,15 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   const currentMdxNode = findCurrentMdxNode();
 
   // Generate some properties required for rendering.
-  const showSearch = typeof window === 'undefined' || window.innerWidth > 768;
   const pageTitle = `${props.pageTitle} — ${props.pageTitleSuffix}`;
+  const pageDescription = currentMdxNode?.excerpt
+    ?.replace(/\w+:\/\//g, '')
+    .replace(/\s+(\W)/g, '$1')
+    .replace(/(?:\s|\r|\n)+/g, ' ');
   const relpath = pagePath(props.location).substring(1);
   const githubHref = props.noEdit
     ? undefined
-    : `https://github.com/line/armeria/tree/master/site/src/pages/${relpath}${
+    : `https://github.com/line/armeria/edit/master/site/src/pages/${relpath}${
         relpath === props.prefix ? '/index' : ''
       }.mdx`;
   let prevLabel;
@@ -287,11 +282,6 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
       nameToMdxNode[currentMdxNode.nextNodeName].tableOfContents.items[0].title;
     nextHref = nameToMdxNode[currentMdxNode.nextNodeName].href;
   }
-
-  // States required for opening and closing ToC
-  const [tocState, setTocState] = useState(ToCState.CLOSED);
-  const tocStateRef = useRef(tocState);
-  tocStateRef.current = tocState;
 
   function findCurrentMdxNode(): any {
     const path = pagePath(props.location);
@@ -324,119 +314,67 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     return undefined;
   }
 
-  const toggleToC = useCallback(() => {
-    switch (tocState) {
-      case ToCState.CLOSED:
-        setTocState(ToCState.OPENING);
-        setTimeout(() => {
-          if (tocStateRef.current === ToCState.OPENING) {
-            setTocState(ToCState.OPEN);
-          }
-        });
-        break;
-      case ToCState.OPEN:
-        setTocState(ToCState.CLOSING);
-        setTimeout(() => {
-          if (tocStateRef.current === ToCState.CLOSING) {
-            setTocState(ToCState.CLOSED);
-          }
-        }, tocAnimationDurationMillis);
-        break;
-      default:
-      // Animation in progress. Let the user wait a little bit.
-    }
-  }, [tocState]);
+  const globalToc = (
+    <ol>
+      {Object.entries(groupToMdxNodes).map(([group, groupedMdxNodes]) => {
+        function renderMdxNodes() {
+          return groupedMdxNodes.flatMap((mdxNode) => {
+            return mdxNode.tableOfContents.items.map(
+              (tocItem: any, i: number) => {
+                const href = `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`;
 
-  // Style functions for fading in/out table of contents.
-  function pageTocWrapperStyle(): React.CSSProperties {
-    switch (tocState) {
-      case ToCState.OPENING:
-        return {
-          display: 'block',
-          opacity: 0,
-          zIndex: 8,
-        };
-      case ToCState.OPEN:
-        return {
-          display: 'block',
-          opacity: 1,
-          zIndex: 8,
-        };
-      case ToCState.CLOSING:
-        return {
-          display: 'block',
-          opacity: 0,
-          zIndex: 8,
-        };
-      default:
-        return { zIndex: 'auto' };
-    }
-  }
+                return (
+                  <li
+                    key={href}
+                    className={`${styles.tocLeaf} ${
+                      href === pagePath(props.location)
+                        ? styles.tocLeafActive
+                        : ''
+                    }`}
+                  >
+                    {href.includes('://') ? (
+                      <OutboundLink href={href} title={tocItem.title}>
+                        {tocItem.title}
+                      </OutboundLink>
+                    ) : (
+                      <Link to={href} title={tocItem.title}>
+                        {tocItem.title}
+                      </Link>
+                    )}
+                  </li>
+                );
+              },
+            );
+          });
+        }
+
+        if (group === 'root') {
+          return renderMdxNodes();
+        }
+
+        return (
+          <li key={`group-${group}`} className={styles.tocGroup}>
+            <span className={styles.tocGroupLabel}>{group}</span>
+            <ol>{renderMdxNodes()}</ol>
+          </li>
+        );
+      })}
+    </ol>
+  );
 
   return (
     <MDXProvider components={mdxComponents}>
       <BaseLayout
         location={props.location}
         pageTitle={pageTitle}
+        pageDescription={pageDescription}
         contentClassName={styles.outerWrapper}
         main={false}
+        extraSidebarContent={globalToc}
       >
         <div className={styles.wrapper}>
           <div className={styles.globalTocWrapper}>
-            <nav>
-              <ol>
-                {Object.entries(groupToMdxNodes).map(
-                  ([group, groupedMdxNodes]) => {
-                    function renderMdxNodes() {
-                      return groupedMdxNodes.flatMap((mdxNode) => {
-                        return mdxNode.tableOfContents.items.map(
-                          (tocItem: any, i: number) => {
-                            const href = `${mdxNode.href}${
-                              i !== 0 ? tocItem.url : ''
-                            }`;
-
-                            return (
-                              <li
-                                key={href}
-                                className={`${styles.tocLeaf} ${
-                                  href === pagePath(props.location)
-                                    ? styles.tocLeafActive
-                                    : ''
-                                }`}
-                              >
-                                {href.includes('://') ? (
-                                  <OutboundLink
-                                    href={href}
-                                    title={tocItem.title}
-                                  >
-                                    {tocItem.title}
-                                  </OutboundLink>
-                                ) : (
-                                  <Link to={href} title={tocItem.title}>
-                                    {tocItem.title}
-                                  </Link>
-                                )}
-                              </li>
-                            );
-                          },
-                        );
-                      });
-                    }
-
-                    if (group === 'root') {
-                      return renderMdxNodes();
-                    }
-
-                    return (
-                      <li key={`group-${group}`} className={styles.tocGroup}>
-                        <span className={styles.tocGroupLabel}>{group}</span>
-                        <ol>{renderMdxNodes()}</ol>
-                      </li>
-                    );
-                  },
-                )}
-              </ol>
-            </nav>
+            <nav>{globalToc}</nav>
           </div>
           <div className={styles.content}>
             <Content className="ant-typography" role="main">
@@ -474,91 +412,14 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
               </div>
             </Content>
           </div>
-          <div className={styles.tocButton}>
+          <div className={styles.pageTocWrapper} role="directory">
             <StickyBox offsetTop={24} offsetBottom={24}>
-              <Button onClick={toggleToC}>
-                {tocState === ToCState.OPEN ? (
-                  <CloseOutlined title="Close table of contents" />
-                ) : (
-                  <UnorderedListOutlined title="Open table of contents" />
-                )}
-              </Button>
-            </StickyBox>
-          </div>
-          {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */}
-          {/* eslint-disable jsx-a11y/click-events-have-key-events */}
-          <div
-            className={styles.pageTocWrapper}
-            style={pageTocWrapperStyle()}
-            role="directory"
-            onClick={useCallback(
-              (e: any) => {
-                if (
-                  tocState === ToCState.OPEN &&
-                  e.target.className === styles.pageTocWrapper
-                ) {
-                  toggleToC();
-                }
-              },
-              [tocState, toggleToC],
-            )}
-          >
-            {/* eslint-enable jsx-a11y/click-events-have-key-events */}
-            {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions */}
-            <StickyBox
-              offsetTop={24}
-              offsetBottom={24}
-              className={styles.pageTocShadow}
-            >
               <nav>
                 <div className={styles.pageToc} />
-                <Select
-                  showSearch={showSearch}
-                  placeholder="Jump to other page"
-                  onChange={useCallback((href) => {
-                    const hrefStr = `${href}`;
-                    if (hrefStr.includes('://')) {
-                      globalHistory.navigate(hrefStr);
-                    } else {
-                      navigate(hrefStr);
-                    }
-                  }, [])}
-                  filterOption={useCallback((input, option) => {
-                    return (
-                      option.children
-                        ?.toLowerCase()
-                        .indexOf(input.toLowerCase()) >= 0
-                    );
-                  }, [])}
-                >
-                  {Object.entries(groupToMdxNodes).map(
-                    ([group, groupedMdxNodes]) => {
-                      function renderMdxNodes() {
-                        return groupedMdxNodes.map((mdxNode) => (
-                          <Select.Option
-                            key={mdxNode.href}
-                            value={mdxNode.href}
-                          >
-                            {mdxNode.tableOfContents.items[0].title}
-                          </Select.Option>
-                        ));
-                      }
-
-                      if (group === 'root') {
-                        return renderMdxNodes();
-                      }
-
-                      return (
-                        <Select.OptGroup
-                          key={`group-${group}`}
-                          label={group.toUpperCase()}
-                        >
-                          {renderMdxNodes()}
-                        </Select.OptGroup>
-                      );
-                    },
-                  )}
-                </Select>
+                <div className={styles.newsletter}>
+                  <Paragraph>Like what we&apos;re doing?</Paragraph>
+                  <Mailchimp />
+                </div>
               </nav>
             </StickyBox>
           </div>

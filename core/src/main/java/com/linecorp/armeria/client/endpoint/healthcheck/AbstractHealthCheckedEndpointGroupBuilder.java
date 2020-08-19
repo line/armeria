@@ -138,8 +138,8 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * Sets the {@link Function} that customizes a {@link Client} that sends health check requests.
      * <pre>{@code
      * builder.withClientOptions(b -> {
-     *     return b.setHttpHeader(HttpHeaders.AUTHORIZATION,
-     *                            "bearer my-access-token")
+     *     return b.setHeader(HttpHeaders.AUTHORIZATION,
+     *                        "bearer my-access-token")
      *             .responseTimeout(Duration.ofSeconds(3));
      * });
      * }</pre>
@@ -188,7 +188,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
-    public HealthCheckedEndpointGroup build() {
+    public final HealthCheckedEndpointGroup build() {
         final HealthCheckStrategy healthCheckStrategy;
         if (maxEndpointCount != null) {
             healthCheckStrategy = new PartialHealthCheckStrategyBuilder()

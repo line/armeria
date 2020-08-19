@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.server.RouteUtil.PREFIX;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.internal.server.RouteUtil.newLoggerName;
 
 import java.util.List;
 import java.util.Set;
@@ -32,9 +31,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
     private final String prefix;
     private final boolean stripPrefix;
-    private final String loggerName;
-    private final String meterTag;
     private final List<String> paths;
+    private final String pathPattern;
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
@@ -45,10 +43,9 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         this.prefix = prefix;
         this.stripPrefix = stripPrefix;
-        loggerName = newLoggerName(prefix);
-        meterTag = PREFIX + prefix;
         final String triePath = prefix + '*';
         paths = ImmutableList.of(prefix, triePath);
+        pathPattern = triePath;
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
@@ -71,13 +68,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String loggerName() {
-        return loggerName;
-    }
-
-    @Override
-    public String meterTag() {
-        return meterTag;
+    public String patternString() {
+        return pathPattern;
     }
 
     @Override

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -105,7 +105,7 @@ class MockWebServiceExtensionTest {
 
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
+                         .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
                          .build();
 
         assertThatThrownBy(() -> client.get("/").aggregate().join())

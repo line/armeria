@@ -21,8 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -40,7 +39,8 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  */
 public final class RetryRuleWithContentBuilder<T extends Response> extends AbstractRuleWithContentBuilder<T> {
 
-    RetryRuleWithContentBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    RetryRuleWithContentBuilder(
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
@@ -50,7 +50,8 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      */
     @Override
     public RetryRuleWithContentBuilder<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> responseFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponse(responseFilter);
     }
 
@@ -78,7 +79,8 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     }
 
     RetryRuleWithContent<T> build(RetryDecision decision) {
-        final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
+        final BiFunction<? super ClientRequestContext, ? super T,
+                ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         final boolean hasResponseFilter = responseFilter != null;
         if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
             responseHeadersFilter() == null && !hasResponseFilter) {
@@ -99,7 +101,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
             if (content == null) {
                 return NEXT_DECISION;
             }
-            return responseFilter.apply(content)
+            return responseFilter.apply(ctx, content)
                                  .handle((matched, cause0) -> {
                                      if (cause0 != null) {
                                          return RetryDecision.next();
@@ -119,7 +121,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @SuppressWarnings("unchecked")
     @Override
     public RetryRuleWithContentBuilder<T> onResponseHeaders(
-            Predicate<? super ResponseHeaders> responseHeadersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
     }
 
@@ -131,7 +133,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @SuppressWarnings("unchecked")
     @Override
     public RetryRuleWithContentBuilder<T> onResponseTrailers(
-            Predicate<? super HttpHeaders> responseTrailersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
     }
 
@@ -191,7 +193,8 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      */
     @SuppressWarnings("unchecked")
     @Override
-    public RetryRuleWithContentBuilder<T> onStatus(Predicate<? super HttpStatus> statusFilter) {
+    public RetryRuleWithContentBuilder<T> onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onStatus(statusFilter);
     }
 
@@ -211,7 +214,8 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      */
     @SuppressWarnings("unchecked")
     @Override
-    public RetryRuleWithContentBuilder<T> onException(Predicate<? super Throwable> exceptionFilter) {
+    public RetryRuleWithContentBuilder<T> onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onException(exceptionFilter);
     }
 

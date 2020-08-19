@@ -2,9 +2,9 @@ import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
-def defaultStylesheetFile = new File(
-        buildscript.sourceFile.parentFile,
-        JavaVersion.current() < JavaVersion.VERSION_1_9 ? 'java-javadoc.pre-jdk9.css' : 'java-javadoc.css')
+def defaultStylesheetFile =
+        JavaVersion.current() >= JavaVersion.VERSION_1_9 ?
+                new File(buildscript.sourceFile.parentFile, 'java-javadoc.css') : null
 def visitedUrls = new HashSet<String>()
 
 task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the javadoc cache directory.') {
@@ -76,12 +76,12 @@ allprojects {
 
             // Highlight.js
             scriptParts.add('''
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/highlight.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/gradle.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/protobuf.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/thrift.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/yaml.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.7.0/highlightjs-line-numbers.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/languages/gradle.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/languages/protobuf.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/languages/thrift.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/languages/yaml.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
             <script>
             // Trim and syntax-highlight the code snippets.
             function trimLines(lines) {
@@ -153,7 +153,9 @@ allprojects {
             author = false
             keyWords = false
             quiet()
-            stylesheetFile = defaultStylesheetFile
+            if (defaultStylesheetFile != null) {
+                stylesheetFile = defaultStylesheetFile
+            }
 
             // Enable all lints except the missing tag warnings
             addBooleanOption('Xdoclint:accessibility').value = true

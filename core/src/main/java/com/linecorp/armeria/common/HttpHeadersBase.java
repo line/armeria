@@ -96,28 +96,28 @@ class HttpHeadersBase
     }
 
     @Override
-    int hashName(CharSequence name) {
+    final int hashName(CharSequence name) {
         return AsciiString.hashCode(name);
     }
 
     @Override
-    boolean nameEquals(AsciiString a, CharSequence b) {
+    final boolean nameEquals(AsciiString a, CharSequence b) {
         return a.contentEqualsIgnoreCase(b);
     }
 
     @Override
-    AsciiString normalizeName(CharSequence name) {
+    final AsciiString normalizeName(CharSequence name) {
         return HttpHeaderNames.of(name);
     }
 
     @Override
-    boolean isFirstGroup(AsciiString name) {
+    final boolean isFirstGroup(AsciiString name) {
         // Pseudo headers must come first during iteration.
         return !name.isEmpty() && name.byteAt(0) == ':';
     }
 
     @Override
-    void validateValue(String value) {
+    final void validateValue(String value) {
         if (!Flags.validateHeaders()) {
             return;
         }
@@ -268,7 +268,7 @@ class HttpHeadersBase
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         final int hashCode = super.hashCode();
         return endOfStream ? ~hashCode : hashCode;
     }

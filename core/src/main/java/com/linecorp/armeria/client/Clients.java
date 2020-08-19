@@ -23,8 +23,9 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.MustBeClosed;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
@@ -285,8 +286,8 @@ public final class Clients {
      * <pre>{@code
      * WebClient derivedWebClient = Clients.newDerivedClient(webClient, options -> {
      *     ClientOptionsBuilder builder = options.toBuilder();
-     *     builder.decorator(...);     // Add a decorator.
-     *     builder.addHttpHeader(...); // Add an HTTP header.
+     *     builder.decorator(...); // Add a decorator.
+     *     builder.addHeader(...); // Add an HTTP header.
      *     return builder.build();
      * });
      * }</pre>
@@ -368,7 +369,7 @@ public final class Clients {
      * <pre>{@code
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      *
-     * try (SafeCloseable ignored = withHttpHeader(AUTHORIZATION, myCredential)) {
+     * try (SafeCloseable ignored = withHeader(AUTHORIZATION, myCredential)) {
      *     client.executeSomething(..);
      * }
      * }</pre>
@@ -377,9 +378,9 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeader(USER_AGENT, myAgent)) {
+     * try (SafeCloseable ignored = withHeader(USER_AGENT, myAgent)) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeader(AUTHORIZATION, secret)) {
+     *         try (SafeCloseable ignored2 = withHeader(AUTHORIZATION, secret)) {
      *             // Both USER_AGENT and AUTHORIZATION will be set.
      *             client.executeSomething(..);
      *         }
@@ -387,12 +388,13 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeaders(Consumer)
+     * @see #withHeaders(Consumer)
      */
-    public static SafeCloseable withHttpHeader(CharSequence name, String value) {
+    @MustBeClosed
+    public static SafeCloseable withHeader(CharSequence name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        return withHttpHeaders(headersBuilder -> {
+        return withHeaders(headersBuilder -> {
             headersBuilder.set(name, value);
         });
     }
@@ -405,7 +407,7 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
      * import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
      *
-     * try (SafeCloseable ignored = withHttpHeader(CONTENT_TYPE, JSON_UTF_8)) {
+     * try (SafeCloseable ignored = withHeader(CONTENT_TYPE, JSON_UTF_8)) {
      *     client.executeSomething(..);
      * }
      * }</pre>
@@ -415,9 +417,9 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
      * import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
      *
-     * try (SafeCloseable ignored = withHttpHeader(CONTENT_TYPE, JSON_UTF_8)) {
+     * try (SafeCloseable ignored = withHeader(CONTENT_TYPE, JSON_UTF_8)) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeader(AUTHORIZATION, secret)) {
+     *         try (SafeCloseable ignored2 = withHeader(AUTHORIZATION, secret)) {
      *             // Both CONTENT_TYPE and AUTHORIZATION will be set.
      *             client.executeSomething(..);
      *         }
@@ -425,67 +427,14 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeaders(Consumer)
+     * @see #withHeaders(Consumer)
      */
-    public static SafeCloseable withHttpHeader(CharSequence name, Object value) {
+    @MustBeClosed
+    public static SafeCloseable withHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        return withHttpHeaders(headersBuilder -> {
+        return withHeaders(headersBuilder -> {
             headersBuilder.setObject(name, value);
-        });
-    }
-
-    /**
-     * Sets the specified HTTP header manipulating function in a thread-local variable so that the manipulated
-     * headers are sent by the client call made from the current thread. Use the {@code try-with-resources}
-     * block with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
-     * <pre>{@code
-     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
-     *
-     * try (SafeCloseable ignored = withHttpHeaders(headers -> {
-     *     return headers.toBuilder()
-     *                   .set(HttpHeaders.AUTHORIZATION, myCredential)
-     *                   .set(HttpHeaders.USER_AGENT, myAgent)
-     *                   .build();
-     * })) {
-     *     client.executeSomething(..);
-     * }
-     * }</pre>
-     * You can also nest the header manipulation:
-     * <pre>{@code
-     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
-     *
-     * try (SafeCloseable ignored = withHttpHeaders(h -> {
-     *          return h.toBuilder()
-     *                  .set(USER_AGENT, myAgent)
-     *                  .build();
-     *      })) {
-     *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeaders(h -> {
-     *                  return h.toBuilder()
-     *                          .set(AUTHORIZATION, secret)
-     *                          .build();
-     *              })) {
-     *             // Both USER_AGENT and AUTHORIZATION will be set.
-     *             client.executeSomething(..);
-     *         }
-     *     }
-     * }
-     * }</pre>
-     *
-     * @see #withHttpHeaders(Consumer)
-     *
-     * @deprecated Use {@link #withHttpHeaders(Consumer)}.
-     */
-    @Deprecated
-    public static SafeCloseable withHttpHeaders(
-            Function<? super HttpHeaders, ? extends HttpHeaders> headerManipulator) {
-        requireNonNull(headerManipulator, "headerManipulator");
-        return withContextCustomizer(ctx -> {
-            final HttpHeaders manipulatedHeaders = headerManipulator.apply(ctx.additionalRequestHeaders());
-            ctx.mutateAdditionalRequestHeaders(mutator -> mutator.add(manipulatedHeaders));
         });
     }
 
@@ -498,7 +447,7 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeaders(builder -> {
+     * try (SafeCloseable ignored = withHeaders(builder -> {
      *     builder.set(HttpHeaders.AUTHORIZATION, myCredential)
      *            .set(HttpHeaders.USER_AGENT, myAgent);
      * })) {
@@ -510,11 +459,11 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeaders(builder -> {
+     * try (SafeCloseable ignored = withHeaders(builder -> {
      *          builder.set(USER_AGENT, myAgent);
      *      })) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeaders(builder -> {
+     *         try (SafeCloseable ignored2 = withHeaders(builder -> {
      *                  builder.set(AUTHORIZATION, secret);
      *              })) {
      *             // Both USER_AGENT and AUTHORIZATION will be set.
@@ -524,9 +473,10 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeader(CharSequence, String)
+     * @see #withHeader(CharSequence, String)
      */
-    public static SafeCloseable withHttpHeaders(Consumer<HttpHeadersBuilder> headerMutator) {
+    @MustBeClosed
+    public static SafeCloseable withHeaders(Consumer<HttpHeadersBuilder> headerMutator) {
         requireNonNull(headerMutator, "headerMutator");
         return withContextCustomizer(ctx -> {
             ctx.mutateAdditionalRequestHeaders(headerMutator);
@@ -565,8 +515,9 @@ public final class Clients {
      * may be {@code null} while the customizer function runs, because the target host of the {@link Request}
      * is not determined yet.
      *
-     * @see #withHttpHeaders(Consumer)
+     * @see #withHeaders(Consumer)
      */
+    @MustBeClosed
     public static SafeCloseable withContextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         requireNonNull(contextCustomizer, "contextCustomizer");

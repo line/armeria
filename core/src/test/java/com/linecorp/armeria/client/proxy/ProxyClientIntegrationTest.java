@@ -13,33 +13,33 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.HttpStatus.OK;
-import static com.linecorp.armeria.common.SessionProtocol.H1C;
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_IMPLEMENTED;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.Proxy.Type;
+import java.net.ProxySelector;
 import java.net.ServerSocket;
-import java.time.Duration;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -47,23 +47,31 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
+import com.linecorp.armeria.internal.testing.SimpleChannelHandlerFactory;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -83,6 +91,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.socksx.SocksPortUnificationServerHandler;
 import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandRequest;
 import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
@@ -107,7 +116,10 @@ class ProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
     private static final String SUCCESS_RESPONSE = "success";
 
-    private static final DynamicBehaviorHandler DYNAMIC_HANDLER = new DynamicBehaviorHandler();
+    private static final SimpleChannelHandlerFactory NOOP_CHANNEL_HANDLER_FACTORY =
+            new SimpleChannelHandlerFactory(null, null);
+
+    private static SimpleChannelHandlerFactory channelHandlerFactory;
 
     @RegisterExtension
     @Order(0)
@@ -119,6 +131,8 @@ class ProxyClientIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, SessionProtocol.HTTP);
+            sb.port(0, SessionProtocol.HTTPS);
+            sb.tlsSelfSigned();
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };
@@ -129,7 +143,7 @@ class ProxyClientIntegrationTest {
         @Override
         protected void configure(Channel ch) throws Exception {
             ch.pipeline().addLast(new SocksPortUnificationServerHandler());
-            ch.pipeline().addLast(DYNAMIC_HANDLER);
+            ch.pipeline().addLast(channelHandlerFactory.newHandler());
             ch.pipeline().addLast(new Socks4ProxyServerHandler());
             ch.pipeline().addLast(new Socks5ProxyServerHandler());
             ch.pipeline().addLast(new IntermediaryProxyServerHandler("socks"));
@@ -172,7 +186,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
-            ch.pipeline().addLast(DYNAMIC_HANDLER);
+            ch.pipeline().addLast(channelHandlerFactory.newHandler());
         }
     };
 
@@ -181,234 +195,353 @@ class ProxyClientIntegrationTest {
     @BeforeEach
     void beforeEach() {
         numSuccessfulProxyRequests = 0;
-        DYNAMIC_HANDLER.reset();
+        channelHandlerFactory = NOOP_CHANNEL_HANDLER_FACTORY;
     }
 
     @Test
     void testDisabledProxyBasicCase() throws Exception {
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(ProxyConfig.direct()).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.direct())
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        clientFactory.close();
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        }
     }
 
     @Test
     void testSocks4BasicCase() throws Exception {
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        }
     }
 
     @Test
     void testSocks5BasicCase() throws Exception {
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks5(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks5(socksProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        }
     }
 
     @Test
     void testH1CProxyBasicCase() throws Exception {
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.connect(httpProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void testWrappingSelectorBasicCase() throws Exception {
+        final ProxySelector proxySelector = new ProxySelector() {
+            @Override
+            public List<Proxy> select(URI uri) {
+                return ImmutableList.of(new Proxy(Type.HTTP, httpProxyServer.address()));
+            }
+
+            @Override
+            public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+            }
+        };
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(proxySelector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void testSelectFailureFailsImmediately() throws Exception {
+        final RuntimeException selectException = new RuntimeException("select exception");
+        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
+            @Override
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                throw selectException;
+            }
+
+            @Override
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
+                fail("connectFailed should not be called");
+            }
+        });
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCause(selectException);
+        }
+    }
+
+    @Test
+    void testNullProxyConfigFailsImmediately() throws Exception {
+        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
+            @Override
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                return null;
+            }
+
+            @Override
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
+                fail("connectFailed should not be called");
+            }
+        });
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(NullPointerException.class)
+                                                    .hasRootCauseMessage("proxyConfig");
+        }
     }
 
     @Test
     void testHttpProxyUpgradeRequestFailure() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
-            if (!(msg instanceof FullHttpRequest)) {
-                ctx.close();
-            }
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
             if ("h2c".equals(request.headers().get(HttpHeaderNames.UPGRADE))) {
                 // reject http2 upgrade requests
-                final HttpHeaders headers = new DefaultHttpHeaders().add(CONNECTION, "close");
-                response = new DefaultFullHttpResponse(HTTP_1_1, NOT_IMPLEMENTED, EMPTY_BUFFER,
-                                                       headers, EmptyHttpHeaders.INSTANCE);
+                final HttpHeaders headers = new DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, "close");
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.NOT_IMPLEMENTED,
+                                                       Unpooled.EMPTY_BUFFER,
+                                                       headers,
+                                                       EmptyHttpHeaders.INSTANCE);
             } else {
-                response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                                                       copiedBuffer(request.method().name(), US_ASCII));
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.OK,
+                                                       Unpooled.copiedBuffer(request.method().name(),
+                                                                             StandardCharsets.US_ASCII));
             }
+
+            ReferenceCountUtil.release(msg);
             ctx.writeAndFlush(response);
             ctx.close();
         });
 
-        final ClientFactory clientFactory =
-                ClientFactory.builder().proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
-                             .useHttp2Preface(false).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(GET.name());
-        assertThat(numSuccessfulProxyRequests).isEqualTo(2);
-        clientFactory.close();
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                                  .useHttp2Preface(false)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(HttpMethod.GET.name());
+            assertThat(numSuccessfulProxyRequests).isEqualTo(2);
+        }
     }
 
     @Test
     void testHttpProxyPrefaceFailure() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
-            if (!(msg instanceof FullHttpRequest)) {
-                ctx.close();
-            }
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
             if (HttpMethod.valueOf("PRI").equals(request.method())) {
                 // reject http2 preface
-                final HttpHeaders headers = new DefaultHttpHeaders().add(CONNECTION, "close");
-                response = new DefaultFullHttpResponse(
-                        HTTP_1_1, NOT_IMPLEMENTED, EMPTY_BUFFER, headers, EmptyHttpHeaders.INSTANCE);
+                final HttpHeaders headers = new DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, "close");
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.NOT_IMPLEMENTED,
+                                                       Unpooled.EMPTY_BUFFER,
+                                                       headers,
+                                                       EmptyHttpHeaders.INSTANCE);
             } else {
-                response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK,
-                                                       copiedBuffer(request.method().name(), US_ASCII));
+                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                       HttpResponseStatus.OK,
+                                                       Unpooled.copiedBuffer(request.method().name(),
+                                                                             StandardCharsets.US_ASCII));
             }
+
+            ReferenceCountUtil.release(msg);
             ctx.writeAndFlush(response);
             ctx.close();
         });
 
-        final ClientFactory clientFactory =
-                ClientFactory.builder().proxyConfig(ProxyConfig.connect(httpProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(GET.name());
-        assertThat(numSuccessfulProxyRequests).isEqualTo(2);
-        clientFactory.close();
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, http1Server.endpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(HttpMethod.GET.name());
+            assertThat(numSuccessfulProxyRequests).isEqualTo(2);
+        }
     }
 
-    @Test
-    void testHttpsProxyBasicCase() throws Exception {
+    @ParameterizedTest
+    @MethodSource("sessionAndEndpointProvider")
+    void testHttpsProxy(SessionProtocol protocol, Endpoint endpoint) throws Exception {
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
                         ProxyConfig.connect(httpsProxyServer.address(), true)).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
+        final WebClient webClient = WebClient.builder(protocol, endpoint)
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
                                              .build();
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualTo(OK);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
     void testProxyWithH2C() throws Exception {
         final int numRequests = 5;
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.H2C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
-        final List<CompletableFuture<AggregatedHttpResponse>> responseFutures = new ArrayList<>();
-        for (int i = 0; i < numRequests; i++) {
-            responseFutures.add(webClient.get(PROXY_PATH).aggregate());
+            final WebClient webClient = WebClient.builder(SessionProtocol.H2C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+
+            final List<CompletableFuture<AggregatedHttpResponse>> responseFutures = new ArrayList<>();
+            for (int i = 0; i < numRequests; i++) {
+                responseFutures.add(webClient.get(PROXY_PATH).aggregate());
+            }
+            await().until(() -> responseFutures.stream().allMatch(CompletableFuture::isDone));
+            assertThat(responseFutures.stream().map(CompletableFuture::join))
+                    .allMatch(response -> response.contentUtf8().equals(SUCCESS_RESPONSE));
+            assertThat(numSuccessfulProxyRequests).isGreaterThanOrEqualTo(1);
         }
-        await().until(() -> responseFutures.stream().allMatch(CompletableFuture::isDone));
-        assertThat(responseFutures.stream().map(CompletableFuture::join))
-                .allMatch(response -> response.contentUtf8().equals(SUCCESS_RESPONSE));
-        assertThat(numSuccessfulProxyRequests).isGreaterThanOrEqualTo(1);
-        clientFactory.close();
     }
 
     @Test
     void testProxyWithUserName() throws Exception {
         final String username = "username";
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
                 assertThat(username).isEqualTo(((DefaultSocks4CommandRequest) msg).userId());
             }
             ctx.fireChannelRead(msg);
         });
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks4(socksProxyServer.address(), username))
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address(), username))
-                             .build();
-
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        final AggregatedHttpResponse response = responseFuture.join();
-        assertThat(response.status()).isEqualTo(OK);
-        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
-    }
-
-    @Test
-    void testProxy_protocolUpgrade_notSharableExceptionNotThrown() throws Exception {
-        DYNAMIC_HANDLER.setWriteCustomizer((ctx, msg, promise) -> {
-            ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
-        });
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                                .hasRootCauseInstanceOf(ProxyConnectException.class);
-        clientFactory.close();
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            final AggregatedHttpResponse response = responseFuture.join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        }
     }
 
     @Test
@@ -418,25 +551,52 @@ class ProxyClientIntegrationTest {
             unusedPort = ss.getLocalPort();
         }
 
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(new InetSocketAddress("127.0.0.1", unusedPort))).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
+        final AtomicInteger failedAttempts = new AtomicInteger();
+        final InetSocketAddress proxyAddress = new InetSocketAddress("127.0.0.1", unusedPort);
+        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
+            @Override
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                return ProxyConfig.socks4(proxyAddress);
+            }
 
-        assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasMessageContaining("Connection refused")
-                                                .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                                .hasRootCauseInstanceOf(ConnectException.class);
-        clientFactory.close();
+            @Override
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                assertThat(sa).isEqualTo(proxyAddress);
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ConnectException.class);
+                failedAttempts.incrementAndGet();
+            }
+        });
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasMessageContaining("Connection refused")
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(ConnectException.class);
+            assertThat(failedAttempts).hasValue(1);
+            assertThat(selector.result()).isTrue();
+        }
     }
 
     @Test
     void testProxy_connectionTimeoutFailure_throwsException() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
                 ctx.channel().eventLoop().schedule(
                         () -> ctx.fireChannelRead(msg), 50, TimeUnit.MILLISECONDS);
@@ -445,58 +605,139 @@ class ProxyClientIntegrationTest {
             }
         });
 
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).connectTimeoutMillis(1).build();
+        final AtomicInteger failedAttempts = new AtomicInteger();
+        final InetSocketAddress proxyAddress = socksProxyServer.address();
+        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
+            @Override
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                return ProxyConfig.socks4(proxyAddress);
+            }
 
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
-        assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                                .hasRootCauseInstanceOf(ProxyConnectException.class);
-        clientFactory.close();
-    }
-
-    @Test
-    void testProxy_responseFailure_throwsException() throws Exception {
-        DYNAMIC_HANDLER.setWriteCustomizer((ctx, msg, promise) -> {
-            ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
+            @Override
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                assertThat(sa).isEqualTo(proxyAddress);
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ProxyConnectException.class);
+                failedAttempts.incrementAndGet();
+            }
         });
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).build();
-        final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator())
-                                             .build();
-        final CompletableFuture<AggregatedHttpResponse> responseFuture =
-                webClient.get(PROXY_PATH).aggregate();
 
-        assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                                .hasRootCauseInstanceOf(ProxyConnectException.class);
-        clientFactory.close();
-    }
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .connectTimeoutMillis(1)
+                                  .useHttp2Preface(true)
+                                  .build()) {
 
-    @Test
-    void testProxyServerImmediateClose() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
-            ctx.close();
-        });
-        try (ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address())).build()) {
-            final WebClient webClient = WebClient.builder(H1C, backendServer.httpEndpoint())
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
-            await().timeout(Duration.ofSeconds(10)).until(responseFuture::isCompletedExceptionally);
             assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                     .hasRootCauseInstanceOf(ProxyConnectException.class);
+            assertThat(failedAttempts).hasValue(1);
+            assertThat(selector.result()).isTrue();
+        }
+    }
+
+    @Test
+    void testProxy_serverImmediateClose_throwsException() throws Exception {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
+            ReferenceCountUtil.release(msg);
+            ctx.close();
+        });
+        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
+            @Override
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                return ProxyConfig.socks4(socksProxyServer.address());
+            }
+
+            @Override
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                assertThat(sa).isEqualTo(socksProxyServer.address());
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ProxyConnectException.class);
+                throw new RuntimeException("connectFailed exception");
+            }
+        });
+
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(ProxyConnectException.class);
+            assertThat(selector.result()).isTrue();
+        }
+    }
+
+    @Test
+    void testProxy_responseFailure_throwsException() throws Exception {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onWrite((ctx, msg, promise) -> {
+            ReferenceCountUtil.release(msg);
+            ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
+        });
+
+        final AtomicInteger failedAttempts = new AtomicInteger();
+        final InetSocketAddress proxyAddress = socksProxyServer.address();
+        final TestProxyConfigSelector selector = new TestProxyConfigSelector(new ProxyConfigSelector() {
+            @Override
+            public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                return ProxyConfig.socks4(proxyAddress);
+            }
+
+            @Override
+            public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                      SocketAddress sa, Throwable throwable) {
+                assertThat(protocol).isEqualTo(SessionProtocol.H1C);
+                assertThat(endpoint).isEqualTo(backendServer.httpEndpoint());
+                assertThat(sa).isEqualTo(proxyAddress);
+                assertThat(throwable).isInstanceOf(UnprocessedRequestException.class)
+                                     .hasCauseInstanceOf(ProxyConnectException.class);
+                failedAttempts.incrementAndGet();
+            }
+        });
+
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(selector)
+                                  .useHttp2Preface(true)
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(ProxyConnectException.class);
+            assertThat(failedAttempts).hasValue(1);
+            assertThat(selector.result()).isTrue();
         }
     }
 
@@ -543,8 +784,8 @@ class ProxyClientIntegrationTest {
         protected void channelRead0(ChannelHandlerContext ctx, Socks4Message msg) throws Exception {
             if (msg instanceof DefaultSocks4CommandRequest) {
                 final DefaultSocks4CommandRequest req = (DefaultSocks4CommandRequest) msg;
-                final DefaultSocks4CommandResponse response;
-                response = new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
+                final DefaultSocks4CommandResponse response =
+                        new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
                 ctx.fireUserEventTriggered(new ProxySuccessEvent(
                         new InetSocketAddress(req.dstAddr(), req.dstPort()), response));
             } else {
@@ -562,7 +803,7 @@ class ProxyClientIntegrationTest {
 
             ctx.fireUserEventTriggered(new ProxySuccessEvent(
                     new InetSocketAddress(split[0], Integer.parseInt(split[1])),
-                    new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.OK)));
+                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
         }
     }
 
@@ -612,7 +853,7 @@ class ProxyClientIntegrationTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {
-                final ByteBuf backendMessage = ReferenceCountUtil.retain((ByteBuf) msg);
+                final ByteBuf backendMessage = (ByteBuf) msg;
                 received.add(backendMessage);
                 writeToBackendAndFlush();
             } else {
@@ -677,6 +918,55 @@ class ProxyClientIntegrationTest {
                 if (wrote) {
                     backend.flush();
                 }
+            }
+        }
+    }
+
+    static Stream<Arguments> sessionAndEndpointProvider() {
+        return Stream.of(
+                Arguments.arguments(SessionProtocol.HTTP, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H2C, backendServer.httpEndpoint()),
+                Arguments.arguments(SessionProtocol.H1, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.H2, backendServer.httpsEndpoint()),
+                Arguments.arguments(SessionProtocol.HTTPS, backendServer.httpsEndpoint())
+        );
+    }
+
+    /**
+     * This test class ensures the test fails when an assertion in the callback fails.
+     */
+    private static class TestProxyConfigSelector implements ProxyConfigSelector {
+        final ProxyConfigSelector inner;
+        final AtomicBoolean result;
+
+        TestProxyConfigSelector(ProxyConfigSelector inner) {
+            this.inner = inner;
+            result = new AtomicBoolean(true);
+        }
+
+        boolean result() {
+            return result.get();
+        }
+
+        @Override
+        public ProxyConfig select(SessionProtocol protocol, Endpoint endpoint) {
+            try {
+                return inner.select(protocol, endpoint);
+            } catch (AssertionError e) {
+                result.set(false);
+                throw e;
+            }
+        }
+
+        @Override
+        public void connectFailed(SessionProtocol protocol, Endpoint endpoint,
+                                  SocketAddress sa, Throwable throwable) {
+            try {
+                inner.connectFailed(protocol, endpoint, sa, throwable);
+            } catch (AssertionError e) {
+                result.set(false);
+                throw e;
             }
         }
     }

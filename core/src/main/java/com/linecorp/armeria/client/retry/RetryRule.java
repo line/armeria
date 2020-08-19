@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -121,7 +121,7 @@ public interface RetryRule {
      * {@linkplain Backoff#ofDefault() default backoff} if the response status matches
      * the specified {@code statusFilter}.
      */
-    static RetryRule onStatus(Predicate<? super HttpStatus> statusFilter) {
+    static RetryRule onStatus(BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
         return builder().onStatus(statusFilter).thenBackoff();
     }
 
@@ -139,7 +139,7 @@ public interface RetryRule {
      * {@linkplain Backoff#ofDefault() default backoff} if an {@link Exception} is raised and
      * the specified {@code exceptionFilter} returns {@code true}.
      */
-    static RetryRule onException(Predicate<? super Throwable> exceptionFilter) {
+    static RetryRule onException(BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
         return builder().onException(exceptionFilter).thenBackoff();
     }
 
@@ -185,13 +185,14 @@ public interface RetryRule {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "method can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
-        return builder(headers -> httpMethods.contains(headers.method()));
+        return builder((ctx, headers) -> httpMethods.contains(headers.method()));
     }
 
     /**
      * Returns a newly created {@link RetryRuleBuilder} with the specified {@code requestHeadersFilter}.
      */
-    static RetryRuleBuilder builder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    static RetryRuleBuilder builder(
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         return new RetryRuleBuilder(requireNonNull(requestHeadersFilter, "requestHeadersFilter"));
     }
 

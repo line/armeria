@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -45,24 +46,18 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.server.unsafe.PooledHttpService;
-import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 
 /**
  * A {@link SimpleDecoratingHttpService} which allows {@link GrpcService} to serve requests without the framing
@@ -79,7 +74,7 @@ import io.netty.buffer.ByteBufHolder;
  *     </li>
  * </ul>
  */
-final class UnframedGrpcService extends SimplePooledDecoratingHttpService implements GrpcService {
+final class UnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
 
     private static final char LINE_SEPARATOR = '\n';
 
@@ -117,20 +112,19 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
     }
 
     @Override
-    public HttpResponse serve(
-            PooledHttpService delegate, ServiceRequestContext ctx, PooledHttpRequest req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
-            return delegate.serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
                 // Framed request, so just delegate.
-                return delegate.serve(ctx, req);
+                return unwrap().serve(ctx, req);
             }
         }
 
@@ -138,7 +132,7 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
         final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
-            return delegate.serve(ctx, req);
+            return unwrap().serve(ctx, req);
         }
 
         if (method.getType() != MethodType.UNARY) {
@@ -193,23 +187,16 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
             CompletableFuture<HttpResponse> res) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
+                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
             final HttpData content = clientRequest.content();
-            final ByteBuf message;
-            if (content instanceof ByteBufHolder) {
-                message = ((ByteBufHolder) content).content();
-            } else {
-                message = ctx.alloc().buffer(content.length());
-                message.writeBytes(content.array());
-            }
             final HttpData frame;
             boolean success = false;
             try {
-                frame = framer.writePayload(message);
+                frame = framer.writePayload(content.byteBuf());
                 success = true;
             } finally {
                 if (!success) {
-                    message.release();
+                    content.close();
                 }
             }
             grpcRequest = HttpRequest.of(grpcHeaders, frame);
@@ -258,15 +245,17 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
                 message.append(", ").append(grpcMessage);
             }
 
-            res.complete(HttpResponse.of(
-                    httpStatus,
-                    MediaType.PLAIN_TEXT_UTF_8,
-                    message.toString()));
+            final ResponseHeaders headers = ResponseHeaders.builder(httpStatus)
+                                                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                                           .add(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode)
+                                                           .build();
+            res.complete(HttpResponse.of(headers, HttpData.ofUtf8(message.toString())));
             return;
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
+        unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
         if (grpcMediaType != null) {
             if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
                 unframedHeaders.contentType(MediaType.PROTOBUF);
@@ -280,7 +269,7 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
                     @Override
                     public void messageRead(DeframedMessage message) {
                         // We know that we don't support compression, so this is always a ByteBuffer.
-                        final HttpData unframedContent = PooledHttpData.wrap(message.buf()).withEndOfStream();
+                        final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
                         res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
                     }
@@ -296,7 +285,7 @@ final class UnframedGrpcService extends SimplePooledDecoratingHttpService implem
                 },
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
-                ctx.alloc())) {
+                ctx.alloc(), false)) {
             deframer.request(1);
             deframer.deframe(grpcResponse.content(), true);
         }

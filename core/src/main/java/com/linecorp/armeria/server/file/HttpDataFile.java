@@ -15,9 +15,11 @@
  */
 package com.linecorp.armeria.server.file;
 
-import java.io.IOException;
+import static java.util.Objects.requireNonNull;
+
 import java.time.Clock;
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
@@ -26,20 +28,24 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.handler.codec.DateFormatter;
 
 final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile {
 
     private final HttpData content;
     private final HttpFileAttributes attrs;
+    @Nullable
+    private UnmodifiableFuture<AggregatedHttpFile> aggregateFuture;
 
     HttpDataFile(HttpData content,
                  Clock clock,
@@ -61,8 +67,8 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
                          @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                          HttpHeaders headers) {
         super(contentType, clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
-        this.content = content;
-        this.attrs = attrs;
+        this.content = requireNonNull(content, "content");
+        this.attrs = requireNonNull(attrs, "attrs");
     }
 
     @Override
@@ -71,25 +77,31 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     }
 
     @Override
-    public HttpFileAttributes readAttributes() {
+    public HttpFileAttributes attributes() {
         return attrs;
     }
 
     @Override
-    public ResponseHeaders readHeaders() {
-        try {
-            return super.readHeaders();
-        } catch (IOException e) {
-            throw new Error(e); // Never reaches here.
-        }
+    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+        return UnmodifiableFuture.completedFuture(attrs);
+    }
+
+    @Override
+    public ResponseHeaders headers() {
+        return readHeaders(attrs);
+    }
+
+    @Override
+    public CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
+        return UnmodifiableFuture.completedFuture(headers());
     }
 
     @Override
     protected HttpResponse doRead(ResponseHeaders headers, long length,
                                   Executor fileReadExecutor, ByteBufAllocator alloc) {
-        if (content instanceof ByteBufHolder) {
-            final ByteBufHolder holder = (ByteBufHolder) content;
-            return HttpResponse.of(headers, (HttpData) holder.retainedDuplicate());
+        if (content.isPooled()) {
+            final ByteBuf buf = content.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE);
+            return HttpResponse.of(headers, HttpData.wrap(buf));
         } else {
             return HttpResponse.of(headers, content);
         }
@@ -102,6 +114,29 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     }
 
     @Override
+    public CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor) {
+        return aggregate();
+    }
+
+    private UnmodifiableFuture<AggregatedHttpFile> aggregate() {
+        if (aggregateFuture == null) {
+            aggregateFuture = UnmodifiableFuture.completedFuture(this);
+        }
+        return aggregateFuture;
+    }
+
+    @Override
+    public CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(Executor fileReadExecutor,
+                                                                            ByteBufAllocator alloc) {
+        return aggregate();
+    }
+
+    @Override
+    public HttpFile toHttpFile() {
+        return this;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("content", content())
@@ -109,7 +144,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
                           .add("lastModified", DateFormatter.format(new Date(attrs.lastModifiedMillis())))
                           .add("dateEnabled", isDateEnabled())
                           .add("lastModifiedEnabled", isLastModifiedEnabled())
-                          .add("headers", headers())
+                          .add("additionalHeaders", additionalHeaders())
                           .toString();
     }
 }

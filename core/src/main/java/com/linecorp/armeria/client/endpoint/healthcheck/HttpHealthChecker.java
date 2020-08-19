@@ -35,7 +35,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.unsafe.PooledWebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
@@ -46,13 +45,13 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.AsciiString;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 final class HttpHealthChecker implements AsyncCloseable {
@@ -62,7 +61,7 @@ final class HttpHealthChecker implements AsyncCloseable {
     private static final AsciiString ARMERIA_LPHC = HttpHeaderNames.of("armeria-lphc");
 
     private final HealthCheckerContext ctx;
-    private final PooledWebClient webClient;
+    private final WebClient webClient;
     private final String authority;
     private final String path;
     private final boolean useGet;
@@ -70,17 +69,16 @@ final class HttpHealthChecker implements AsyncCloseable {
     private int maxLongPollingSeconds;
     private int pingIntervalSeconds;
     @Nullable
-    private PooledHttpResponse lastResponse;
+    private HttpResponse lastResponse;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
         final Endpoint endpoint = ctx.endpoint();
         this.ctx = ctx;
-        webClient = PooledWebClient.of(
-                WebClient.builder(ctx.protocol(), endpoint)
-                         .options(ctx.clientOptions())
-                         .decorator(ResponseTimeoutUpdater::new)
-                         .build());
+        webClient = WebClient.builder(ctx.protocol(), endpoint)
+                             .options(ctx.clientOptions())
+                             .decorator(ResponseTimeoutUpdater::new)
+                             .build();
         authority = endpoint.authority();
         this.path = path;
         this.useGet = useGet;
@@ -110,8 +108,8 @@ final class HttpHealthChecker implements AsyncCloseable {
         try (ClientRequestContextCaptor reqCtxCaptor = Clients.newContextCaptor()) {
             lastResponse = webClient.execute(headers);
             final ClientRequestContext reqCtx = reqCtxCaptor.get();
-            lastResponse.subscribeWithPooledObjects(new HealthCheckResponseSubscriber(reqCtx, lastResponse),
-                                                    reqCtx.eventLoop());
+            lastResponse.subscribe(new HealthCheckResponseSubscriber(reqCtx, lastResponse),
+                                   reqCtx.eventLoop().withoutContext(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
     }
 
@@ -185,7 +183,7 @@ final class HttpHealthChecker implements AsyncCloseable {
 
             try {
                 if (!(obj instanceof ResponseHeaders)) {
-                    ReferenceCountUtil.release(obj);
+                    PooledObjects.close(obj);
                     return;
                 }
 
@@ -280,7 +278,7 @@ final class HttpHealthChecker implements AsyncCloseable {
             }
 
             final long pingTimeoutNanos = TimeUnit.SECONDS.toNanos(pingIntervalSeconds) * 2;
-            pingCheckFuture = reqCtx.eventLoop().scheduleWithFixedDelay(() -> {
+            pingCheckFuture = reqCtx.eventLoop().withoutContext().scheduleWithFixedDelay(() -> {
                 if (System.nanoTime() - lastPingTimeNanos >= pingTimeoutNanos) {
                     // Did not receive a ping on time.
                     res.abort(ResponseTimeoutException.get());

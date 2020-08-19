@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 interface ServiceConfigSetters {
@@ -76,4 +78,35 @@ interface ServiceConfigSetters {
      * @param decorator the {@link Function} that decorates the {@link HttpService}
      */
     ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
+
+    /**
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
+     *
+     * @param decorators the {@link Function}s that decorate the {@link HttpService}
+     */
+    ServiceConfigSetters decorators(Function<? super HttpService, ? extends HttpService>... decorators);
+
+    /**
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
+     *
+     * @param decorators the {@link Function}s that decorate the {@link HttpService}
+     */
+    ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
+
+    /**
+     * Sets the default value of the {@link RequestLog#serviceName()} property which is used when
+     * no service name was set via {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultServiceName the default service name.
+     */
+    ServiceConfigSetters defaultServiceName(String defaultServiceName);
+
+    /**
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
+     * {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultLogName the default log name.
+     */
+    ServiceConfigSetters defaultLogName(String defaultLogName);
 }

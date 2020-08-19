@@ -19,22 +19,19 @@ package com.linecorp.armeria.common.stream;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-import javax.annotation.CheckReturnValue;
-
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.google.errorprone.annotations.CheckReturnValue;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCounted;
+import com.linecorp.armeria.common.HttpData;
 
 /**
  * Produces the objects to be published by a {@link StreamMessage}.
  *
  * <h3 id="reference-counted">Life cycle of reference-counted objects</h3>
  *
- * <p>When the following methods are given with a {@link ReferenceCounted} object, such as {@link ByteBuf} and
- * {@link PooledHttpData}, or the {@link Supplier} that provides such an object:
+ * <p>When the following methods are given with a pooled {@link HttpData} or the {@link Supplier} that
+ * provides such an object:
  *
  * <ul>
  *   <li>{@link #tryWrite(Object)}</li>

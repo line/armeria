@@ -20,6 +20,8 @@
  * these methods if you really know what you're doing.
  */
 @NonNullByDefault
+@UnstableApi
 package com.linecorp.armeria.unsafe.grpc;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

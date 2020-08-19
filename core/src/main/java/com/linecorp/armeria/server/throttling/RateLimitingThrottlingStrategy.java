@@ -33,8 +33,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A {@link ThrottlingStrategy} that provides a throttling strategy based on QPS.
  * The throttling works by examining the number of requests from the beginning, and
  * throttling if the QPS is found exceed the specified tolerable maximum.
+ *
+ * @see ThrottlingStrategy#rateLimiting(double, String)
  */
-public final class RateLimitingThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
+final class RateLimitingThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
+
     private final RateLimiter rateLimiter;
 
     /**
@@ -42,7 +45,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
      *
      * @param requestPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
-    public RateLimitingThrottlingStrategy(double requestPerSecond, @Nullable String name) {
+    RateLimitingThrottlingStrategy(double requestPerSecond, @Nullable String name) {
         super(name);
         checkArgument(requestPerSecond > 0, "requestPerSecond: %s (expected: > 0)", requestPerSecond);
         rateLimiter = RateLimiter.create(requestPerSecond);
@@ -53,7 +56,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
      *
      * @param requestPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
-    public RateLimitingThrottlingStrategy(double requestPerSecond) {
+    RateLimitingThrottlingStrategy(double requestPerSecond) {
         this(requestPerSecond, null);
     }
 

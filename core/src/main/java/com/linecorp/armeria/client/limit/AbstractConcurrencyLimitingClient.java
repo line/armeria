@@ -113,12 +113,12 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     /**
      * Returns the number of the {@link Request}s that are being executed.
      */
-    public int numActiveRequests() {
+    public final int numActiveRequests() {
         return numActiveRequests.get();
     }
 
     @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
+    public final O execute(ClientRequestContext ctx, I req) throws Exception {
         return maxConcurrency == 0 ? unlimitedExecute(ctx, req)
                                    : limitedExecute(ctx, req);
     }
@@ -133,7 +133,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
         if (!currentTask.isRun() && timeoutMillis != 0) {
             // Current request was not delegated. Schedule a timeout.
-            final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().schedule(
+            final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
                     () -> resFuture.completeExceptionally(
                             UnprocessedRequestException.of(RequestTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
@@ -161,7 +161,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         }
     }
 
-    void drain() {
+    final void drain() {
         while (!pendingRequests.isEmpty()) {
             final int currentActiveRequests = numActiveRequests.get();
             if (currentActiveRequests >= maxConcurrency) {
@@ -239,7 +239,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                         numActiveRequests.decrementAndGet();
                         drain();
                         return null;
-                    }, ctx.eventLoop());
+                    }, ctx.eventLoop().withoutContext());
                     resFuture.complete(actualRes);
                 } catch (Throwable t) {
                     numActiveRequests.decrementAndGet();

@@ -62,9 +62,7 @@ class ClientRequestContextTest {
         assertCurrentCtx(null);
 
         try (SafeCloseable unused = serviceRequestContext().push()) {
-            assertThatThrownBy(ClientRequestContext::currentOrNull)
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("not a client-side context");
+            assertThat(ClientRequestContext.currentOrNull()).isNull();
         }
     }
 
@@ -181,7 +179,7 @@ class ClientRequestContextTest {
             assertCurrentCtx(sctx);
             final ClientRequestContext cctx1 = clientRequestContext();
             final ClientRequestContext derived = cctx1.newDerivedContext(cctx1.id(), cctx1.request(),
-                                                                         cctx1.rpcRequest());
+                                                                         cctx1.rpcRequest(), cctx1.endpoint());
             try (SafeCloseable ignored1 = derived.push()) {
                 assertCurrentCtx(derived);
                 final ClientRequestContext cctx2 = clientRequestContext();

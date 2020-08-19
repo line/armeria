@@ -21,13 +21,12 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.unsafe.PooledHttpClient;
-import com.linecorp.armeria.client.unsafe.SimplePooledDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -36,6 +35,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
@@ -43,9 +43,6 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
-import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -74,7 +71,7 @@ public final class UnaryGrpcClient {
     public UnaryGrpcClient(WebClient webClient) {
         this.webClient = Clients.newDerivedClient(
                 webClient,
-                ClientOption.DECORATION.newValue(
+                ClientOptions.DECORATION.newValue(
                         ClientDecoration.of(GrpcFramingDecorator::new)
                 ));
     }
@@ -127,31 +124,28 @@ public final class UnaryGrpcClient {
         }
     }
 
-    private static final class GrpcFramingDecorator extends SimplePooledDecoratingHttpClient {
+    private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
 
         private GrpcFramingDecorator(HttpClient delegate) {
             super(delegate);
         }
 
         @Override
-        public HttpResponse execute(
-                PooledHttpClient client, ClientRequestContext ctx, PooledHttpRequest req) {
+        public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
             return HttpResponse.from(
                     req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                        .thenCompose(
                                msg -> {
-                                   final ByteBuf buf = msg.content().content();
-                                   final PooledHttpData framed;
+                                   final ByteBuf buf = msg.content().byteBuf();
+                                   final HttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                                           ctx.alloc(), Integer.MAX_VALUE)) {
+                                           ctx.alloc(), Integer.MAX_VALUE, false)) {
                                        framed = framer.writePayload(buf);
                                    }
 
                                    try {
-                                       return client.execute(
-                                               ctx, PooledHttpRequest.of(HttpRequest.of(req.headers(), framed)))
-                                                    .aggregateWithPooledObjects(ctx.eventLoop(),
-                                                                                ctx.alloc());
+                                       return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
+                                                      .aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
                                    } catch (Exception e) {
                                        throw new ArmeriaStatusException(StatusCodes.INTERNAL,
                                                                         "Error executing request.");
@@ -173,7 +167,7 @@ public final class UnaryGrpcClient {
                                    assert buf != null;
                                    responseFuture.complete(HttpResponse.of(
                                            msg.headers(),
-                                           PooledHttpData.wrap(buf).withEndOfStream(),
+                                           HttpData.wrap(buf).withEndOfStream(),
                                            msg.trailers()));
                                }
 
@@ -185,7 +179,7 @@ public final class UnaryGrpcClient {
                                                                                msg.trailers()));
                                    }
                                }
-                           }, Integer.MAX_VALUE, ctx.alloc())) {
+                           }, Integer.MAX_VALUE, ctx.alloc(), false)) {
                                deframer.request(1);
                                deframer.deframe(msg.content(), true);
                            }

@@ -46,8 +46,8 @@ public abstract class LoggingDecoratorBuilder {
 
     @Nullable
     private Logger logger;
-    private LogLevel requestLogLevel = LogLevel.TRACE;
-    private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
+    private LogLevel requestLogLevel = LogLevel.DEBUG;
+    private LogLevel successfulResponseLogLevel = LogLevel.DEBUG;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
     private Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper =
             log -> requestLogLevel();
@@ -87,12 +87,12 @@ public abstract class LoggingDecoratorBuilder {
      * or {@code null} if not set and a default logger should be used.
      */
     @Nullable
-    protected Logger logger() {
+    protected final Logger logger() {
         return logger;
     }
 
     /**
-     * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
+     * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#DEBUG}.
      */
     public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
         if (isRequestLogLevelMapperSet) {
@@ -107,13 +107,13 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging requests.
      */
     @VisibleForTesting
-    LogLevel requestLogLevel() {
+    final LogLevel requestLogLevel() {
         return requestLogLevel;
     }
 
     /**
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
-     * If unset, will use {@link LogLevel#TRACE}.
+     * If unset, will use {@link LogLevel#DEBUG}.
      */
     public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         if (isResponseLogLevelMapperSet) {
@@ -129,7 +129,7 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      */
     @VisibleForTesting
-    LogLevel successfulResponseLogLevel() {
+    final LogLevel successfulResponseLogLevel() {
         return successfulResponseLogLevel;
     }
 
@@ -150,7 +150,7 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      */
     @VisibleForTesting
-    LogLevel failedResponseLogLevel() {
+    final LogLevel failedResponseLogLevel() {
         return failedResponseLogLevel;
     }
 
@@ -170,7 +170,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link LogLevel} to use when logging request logs.
      */
-    protected Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper() {
+    protected final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper() {
         return requestLogLevelMapper;
     }
 
@@ -191,7 +191,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link LogLevel} to use when logging response logs.
      */
-    protected Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
+    protected final Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
         return responseLogLevelMapper;
     }
 
@@ -207,23 +207,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request headers before logging. It is common to have the
-     * {@link Function} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will use
-     * {@link Function#identity()}.
-     *
-     * @deprecated Use {@link #requestHeadersSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder requestHeadersSanitizer(
-            Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
-        requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
-        return requestHeadersSanitizer((ctx, headers) -> requestHeadersSanitizer.apply(headers));
-    }
-
-    /**
      * Returns the {@link BiFunction} to use to sanitize request headers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
@@ -239,23 +225,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize response headers before logging. It is common to have the
-     * {@link Function} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
-     * will use {@link Function#identity()}.
-     *
-     * @deprecated Use {@link #responseHeadersSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder responseHeadersSanitizer(
-            Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
-        requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
-        return responseHeadersSanitizer((ctx, headers) -> responseHeadersSanitizer.apply(headers));
-    }
-
-    /**
      * Returns the {@link BiFunction} to use to sanitize response headers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
@@ -270,22 +242,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request trailers before logging. If unset,
-     * will use {@link Function#identity()}.
-     *
-     * @deprecated Use {@link #requestTrailersSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder requestTrailersSanitizer(
-            Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
-        requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
-        return requestTrailersSanitizer((ctx, trailers) -> requestTrailersSanitizer.apply(trailers));
-    }
-
-    /**
      * Returns the {@link BiFunction} to use to sanitize request trailers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer() {
         return requestTrailersSanitizer;
     }
 
@@ -300,22 +259,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize response trailers before logging. If unset,
-     * will use {@link Function#identity()}.
-     *
-     * @deprecated Use {@link #responseTrailersSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder responseTrailersSanitizer(
-            Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
-        requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
-        return responseTrailersSanitizer((ctx, trailers) -> responseTrailersSanitizer.apply(trailers));
-    }
-
-    /**
      * Returns the {@link Function} to use to sanitize response trailers before logging.
      */
-    protected BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer() {
         return responseTrailersSanitizer;
     }
 
@@ -347,34 +293,6 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request, response and trailers before logging.
-     * It is common to have the {@link Function} that removes sensitive headers, like {@code "Cookie"} and
-     * {@code "Set-Cookie"}, before logging. This method is a shortcut for:
-     * <pre>{@code
-     * builder.requestHeadersSanitizer(headersSanitizer);
-     * builder.requestTrailersSanitizer(headersSanitizer);
-     * builder.responseHeadersSanitizer(headersSanitizer);
-     * builder.responseTrailersSanitizer(headersSanitizer);
-     * }</pre>
-     *
-     * @see #requestHeadersSanitizer(Function)
-     * @see #requestTrailersSanitizer(Function)
-     * @see #responseHeadersSanitizer(Function)
-     * @see #responseTrailersSanitizer(Function)
-     *
-     * @deprecated Use {@link #headersSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
-        requireNonNull(headersSanitizer, "headersSanitizer");
-        requestHeadersSanitizer(headersSanitizer);
-        requestTrailersSanitizer(headersSanitizer);
-        responseHeadersSanitizer(headersSanitizer);
-        responseTrailersSanitizer(headersSanitizer);
-        return this;
-    }
-
-    /**
      * Sets the {@link BiFunction} to use to sanitize request content before logging. It is common to have the
      * {@link BiFunction} that removes sensitive content, such as an GPS location query, before logging.
      * If unset, will not sanitize request content.
@@ -386,22 +304,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request content before logging. It is common to have the
-     * {@link Function} that removes sensitive content, such as an GPS location query, before logging. If unset,
-     * will use {@link Function#identity()}.
-     *
-     * @deprecated Use {@link #requestContentSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
-        requireNonNull(requestContentSanitizer, "requestContentSanitizer");
-        return requestContentSanitizer((ctx, content) -> requestContentSanitizer.apply(content));
-    }
-
-    /**
      * Returns the {@link BiFunction} to use to sanitize request content before logging.
      */
-    protected BiFunction<? super RequestContext, Object, ?> requestContentSanitizer() {
+    protected final BiFunction<? super RequestContext, Object, ?> requestContentSanitizer() {
         return requestContentSanitizer;
     }
 
@@ -417,22 +322,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize response content before logging. It is common to have the
-     * {@link Function} that removes sensitive content, such as an address, before logging. If unset,
-     * will use {@link Function#identity()}.
-     *
-     * @deprecated Use {@link #responseContentSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
-        requireNonNull(responseContentSanitizer, "responseContentSanitizer");
-        return responseContentSanitizer((ctx, content) -> responseContentSanitizer.apply(content));
-    }
-
-    /**
      * Returns the {@link BiFunction} to use to sanitize response content before logging.
      */
-    protected BiFunction<? super RequestContext, Object, ?> responseContentSanitizer() {
+    protected final BiFunction<? super RequestContext, Object, ?> responseContentSanitizer() {
         return responseContentSanitizer;
     }
 
@@ -458,29 +350,6 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request and response content before logging. It is common
-     * to have the {@link Function} that removes sensitive content, such as an GPS location query and
-     * an address, before logging. If unset, will use {@link Function#identity()}.
-     * This method is a shortcut for:
-     * <pre>{@code
-     * builder.requestContentSanitizer(contentSanitizer);
-     * builder.responseContentSanitizer(contentSanitizer);
-     * }</pre>
-     *
-     * @see #requestContentSanitizer(Function)
-     * @see #responseContentSanitizer(Function)
-     *
-     * @deprecated Use {@link #contentSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder contentSanitizer(Function<Object, ?> contentSanitizer) {
-        requireNonNull(contentSanitizer, "contentSanitizer");
-        requestContentSanitizer(contentSanitizer);
-        responseContentSanitizer(contentSanitizer);
-        return this;
-    }
-
-    /**
      * Sets the {@link BiFunction} to use to sanitize a response cause before logging. You can
      * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
      * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
@@ -493,24 +362,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize a response cause before logging. You can
-     * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
-     * the stack trace completely by returning {@code null} in the {@link Function}. If unset, will use
-     * {@link Function#identity()}.
-     *
-     * @deprecated Use {@link #responseCauseSanitizer(BiFunction)}.
-     */
-    @Deprecated
-    public LoggingDecoratorBuilder responseCauseSanitizer(
-            Function<? super Throwable, ?> responseCauseSanitizer) {
-        requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        return responseCauseSanitizer((ctx, cause) -> responseCauseSanitizer.apply(cause));
-    }
-
-    /**
      * Returns the {@link BiFunction} to use to sanitize response cause before logging.
      */
-    protected BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer() {
         return responseCauseSanitizer;
     }
 

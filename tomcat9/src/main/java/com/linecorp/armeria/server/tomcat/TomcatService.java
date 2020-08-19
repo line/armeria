@@ -327,7 +327,7 @@ public abstract class TomcatService implements HttpService {
     abstract String hostName();
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Connector connector = connector();
         if (connector == null) {
             // Tomcat is not configured / stopped.

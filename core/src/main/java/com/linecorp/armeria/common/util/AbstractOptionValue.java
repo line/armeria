@@ -46,19 +46,19 @@ public abstract class AbstractOptionValue<
     /**
      * Returns the option that this option value holder belongs to.
      */
-    public U option() {
+    public final U option() {
         return option;
     }
 
     /**
      * Returns the value of this option value holder has.
      */
-    public V value() {
+    public final V value() {
         return value;
     }
 
     @Override
-    public String toString() {
+    public final String toString() {
         return option.toString() + '=' + value;
     }
 }

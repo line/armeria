@@ -46,14 +46,17 @@ public final class ContentPreviewerFactoryBuilder {
 
     // TODO(minwoox): Add setters for the seprate request and response previewer.
 
+    private static final int DEFAULT_MAX_LENGTH = 32;
+
     private final ImmutableList.Builder<PreviewSpec> previewSpecsBuilder = ImmutableList.builder();
-    private int maxLength;
+    private int maxLength = DEFAULT_MAX_LENGTH;
     private Charset defaultCharset = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET;
 
     ContentPreviewerFactoryBuilder() {}
 
     /**
      * Sets the maximum length of the produced preview.
+     * If not set, {@value DEFAULT_MAX_LENGTH} is used by default.
      */
     public ContentPreviewerFactoryBuilder maxLength(int maxLength) {
         checkArgument(maxLength > 0, "maxLength : %s (expected: > 0)", maxLength);

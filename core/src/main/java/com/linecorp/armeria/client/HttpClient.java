@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
@@ -25,5 +27,6 @@ import com.linecorp.armeria.common.HttpResponse;
 @FunctionalInterface
 public interface HttpClient extends Client<HttpRequest, HttpResponse> {
     @Override
+    @CheckReturnValue
     HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception;
 }

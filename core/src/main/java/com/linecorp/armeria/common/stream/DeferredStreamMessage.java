@@ -29,9 +29,8 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.stream.InternalSubscriptionOption;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -66,7 +65,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             DeferredStreamMessage.class, Throwable.class, "abortCause");
 
     @Nullable
-    @SuppressWarnings("unused") // Updated only via delegateUpdater
+    @SuppressWarnings("unused") // Updated only via upstreamUpdater
     private volatile StreamMessage<T> upstream;
 
     // Only accessed from subscription's executor.
@@ -95,7 +94,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      * @throws IllegalStateException if the upstream has been set already or
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
-    protected void delegate(StreamMessage<T> upstream) {
+    protected final void delegate(StreamMessage<T> upstream) {
         requireNonNull(upstream, "upstream");
 
         if (!upstreamUpdater.compareAndSet(this, null, upstream)) {
@@ -127,7 +126,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      * @throws IllegalStateException if the upstream has been set already or
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
-    public void close() {
+    public final void close() {
         final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
         m.close();
         delegate(m);
@@ -139,7 +138,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      * @throws IllegalStateException if the delegate has been set already or
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
-    public void close(Throwable cause) {
+    public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
         final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
         m.close(cause);
@@ -147,17 +146,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    public boolean isOpen() {
-        final StreamMessage<T> delegate = this.upstream;
-        if (delegate != null) {
-            return delegate.isOpen();
+    public final boolean isOpen() {
+        final StreamMessage<T> upstream = this.upstream;
+        if (upstream != null) {
+            return upstream.isOpen();
         }
 
         return !whenComplete().isDone();
     }
 
     @Override
-    public boolean isEmpty() {
+    public final boolean isEmpty() {
         final StreamMessage<T> upstream = this.upstream;
         if (upstream != null) {
             return upstream.isEmpty();
@@ -167,12 +166,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    long demand() {
+    final long demand() {
         return pendingDemand;
     }
 
     @Override
-    void request(long n) {
+    final void request(long n) {
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
         assert downstreamSubscription != null;
 
@@ -193,7 +192,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    void cancel() {
+    final void cancel() {
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
         assert downstreamSubscription != null;
 
@@ -228,7 +227,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
+    final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!downstreamSubscriptionUpdater.compareAndSet(this, null, subscription)) {
             final SubscriptionImpl oldSubscription = downstreamSubscription;
             assert oldSubscription != null;
@@ -273,7 +272,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
         final ImmutableList.Builder<SubscriptionOption> builder = ImmutableList.builder();
         if (downstreamSubscription.withPooledObjects()) {
-            builder.add(InternalSubscriptionOption.WITH_POOLED_OBJECTS);
+            builder.add(SubscriptionOption.WITH_POOLED_OBJECTS);
         }
         if (downstreamSubscription.notifyCancellation()) {
             builder.add(SubscriptionOption.NOTIFY_CANCELLATION);
@@ -285,12 +284,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    public void abort() {
+    public final void abort() {
         abort(AbortedStreamException.get());
     }
 
     @Override
-    public void abort(Throwable cause) {
+    public final void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         if (!abortCauseUpdater.compareAndSet(this, null, cause)) {
             return;

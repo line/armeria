@@ -66,6 +66,7 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 
 /**
@@ -275,7 +276,14 @@ public final class JettyService implements HttpService {
 
         final HttpData content = aReq.content();
         if (!content.isEmpty()) {
-            jReq.getHttpInput().addContent(new Content(ByteBuffer.wrap(content.array())));
+            final ByteBuf buf = content.byteBuf();
+            final ByteBuffer nioBuf;
+            if (buf.nioBufferCount() == 1) {
+                nioBuf = buf.nioBuffer();
+            } else {
+                nioBuf = ByteBuffer.wrap(content.array());
+            }
+            jReq.getHttpInput().addContent(new Content(nioBuf));
         }
         jReq.getHttpInput().eof();
     }

@@ -36,14 +36,14 @@ class Java9VersionSpecific extends JavaVersionSpecific {
     }
 
     @Override
-    public final long currentTimeMicros() {
+    public long currentTimeMicros() {
         final Instant now = Clock.systemUTC().instant();
         return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
                 now.getNano());
     }
 
     @Override
-    public final <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
-        return new Java9RequestContextAwareFuture<>(requireNonNull(ctx, "ctx"));
+    public <T> CompletableFuture<T> newContextAwareFuture(RequestContext ctx) {
+        return new Java9ContextAwareFuture<>(requireNonNull(ctx, "ctx"));
     }
 }

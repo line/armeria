@@ -79,7 +79,7 @@ class AbstractEndpointSelectorTest {
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isGreaterThan(900);
     }
 
-    private EndpointSelector newSelector(EndpointGroup endpointGroup) {
+    private static EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new AbstractEndpointSelector(endpointGroup) {
             @Nullable
             @Override

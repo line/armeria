@@ -28,7 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -122,7 +122,7 @@ class ArmeriaRetrofitBuilderTest {
     void build_clientOptions() {
         final Service secretService = ArmeriaRetrofit
                 .builder(server.httpUri())
-                .addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Bearer: access-token")
+                .addHeader(HttpHeaderNames.AUTHORIZATION, "Bearer: access-token")
                 .addConverterFactory(converterFactory)
                 .build()
                 .create(Service.class);
@@ -133,7 +133,7 @@ class ArmeriaRetrofitBuilderTest {
     void build_overrideOption() {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .responseTimeoutMillis(500L).build();
-        assertThat(client.options().get(ClientOption.RESPONSE_TIMEOUT_MILLIS).longValue()).isEqualTo(500);
+        assertThat(client.options().get(ClientOptions.RESPONSE_TIMEOUT_MILLIS).longValue()).isEqualTo(500);
 
         final Service serviceWithDefaultOptions = ArmeriaRetrofit.builder(client)
                                                                  .addConverterFactory(converterFactory)
@@ -145,7 +145,7 @@ class ArmeriaRetrofitBuilderTest {
 
         final Service serviceWithCustomOptions =
                 ArmeriaRetrofit.builder(client)
-                               .option(ClientOption.RESPONSE_TIMEOUT_MILLIS, 4000L)
+                               .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS, 4000L)
                                .addConverterFactory(converterFactory)
                                .build()
                                .create(Service.class);

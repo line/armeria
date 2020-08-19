@@ -31,12 +31,12 @@ abstract class AbstractEventLoopEntry implements ReleasableHolder<EventLoop> {
     }
 
     @Override
-    public EventLoop get() {
+    public final EventLoop get() {
         return eventLoop;
     }
 
     @Override
-    public void release() {
+    public final void release() {
         parent.release(this);
     }
 

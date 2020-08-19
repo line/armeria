@@ -20,9 +20,8 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.util.UnstableApi;
-
-import io.netty.util.ReferenceCountUtil;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * A {@link FixedStreamMessage} that publishes two objects.
@@ -51,7 +50,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             try {
                 onRemoval(obj1);
             } finally {
-                ReferenceCountUtil.safeRelease(obj1);
+                PooledObjects.close(obj1);
             }
             obj1 = null;
         }
@@ -59,7 +58,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             try {
                 onRemoval(obj2);
             } finally {
-                ReferenceCountUtil.safeRelease(obj2);
+                PooledObjects.close(obj2);
             }
             obj2 = null;
         }

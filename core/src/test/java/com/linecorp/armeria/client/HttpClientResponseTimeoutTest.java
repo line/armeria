@@ -21,9 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
-import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -38,6 +38,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -53,25 +54,10 @@ class HttpClientResponseTimeoutTest {
     };
 
     @Test
-    void setRequestTimeoutAtPastTimeClient() {
-        final WebClient client = WebClient
-                .builder(server.httpUri())
-                .decorator((delegate, ctx, req) -> {
-                    ctx.eventLoop().schedule(() -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
-                                             1, TimeUnit.SECONDS);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
-        assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(ResponseTimeoutException.class);
-    }
-
-    @Test
     void shouldSetResponseTimeoutWithNoTimeout() {
         final WebClient client = WebClient
                 .builder(server.httpUri())
-                .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                 .decorator((delegate, ctx, req) -> {
                     ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
                     assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
@@ -91,7 +77,7 @@ class HttpClientResponseTimeoutTest {
     void setRequestTimeoutAtPendingTimeoutTask(Consumer<? super ClientRequestContext> timeoutCustomizer) {
         final WebClient client = WebClient
                 .builder(server.httpUri())
-                .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(30L))
+                .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(30L))
                 .decorator((delegate, ctx, req) -> {
                     // set timeout before initializing timeout controller
                     timeoutCustomizer.accept(ctx);
@@ -106,12 +92,36 @@ class HttpClientResponseTimeoutTest {
         });
     }
 
+    @Test
+    void whenTimedOut() {
+        final AtomicReference<CompletableFuture<Void>> timeoutFutureRef = new AtomicReference<>();
+        final WebClient client = WebClient
+                .builder(server.httpUri())
+                .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(1000L))
+                .decorator((delegate, ctx, req) -> {
+                    timeoutFutureRef.set(ctx.whenResponseTimedOut());
+                    return delegate.execute(ctx, req);
+                })
+                .build();
+
+        await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ResponseTimeoutException.class);
+        });
+
+        await().untilAsserted(() -> {
+            final CompletableFuture<Void> timeoutFuture = timeoutFutureRef.get();
+            assertThat(timeoutFuture).isInstanceOf(UnmodifiableFuture.class);
+            assertThat(timeoutFuture).isDone();
+        });
+    }
+
     private static class TimeoutDecoratorSource implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext)
                 throws Exception {
             final Stream<Consumer<? super ClientRequestContext>> timeoutCustomizers = Stream.of(
-                    ctx -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
                     ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000),
                     ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000),
                     RequestContext::timeoutNow

@@ -19,12 +19,12 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.stream.AbortCauseArgumentProvider.ABORT_CAUSES;
 import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static com.linecorp.armeria.common.util.Exceptions.clearTrace;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -45,12 +45,14 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.DownstreamSubscription;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.SignalQueue;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.StreamMessageProcessor;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -275,6 +277,27 @@ class StreamMessageDuplicatorTest {
     }
 
     @Test
+    void abortedChildStreamShouldNotLeakPublisherElements() {
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final ByteBuf buf = Unpooled.directBuffer().writeByte(0);
+        publisher.write(HttpData.wrap(buf));
+
+        try (StreamMessageDuplicator<HttpData> duplicator =
+                     publisher.toDuplicator(ImmediateEventExecutor.INSTANCE)) {
+
+            final StreamMessage<HttpData> child = duplicator.duplicate();
+            child.abort();
+
+            // Ensure the child did not consume the element.
+            assertThat(buf.refCnt()).isOne();
+        }
+
+        // The duplicator should clean up the published elements after duplicator.close()
+        // since a child can't be created anymore.
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
     void duplicateToClosedDuplicator() {
         final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<String> duplicator =
@@ -344,25 +367,25 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void publishedSignalsCleanedUpWhenDuplicatorIsClosed() {
-        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator<ByteBuf> duplicator =
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
-        final StreamMessage<ByteBuf> duplicated1 = duplicator.duplicate();
-        final StreamMessage<ByteBuf> duplicated2 = duplicator.duplicate();
+        final StreamMessage<HttpData> duplicated1 = duplicator.duplicate();
+        final StreamMessage<HttpData> duplicated2 = duplicator.duplicate();
         duplicator.close();
         // duplicate() is not allowed anymore.
         assertThatThrownBy(duplicator::duplicate).isInstanceOf(IllegalStateException.class);
 
-        duplicated1.subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
-        duplicated2.subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
+        duplicated1.subscribe(new HttpDataSubscriber(), ImmediateEventExecutor.INSTANCE);
+        duplicated2.subscribe(new HttpDataSubscriber(), ImmediateEventExecutor.INSTANCE);
 
         // Only used to read refCnt, not an actual reference.
         final ByteBuf[] bufs = new ByteBuf[30];
         for (int i = 0; i < 30; i++) {
             final ByteBuf buf = newUnpooledBuffer();
             bufs[i] = buf;
-            publisher.write(buf);
+            publisher.write(HttpData.wrap(buf));
             assertThat(buf.refCnt()).isOne();
         }
 
@@ -381,10 +404,10 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void closingDuplicatorDoesNotAbortDuplicatedStream() {
-        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator<ByteBuf> duplicator =
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
-        final ByteBufSubscriber subscriber = new ByteBufSubscriber();
+        final HttpDataSubscriber subscriber = new HttpDataSubscriber();
 
         duplicator.duplicate().subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         duplicator.close();
@@ -398,18 +421,18 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void raiseExceptionInOnNext() {
-        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator<ByteBuf> duplicator =
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
         final ByteBuf buf = newUnpooledBuffer();
-        publisher.write(buf);
+        publisher.write(HttpData.wrap(buf));
         assertThat(buf.refCnt()).isOne();
 
         // Release the buf after writing to the publisher which must not happen!
         buf.release();
 
-        final ByteBufSubscriber subscriber = new ByteBufSubscriber();
+        final HttpDataSubscriber subscriber = new HttpDataSubscriber();
         duplicator.duplicate().subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         assertThatThrownBy(() -> subscriber.completionFuture().get()).hasCauseInstanceOf(
                 IllegalReferenceCountException.class);
@@ -418,14 +441,14 @@ class StreamMessageDuplicatorTest {
     @Test
     void withPooledObjects() {
         final ByteBuf data = newPooledBuffer();
-        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator<ByteBuf> duplicator =
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
-        publisher.write(data);
+        publisher.write(HttpData.wrap(data));
         publisher.close();
 
         final AtomicBoolean completed = new AtomicBoolean();
-        duplicator.duplicate().subscribe(new Subscriber<ByteBuf>() {
+        duplicator.duplicate().subscribe(new Subscriber<HttpData>() {
             @Nullable
             Subscription subscription;
 
@@ -437,22 +460,22 @@ class StreamMessageDuplicatorTest {
             }
 
             @Override
-            public void onNext(ByteBuf b) {
+            public void onNext(HttpData d) {
                 assertThat(data.refCnt()).isEqualTo(2);
                 subscription.cancel();
-                b.release();
+                d.close();
                 completed.set(true);
             }
 
             @Override
             public void onError(Throwable throwable) {
                 // This is not called because we didn't specify NOTIFY_CANCELLATION when subscribe.
-                fail();
+                fail("unexpected onError()", throwable);
             }
 
             @Override
             public void onComplete() {
-                fail();
+                fail("unexpected onComplete()");
             }
         }, WITH_POOLED_OBJECTS);
 
@@ -465,14 +488,14 @@ class StreamMessageDuplicatorTest {
     @Test
     void unpooledByDefault() {
         final ByteBuf data = newPooledBuffer();
-        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator<ByteBuf> duplicator =
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
-        publisher.write(data);
+        publisher.write(HttpData.wrap(data));
         publisher.close();
 
         final AtomicBoolean completed = new AtomicBoolean();
-        duplicator.duplicate().subscribe(new Subscriber<ByteBuf>() {
+        duplicator.duplicate().subscribe(new Subscriber<HttpData>() {
             @Nullable
             Subscription subscription;
 
@@ -484,22 +507,22 @@ class StreamMessageDuplicatorTest {
             }
 
             @Override
-            public void onNext(ByteBuf b) {
+            public void onNext(HttpData d) {
                 assertThat(data.refCnt()).isOne();
                 subscription.cancel();
-                b.release();
+                d.close();
                 completed.set(true);
             }
 
             @Override
             public void onError(Throwable throwable) {
                 // This is not called because we didn't specify NOTIFY_CANCELLATION when subscribe.
-                fail();
+                fail("unexpected onError()", throwable);
             }
 
             @Override
             public void onComplete() {
-                fail();
+                fail("unexpected onComplete()");
             }
         });
 
@@ -512,22 +535,22 @@ class StreamMessageDuplicatorTest {
     @Test
     void notifyCancellation() {
         final ByteBuf data = newPooledBuffer();
-        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator<ByteBuf> duplicator =
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
-        publisher.write(data);
+        publisher.write(HttpData.wrap(data));
         publisher.close();
 
         final AtomicBoolean completed = new AtomicBoolean();
-        duplicator.duplicate().subscribe(new Subscriber<ByteBuf>() {
+        duplicator.duplicate().subscribe(new Subscriber<HttpData>() {
             @Override
             public void onSubscribe(Subscription s) {
                 s.cancel();
             }
 
             @Override
-            public void onNext(ByteBuf byteBuf) {
-                fail();
+            public void onNext(HttpData d) {
+                fail("unexpected onNext(): %s", d);
             }
 
             @Override
@@ -538,7 +561,7 @@ class StreamMessageDuplicatorTest {
 
             @Override
             public void onComplete() {
-                fail();
+                fail("unexpected onComplete()");
             }
         }, NOTIFY_CANCELLATION);
 
@@ -607,7 +630,7 @@ class StreamMessageDuplicatorTest {
         }
     }
 
-    private static class ByteBufSubscriber implements Subscriber<ByteBuf> {
+    private static class HttpDataSubscriber implements Subscriber<HttpData> {
 
         private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
@@ -621,7 +644,7 @@ class StreamMessageDuplicatorTest {
         }
 
         @Override
-        public void onNext(ByteBuf o) {}
+        public void onNext(HttpData o) {}
 
         @Override
         public void onError(Throwable throwable) {

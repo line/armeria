@@ -32,7 +32,7 @@ class RoundRobinStrategyTest {
                              Endpoint.parse("localhost:1234"),
                              Endpoint.parse("localhost:2345"));
 
-    private static final EndpointGroup emptyGroup = EndpointGroup.empty();
+    private static final EndpointGroup emptyGroup = EndpointGroup.of();
 
     private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 

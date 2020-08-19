@@ -174,15 +174,16 @@ public final class AnnotatedServiceFactory {
      * {@link ExceptionHandlerFunction}s and {@link AnnotatedServiceExtensions}.
      */
     public static List<AnnotatedServiceElement> find(
-            String pathPrefix, Object object,
+            String pathPrefix, Object object, boolean useBlockingTaskExecutor,
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions,
             List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
         final List<Method> methods = requestMappingMethods(object);
         return methods.stream()
                       .flatMap((Method method) ->
-                                       create(pathPrefix, object, method, requestConverterFunctions,
-                                              responseConverterFunctions, exceptionHandlerFunctions).stream())
+                                       create(pathPrefix, object, method, useBlockingTaskExecutor,
+                                              requestConverterFunctions, responseConverterFunctions,
+                                              exceptionHandlerFunctions).stream())
                       .collect(toImmutableList());
     }
 
@@ -235,6 +236,7 @@ public final class AnnotatedServiceFactory {
      */
     @VisibleForTesting
     static List<AnnotatedServiceElement> create(String pathPrefix, Object object, Method method,
+                                                boolean useBlockingTaskExecutor,
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers) {
@@ -303,7 +305,10 @@ public final class AnnotatedServiceFactory {
         final ResponseHeaders responseHeaders = defaultHeaders.build();
         final HttpHeaders responseTrailers = defaultTrailers.build();
 
-        final boolean useBlockingTaskExecutor = AnnotationUtil.findFirst(method, Blocking.class) != null;
+        final boolean needToUseBlockingTaskExecutor =
+                useBlockingTaskExecutor ||
+                AnnotationUtil.findFirst(method, Blocking.class) != null ||
+                AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
 
         return routes.stream().map(route -> {
             final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
@@ -311,7 +316,7 @@ public final class AnnotatedServiceFactory {
             return new AnnotatedServiceElement(
                     route,
                     new AnnotatedService(object, method, resolvers, eh, res, route, responseHeaders,
-                                         responseTrailers, useBlockingTaskExecutor),
+                                         responseTrailers, needToUseBlockingTaskExecutor),
                     decorator(method, clazz));
         }).collect(toImmutableList());
     }
@@ -503,10 +508,9 @@ public final class AnnotatedServiceFactory {
                             }
                             if (usePathPatterns) {
                                 httpMethodPaths.addAll(pathPatterns);
-                            }
-                            if (httpMethodPaths.isEmpty()) {
-                                throw new IllegalArgumentException("A path pattern should be specified by" +
-                                                                   " @Path or HTTP method annotations.");
+                            } else if (httpMethodPaths.isEmpty()) {
+                                // Add an empty value if HTTP method annotation value is empty or not specified.
+                                httpMethodPaths.add("");
                             }
                             return ImmutableList.copyOf(httpMethodPaths);
                         }));

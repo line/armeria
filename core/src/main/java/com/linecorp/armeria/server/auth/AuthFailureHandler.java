@@ -17,6 +17,8 @@ package com.linecorp.armeria.server.auth;
 
 import javax.annotation.Nullable;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.HttpService;
@@ -39,6 +41,7 @@ public interface AuthFailureHandler {
      * @param cause {@code null} if the {@link HttpRequest} has been rejected by the {@link Authorizer}.
      *              non-{@code null} if the {@link Authorizer} raised an {@link Exception}.
      */
+    @CheckReturnValue
     HttpResponse authFailed(HttpService delegate, ServiceRequestContext ctx,
                             HttpRequest req, @Nullable Throwable cause) throws Exception;
 }

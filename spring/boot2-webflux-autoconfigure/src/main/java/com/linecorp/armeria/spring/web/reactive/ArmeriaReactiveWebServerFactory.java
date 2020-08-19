@@ -19,11 +19,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureTls;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.contentEncodingDecorator;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.parseDataSize;
@@ -51,8 +47,10 @@ import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.core.env.Environment;
 import org.springframework.http.server.reactive.HttpHandler;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -66,14 +64,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
-import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
-import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
-import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
-import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
-import com.linecorp.armeria.spring.web.ArmeriaWebServer;
+import com.linecorp.armeria.spring.DocServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -87,12 +80,15 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
 
     private final ConfigurableListableBeanFactory beanFactory;
+    private final Environment environment;
 
     /**
      * Creates a new factory instance with the specified {@link ConfigurableListableBeanFactory}.
      */
-    public ArmeriaReactiveWebServerFactory(ConfigurableListableBeanFactory beanFactory) {
+    public ArmeriaReactiveWebServerFactory(ConfigurableListableBeanFactory beanFactory,
+                                           Environment environment) {
         this.beanFactory = requireNonNull(beanFactory, "beanFactory");
+        this.environment = environment;
     }
 
     private static com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
@@ -131,6 +127,11 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     @Override
     public WebServer getWebServer(HttpHandler httpHandler) {
+        final ArmeriaWebServer armeriaWebServerBean = findBean(ArmeriaWebServer.class);
+        if (armeriaWebServerBean != null) {
+            return armeriaWebServerBean;
+        }
+
         final ServerBuilder sb = Server.builder();
         sb.disableServerHeader();
         sb.disableDateHeader();
@@ -193,9 +194,13 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                   Ints.saturatedCast(minResponseSize)));
         }
 
+        final DocServiceBuilder docServiceBuilder = DocService.builder();
+        findBeans(DocServiceConfigurator.class).forEach(
+                configurator -> configurator.configure(docServiceBuilder));
+
         final ArmeriaSettings settings = findBean(ArmeriaSettings.class);
         if (settings != null) {
-            configureArmeriaService(sb, settings);
+            configureArmeriaService(sb, docServiceBuilder, settings);
         }
         findBeans(ArmeriaServerConfigurator.class).forEach(configurator -> configurator.configure(sb));
 
@@ -203,7 +208,28 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        return new ArmeriaWebServer(server, protocol, address, port, beanFactory);
+        final ArmeriaWebServer armeriaWebServer = new ArmeriaWebServer(server, protocol, address, port,
+                                                                       beanFactory);
+        if (!isManagementPortEqualsToServerPort()) {
+            // The management port is set to the Server in ArmeriaSpringActuatorAutoConfiguration.
+            // Since this method will be called twice, need to reuse ArmeriaWebServer.
+            beanFactory.registerSingleton("armeriaWebServer", armeriaWebServer);
+        }
+
+        return armeriaWebServer;
+    }
+
+    @VisibleForTesting
+    boolean isManagementPortEqualsToServerPort() {
+        final Integer managementPort = environment.getProperty("management.server.port", Integer.class);
+        if (managementPort == null) {
+            // The management port is disable
+            return true;
+        }
+        final Integer ensuredManagementPort = ensureValidPort(managementPort);
+        final Integer serverPort = environment.getProperty("server.port", Integer.class);
+        return (serverPort == null && ensuredManagementPort.equals(8080)) ||
+               (ensuredManagementPort != 0 && ensuredManagementPort.equals(serverPort));
     }
 
     private static ServerBuilder configureService(ServerBuilder sb, HttpHandler httpHandler,
@@ -228,32 +254,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         });
     }
 
-    private void configureArmeriaService(ServerBuilder sb, ArmeriaSettings settings) {
-        final MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory =
-                settings.isEnableMetrics() ? firstNonNull(findBean(MeterIdPrefixFunctionFactory.class),
-                                                          MeterIdPrefixFunctionFactory.ofDefault())
-                                           : null;
-
+    private void configureArmeriaService(ServerBuilder sb, DocServiceBuilder docServiceBuilder,
+                                         ArmeriaSettings settings) {
         configurePorts(sb, settings.getPorts());
-        final DocServiceBuilder docServiceBuilder = DocService.builder();
-        configureThriftServices(sb,
-                                docServiceBuilder,
-                                findBeans(ThriftServiceRegistrationBean.class),
-                                meterIdPrefixFunctionFactory,
-                                settings.getDocsPath());
-        configureGrpcServices(sb,
-                              docServiceBuilder,
-                              findBeans(GrpcServiceRegistrationBean.class),
-                              meterIdPrefixFunctionFactory,
-                              settings.getDocsPath());
-        configureHttpServices(sb,
-                              findBeans(HttpServiceRegistrationBean.class),
-                              meterIdPrefixFunctionFactory);
-        configureAnnotatedServices(sb,
-                                   docServiceBuilder,
-                                   findBeans(AnnotatedServiceRegistrationBean.class),
-                                   meterIdPrefixFunctionFactory,
-                                   settings.getDocsPath());
         configureServerWithArmeriaSettings(sb, settings,
                                            firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
                                            findBeans(HealthChecker.class));

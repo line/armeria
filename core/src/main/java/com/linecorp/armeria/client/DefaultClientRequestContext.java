@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -32,6 +33,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -47,6 +49,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -55,8 +58,6 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -86,18 +87,20 @@ public final class DefaultClientRequestContext
     private boolean initialized;
     @Nullable
     private EventLoop eventLoop;
-    private final ClientOptions options;
     @Nullable
     private EndpointGroup endpointGroup;
     @Nullable
     private Endpoint endpoint;
     @Nullable
+    private ContextAwareEventLoop contextAwareEventLoop;
+    @Nullable
     private final String fragment;
     @Nullable
     private final ServiceRequestContext root;
 
+    private final ClientOptions options;
     private final RequestLogBuilder log;
-    private final TimeoutScheduler timeoutScheduler;
+    private final TimeoutScheduler responseTimeoutScheduler;
 
     private long writeTimeoutMillis;
     @Nullable
@@ -134,10 +137,11 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            TimeoutScheduler responseTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
-             requestStartTimeNanos, requestStartTimeMicros);
+             responseTimeoutScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -159,7 +163,8 @@ public final class DefaultClientRequestContext
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             id, method, path, query, fragment, options, req, rpcReq,
+             serviceRequestContext(), /* responseTimeoutScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -168,7 +173,7 @@ public final class DefaultClientRequestContext
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext root,
+            @Nullable ServiceRequestContext root, @Nullable TimeoutScheduler responseTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
@@ -179,11 +184,16 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new TimeoutScheduler(options.responseTimeoutMillis());
 
+        if (responseTimeoutScheduler == null) {
+            this.responseTimeoutScheduler =
+                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
+        } else {
+            this.responseTimeoutScheduler = responseTimeoutScheduler;
+        }
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
-        additionalRequestHeaders = options.get(ClientOption.HTTP_HEADERS);
+        additionalRequestHeaders = options.get(ClientOptions.HEADERS);
         customizers = copyThreadLocalCustomizers();
     }
 
@@ -320,10 +330,15 @@ public final class DefaultClientRequestContext
         final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
         if (headers.scheme() == null || !authority.equals(headers.authority())) {
             final RequestHeadersBuilder headersBuilder =
-                    headers.toBuilder()
-                           .removeAndThen(HttpHeaderNames.HOST)
-                           .authority(authority)
-                           .scheme(sessionProtocol());
+                    headers.toBuilder();
+            if (headers.scheme() == null) {
+                headersBuilder.scheme(sessionProtocol());
+            }
+            if (headersBuilder.get(HttpHeaderNames.HOST) != null) {
+                headersBuilder.set(HttpHeaderNames.HOST, authority);
+            } else {
+                headersBuilder.set(HttpHeaderNames.AUTHORITY, authority);
+            }
             unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
     }
@@ -347,7 +362,7 @@ public final class DefaultClientRequestContext
             requireNonNull(rpcReq, "rpcReq");
         }
 
-        eventLoop = ctx.eventLoop();
+        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         endpointGroup = ctx.endpointGroup();
         updateEndpoint(endpoint);
@@ -355,7 +370,8 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(ctx.responseTimeoutMillis());
+        responseTimeoutScheduler =
+                new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
@@ -418,9 +434,12 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public EventLoop eventLoop() {
+    public ContextAwareEventLoop eventLoop() {
         checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
-        return eventLoop;
+        if (contextAwareEventLoop != null) {
+            return contextAwareEventLoop;
+        }
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override
@@ -479,45 +498,24 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return timeoutScheduler.timeoutMillis();
+        return TimeUnit.NANOSECONDS.toMillis(responseTimeoutScheduler.timeoutNanos());
     }
 
     @Override
     public void clearResponseTimeout() {
-        timeoutScheduler.clearTimeout();
+        responseTimeoutScheduler.clearTimeout();
     }
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(requireNonNull(mode, "mode"), responseTimeoutMillis);
-    }
-
-    @Deprecated
-    @Override
-    public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
-        timeoutScheduler.setTimeoutAtMillis(responseTimeoutAtMillis);
+        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                 TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
     }
 
     @Override
-    @Nullable
-    public Runnable responseTimeoutHandler() {
-        return responseTimeoutHandler;
-    }
-
-    @Override
-    public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
-        this.responseTimeoutHandler = requireNonNull(responseTimeoutHandler, "responseTimeoutHandler");
-    }
-
-    /**
-     * Sets the {@code responseTimeoutController} that is set to a new timeout when
-     * the {@linkplain #responseTimeoutMillis()} response timeout} setting is changed.
-     *
-     * <p>Note: This method is meant for internal use by client-side protocol implementation to reschedule
-     * a timeout task when a user updates the response timeout configuration.
-     */
-    void setResponseTimeoutController(TimeoutController responseTimeoutController) {
-        timeoutScheduler.setTimeoutController(responseTimeoutController, eventLoop());
+    public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
+        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                 requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override
@@ -574,14 +572,28 @@ public final class DefaultClientRequestContext
         return log;
     }
 
+    TimeoutScheduler responseTimeoutScheduler() {
+        return responseTimeoutScheduler;
+    }
+
     @Override
     public void timeoutNow() {
-        timeoutScheduler.timeoutNow();
+        responseTimeoutScheduler.timeoutNow();
     }
 
     @Override
     public boolean isTimedOut() {
-        return timeoutScheduler.isTimedOut();
+        return responseTimeoutScheduler.isTimedOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseTimingOut() {
+        return responseTimeoutScheduler.whenTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseTimedOut() {
+        return responseTimeoutScheduler.whenTimedOut();
     }
 
     @Override

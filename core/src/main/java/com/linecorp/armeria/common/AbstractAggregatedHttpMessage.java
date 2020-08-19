@@ -27,12 +27,12 @@ abstract class AbstractAggregatedHttpMessage implements AggregatedHttpMessage {
     }
 
     @Override
-    public HttpData content() {
+    public final HttpData content() {
         return content;
     }
 
     @Override
-    public HttpHeaders trailers() {
+    public final HttpHeaders trailers() {
         return trailers;
     }
 }

@@ -125,7 +125,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
+    public final O execute(ClientRequestContext ctx, I req) throws Exception {
         final State state =
                 new State(maxTotalAttempts, responseTimeoutMillisForEachAttempt, ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
@@ -165,7 +165,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return retryRuleWithContent;
     }
 
-    RetryRule fromRetryRuleWithContent() {
+    final RetryRule fromRetryRuleWithContent() {
         checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
         return fromRetryRuleWithContent;
     }
@@ -178,11 +178,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                                             Runnable retryTask, long nextDelayMillis) {
         try {
             if (nextDelayMillis == 0) {
-                ctx.contextAwareEventLoop().execute(retryTask);
+                ctx.eventLoop().execute(retryTask);
             } else {
                 @SuppressWarnings("unchecked")
                 final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
-                        .contextAwareEventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
+                        .eventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
                 scheduledFuture.addListener(future -> {
                     if (future.isCancelled()) {
                         // future is cancelled when the client factory is closed.
@@ -295,7 +295,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         if (endpointGroup != null && !initialAttempt) {
             derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.selectNow(ctx));
         } else {
-            derived = ctx.newDerivedContext(id, req, rpcReq);
+            derived = ctx.newDerivedContext(id, req, rpcReq, ctx.endpoint());
         }
 
         final RequestLogAccess parentLog = ctx.log();
@@ -349,7 +349,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return derived;
     }
 
-    private static class State {
+    private static final class State {
 
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;

@@ -24,7 +24,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import org.junit.Test;
@@ -37,6 +36,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -62,11 +62,12 @@ public class CachingHttpFileTest {
     @Test
     public void nonExistentFile() throws Exception {
         final HttpFile cached = HttpFile.ofCached(HttpFile.nonExistent(), Integer.MAX_VALUE);
-        assertThat(cached.readAttributes()).isNull();
-        assertThat(cached.readHeaders()).isNull();
-        assertThat(cached.read(executor, alloc)).isNull();
-        assertThat(cached.aggregate(executor).join()).isSameAs(HttpFile.nonExistent());
-        assertThat(cached.aggregateWithPooledObjects(executor, alloc).join()).isSameAs(HttpFile.nonExistent());
+        assertThat(cached.readAttributes(executor).join()).isNull();
+        assertThat(cached.readHeaders(executor).join()).isNull();
+        assertThat(cached.read(executor, alloc).join()).isNull();
+        assertThat(cached.aggregate(executor).join()).isSameAs(AggregatedHttpFile.nonExistent());
+        assertThat(cached.aggregateWithPooledObjects(executor, alloc).join())
+                .isSameAs(AggregatedHttpFile.nonExistent());
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertThat(cached.asService().serve(ctx, ctx.request()).aggregate().join().status())
@@ -81,64 +82,64 @@ public class CachingHttpFileTest {
         final HttpFileAttributes attrs = new HttpFileAttributes(3, 0);
         final ResponseHeaders headers = ResponseHeaders.of(200);
         final HttpFile uncached = mock(HttpFile.class);
-        when(uncached.readAttributes()).thenReturn(attrs);
-        when(uncached.readHeaders()).thenReturn(headers);
+        when(uncached.readAttributes(executor)).thenReturn(UnmodifiableFuture.completedFuture(attrs));
+        when(uncached.readHeaders(executor)).thenReturn(UnmodifiableFuture.completedFuture(headers));
         when(uncached.read(any(), any())).thenAnswer(invocation -> HttpResponse.of("foo"));
         when(uncached.aggregate(any())).thenAnswer(
-                invocation -> CompletableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("foo"), 0)));
+                invocation -> UnmodifiableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("foo"), 0)));
 
         final HttpFile cached = HttpFile.ofCached(uncached, 3);
 
         // Ensure readAttributes() is not cached.
-        assertThat(cached.readAttributes()).isSameAs(attrs);
-        verify(uncached, times(1)).readAttributes();
+        assertThat(cached.readAttributes(executor).join()).isSameAs(attrs);
+        verify(uncached, times(1)).readAttributes(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
-        assertThat(cached.readAttributes()).isSameAs(attrs);
-        verify(uncached, times(1)).readAttributes();
+        assertThat(cached.readAttributes(executor).join()).isSameAs(attrs);
+        verify(uncached, times(1)).readAttributes(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
         // Ensure readHeaders() is not cached.
-        assertThat(cached.readHeaders()).isSameAs(headers);
-        verify(uncached, times(1)).readHeaders();
+        assertThat(cached.readHeaders(executor).join()).isSameAs(headers);
+        verify(uncached, times(1)).readHeaders(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
-        assertThat(cached.readHeaders()).isSameAs(headers);
-        verify(uncached, times(1)).readHeaders();
+        assertThat(cached.readHeaders(executor).join()).isSameAs(headers);
+        verify(uncached, times(1)).readHeaders(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
         // First read() should trigger uncached.aggregate().
-        HttpResponse res = cached.read(executor, alloc);
+        HttpResponse res = cached.read(executor, alloc).join();
         assertThat(res).isNotNull();
         assertThat(res.aggregate().join().contentUtf8()).isEqualTo("foo");
-        verify(uncached, times(1)).readAttributes();
+        verify(uncached, times(1)).readAttributes(executor);
         verify(uncached, times(1)).aggregate(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
         // Second read() should not trigger uncached.aggregate().
-        res = cached.read(executor, alloc);
+        res = cached.read(executor, alloc).join();
         assertThat(res).isNotNull();
         assertThat(res.aggregate().join().contentUtf8()).isEqualTo("foo");
-        verify(uncached, times(1)).readAttributes();
+        verify(uncached, times(1)).readAttributes(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
         // Update the uncached file's attributes to invalidate the cache.
         final HttpFileAttributes newAttrs = new HttpFileAttributes(3, 1);
-        when(uncached.readAttributes()).thenReturn(newAttrs);
+        when(uncached.readAttributes(executor)).thenReturn(UnmodifiableFuture.completedFuture(newAttrs));
         when(uncached.aggregate(any())).thenAnswer(
-                invocation -> CompletableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("bar"), 1)));
+                invocation -> UnmodifiableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("bar"), 1)));
 
         // Make sure read() invalidates the cache and triggers uncached.aggregate().
-        res = cached.read(executor, alloc);
+        res = cached.read(executor, alloc).join();
         assertThat(res).isNotNull();
         assertThat(res.aggregate().join().contentUtf8()).isEqualTo("bar");
-        verify(uncached, times(1)).readAttributes();
+        verify(uncached, times(1)).readAttributes(executor);
         verify(uncached, times(1)).aggregate(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
@@ -152,36 +153,36 @@ public class CachingHttpFileTest {
         final HttpFileAttributes attrs = new HttpFileAttributes(5, 0);
         final ResponseHeaders headers = ResponseHeaders.of(200);
         final HttpResponse res = HttpResponse.of("large");
-        final CompletableFuture<AggregatedHttpFile> aggregated =
-                CompletableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("large"), 0));
-        final CompletableFuture<AggregatedHttpFile> aggregatedWithPooledObjs =
-                CompletableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("large"), 0));
+        final AggregatedHttpFile aggregated = AggregatedHttpFile.of(HttpData.ofUtf8("large"), 0);
+        final AggregatedHttpFile aggregatedWithPooledObjs = AggregatedHttpFile.of(HttpData.ofUtf8("large"), 0);
         final HttpFile uncached = mock(HttpFile.class);
-        when(uncached.readAttributes()).thenReturn(attrs);
-        when(uncached.readHeaders()).thenReturn(headers);
-        when(uncached.read(any(), any())).thenReturn(res);
-        when(uncached.aggregate(any())).thenReturn(aggregated);
-        when(uncached.aggregateWithPooledObjects(any(), any())).thenReturn(aggregatedWithPooledObjs);
+        when(uncached.readAttributes(executor)).thenReturn(UnmodifiableFuture.completedFuture(attrs));
+        when(uncached.readHeaders(executor)).thenReturn(UnmodifiableFuture.completedFuture(headers));
+        when(uncached.read(any(), any())).thenReturn(UnmodifiableFuture.completedFuture(res));
+        when(uncached.aggregate(any())).thenReturn(UnmodifiableFuture.completedFuture(aggregated));
+        when(uncached.aggregateWithPooledObjects(any(), any()))
+                .thenReturn(UnmodifiableFuture.completedFuture(aggregatedWithPooledObjs));
 
         final HttpFile cached = HttpFile.ofCached(uncached, 4);
 
         // read() should be delegated to 'uncached'.
-        assertThat(cached.read(executor, alloc)).isSameAs(res);
-        verify(uncached, times(1)).readAttributes();
+        assertThat(cached.read(executor, alloc).join()).isSameAs(res);
+        verify(uncached, times(1)).readAttributes(executor);
         verify(uncached, times(1)).read(executor, alloc);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
         // aggregate() should be delegated to 'uncached'.
-        assertThat(cached.aggregate(executor)).isSameAs(aggregated);
-        verify(uncached, times(1)).readAttributes();
+        assertThat(cached.aggregate(executor).join()).isSameAs(aggregated);
+        verify(uncached, times(1)).readAttributes(executor);
         verify(uncached, times(1)).aggregate(executor);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
 
         // aggregateWithPooledObjects() should be delegated to 'uncached'.
-        assertThat(cached.aggregateWithPooledObjects(executor, alloc)).isSameAs(aggregatedWithPooledObjs);
-        verify(uncached, times(1)).readAttributes();
+        assertThat(cached.aggregateWithPooledObjects(executor, alloc).join())
+                .isSameAs(aggregatedWithPooledObjs);
+        verify(uncached, times(1)).readAttributes(executor);
         verify(uncached, times(1)).aggregateWithPooledObjects(executor, alloc);
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);

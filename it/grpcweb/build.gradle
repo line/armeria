@@ -1,0 +1,9 @@
+dependencies {
+    testImplementation project(':grpc')
+
+    testImplementation 'ch.megard:akka-http-cors_2.13'
+    testImplementation 'com.lightbend.akka.grpc:akka-grpc-runtime_2.13'
+    testImplementation 'com.typesafe.akka:akka-actor-typed_2.13:2.6.8'
+    testImplementation 'com.typesafe.akka:akka-discovery_2.13:2.6.8'
+    testImplementation 'com.typesafe.akka:akka-stream_2.13:2.6.8'
+}

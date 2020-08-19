@@ -19,22 +19,32 @@ package com.linecorp.armeria.common.stream;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.internal.stream.InternalSubscriptionOption;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * Options used when subscribing to a {@link StreamMessage}. This class is sealed to Armeria and can only be
- * implemented here.
+ * Options used when subscribing to a {@link StreamMessage}.
  *
  * @see StreamMessage#subscribe(Subscriber, SubscriptionOption...)
  * @see StreamMessage#subscribe(Subscriber, EventExecutor, SubscriptionOption...)
  */
-public interface SubscriptionOption {
+public enum SubscriptionOption {
 
     /**
      * To get notified by {@link Subscriber#onError(Throwable)} even when the {@link StreamMessage} is
      * {@linkplain Subscription#cancel() cancelled}.
      */
-    SubscriptionOption NOTIFY_CANCELLATION = new InternalSubscriptionOption();
+    NOTIFY_CANCELLATION,
+
+    /**
+     * (Advanced users only) To receive the pooled {@link HttpData} as is, without making a copy.
+     * If you don't know what this means, do not specify this when you subscribe the {@link StreamMessage}.
+     *
+     * @see PooledObjects
+     */
+    @UnstableApi
+    WITH_POOLED_OBJECTS
 }

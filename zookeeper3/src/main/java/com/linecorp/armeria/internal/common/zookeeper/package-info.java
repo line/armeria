@@ -19,4 +19,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.internal.common.zookeeper;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

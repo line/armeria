@@ -32,11 +32,11 @@ abstract class PooledChannel implements ReleasableHolder<Channel> {
     }
 
     @Override
-    public Channel get() {
+    public final Channel get() {
         return channel;
     }
 
-    SessionProtocol protocol() {
+    final SessionProtocol protocol() {
         return protocol;
     }
 }

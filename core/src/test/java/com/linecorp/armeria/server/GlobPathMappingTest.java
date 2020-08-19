@@ -83,18 +83,6 @@ class GlobPathMappingTest {
     }
 
     @Test
-    void testLoggerName() throws Exception {
-        assertThat(glob("/foo/bar/**").loggerName()).isEqualTo("foo.bar.__");
-        assertThat(glob("foo").loggerName()).isEqualTo("__.foo");
-    }
-
-    @Test
-    void testMetricName() throws Exception {
-        assertThat(glob("/foo/bar/**").meterTag()).isEqualTo("glob:/foo/bar/**");
-        assertThat(glob("foo").meterTag()).isEqualTo("glob:/**/foo");
-    }
-
-    @Test
     void params() throws Exception {
         Route route = glob("baz");
         assertThat(route.paramNames()).isEmpty();

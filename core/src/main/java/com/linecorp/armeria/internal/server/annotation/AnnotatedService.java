@@ -80,7 +80,7 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
  * This class is not supposed to be instantiated by a user. Please check out the documentation
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
-public class AnnotatedService implements HttpService {
+public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
     static final ServiceLoader<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
@@ -242,8 +242,6 @@ public class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        ctx.logBuilder().name(serviceName(), methodName());
-
         final CompletableFuture<AggregatedHttpRequest> f;
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
             f = req.aggregate();

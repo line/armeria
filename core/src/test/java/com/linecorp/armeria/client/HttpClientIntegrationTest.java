@@ -76,9 +76,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
-import com.linecorp.armeria.common.unsafe.PooledHttpResponse;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
@@ -88,14 +86,10 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.server.unsafe.PooledHttpService;
-import com.linecorp.armeria.server.unsafe.SimplePooledDecoratingHttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.util.AsciiString;
-import io.netty.util.ReferenceCountUtil;
 
 class HttpClientIntegrationTest {
 
@@ -139,18 +133,17 @@ class HttpClientIntegrationTest {
         }
     }
 
-    private static final class PoolAwareDecorator extends SimplePooledDecoratingHttpService {
+    private static final class PoolAwareDecorator extends SimpleDecoratingHttpService {
 
         private PoolAwareDecorator(HttpService delegate) {
             super(delegate);
         }
 
         @Override
-        protected HttpResponse serve(PooledHttpService delegate, ServiceRequestContext ctx,
-                                     PooledHttpRequest req) throws Exception {
-            final PooledHttpResponse res = delegate.serve(ctx, req);
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            final HttpResponse res = unwrap().serve(ctx, req);
             final HttpResponseWriter decorated = HttpResponse.streaming();
-            res.subscribeWithPooledObjects(new Subscriber<HttpObject>() {
+            res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
                     s.request(Long.MAX_VALUE);
@@ -158,11 +151,9 @@ class HttpClientIntegrationTest {
 
                 @Override
                 public void onNext(HttpObject httpObject) {
-                    if (httpObject instanceof ByteBufHolder) {
-                        try {
-                            decorated.write(HttpData.copyOf(((ByteBufHolder) httpObject).content()));
-                        } finally {
-                            ReferenceCountUtil.safeRelease(httpObject);
+                    if (httpObject instanceof HttpData) {
+                        try (HttpData data = (HttpData) httpObject) {
+                            decorated.write(HttpData.copyOf(data.byteBuf()));
                         }
                     } else {
                         decorated.write(httpObject);
@@ -178,7 +169,7 @@ class HttpClientIntegrationTest {
                 public void onComplete() {
                     decorated.close();
                 }
-            });
+            }, SubscriptionOption.WITH_POOLED_OBJECTS);
             return decorated;
         }
     }
@@ -191,7 +182,7 @@ class HttpClientIntegrationTest {
             final ByteBuf buf = ctx.alloc().buffer();
             buf.writeCharSequence("pooled content", StandardCharsets.UTF_8);
             releasedByteBuf.set(buf);
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, PooledHttpData.wrap(buf));
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.wrap(buf));
         }
     }
 
@@ -422,8 +413,8 @@ class HttpClientIntegrationTest {
 
     private static void testEndpointWithAlternateAuthority(EndpointGroup group) {
         final WebClient client = WebClient.builder(SessionProtocol.HTTP, group)
-                                          .setHttpHeader(HttpHeaderNames.AUTHORITY,
-                                                         "255.255.255.255.xip.io")
+                                          .setHeader(HttpHeaderNames.AUTHORITY,
+                                                     "255.255.255.255.xip.io")
                                           .build();
 
         final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
@@ -460,7 +451,7 @@ class HttpClientIntegrationTest {
     private static void testHeaderOverridableByClientOption(String path, AsciiString headerName,
                                                             String headerValue) throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .setHttpHeader(headerName, headerValue)
+                                          .setHeader(headerName, headerValue)
                                           .build();
 
         final AggregatedHttpResponse response = client.get(path).aggregate().get();
@@ -520,10 +511,10 @@ class HttpClientIntegrationTest {
 
             // Send a request. Note that we do not wait for a response anywhere because we are only interested
             // in testing what client sends.
-            WebClient.builder("none+h1c://127.0.0.1:" + port)
-                     .factory(clientFactory)
-                     .build()
-                     .get(path);
+            final HttpResponse res = WebClient.builder("none+h1c://127.0.0.1:" + port)
+                                              .factory(clientFactory)
+                                              .build()
+                                              .get(path);
             ss.setSoTimeout(10000);
             s = ss.accept();
 
@@ -540,6 +531,8 @@ class HttpClientIntegrationTest {
             // Should not send anything more.
             s.setSoTimeout(1000);
             assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
+
+            res.abort();
         } finally {
             Closeables.close(s, true);
         }
@@ -656,7 +649,7 @@ class HttpClientIntegrationTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -672,7 +665,7 @@ class HttpClientIntegrationTest {
                 AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -688,7 +681,7 @@ class HttpClientIntegrationTest {
                 AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @ParameterizedTest

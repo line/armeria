@@ -63,12 +63,12 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
         this.ruleWithContent = ruleWithContent;
     }
 
-    CircuitBreakerRule rule() {
+    final CircuitBreakerRule rule() {
         checkState(rule != null, "rule is not set.");
         return rule;
     }
 
-    CircuitBreakerRuleWithContent<O> ruleWithContent() {
+    final CircuitBreakerRuleWithContent<O> ruleWithContent() {
         checkState(ruleWithContent != null, "ruleWithContent is not set.");
         return ruleWithContent;
     }
@@ -84,7 +84,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
         return this;
     }
 
-    CircuitBreakerMapping mapping() {
+    final CircuitBreakerMapping mapping() {
         return mapping;
     }
 

@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -203,7 +201,6 @@ public interface RequestOnlyLog extends RequestLogAccess {
      * </ul>
      * This property is often used as a meter tag or distributed trace's span name.
      */
-    @Nullable
     String name();
 
     /**
@@ -211,7 +208,6 @@ public interface RequestOnlyLog extends RequestLogAccess {
      * {@link #name()} using {@code '/'}, of the {@link Request}.
      * This property is often used as a meter tag or distributed trace's span name.
      */
-    @Nullable
     String fullName();
 
     /**
@@ -310,47 +306,4 @@ public interface RequestOnlyLog extends RequestLogAccess {
     String toStringRequestOnly(BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
                                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
                                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer);
-
-    /**
-     * Returns the string representation of the {@link Request}. This method is a shortcut for:
-     * <pre>{@code
-     * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
-     * }</pre>
-     *
-     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of
-     *                         the {@link Function} is what is actually logged as headers.
-     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of
-     *                         the {@link Function} is what is actually logged as content.
-     *
-     * @deprecated Use {@link #toStringRequestOnly(BiFunction, BiFunction)}.
-     */
-    @Deprecated
-    default String toStringRequestOnly(Function<? super HttpHeaders, ?> headersSanitizer,
-                                       Function<Object, ?> contentSanitizer) {
-        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
-    }
-
-    /**
-     * Returns the string representation of the {@link Request}.
-     *
-     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of
-     *                         the {@link Function} is what is actually logged as headers.
-     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of
-     *                         the {@link Function} is what is actually logged as content.
-     * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of
-     *                          the {@link Function} is what is actually logged as trailers.
-     *
-     * @deprecated Use {@link #toStringRequestOnly(BiFunction, BiFunction, BiFunction)}.
-     */
-    @Deprecated
-    default String toStringRequestOnly(Function<? super RequestHeaders, ?> headersSanitizer,
-                                       Function<Object, ?> contentSanitizer,
-                                       Function<? super HttpHeaders, ?> trailersSanitizer) {
-        requireNonNull(headersSanitizer, "headersSanitizer");
-        requireNonNull(contentSanitizer, "contentSanitizer");
-        requireNonNull(trailersSanitizer, "trailersSanitizer");
-        return toStringRequestOnly((ctx, headers) -> headersSanitizer.apply(headers),
-                                   (ctx, content) -> contentSanitizer.apply(content),
-                                   (ctx, trailers) -> trailersSanitizer.apply(trailers));
-    }
 }

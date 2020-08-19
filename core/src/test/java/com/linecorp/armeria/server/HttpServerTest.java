@@ -81,7 +81,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.PathAndQuery;
@@ -151,7 +150,7 @@ class HttpServerTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                     final HttpResponse res = HttpResponse.from(responseFuture);
-                    ctx.setRequestTimeoutHandler(
+                    ctx.whenRequestTimingOut().thenRun(
                             () -> responseFuture.complete(
                                     HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
@@ -164,7 +163,7 @@ class HttpServerTest {
             sb.service("/delay-custom-deferred/{delay}", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                 final HttpResponse res = HttpResponse.from(responseFuture);
-                ctx.setRequestTimeoutHandler(
+                ctx.whenRequestTimingOut().thenRun(
                         () -> responseFuture.complete(HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
                 final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
@@ -216,7 +215,7 @@ class HttpServerTest {
                                         final ByteBuf content = PooledByteBufAllocator.DEFAULT
                                                 .buffer(1)
                                                 .writeByte('0' + finalI);
-                                        data = PooledHttpData.wrap(content);
+                                        data = HttpData.wrap(content);
                                     } else {
                                         data = HttpData.ofAscii(String.valueOf(finalI));
                                     }
@@ -441,7 +440,7 @@ class HttpServerTest {
 
     @AfterAll
     static void destroy() {
-        CompletableFuture.runAsync(clientFactory::close);
+        clientFactory.closeAsync();
     }
 
     @BeforeEach

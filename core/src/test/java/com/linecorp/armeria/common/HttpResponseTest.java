@@ -69,23 +69,19 @@ class HttpResponseTest {
 
     @Test
     void shouldReleaseEmptyContent() {
-        final EmptyReferenceCountedHttpData data = new EmptyReferenceCountedHttpData();
-
-        data.retain();
+        EmptyPooledHttpData data = new EmptyPooledHttpData();
         HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, data);
-        assertThat(data.refCnt()).isOne();
+        assertThat(data.refCnt()).isZero();
 
-        data.retain();
+        data = new EmptyPooledHttpData();
         HttpResponse.of(ResponseHeaders.of(200), data);
-        assertThat(data.refCnt()).isOne();
+        assertThat(data.refCnt()).isZero();
 
-        data.retain();
+        data = new EmptyPooledHttpData();
         HttpResponse.of(ResponseHeaders.of(200),
                         data,
                         HttpHeaders.of("some-trailer", "value"));
-        assertThat(data.refCnt()).isOne();
-
-        data.release();
+        assertThat(data.refCnt()).isZero();
     }
 
     @Test

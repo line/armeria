@@ -31,7 +31,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 
 /**
- * A skeletal builder class which helps easier implementation of an {@link HttpFile} builder.
+ * A skeletal builder class which helps easier implementation of {@link HttpFileBuilder} or
+ * {@link AggregatedHttpFileBuilder}.
  */
 public abstract class AbstractHttpFileBuilder {
 
@@ -149,7 +150,7 @@ public abstract class AbstractHttpFileBuilder {
      * {@link HttpResponse}.
      */
     protected final HttpHeaders buildHeaders() {
-        return headers != null ? headers.build() : HttpHeaders.of();
+        return headers != null ? headers.removeAndThen(HttpHeaderNames.STATUS).build() : HttpHeaders.of();
     }
 
     private HttpHeadersBuilder headersBuilder() {

@@ -18,14 +18,13 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static io.netty.util.AsciiString.c2b;
+import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -41,21 +40,19 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
@@ -65,6 +62,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
+import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -81,8 +79,6 @@ import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.util.AsciiString;
 
 /**
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
@@ -96,10 +92,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<ArmeriaServerCall> pendingMessagesUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaServerCall.class, "pendingMessages");
-
-    // Only most significant bit of a byte is set.
-    @VisibleForTesting
-    static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
 
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
 
@@ -140,6 +132,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private volatile boolean listenerClosed;
     private boolean sendHeadersCalled;
     private boolean closeCalled;
+    private boolean inHalfClose;
 
     private volatile int pendingMessages;
 
@@ -161,15 +154,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
-                new ArmeriaMessageDeframer(
-                        this,
-                        maxInboundMessageSizeBytes,
-                        ctx.alloc())
+                new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc(), grpcWebText)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry)),
                 this);
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
+        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding =
@@ -197,7 +188,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             messageReader.request(numMessages);
         } else {
-            ctx.eventLoop().submit(() -> messageReader.request(numMessages));
+            ctx.eventLoop().execute(() -> messageReader.request(numMessages));
         }
     }
 
@@ -206,7 +197,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendHeaders(metadata);
         } else {
-            ctx.eventLoop().submit(() -> doSendHeaders(metadata));
+            ctx.eventLoop().execute(() -> doSendHeaders(metadata));
         }
     }
 
@@ -247,7 +238,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message);
         } else {
-            ctx.eventLoop().submit(() -> doSendMessage(message));
+            ctx.eventLoop().execute(() -> doSendMessage(message));
         }
     }
 
@@ -294,10 +285,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void close(Status status, Metadata metadata) {
-        if (ctx.eventLoop().inEventLoop()) {
+        // TODO(ikhoon): `onHalfClose()` could call directly 'ServerCall.close()' due to a race condition of
+        //               Coroutine in gRPC-Kotline. By rescheduling the close event, we can avoid the race
+        //               condition. Remove `inHalfClose` flag once
+        //               https://github.com/grpc/grpc-kotlin/issues/151 is resolved properly.
+        if (ctx.eventLoop().inEventLoop() && !inHalfClose) {
             doClose(status, metadata);
         } else {
-            ctx.eventLoop().submit(() -> doClose(status, metadata));
+            ctx.eventLoop().execute(() -> doClose(status, metadata));
         }
     }
 
@@ -311,19 +306,21 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             return;
         }
 
-        final HttpHeaders trailers = statusToTrailers(ctx, status, metadata, sendHeadersCalled);
-        final HttpObject trailersObj;
-        if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
-            // Normal trailers are not supported in grpc-web and must be encoded as a message.
-            // Message compression is not supported in grpc-web, so we don't bother using the normal
-            // ArmeriaMessageFramer.
-            trailersObj = serializeTrailersAsMessage(trailers);
-        } else {
-            trailersObj = trailers;
-        }
+        final HttpHeaders trailers = statusToTrailers(
+                ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
+                status, metadata);
         try {
-            if (res.tryWrite(trailersObj)) {
-                res.close();
+            if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
+                GrpcWebTrailers.set(ctx, trailers);
+                // Normal trailers are not supported in grpc-web and must be encoded as a message.
+                final ByteBuf serialized = serializeTrailersAsMessage(ctx.alloc(), trailers);
+                if (res.tryWrite(messageFramer.writePayload(serialized, true))) {
+                    res.close();
+                }
+            } else {
+                if (res.tryWrite(trailers)) {
+                    res.close();
+                }
             }
         } finally {
             closeListener(status);
@@ -385,8 +382,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
         }
 
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+
         try {
-            request = marshaller.deserializeRequest(message);
+            request = marshaller.deserializeRequest(message, grpcWebText);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -395,7 +394,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
         }
 
-        if (unsafeWrapRequestBuffers && buf != null) {
+        if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
             GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
         }
 
@@ -432,9 +431,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void invokeHalfClose() {
         try (SafeCloseable ignored = ctx.push()) {
+            inHalfClose = true;
             listener.onHalfClose();
         } catch (Throwable t) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
+        } finally {
+            inHalfClose = false;
         }
     }
 
@@ -517,22 +519,22 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     static HttpHeaders statusToTrailers(
-            ServiceRequestContext ctx, Status status, Metadata metadata, boolean headersSent) {
-        final HttpHeadersBuilder trailers = GrpcTrailersUtil.statusToTrailers(
-                status.getCode().value(), status.getDescription(), headersSent);
+            ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
+        GrpcTrailersUtil.addStatusMessageToTrailers(
+                trailersBuilder, status.getCode().value(), status.getDescription());
 
-        MetadataUtil.fillHeaders(metadata, trailers);
+        MetadataUtil.fillHeaders(metadata, trailersBuilder);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
-            trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
-                         Base64.getEncoder().encodeToString(proto.toByteArray()));
+            trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
+                               Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
         final HttpHeaders additionalTrailers = ctx.additionalResponseTrailers();
         ctx.mutateAdditionalResponseTrailers(HttpHeadersBuilder::clear);
-        trailers.add(additionalTrailers);
-        return trailers.build();
+        trailersBuilder.add(additionalTrailers);
+        return trailersBuilder.build();
     }
 
     HttpStreamReader messageReader() {
@@ -542,27 +544,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     void setListener(Listener<I> listener) {
         checkState(this.listener == null, "listener already set");
         this.listener = requireNonNull(listener, "listener");
-    }
-
-    private PooledHttpData serializeTrailersAsMessage(HttpHeaders trailers) {
-        final ByteBuf serialized = ctx.alloc().buffer();
-        boolean success = false;
-        try {
-            serialized.writeByte(TRAILERS_FRAME_HEADER);
-            // Skip, we'll set this after serializing the headers.
-            serialized.writeInt(0);
-            for (Map.Entry<AsciiString, String> trailer : trailers) {
-                encodeHeader(trailer.getKey(), trailer.getValue(), serialized);
-            }
-            final int messageSize = serialized.readableBytes() - 5;
-            serialized.setInt(1, messageSize);
-            success = true;
-        } finally {
-            if (!success) {
-                serialized.release();
-            }
-        }
-        return PooledHttpData.wrap(serialized).withEndOfStream();
     }
 
     @Nullable
@@ -576,37 +557,5 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             return ForwardingDecompressor.forGrpc(decompressor);
         }
         return ForwardingDecompressor.forGrpc(Identity.NONE);
-    }
-
-    // Copied from io.netty.handler.codec.http.HttpHeadersEncoder
-    private static void encodeHeader(CharSequence name, CharSequence value, ByteBuf buf) {
-        final int nameLen = name.length();
-        final int valueLen = value.length();
-        final int entryLen = nameLen + valueLen + 4;
-        buf.ensureWritable(entryLen);
-        int offset = buf.writerIndex();
-        writeAscii(buf, offset, name, nameLen);
-        offset += nameLen;
-        buf.setByte(offset++, ':');
-        buf.setByte(offset++, ' ');
-        writeAscii(buf, offset, value, valueLen);
-        offset += valueLen;
-        buf.setByte(offset++, '\r');
-        buf.setByte(offset++, '\n');
-        buf.writerIndex(offset);
-    }
-
-    private static void writeAscii(ByteBuf buf, int offset, CharSequence value, int valueLen) {
-        if (value instanceof AsciiString) {
-            ByteBufUtil.copy((AsciiString) value, 0, buf, offset, valueLen);
-        } else {
-            writeCharSequence(buf, offset, value, valueLen);
-        }
-    }
-
-    private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {
-        for (int i = 0; i < valueLen; ++i) {
-            buf.setByte(offset++, c2b(value.charAt(i)));
-        }
     }
 }

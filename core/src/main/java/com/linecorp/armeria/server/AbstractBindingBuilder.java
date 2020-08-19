@@ -30,6 +30,7 @@ import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -39,7 +40,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -409,12 +409,26 @@ abstract class AbstractBindingBuilder {
      * Returns a newly-created {@link Route}s based on the properties of this builder.
      */
     final List<Route> buildRouteList() {
-        final Builder<Route> builder = ImmutableList.builder();
+        return buildRouteList(ImmutableSet.of());
+    }
+
+    /**
+     * Returns a newly-created {@link Route}s based on the properties of this builder.
+     *
+     * @param fallbackRoutes the {@link Route}s to use when a user did not specify any {@link Route}s.
+     */
+    final List<Route> buildRouteList(Collection<Route> fallbackRoutes) {
+        final ImmutableList.Builder<Route> builder = ImmutableList.builder();
 
         if (additionalRoutes.isEmpty()) {
             if (pathBuilders.isEmpty() && routeBuilders.isEmpty()) {
-                throw new IllegalStateException(
-                        "Should set at least one path that the service is bound to before calling this.");
+                if (fallbackRoutes.isEmpty()) {
+                    throw new IllegalStateException(
+                            "Should set at least one path that the service is bound to before calling this.");
+                } else {
+                    // Use the fallbackRoutes since a user didn't specify any routes.
+                    return builder.addAll(fallbackRoutes).build();
+                }
             }
             if (pathBuilders.isEmpty() && !methods.isEmpty()) {
                 throw new IllegalStateException("Should set a path when the methods are set: " + methods);

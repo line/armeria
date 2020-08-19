@@ -81,6 +81,8 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
         gen.writeEndObject();
     }
 
+    // TODO(trustin): Merge serializeTBase() and serializeTApplicationException() once we drop support for 0.9.
+    //                Since 0.10, both TBase and TApplicationException implement TSerializable.
     @SuppressWarnings("rawtypes")
     static void serializeTBase(@Nullable TBase value, JsonGenerator gen,
                                boolean useNamedEnums) throws IOException {
@@ -131,6 +133,7 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
 
         private final boolean useNamedEnums;
 
+        @SuppressWarnings("unused")
         ThriftCallJsonSerializer() {
             this(false);
         }

@@ -19,11 +19,11 @@ package com.linecorp.armeria.internal.client.grpc;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.unsafe.PooledHttpClient;
-import com.linecorp.armeria.client.unsafe.SimplePooledDecoratingHttpClient;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 
 import io.grpc.Attributes;
@@ -35,13 +35,13 @@ import io.grpc.MethodDescriptor;
 import io.grpc.SecurityLevel;
 import io.grpc.Status;
 
-final class CallCredentialsDecoratingClient extends SimplePooledDecoratingHttpClient {
+final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
 
     private final CallCredentials credentials;
     private final MethodDescriptor<?, ?> method;
     private final String authority;
 
-    CallCredentialsDecoratingClient(PooledHttpClient delegate, CallCredentials credentials,
+    CallCredentialsDecoratingClient(HttpClient delegate, CallCredentials credentials,
                                     MethodDescriptor<?, ?> method, String authority) {
         super(delegate);
         this.credentials = credentials;
@@ -50,7 +50,7 @@ final class CallCredentialsDecoratingClient extends SimplePooledDecoratingHttpCl
     }
 
     @Override
-    protected HttpResponse execute(PooledHttpClient client, ClientRequestContext ctx, PooledHttpRequest req) {
+    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> response = new CompletableFuture<>();
 
         final RequestInfo requestInfo = new RequestInfo() {
@@ -94,7 +94,7 @@ final class CallCredentialsDecoratingClient extends SimplePooledDecoratingHttpCl
                         ctx.mutateAdditionalRequestHeaders(
                                 headers -> MetadataUtil.fillHeaders(metadata, headers));
                         try {
-                            response.complete(client.execute(ctx, req));
+                            response.complete(unwrap().execute(ctx, req));
                         } catch (Exception e) {
                             response.completeExceptionally(e);
                         }

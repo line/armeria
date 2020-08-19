@@ -61,7 +61,7 @@ public class AuthService extends SimpleDecoratingHttpService {
             return HttpResponse.of(HttpStatus.UNAUTHORIZED);
         }
 
-        HttpService delegate = delegate();
+        HttpService delegate = unwrap();
         return delegate.serve(ctx, req);
     }
 }
@@ -92,7 +92,7 @@ public class MyRpcService extends DecoratingService<RpcRequest, RpcResponse,
         // This method has been greatly simplified for easier understanding.
         // In reality, we will have to do this asynchronously.
         RpcRequest rpcReq = convertToRpcRequest(req);
-        RpcResponse rpcRes = delegate().serve(ctx, rpcReq);
+        RpcResponse rpcRes = unwrap().serve(ctx, rpcReq);
         return convertToHttpResponse(rpcRes);
     }
 
@@ -137,7 +137,7 @@ for (ServiceConfig sc : serviceConfigs) {
 ## Decorating `ServiceWithRoutes`
 
 <type://ServiceWithRoutes> is a special variant of service which allows a user to register multiple
-routes for a single service. It has a method called `routes()` which returns a `Set` of
+routes for a single service. It has a method called <type://ServiceWithRoutes#routes()> which returns a `Set` of
 <typeplural://Route> so that you do not have to specify path when registering your service:
 
 ```java

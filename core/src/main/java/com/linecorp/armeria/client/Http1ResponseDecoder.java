@@ -23,12 +23,13 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -209,7 +210,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
-                            } else if (!res.tryWrite(PooledHttpData.wrap(data.retain()))) {
+                            } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
                                 fail(ctx, ClosedStreamException.get());
                                 return;
                             }
@@ -249,9 +250,16 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
-        fail(ctx, new ProtocolViolationException(
-                "unexpected message type: " + msg.getClass().getName() +
-                " (expected: " + expected.getName() + ')'));
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("unexpected message type: " + msg.getClass().getName() +
+                   " (expected: " + expected.getName() + ", channel: " + ctx.channel() +
+                   ", resId: " + resId);
+        if (lastPingReqId == -1) {
+            buf.append(')');
+        } else {
+            buf.append(", lastPingReqId: " + lastPingReqId + ')');
+        }
+        fail(ctx, new ProtocolViolationException(buf.toString()));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {

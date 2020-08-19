@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
@@ -40,14 +39,12 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledHeapByteBuf;
 
 class StreamMessageTest {
 
@@ -165,25 +162,25 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(ByteBufStreamProvider.class)
-    public void releaseOnConsumption_ByteBuf(ByteBuf buf, StreamMessage<ByteBuf> stream) {
+    @ArgumentsSource(PooledHttpDataStreamProvider.class)
+    void releaseOnConsumption_HttpData(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
-            ((StreamWriter<ByteBuf>) stream).write(buf);
+            ((StreamWriter<HttpData>) stream).write(data);
             ((StreamWriter<?>) stream).close();
         }
-        assertThat(buf.refCnt()).isEqualTo(1);
+        assertThat(data.isPooled()).isTrue();
+        assertThat(buf.refCnt()).isOne();
 
-        stream.subscribe(new Subscriber<ByteBuf>() {
+        stream.subscribe(new Subscriber<HttpData>() {
             @Override
             public void onSubscribe(Subscription subscription) {
                 subscription.request(1);
             }
 
             @Override
-            public void onNext(ByteBuf o) {
-                assertThat(o).isNotSameAs(buf);
-                assertThat(o).isInstanceOf(UnpooledHeapByteBuf.class);
-                assertThat(o.refCnt()).isEqualTo(1);
+            public void onNext(HttpData o) {
+                assertThat(o).isNotSameAs(data);
+                assertThat(o.isPooled()).isFalse();
                 assertThat(buf.refCnt()).isZero();
             }
 
@@ -201,45 +198,8 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(ByteBufHolderStreamProvider.class)
-    void releaseOnConsumption_HttpData(ByteBufHolder data, StreamMessage<ByteBufHolder> stream) {
-        if (stream instanceof StreamWriter) {
-            ((StreamWriter<ByteBufHolder>) stream).write(data);
-            ((StreamWriter<?>) stream).close();
-        }
-        assertThat(data.refCnt()).isEqualTo(1);
-
-        stream.subscribe(new Subscriber<ByteBufHolder>() {
-            @Override
-            public void onSubscribe(Subscription subscription) {
-                subscription.request(1);
-            }
-
-            @Override
-            public void onNext(ByteBufHolder o) {
-                assertThat(o).isNotSameAs(data);
-                assertThat(o).isInstanceOf(PooledHttpData.class);
-                assertThat(o.content()).isInstanceOf(UnpooledHeapByteBuf.class);
-                assertThat(o.refCnt()).isEqualTo(1);
-                assertThat(data.refCnt()).isZero();
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-                Exceptions.throwUnsafely(throwable);
-            }
-
-            @Override
-            public void onComplete() {
-                completed = true;
-            }
-        });
-        await().untilAsserted(() -> assertThat(completed).isTrue());
-    }
-
-    @ParameterizedTest
-    @ArgumentsSource(ByteBufHolderStreamProvider.class)
-    void releaseWithZeroDemand(ByteBufHolder data, StreamMessage<ByteBufHolder> stream) {
+    @ArgumentsSource(PooledHttpDataStreamProvider.class)
+    void releaseWithZeroDemand(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
             ((StreamWriter<Object>) stream).write(data);
         }
@@ -265,15 +225,15 @@ class StreamMessageTest {
             public void onComplete() {
                 fail("onComplete() invoked unexpectedly");
             }
-        }, WITH_POOLED_OBJECTS);
+        }, SubscriptionOption.WITH_POOLED_OBJECTS);
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
-        await().untilAsserted(() -> assertThat(data.refCnt()).isZero());
+        await().untilAsserted(() -> assertThat(buf.refCnt()).isZero());
     }
 
     @ParameterizedTest
-    @ArgumentsSource(ByteBufHolderStreamProvider.class)
-    void releaseWithZeroDemandAndClosedStream(ByteBufHolder data, StreamMessage<ByteBufHolder> stream) {
+    @ArgumentsSource(PooledHttpDataStreamProvider.class)
+    void releaseWithZeroDemandAndClosedStream(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
             ((StreamWriter<Object>) stream).write(data);
             ((StreamWriter<Object>) stream).close();
@@ -301,10 +261,10 @@ class StreamMessageTest {
             public void onComplete() {
                 fail("onComplete() invoked unexpectedly");
             }
-        }, WITH_POOLED_OBJECTS);
+        }, SubscriptionOption.WITH_POOLED_OBJECTS);
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
-        await().untilAsserted(() -> assertThat(data.refCnt()).isZero());
+        await().untilAsserted(() -> assertThat(buf.refCnt()).isZero());
     }
 
     private static class StreamProvider implements ArgumentsProvider {
@@ -319,29 +279,19 @@ class StreamMessageTest {
         }
     }
 
-    private static class ByteBufStreamProvider implements ArgumentsProvider {
+    private static class PooledHttpDataStreamProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            final ByteBuf defaultData = newPooledBuffer();
-            final DefaultStreamMessage<ByteBufHolder> defaultStream = new DefaultStreamMessage<>();
+            final ByteBuf defaultBuf = newPooledBuffer();
+            final HttpData defaultData = HttpData.wrap(defaultBuf).withEndOfStream();
+            final DefaultStreamMessage<HttpData> defaultStream = new DefaultStreamMessage<>();
 
-            final ByteBuf fixedData = newPooledBuffer();
-            final StreamMessage<ByteBuf> fixedStream = StreamMessage.of(fixedData);
+            final ByteBuf fixedBuf = newPooledBuffer();
+            final HttpData fixedData = HttpData.wrap(fixedBuf).withEndOfStream();
+            final StreamMessage<HttpData> fixedStream = StreamMessage.of(fixedData);
 
-            return Stream.of(arguments(defaultData, defaultStream), arguments(fixedData, fixedStream));
-        }
-    }
-
-    private static class ByteBufHolderStreamProvider implements ArgumentsProvider {
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            final PooledHttpData defaultData = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
-            final DefaultStreamMessage<ByteBufHolder> defaultStream = new DefaultStreamMessage<>();
-
-            final PooledHttpData fixedData = PooledHttpData.wrap(newPooledBuffer()).withEndOfStream();
-            final StreamMessage<ByteBufHolder> fixedStream = StreamMessage.of(fixedData);
-
-            return Stream.of(arguments(defaultData, defaultStream), arguments(fixedData, fixedStream));
+            return Stream.of(arguments(defaultData, defaultBuf, defaultStream),
+                             arguments(fixedData, fixedBuf, fixedStream));
         }
     }
 
@@ -373,7 +323,7 @@ class StreamMessageTest {
         return PooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
     }
 
-    private void writeTenIntegers(StreamMessage<Integer> stream) {
+    private static void writeTenIntegers(StreamMessage<Integer> stream) {
         if (stream instanceof StreamWriter) {
             final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
             TEN_INTEGERS.forEach(writer::write);

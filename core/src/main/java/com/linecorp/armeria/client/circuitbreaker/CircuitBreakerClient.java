@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -30,12 +32,13 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
  */
-public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpRequest, HttpResponse>
+public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpRequest, HttpResponse>
         implements HttpClient {
 
     /**
@@ -102,7 +105,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerMethodDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
+    newPerMethodDecorator(Function<String, ? extends CircuitBreaker> factory, CircuitBreakerRule rule) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), rule);
     }
 
@@ -116,7 +119,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerMethodDecorator(Function<String, CircuitBreaker> factory,
+    newPerMethodDecorator(Function<String, ? extends CircuitBreaker> factory,
                           CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), ruleWithContent);
     }
@@ -131,7 +134,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
+    newPerHostDecorator(Function<String, ? extends CircuitBreaker> factory, CircuitBreakerRule rule) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), rule);
     }
 
@@ -145,7 +148,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostDecorator(Function<String, CircuitBreaker> factory,
+    newPerHostDecorator(Function<String, ? extends CircuitBreaker> factory,
                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), ruleWithContent);
     }
@@ -160,7 +163,8 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory, CircuitBreakerRule rule) {
+    newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
+                                 CircuitBreakerRule rule) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), rule);
     }
 
@@ -174,7 +178,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      */
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
+    newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
                                  CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
     }
@@ -256,20 +260,35 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
                    .whenAvailable(rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
                                                                   : RequestLogProperty.RESPONSE_HEADERS)
                    .thenApply(log -> {
-                       final Throwable cause =
+                       final Throwable resCause =
                                log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
 
-                       if (needsContentInRule && cause == null) {
-                           try (HttpResponseDuplicator duplicator =
-                                        response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength())) {
+                       if (needsContentInRule && resCause == null) {
+                           final HttpResponseDuplicator duplicator =
+                                   response.toDuplicator(ctx.eventLoop().withoutContext(),
+                                                         ctx.maxResponseLength());
+                           try {
                                final TruncatingHttpResponse truncatingHttpResponse =
                                        new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
-                               reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
-                                       ctx, truncatingHttpResponse, null));
-                               return duplicator.duplicate();
+
+                               final CompletionStage<CircuitBreakerDecision> f =
+                                       ruleWithContent().shouldReportAsSuccess(
+                                               ctx, truncatingHttpResponse, null);
+                               f.handle((unused1, unused2) -> {
+                                   truncatingHttpResponse.abort();
+                                   return null;
+                               });
+                               reportSuccessOrFailure(circuitBreaker, f);
+
+                               final HttpResponse duplicate = duplicator.duplicate();
+                               duplicator.close();
+                               return duplicate;
+                           } catch (Throwable cause) {
+                               duplicator.abort(cause);
+                               return Exceptions.throwUnsafely(cause);
                            }
                        } else {
-                           reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
+                           reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, resCause));
                            return response;
                        }
                    });

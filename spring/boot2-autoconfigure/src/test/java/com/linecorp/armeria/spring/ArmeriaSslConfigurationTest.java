@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -34,8 +35,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
@@ -67,12 +66,12 @@ public class ArmeriaSslConfigurationTest {
     public static class TestConfiguration {
 
         @Bean
-        public HttpServiceRegistrationBean okService() {
-            return new HttpServiceRegistrationBean()
-                    .setServiceName("okService")
-                    .setService(new OkService())
-                    .setRoute(Route.builder().path("/ok").build())
-                    .setDecorators(ImmutableList.of(LoggingService.newDecorator()));
+        public ArmeriaServerConfigurator okService() {
+            return sb -> sb.route()
+                           .addRoute(Route.builder().path("/ok").build())
+                           .defaultServiceName("okService")
+                           .decorators(LoggingService.newDecorator())
+                           .build(new OkService());
         }
     }
 
@@ -108,6 +107,11 @@ public class ArmeriaSslConfigurationTest {
                                                     .get("/ok").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("ok");
+    }
+
+    @AfterClass
+    public static void closeClientFactory() {
+        clientFactory.closeAsync();
     }
 
     @Test

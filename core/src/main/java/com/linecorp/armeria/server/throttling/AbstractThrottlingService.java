@@ -53,7 +53,7 @@ public abstract class AbstractThrottlingService<I extends Request, O extends Res
     }
 
     @Override
-    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+    public final O serve(ServiceRequestContext ctx, I req) throws Exception {
         return responseConverter.apply(
                 strategy.accept(ctx, req).handleAsync((accept, cause) -> {
                     try {
@@ -64,6 +64,6 @@ public abstract class AbstractThrottlingService<I extends Request, O extends Res
                     } catch (Exception e) {
                         return Exceptions.throwUnsafely(e);
                     }
-                }, ctx.contextAwareEventLoop()));
+                }, ctx.eventLoop()));
     }
 }

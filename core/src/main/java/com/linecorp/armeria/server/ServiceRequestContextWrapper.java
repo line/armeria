@@ -18,20 +18,20 @@ package com.linecorp.armeria.server;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
-import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
 /**
@@ -72,14 +72,6 @@ public class ServiceRequestContextWrapper
         return delegate().clientAddress();
     }
 
-    @Deprecated
-    @Override
-    public ServiceRequestContext newDerivedContext(RequestId id,
-                                                   @Nullable HttpRequest req,
-                                                   @Nullable RpcRequest rpcReq) {
-        return delegate().newDerivedContext(id, req, rpcReq);
-    }
-
     @Override
     public ServiceConfig config() {
         return delegate().config();
@@ -96,7 +88,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
         return delegate().blockingTaskExecutor();
     }
 
@@ -132,20 +124,18 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    @Deprecated
-    public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
-        delegate().setRequestTimeoutAtMillis(requestTimeoutAtMillis);
-    }
-
-    @Nullable
-    @Override
-    public Runnable requestTimeoutHandler() {
-        return delegate().requestTimeoutHandler();
+    public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
+        delegate().setRequestTimeout(mode, requestTimeout);
     }
 
     @Override
-    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
-        delegate().setRequestTimeoutHandler(requestTimeoutHandler);
+    public CompletableFuture<Void> whenRequestTimingOut() {
+        return delegate().whenRequestTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenRequestTimedOut() {
+        return delegate().whenRequestTimedOut();
     }
 
     @Override

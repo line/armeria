@@ -49,7 +49,7 @@ package com.linecorp.armeria.common.grpc.protocol;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**

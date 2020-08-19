@@ -18,19 +18,36 @@ package com.linecorp.armeria.client;
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.netty.util.AttributeMap;
 
 /**
  * Listens to the client connection pool events.
  */
-public interface ConnectionPoolListener {
+public interface ConnectionPoolListener extends Unwrappable {
 
     /**
      * Returns an instance that does nothing.
      */
     static ConnectionPoolListener noop() {
         return ConnectionPoolListenerAdapter.NOOP;
+    }
+
+    /**
+     * Returns a {@link ConnectionPoolListener} that logs the connection pool events.
+     */
+    static ConnectionPoolListener logging() {
+        return new ConnectionPoolLoggingListener();
+    }
+
+    /**
+     * Returns a {@link ConnectionPoolListener} that logs the connection pool events with an alternative
+     * {@link Ticker}.
+     */
+    static ConnectionPoolListener logging(Ticker ticker) {
+        return new ConnectionPoolLoggingListener(ticker);
     }
 
     /**
@@ -48,4 +65,9 @@ public interface ConnectionPoolListener {
                           InetSocketAddress remoteAddr,
                           InetSocketAddress localAddr,
                           AttributeMap attrs) throws Exception;
+
+    @Override
+    default ConnectionPoolListener unwrap() {
+        return this;
+    }
 }

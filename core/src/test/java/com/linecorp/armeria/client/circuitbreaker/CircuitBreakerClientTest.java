@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -100,15 +101,15 @@ class CircuitBreakerClientTest {
         when(circuitBreaker.canRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
-        final Function<String, CircuitBreaker> factory = mock(Function.class);
-        when(factory.apply(any())).thenReturn(circuitBreaker);
+        final BiFunction<String, String, CircuitBreaker> factory = mock(BiFunction.class);
+        when(factory.apply(any(), any())).thenReturn(circuitBreaker);
 
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerClient.newPerHostAndMethodDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
-        verify(factory, times(1)).apply("dummyhost:8080#GET");
+        verify(factory, times(1)).apply("dummyhost:8080", "GET");
     }
 
     @Test
@@ -182,7 +183,7 @@ class CircuitBreakerClientTest {
         final HttpClient client = mock(HttpClient.class);
         final HttpClient decorated = decorator.apply(client);
 
-        decorated.execute(ctx, req);
+        decorated.execute(ctx, req).aggregate();
     }
 
     /**

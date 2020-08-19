@@ -192,6 +192,9 @@ Therefore, Armeria provides various ways that let users group the range of circu
 - Group by host and method: a single <type://CircuitBreaker> is used for each method and host combination.
 
   ```java
+  // Create a CircuitBreaker with the host and method name
+  final BiFunction<String, String, CircuitBreaker> factory =
+          (host, method) -> CircuitBreaker.of("my-cb-" + host + '#' + method);
   // Create CircuitBreakers per host and method
   CircuitBreakerClient.newPerHostAndMethodDecorator(factory, httpRule);
   // The names of the created CircuitBreaker: my-cb-a.com#GET,
@@ -201,20 +204,6 @@ Therefore, Armeria provides various ways that let users group the range of circu
   // The names of the created CircuitBreaker: my-cb-a.com#methodA,
   // my-cb-a.com#methodB, my-cb-b.com#methodA, my-cb-b.com#methodB, ...
   ```
-
-If you want none of the above groupings, you can group them however you want using
-<type://KeyedCircuitBreakerMapping> and <type://KeyedCircuitBreakerMapping$KeySelector>.
-
-```java
-import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping;
-import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
-
-// I want to create CircuitBreakers per path!
-final KeyedCircuitBreakerMapping<String> mapping =
-        new KeyedCircuitBreakerMapping<>((ctx, req) -> ctx.path(), factory);
-
-CircuitBreakerClient.newDecorator(mapping, httpRule);
-```
 
 ## `CircuitBreakerBuilder`
 
@@ -263,8 +252,8 @@ clients:
 
 1. Create a <type://CircuitBreaker>.
 2. Guard your client calls with `CircuitBreaker.canRequest()`.
-3. Update the state of <type://CircuitBreaker> by calling `CircuitBreaker.onSuccess()` or `onFailure()`
-   depending on the outcome of the client call.
+3. Update the state of <type://CircuitBreaker> by calling <type://CircuitBreaker#onSuccess()> or
+   <type://CircuitBreaker#onFailure()> depending on the outcome of the client call.
 
 For example:
 

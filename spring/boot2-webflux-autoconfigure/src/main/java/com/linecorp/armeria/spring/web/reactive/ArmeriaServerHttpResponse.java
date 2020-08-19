@@ -63,8 +63,6 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -289,7 +287,9 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         final HttpResponse response = HttpResponse.of(buildResponseHeaders());
         future.complete(response);
         logger.debug("{} Response future has been completed with an HttpResponse", ctx);
-        return Mono.fromFuture(response.whenComplete());
+
+        return Mono.fromFuture(response.whenComplete())
+                   .onErrorResume(CancelledSubscriptionException.class, e -> Mono.empty());
     }
 
     @Override
@@ -538,9 +538,9 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
         private void releaseFirstContent() {
             if (state != PublishingState.FIRST_CONTENT_SENT &&
-                firstContent instanceof ReferenceCounted) {
+                firstContent instanceof HttpData) {
                 logger.debug("Releasing the first cached content: {}", firstContent);
-                ReferenceCountUtil.safeRelease(firstContent);
+                ((HttpData) firstContent).close();
             }
         }
 

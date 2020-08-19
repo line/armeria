@@ -30,7 +30,7 @@ AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 That's it. The client will keep attempting until it succeeds or the number of attempts exceeds the maximum
 number of total attempts. You can configure the `maxTotalAttempts` when making the decorator using
-`RetryingClient.newDecorator(rule, maxTotalAttempts)`. Meanwhile, the `rule` will decide to
+<type://RetryingClient#newDecorator(RetryRule,int)>. Meanwhile, the `rule` will decide to
 retry depending on the response. In this case, the client retries when it receives `5xx` response error or
 an exception is raised.
 
@@ -155,7 +155,7 @@ AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 <Tip>
 
-You might find the `peel()` method in <type://Exceptions> useful when the exception you are trying to
+You might find the <type://Exceptions#peel(Throwable)> method useful when the exception you are trying to
 handle is wrapped by exceptions like `CompletionException` and `ExecutionException`:
 
 ```java
@@ -185,11 +185,11 @@ public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
 
 You can use a <type://Backoff> to determine the delay between attempts. Armeria provides <type://Backoff>
 implementations which produce the following delays out of the box:
-- Fixed delay, created with `Backoff.fixed()`
-- Random delay, created with `Backoff.random()`
-- Exponential delay which is multiplied on each attempt, created with `Backoff.exponential()`
+- Fixed delay, created with <type://Backoff#fixed(long)>
+- Random delay, created with <type://Backoff#random(long,long)>
+- Exponential delay which is multiplied on each attempt, created with <type://Backoff#exponential(long,long)>
 
-Armeria provides `Backoff.ofDefault()` that you might use by default. It is exactly the same as:
+Armeria provides <type://Backoff#ofDefault()> that you might use by default. It is exactly the same as:
 
 ```java
 Backoff.exponential(200   /* minDelayMillis */,
@@ -199,14 +199,14 @@ Backoff.exponential(200   /* minDelayMillis */,
 ```
 
 The delay starts from `minDelayMillis` until it reaches `maxDelayMillis` multiplying by multiplier every
-retry. Please note that the `.withJitter()` will add jitter value to the calculated delay.
+retry. Please note that the <type://Backoff#withJitter(double)> will add jitter value to the calculated delay.
 
 For more information, please refer to the API documentation of the
 [com.linecorp.armeria.client.retry](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/retry/package-summary.html) package.
 
 ## `maxTotalAttempts` vs per-Backoff `maxAttempts`
 
-If you create a <type://Backoff> using `.withMaxAttempts(maxAttempts)` in a <type://RetryRule>,
+If you create a <type://Backoff> using <type://Backoff#withMaxAttempts(int)> in a <type://RetryRule>,
 the <type://RetryingClient> which uses the <type://RetryRule> will stop retrying when the number of
 attempts passed `maxAttempts`. However, if you have more than one <type://Backoff> and return one after
 the other continuously, it will keep retrying over and over again because the counter that
@@ -354,16 +354,16 @@ You might want to use [Circuit breaker](/docs/client-circuit-breaker) with <type
 [Decorating a client](/docs/client-decorator):
 
 ```java
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientBuilder;
 
-CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
+CircuitBreakerRule cbRule = CircuitBreakerRule.onServerErrorStatus();
 RetryRule myRetryRule = RetryRule.builder()
                                  ...
                                  .build();
 
 WebClient client = WebClient.builder(...)
-                            .decorator(CircuitBreakerClient.builder(cbStrategy)
+                            .decorator(CircuitBreakerClient.builder(cbRule)
                                                            .newDecorator())
                             .decorator(RetryingClient.builder(myRetryRule)
                                                      .newDecorator())

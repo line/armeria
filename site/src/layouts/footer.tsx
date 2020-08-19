@@ -1,4 +1,3 @@
-import loadable from '@loadable/component';
 import { Layout, Typography } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -7,9 +6,9 @@ import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import React from 'react';
 
 import Logo from '../components/logo';
+import Mailchimp from '../components/mailchimp';
 import styles from './footer.module.less';
 
-const Mailchimp = loadable(() => import('../components/mailchimp'));
 const { Paragraph } = Typography;
 const { Footer } = Layout;
 

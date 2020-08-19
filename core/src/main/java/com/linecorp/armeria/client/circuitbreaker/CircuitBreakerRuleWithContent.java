@@ -20,8 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -51,7 +51,8 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * a failure if the specified {@code responseFilter} completes with {@code true}.
      */
     static <T extends Response> CircuitBreakerRuleWithContent<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> responseFilter) {
         return CircuitBreakerRuleWithContent.<T>builder().onResponse(responseFilter).thenFailure();
     }
 
@@ -78,7 +79,7 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "methods can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
-        return builder(headers -> httpMethods.contains(headers.method()));
+        return builder((unused, headers) -> httpMethods.contains(headers.method()));
     }
 
     /**
@@ -86,7 +87,7 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * {@code requestHeadersFilter}.
      */
     static <T extends Response> CircuitBreakerRuleWithContentBuilder<T> builder(
-            Predicate<? super RequestHeaders> requestHeadersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         requireNonNull(requestHeadersFilter, "requestHeadersFilter");
         return new CircuitBreakerRuleWithContentBuilder<>(requestHeadersFilter);
     }

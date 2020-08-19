@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
@@ -41,8 +41,9 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import reactor.test.StepVerifier;
 
@@ -90,28 +91,38 @@ class DefaultHttpResponseTest {
     @Test
     void closeMustReleaseAggregatedContent() {
         final HttpResponseWriter res = HttpResponse.streaming();
-        final PooledHttpData data =
-                PooledHttpData.wrap(Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8)).withEndOfStream();
+        final ByteBuf buf = Unpooled.directBuffer();
+        buf.writeCharSequence("foo", StandardCharsets.UTF_8);
+        final HttpData data = HttpData.wrap(buf).withEndOfStream();
         res.close();
         res.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), data));
-        assertThat(data.refCnt()).isZero();
+        assertThat(buf.refCnt()).isZero();
     }
 
     /**
      * The aggregation future must be completed even if the response being aggregated has been aborted.
      */
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void abortedAggregation(boolean executorSpecified) {
+    @ArgumentsSource(ParametersProvider.class)
+    void abortedAggregation(boolean executorSpecified, boolean withPooledObjects) {
         final Thread mainThread = Thread.currentThread();
         final HttpResponseWriter res = HttpResponse.streaming();
         final CompletableFuture<AggregatedHttpResponse> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
-             future = res.aggregate(CommonPools.workerGroup().next());
+            if (withPooledObjects) {
+                future = res.aggregateWithPooledObjects(
+                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
+            } else {
+                future = res.aggregate(CommonPools.workerGroup().next());
+            }
         } else {
-            future = res.aggregate();
+            if (withPooledObjects) {
+                future = res.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+            } else {
+                future = res.aggregate();
+            }
         }
 
         final AtomicReference<Thread> callbackThread = new AtomicReference<>();

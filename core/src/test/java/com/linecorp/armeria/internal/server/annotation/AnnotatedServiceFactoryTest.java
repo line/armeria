@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.collectDecorators;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.create;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.find;
@@ -28,13 +29,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -153,8 +154,9 @@ class AnnotatedServiceFactoryTest {
     @Test
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
-        final List<AnnotatedServiceElement> elements = find("/", object, ImmutableList.of(),
-                                                            ImmutableList.of(), ImmutableList.of());
+        final List<AnnotatedServiceElement> elements =
+                find("/", object, /* useBlockingTaskExecutor */ false,
+                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedServiceElement::route)
@@ -167,9 +169,9 @@ class AnnotatedServiceFactoryTest {
     @Test
     void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
         final Object serviceObject = new ServiceObject();
-        final List<AnnotatedServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
-                                                            ImmutableList.of(), ImmutableList.of(),
-                                                            ImmutableList.of());
+        final List<AnnotatedServiceElement> elements =
+                find(HOME_PATH_PREFIX, serviceObject, /* useBlockingTaskExecutor */ false,
+                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedServiceElement::route)
@@ -184,14 +186,20 @@ class AnnotatedServiceFactoryTest {
         final ServiceObjectWithoutPathOnAnnotatedMethod serviceObject =
                 new ServiceObjectWithoutPathOnAnnotatedMethod();
 
-        getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
-            assertThatThrownBy(() -> {
+        final List<Route> routes = Stream.of(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.HEAD, HttpMethod.PUT,
+                                             HttpMethod.OPTIONS, HttpMethod.PATCH, HttpMethod.POST,
+                                             HttpMethod.TRACE)
+                                         .map(m -> Route.builder().path("/").methods(m).build())
+                                         .collect(toImmutableList());
 
-                create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of());
-            }).isInstanceOf(IllegalArgumentException.class)
-              .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
-        });
+        final List<Route> actualRoutes = getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class,
+                                                    HttpResponse.class)
+                .map(method -> create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
+                                      ImmutableList.of(), ImmutableList.of(), ImmutableList.of()))
+                .flatMap(Collection::stream)
+                .map(AnnotatedServiceElement::route)
+                .collect(toImmutableList());
+        assertThat(actualRoutes).containsAll(routes);
     }
 
     @Test
@@ -255,7 +263,7 @@ class AnnotatedServiceFactoryTest {
     void testDuplicatePathAnnotations() {
         final List<AnnotatedServiceElement> getServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "duplicatePathAnnotations", HttpMethod.GET);
-        Assertions.assertThat(getServiceElements).hasSize(2);
+        assertThat(getServiceElements).hasSize(2);
         final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedServiceElement::route)
                                                        .collect(Collectors.toSet());
         assertThat(getRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.GET).build(),
@@ -263,7 +271,7 @@ class AnnotatedServiceFactoryTest {
 
         final List<AnnotatedServiceElement> postServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "duplicatePathAnnotations", HttpMethod.POST);
-        Assertions.assertThat(getServiceElements).hasSize(2);
+        assertThat(getServiceElements).hasSize(2);
         final Set<Route> postRoutes = postServiceElements.stream().map(AnnotatedServiceElement::route)
                                                          .collect(Collectors.toSet());
         assertThat(postRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.POST).build(),
@@ -275,8 +283,8 @@ class AnnotatedServiceFactoryTest {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of());
+                create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
+                       ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -312,8 +320,8 @@ class AnnotatedServiceFactoryTest {
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
                             final List<AnnotatedServiceElement> AnnotatedServices = create(
-                                    "/", service, method, ImmutableList.of(), ImmutableList.of(),
-                                    ImmutableList.of());
+                                    "/", service, method, /* useBlockingTaskExecutor */ false,
+                                    ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
                             return AnnotatedServices.stream();
                         }
                 )
@@ -537,23 +545,6 @@ class AnnotatedServiceFactoryTest {
     }
 
     static class MultiPathFailingService {
-
-        @Get
-        public HttpResponse noGetMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get
-        @Post
-        public HttpResponse noGetPostMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get("/get")
-        @Post
-        public HttpResponse noPostMappingAndGetMapping() {
-            return HttpResponse.of(HttpStatus.OK);
-        }
 
         @Get("/get")
         @Path("/path")

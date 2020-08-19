@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
@@ -41,7 +42,7 @@ public class HttpFileTest {
         assertThat(((AbstractHttpFile) f).contentType()).isNull();
 
         // Make sure all additional headers are set as expected.
-        final HttpHeaders headers = f.readHeaders();
+        final HttpHeaders headers = f.readHeaders(CommonPools.blockingTaskExecutor()).join();
         assertThat(headers).isNotNull();
         assertThat(headers.getAll(HttpHeaderNames.of("foo"))).containsExactly("1", "2");
         assertThat(headers.getAll(HttpHeaderNames.of("bar"))).containsExactly("3");
@@ -54,7 +55,7 @@ public class HttpFileTest {
     @Test
     public void leadingSlashInResourcePath() throws Exception {
         final HttpFile f = HttpFile.of(ClassLoader.getSystemClassLoader(), "/java/lang/Object.class");
-        final HttpFileAttributes attrs = f.readAttributes();
+        final HttpFileAttributes attrs = f.readAttributes(CommonPools.blockingTaskExecutor()).join();
         assertThat(attrs).isNotNull();
         assertThat(attrs.length()).isPositive();
     }

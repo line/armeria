@@ -67,12 +67,12 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         this.retryRuleWithContent = retryRuleWithContent;
     }
 
-    RetryRule retryRule() {
+    final RetryRule retryRule() {
         checkState(retryRule != null, "retryRule is not set.");
         return retryRule;
     }
 
-    RetryRuleWithContent<O> retryRuleWithContent() {
+    final RetryRuleWithContent<O> retryRuleWithContent() {
         checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
         return retryRuleWithContent;
     }
@@ -90,7 +90,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         return this;
     }
 
-    int maxTotalAttempts() {
+    final int maxTotalAttempts() {
         return maxTotalAttempts;
     }
 
@@ -114,7 +114,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         return this;
     }
 
-    long responseTimeoutMillisForEachAttempt() {
+    final long responseTimeoutMillisForEachAttempt() {
         return responseTimeoutMillisForEachAttempt;
     }
 
@@ -139,7 +139,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         return toStringHelper().toString();
     }
 
-    ToStringHelper toStringHelper() {
+    final ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("retryRule", retryRule)
                           .add("retryRuleWithContent", retryRuleWithContent)

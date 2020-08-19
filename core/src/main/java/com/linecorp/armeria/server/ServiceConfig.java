@@ -45,7 +45,7 @@ public final class ServiceConfig {
     private final Route route;
     private final HttpService service;
     @Nullable
-    private String defaultServiceName;
+    private final String defaultServiceName;
     @Nullable
     private final String defaultLogName;
 

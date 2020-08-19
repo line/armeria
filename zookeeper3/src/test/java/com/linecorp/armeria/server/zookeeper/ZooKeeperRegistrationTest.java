@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
+import static com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil.startServerWithRetries;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -93,7 +94,7 @@ class ZooKeeperRegistrationTest {
         assertThat(remaining).isEqualTo(sampleEndpoints.size() - 1);
     }
 
-    private static List<Server> startServers(boolean endpointRegistrationSpec) {
+    private static List<Server> startServers(boolean legacySpec) throws Exception {
         final List<Server> servers = new ArrayList<>();
         for (int i = 0; i < sampleEndpoints.size(); i++) {
             final Server server = Server.builder()
@@ -101,7 +102,7 @@ class ZooKeeperRegistrationTest {
                                         .service("/", (ctx, req) -> HttpResponse.of(200))
                                         .build();
             final ZooKeeperRegistrationSpec registrationSpec;
-            if (endpointRegistrationSpec) {
+            if (legacySpec) {
                 registrationSpec = ZooKeeperRegistrationSpec.legacy(sampleEndpoints.get(i));
             } else {
                 registrationSpec = ZooKeeperRegistrationSpec.builderForCurator(CURATOR_X_SERVICE_NAME)
@@ -114,7 +115,7 @@ class ZooKeeperRegistrationTest {
                                              .sessionTimeoutMillis(SESSION_TIMEOUT_MILLIS)
                                              .build();
             server.addListener(listener);
-            server.start().join();
+            startServerWithRetries(server);
             servers.add(server);
         }
         return servers;

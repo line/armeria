@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -67,6 +68,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<ExceptionHandlerFunction> exceptionHandlerFunctionBuilder = ImmutableList.builder();
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
+
+    private boolean useBlockingTaskExecutor;
     private String pathPrefix = "/";
     @Nullable
     private Object service;
@@ -150,6 +153,17 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
+    /**
+     * Sets whether the service executes service methods using the blocking executor. By default, service
+     * methods are executed directly on the event loop for implementing fully asynchronous services. If your
+     * service uses blocking logic, you should either execute such logic in a separate thread using something
+     * like {@link Executors#newCachedThreadPool()} or enable this setting.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         defaultServiceConfigSetters.requestTimeout(requestTimeout);
@@ -194,6 +208,33 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
+    @Override
+    @SafeVarargs
+    public final VirtualHostAnnotatedServiceBindingBuilder decorators(
+            Function<? super HttpService, ? extends HttpService>... decorators) {
+        defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder defaultServiceName(String defaultServiceName) {
+        defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder defaultLogName(String defaultLogName) {
+        defaultServiceConfigSetters.defaultLogName(defaultLogName);
+        return this;
+    }
+
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *
@@ -227,8 +268,9 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         assert service != null;
 
         final List<AnnotatedServiceElement> elements =
-                AnnotatedServiceFactory.find(pathPrefix, service, requestConverterFunctions,
-                                             responseConverterFunctions, exceptionHandlerFunctions);
+                AnnotatedServiceFactory.find(
+                        pathPrefix, service, useBlockingTaskExecutor,
+                        requestConverterFunctions, responseConverterFunctions, exceptionHandlerFunctions);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

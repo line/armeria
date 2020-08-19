@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * An {@link HttpResponse} that filters objects as they are published. The filtering
@@ -38,14 +37,15 @@ public abstract class FilteredHttpResponse
     }
 
     /**
-     * Creates a new {@link FilteredHttpResponse} that filters objects published by {@code delegate}
-     * before passing to a subscriber.
+     * (Advanced users only) Creates a new {@link FilteredHttpResponse} that filters objects published by
+     * {@code delegate} before passing to a subscriber.
      *
      * @param withPooledObjects if {@code true}, {@link FilteredStreamMessage#filter(Object)} receives the
-     *                          pooled {@link ByteBuf} and {@link ByteBufHolder} as is, without making a copy.
-     *                          If you don't know what this means,
-     *                          use {@link #FilteredHttpResponse(HttpResponse)}.
+     *                          pooled {@link HttpData} as is, without making a copy. If you don't know what
+     *                          this means, use {@link #FilteredHttpResponse(HttpResponse)}.
+     * @see PooledObjects
      */
+    @UnstableApi
     protected FilteredHttpResponse(HttpResponse delegate, boolean withPooledObjects) {
         super(delegate, withPooledObjects);
     }

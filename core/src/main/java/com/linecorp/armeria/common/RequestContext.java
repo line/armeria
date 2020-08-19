@@ -39,6 +39,8 @@ import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 
+import com.google.errorprone.annotations.MustBeClosed;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -377,19 +379,12 @@ public interface RequestContext {
     boolean isTimedOut();
 
     /**
-     * Returns the {@link Executor} that is handling the current {@link Request}.
+     * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.
+     * The {@link ContextAwareEventLoop} sets this {@link RequestContext} as the current context
+     * before executing any submitted tasks. If you want to use {@link EventLoop} without setting this context,
+     * call {@link ContextAwareEventLoop#withoutContext()} and use the returned {@link EventLoop}.
      */
-    default Executor executor() {
-        // The implementation is the same as eventLoop but we expose as an Executor as well given
-        // how much easier it is to write tests for an Executor (i.e.,
-        // when(ctx.executor()).thenReturn(MoreExecutors.directExecutor()));
-        return eventLoop();
-    }
-
-    /**
-     * Returns the {@link EventLoop} that is handling the current {@link Request}.
-     */
-    EventLoop eventLoop();
+    ContextAwareEventLoop eventLoop();
 
     /**
      * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
@@ -400,28 +395,6 @@ public interface RequestContext {
      */
     default ByteBufAllocator alloc() {
         throw new UnsupportedOperationException("No ByteBufAllocator available for this RequestContext.");
-    }
-
-    /**
-     * Returns an {@link Executor} that will make sure this {@link RequestContext} is set as the current
-     * context before executing any callback. This should almost always be used for executing asynchronous
-     * callbacks in service code to make sure features that require the {@link RequestContext} work properly.
-     * Most asynchronous libraries like {@link CompletableFuture} provide methods that accept an
-     * {@link Executor} to run callbacks on.
-     */
-    default Executor contextAwareExecutor() {
-        // The implementation is the same as contextAwareEventLoop but we expose as an Executor as well given
-        // how common it is to use only as an Executor and it becomes much easier to write tests for an
-        // Executor (i.e., when(ctx.contextAwareExecutor()).thenReturn(MoreExecutors.directExecutor()));
-        return contextAwareEventLoop();
-    }
-
-    /**
-     * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current
-     * context before executing any callback.
-     */
-    default EventLoop contextAwareEventLoop() {
-        return new RequestContextAwareEventLoop(this, eventLoop());
     }
 
     /**
@@ -437,6 +410,7 @@ public interface RequestContext {
      * thread-local. Please see {@link ServiceRequestContext#push()} and
      * {@link ClientRequestContext#push()} to find out the satisfying conditions.
      */
+    @MustBeClosed
     SafeCloseable push();
 
     /**
@@ -450,6 +424,7 @@ public interface RequestContext {
      * @see ClientRequestContext#push()
      * @see ServiceRequestContext#push()
      */
+    @MustBeClosed
     default SafeCloseable replace() {
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         return () -> RequestContextUtil.pop(this, oldCtx);
@@ -458,9 +433,10 @@ public interface RequestContext {
     /**
      * Returns an {@link Executor} that will execute callbacks in the given {@code executor}, making sure to
      * propagate the current {@link RequestContext} into the callback execution. It is generally preferred to
-     * use {@link #contextAwareEventLoop()} to ensure the callback stays on the same thread as well.
+     * use {@link #eventLoop()} to ensure the callback stays on the same thread as well.
      */
     default Executor makeContextAware(Executor executor) {
+        requireNonNull(executor, "executor");
         return runnable -> executor.execute(makeContextAware(runnable));
     }
 
@@ -469,7 +445,7 @@ public interface RequestContext {
      * sure to propagate the current {@link RequestContext} into the callback execution.
      */
     default ExecutorService makeContextAware(ExecutorService executor) {
-        return new RequestContextAwareExecutorService(this, executor);
+        return ContextAwareExecutorService.of(this, executor);
     }
 
     /**
@@ -477,7 +453,7 @@ public interface RequestContext {
      * making sure to propagate the current {@link RequestContext} into the callback execution.
      */
     default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
-        return new RequestContextAwareScheduledExecutorService(this, executor);
+        return ContextAwareScheduledExecutorService.of(this, executor);
     }
 
     /**
@@ -485,6 +461,7 @@ public interface RequestContext {
      * the input {@code callable}.
      */
     default <T> Callable<T> makeContextAware(Callable<T> callable) {
+        requireNonNull(callable, "callable");
         return () -> {
             try (SafeCloseable ignored = push()) {
                 return callable.call();
@@ -497,6 +474,7 @@ public interface RequestContext {
      * the input {@code runnable}.
      */
     default Runnable makeContextAware(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
         return () -> {
             try (SafeCloseable ignored = push()) {
                 runnable.run();
@@ -509,6 +487,7 @@ public interface RequestContext {
      * the input {@code function}.
      */
     default <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
+        requireNonNull(function, "function");
         return t -> {
             try (SafeCloseable ignored = push()) {
                 return function.apply(t);
@@ -521,6 +500,7 @@ public interface RequestContext {
      * the input {@code function}.
      */
     default <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
+        requireNonNull(function, "function");
         return (t, u) -> {
             try (SafeCloseable ignored = push()) {
                 return function.apply(t, u);
@@ -533,6 +513,7 @@ public interface RequestContext {
      * the input {@code action}.
      */
     default <T> Consumer<T> makeContextAware(Consumer<T> action) {
+        requireNonNull(action, "action");
         return t -> {
             try (SafeCloseable ignored = push()) {
                 action.accept(t);
@@ -545,6 +526,7 @@ public interface RequestContext {
      * the input {@code action}.
      */
     default <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
+        requireNonNull(action, "action");
         return (t, u) -> {
             try (SafeCloseable ignored = push()) {
                 action.accept(t, u);
@@ -557,7 +539,18 @@ public interface RequestContext {
      * then invokes the input {@code stage}.
      */
     default <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
-        final CompletableFuture<T> future = JavaVersionSpecific.get().newRequestContextAwareFuture(this);
+        requireNonNull(stage, "stage");
+        if (stage instanceof ContextHolder) {
+            final RequestContext context = ((ContextHolder) stage).context();
+            if (this == context) {
+                return stage;
+            }
+            if (root() != context.root()) {
+                throw new IllegalArgumentException(
+                        "cannot create a context aware future using " + stage);
+            }
+        }
+        final CompletableFuture<T> future = JavaVersionSpecific.get().newContextAwareFuture(this);
         stage.handle((result, cause) -> {
             try (SafeCloseable ignored = push()) {
                 if (cause != null) {
@@ -578,6 +571,7 @@ public interface RequestContext {
      * then invokes the input {@code future}.
      */
     default <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
+        requireNonNull(future, "future");
         return makeContextAware((CompletionStage<T>) future).toCompletableFuture();
     }
 
@@ -587,16 +581,6 @@ public interface RequestContext {
      * @param logger the {@link Logger} to decorate.
      */
     default Logger makeContextAware(Logger logger) {
-        return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
+        return ContextAwareLogger.of(this, logger);
     }
-
-    /**
-     * Creates a new {@link RequestContext} whose properties and {@link #attrs()} are copied from this
-     * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
-     * and its own {@link RequestLog}.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    RequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 }

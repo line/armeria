@@ -38,7 +38,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
     /**
      * Returns a singleton {@link EndpointGroup} which does not contain any {@link Endpoint}s.
      */
-    static EndpointGroup empty() {
+    static EndpointGroup of() {
         return StaticEndpointGroup.EMPTY;
     }
 
@@ -99,7 +99,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
         }
 
         if (groups.isEmpty() && staticEndpoints.isEmpty()) {
-            return empty();
+            return of();
         }
 
         if (groups.isEmpty()) {

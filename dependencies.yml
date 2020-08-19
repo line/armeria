@@ -3,18 +3,22 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.11.0
-  - io.dropwizard.metrics:metrics-bom:4.1.9
-  - io.grpc:grpc-bom:1.30.1
-  - io.micrometer:micrometer-bom:1.5.1
+  - com.fasterxml.jackson:jackson-bom:2.11.2
+  - io.dropwizard.metrics:metrics-bom:4.1.11
+  - io.grpc:grpc-bom:1.31.0
+  - io.micrometer:micrometer-bom:1.5.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.50.Final
-  - io.zipkin.brave:brave-bom:5.12.3
-  - org.eclipse.jetty:jetty-bom:9.4.30.v20200611
+  - io.netty:netty-bom:4.1.51.Final
+  - io.zipkin.brave:brave-bom:5.12.4
+  - org.eclipse.jetty:jetty-bom:9.4.31.v20200723
   - org.junit:junit-bom:5.6.2
 
 cglib:
   cglib: { version: '3.3.0' }
+
+# Akka is used only for testing in it:grpcweb module.
+ch.megard:
+  akka-http-cors_2.13: { version: '1.0.0' }
 
 ch.qos.logback:
   logback-classic:
@@ -41,11 +45,11 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.8.4'
+    version: '2.8.5'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.2/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.5/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -57,19 +61,19 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.4' }
 
 com.google.api:
-  gax-grpc: { version: '1.57.0' }
+  gax-grpc: { version: '1.57.1' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.28' }
+  dagger: { version: &DAGGER_VERSION '2.28.3' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
 com.google.errorprone:
-  error_prone_core:
-    version: '2.4.0'
+  error_prone_core: { version: &ERRORPRONE_VERSION '2.4.0' }
+  error_prone_annotations: { version: *ERRORPRONE_VERSION }
 
 com.google.guava:
   guava:
@@ -115,13 +119,17 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.12' }
   protoc: { version: *PROTOBUF_VERSION }
 
+# Akka is used only for testing in it:grpcweb module.
+com.lightbend.akka.grpc:
+  akka-grpc-runtime_2.13: { version: '1.0.1' }
+
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
-  eureka-client: { version: &EUREKA_VERSION '1.9.23' }
+  eureka-client: { version: &EUREKA_VERSION '1.9.25' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.33' }
+  checkstyle: { version: '8.35' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -129,7 +137,7 @@ com.salesforce.servicelibs:
 
 com.spotify:
   completable-futures:
-    version: '0.3.2'
+    version: '0.3.3'
     relocations:
     - from: com.spotify.futures
       to: com.linecorp.armeria.internal.shaded.futures
@@ -143,51 +151,36 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 com.thesamet.scalapb:
-  scalapb-runtime_2.13: { version: &SCALAPB_VERSION '0.10.1' }
+  scalapb-runtime_2.13: { version: &SCALAPB_VERSION '0.10.7' }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
-  scalapb-json4s_2.13: { version: *SCALAPB_VERSION }
+  scalapb-json4s_2.13: { version: '0.10.1' }
+
+# Akka is used only for testing in it:grpcweb module.
+com.typesafe.akka:
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.8' }
+  akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
+  akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '20.5.0'
+    version: '20.7.0'
 
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.10'
+    version: &DROPWIZARD_VERSION '2.0.12'
     javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.10/
-  dropwizard-jackson:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jackson/2.0.10/
-  dropwizard-lifecycle:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-lifecycle/2.0.10/
-  dropwizard-jersey:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jersey/2.0.10/
-  dropwizard-jetty:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-jetty/2.0.10/
-  dropwizard-testing:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-      - https://www.javadoc.io/doc/io.dropwizard/dropwizard-testing/2.0.10/
-  dropwizard-util:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-util/2.0.10/
-  dropwizard-validation:
-    version: *DROPWIZARD_VERSION
-    javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-validation/2.0.10/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.12/
+  dropwizard-jackson: { version: *DROPWIZARD_VERSION }
+  dropwizard-lifecycle: { version: *DROPWIZARD_VERSION }
+  dropwizard-jersey: { version: *DROPWIZARD_VERSION }
+  dropwizard-jetty: { version: *DROPWIZARD_VERSION }
+  dropwizard-testing: { version: *DROPWIZARD_VERSION }
+  dropwizard-util: { version: *DROPWIZARD_VERSION }
+  dropwizard-validation: { version: *DROPWIZARD_VERSION }
 
 io.dropwizard.metrics:
   metrics-core:
@@ -216,7 +209,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.3' }
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.1.4' }
   protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
@@ -235,18 +228,18 @@ io.micrometer:
 
 # This is only used for examples/grpc-scala
 io.monix:
-  monix-reactive_2.13: { version: '3.2.1' }
+  monix-reactive_2.13: { version: '3.2.2' }
 
 io.netty:
   netty-common:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.30.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.31.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.6.RELEASE'
+    version: &REACTOR_VERSION '3.3.9.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -268,7 +261,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.0.4'
+    version: '3.0.5'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -281,7 +274,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: '8.3.1'
+    version: '8.4.0'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -341,6 +334,7 @@ org.apache.curator:
   curator-recipes:
     version: &CURATOR_VERSION '4.3.0'
     javadocs:
+    - https://www.javadoc.io/doc/org.apache.curator/curator-framework/4.3.0/
     - https://www.javadoc.io/doc/org.apache.curator/curator-recipes/4.3.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
@@ -382,7 +376,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.36'
+    version: &TOMCAT_VERSION '9.0.37'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -404,7 +398,7 @@ org.awaitility:
 
 org.bouncycastle:
   bcprov-jdk15on:
-    version: '1.65.01'
+    version: '1.66'
     relocations:
     - from: org.bouncycastle
       to: com.linecorp.armeria.internal.shaded.bouncycastle
@@ -455,21 +449,21 @@ org.jetbrains.kotlin:
   kotlin-allopen: { version: &KOTLIN_VERSION '1.3.72' }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.7' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.8' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
 org.jlleitschuh.gradle:
-  ktlint-gradle: { version: '9.2.1' }
-
-org.jsoup:
-  jsoup: { version: '1.13.1' }
+  ktlint-gradle: { version: '9.3.0' }
 
 org.jooq:
   joor: { version: '0.9.13' }
 
+org.jsoup:
+  jsoup: { version: '1.13.1' }
+
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.3.3' }
+  mockito-core: { version: &MOCKITO_VERSION '3.4.6' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -521,11 +515,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.2.7.RELEASE' }
+  spring-web: { version: '5.2.8.RELEASE' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.3.1.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.3.2.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

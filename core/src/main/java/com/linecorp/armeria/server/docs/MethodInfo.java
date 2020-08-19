@@ -37,7 +37,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
 
@@ -54,7 +54,7 @@ public final class MethodInfo {
     private final List<FieldInfo> parameters;
     private final Set<TypeSignature> exceptionTypeSignatures;
     private final Set<EndpointInfo> endpoints;
-    private final List<HttpHeaders> exampleHttpHeaders;
+    private final List<HttpHeaders> exampleHeaders;
     private final List<String> exampleRequests;
     private final List<String> examplePaths;
     private final List<String> exampleQueries;
@@ -84,7 +84,7 @@ public final class MethodInfo {
                       HttpMethod httpMethod,
                       @Nullable String docString) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
-             /* exampleHttpHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
+             /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
              /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
              httpMethod, docString);
     }
@@ -97,7 +97,7 @@ public final class MethodInfo {
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
-                      Iterable<HttpHeaders> exampleHttpHeaders,
+                      Iterable<HttpHeaders> exampleHeaders,
                       Iterable<String> exampleRequests,
                       Iterable<String> examplePaths,
                       Iterable<String> exampleQueries,
@@ -114,8 +114,7 @@ public final class MethodInfo {
         this.endpoints = ImmutableSortedSet.copyOf(
                 comparing(e -> e.hostnamePattern() + ':' + e.pathMapping()),
                 requireNonNull(endpoints, "endpoints"));
-        this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
-                                                                      "exampleHttpHeaders"));
+        this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
 
         requireNonNull(examplePaths, "examplePaths");
@@ -186,8 +185,8 @@ public final class MethodInfo {
      * Returns the example HTTP headers of the method.
      */
     @JsonProperty
-    public List<HttpHeaders> exampleHttpHeaders() {
-        return exampleHttpHeaders;
+    public List<HttpHeaders> exampleHeaders() {
+        return exampleHeaders;
     }
 
     /**
@@ -249,7 +248,7 @@ public final class MethodInfo {
                parameters().equals(that.parameters()) &&
                exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
                endpoints().equals(that.endpoints()) &&
-               Objects.equals(httpMethod(), that.httpMethod());
+               httpMethod() == that.httpMethod();
     }
 
     @Override

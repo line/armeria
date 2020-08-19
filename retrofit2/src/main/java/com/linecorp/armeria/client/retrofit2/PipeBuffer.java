@@ -23,7 +23,7 @@ import okio.Buffer;
 import okio.Source;
 import okio.Timeout;
 
-class PipeBuffer {
+final class PipeBuffer {
 
     private final Buffer buffer = new Buffer();
     private final PipeSource source = new PipeSource();

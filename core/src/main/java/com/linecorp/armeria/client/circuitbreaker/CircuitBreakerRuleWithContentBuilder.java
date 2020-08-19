@@ -20,8 +20,7 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -38,10 +37,11 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  * A builder for creating a new {@link CircuitBreakerRuleWithContent}.
  * @param <T> the response type
  */
-public class CircuitBreakerRuleWithContentBuilder<T extends Response>
+public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         extends AbstractRuleWithContentBuilder<T> {
 
-    CircuitBreakerRuleWithContentBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    CircuitBreakerRuleWithContentBuilder(
+            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
@@ -70,7 +70,8 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     private CircuitBreakerRuleWithContent<T> build(CircuitBreakerDecision decision) {
-        final Function<? super T, ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
+        final BiFunction<? super ClientRequestContext, ? super T,
+                ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         final boolean hasResponseFilter = responseFilter != null;
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
@@ -87,7 +88,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
             if (content == null) {
                 return NEXT_DECISION;
             }
-            return responseFilter.apply(content)
+            return responseFilter.apply(ctx, content)
                                  .handle((matched, cause0) -> {
                                      if (cause0 != null) {
                                          return CircuitBreakerDecision.next();
@@ -99,6 +100,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
+
     /**
      * Adds the specified {@code responseFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If the specified {@code responseFilter} completes with {@code true},
@@ -107,7 +109,8 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
      */
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> responseFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponse(responseFilter);
     }
 
@@ -120,7 +123,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @SuppressWarnings("unchecked")
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onResponseHeaders(
-            Predicate<? super ResponseHeaders> responseHeadersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
     }
 
@@ -133,7 +136,7 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @SuppressWarnings("unchecked")
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onResponseTrailers(
-            Predicate<? super HttpHeaders> responseTrailersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
     }
 
@@ -205,7 +208,8 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
      */
     @SuppressWarnings("unchecked")
     @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onStatus(Predicate<? super HttpStatus> statusFilter) {
+    public CircuitBreakerRuleWithContentBuilder<T> onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onStatus(statusFilter);
     }
 
@@ -229,7 +233,8 @@ public class CircuitBreakerRuleWithContentBuilder<T extends Response>
      */
     @SuppressWarnings("unchecked")
     @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onException(Predicate<? super Throwable> exceptionFilter) {
+    public CircuitBreakerRuleWithContentBuilder<T> onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onException(exceptionFilter);
     }
 

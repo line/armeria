@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -53,15 +52,11 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     /**
      * Returns a new {@link HttpService} decorator that logs {@link HttpRequest}s and {@link HttpResponse}s at
-     * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
-     *
-     * @see LoggingServiceBuilder for more information on the default settings.
+     * {@link LogLevel#DEBUG} for success, {@link LogLevel#WARN} for failure. See {@link LoggingServiceBuilder}
+     * for more information on the default settings.
      */
     public static Function<? super HttpService, LoggingService> newDecorator() {
-        return builder().requestLogLevel(LogLevel.INFO)
-                        .successfulResponseLogLevel(LogLevel.INFO)
-                        .failureResponseLogLevel(LogLevel.WARN)
-                        .newDecorator();
+        return builder().newDecorator();
     }
 
     /**

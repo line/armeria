@@ -163,7 +163,7 @@ class ContentPreviewerTest {
                                                  HttpHeaderNames.CONTENT_TYPE, contentType,
                                                  HttpHeaderNames.ACCEPT, "utf-8",
                                                  HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE),
-                               content);
+                               content).aggregate();
                 final RequestLog log = waitingFuture.get();
                 waitingFuture = null;
                 return log;

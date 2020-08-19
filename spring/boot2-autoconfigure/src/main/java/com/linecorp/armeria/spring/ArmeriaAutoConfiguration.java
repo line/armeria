@@ -17,11 +17,7 @@
 package com.linecorp.armeria.spring;
 
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -76,33 +72,16 @@ public class ArmeriaAutoConfiguration {
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
-            Optional<MeterIdPrefixFunctionFactory> meterIdPrefixFunctionFactory,
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
-            Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
-            Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBeans,
-            Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
-            Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans,
             Optional<List<DocServiceConfigurator>> docServiceConfigurators)
             throws InterruptedException {
 
         if (!armeriaServerConfigurators.isPresent() &&
-            !armeriaServerBuilderConsumers.isPresent() &&
-            !thriftServiceRegistrationBeans.isPresent() &&
-            !grpcServiceRegistrationBeans.isPresent() &&
-            !httpServiceRegistrationBeans.isPresent() &&
-            !annotatedServiceRegistrationBeans.isPresent()) {
+            !armeriaServerBuilderConsumers.isPresent()) {
             // No services to register, no need to start up armeria server.
             return null;
-        }
-
-        final MeterIdPrefixFunctionFactory meterIdPrefixFuncFactory;
-        if (armeriaSettings.isEnableMetrics()) {
-            meterIdPrefixFuncFactory = meterIdPrefixFunctionFactory.orElse(
-                    MeterIdPrefixFunctionFactory.ofDefault());
-        } else {
-            meterIdPrefixFuncFactory = null;
         }
 
         final ServerBuilder serverBuilder = Server.builder();
@@ -120,24 +99,6 @@ public class ArmeriaAutoConfiguration {
                         configurator -> configurator.configure(docServiceBuilder)));
 
         final String docsPath = armeriaSettings.getDocsPath();
-        configureThriftServices(serverBuilder,
-                                docServiceBuilder,
-                                thriftServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                meterIdPrefixFuncFactory,
-                                docsPath);
-        configureGrpcServices(serverBuilder,
-                              docServiceBuilder,
-                              grpcServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                              meterIdPrefixFuncFactory,
-                              docsPath);
-        configureHttpServices(serverBuilder,
-                              httpServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                              meterIdPrefixFuncFactory);
-        configureAnnotatedServices(serverBuilder,
-                                   docServiceBuilder,
-                                   annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                   meterIdPrefixFuncFactory,
-                                   docsPath);
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
                                            meterRegistry.orElse(Metrics.globalRegistry),
                                            healthCheckers.orElseGet(Collections::emptyList));

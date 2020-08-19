@@ -72,8 +72,12 @@ public final class GrpcTestUtil {
     }
 
     public static byte[] uncompressedFrame(ByteBuf proto) {
+        return uncompressedFrame(proto, (byte) 0);
+    }
+
+    public static byte[] uncompressedFrame(ByteBuf proto, byte flag) {
         final ByteBuf buf = Unpooled.buffer();
-        buf.writeByte(0);
+        buf.writeByte(flag);
         buf.writeInt(proto.readableBytes());
         buf.writeBytes(proto);
         proto.release();
@@ -83,6 +87,10 @@ public final class GrpcTestUtil {
     }
 
     public static byte[] compressedFrame(ByteBuf uncompressed) {
+        return compressedFrame(uncompressed, (byte) 1);
+    }
+
+    public static byte[] compressedFrame(ByteBuf uncompressed, byte flag) {
         final ByteBuf compressed = Unpooled.buffer();
         try (ByteBufInputStream is = new ByteBufInputStream(uncompressed, true);
              GZIPOutputStream os = new GZIPOutputStream(new ByteBufOutputStream(compressed))) {
@@ -91,7 +99,7 @@ public final class GrpcTestUtil {
             throw new UncheckedIOException(e);
         }
         final ByteBuf buf = Unpooled.buffer();
-        buf.writeByte(1);
+        buf.writeByte(flag);
         buf.writeInt(compressed.readableBytes());
         buf.writeBytes(compressed);
         compressed.release();

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -70,6 +71,7 @@ public final class EurekaWebClient {
     /**
      * Registers the specified {@link InstanceInfo} to the Eureka registry.
      */
+    @CheckReturnValue
     public HttpResponse register(InstanceInfo info) {
         requireNonNull(info, "info");
         final String path = APPS + info.getAppName();
@@ -86,6 +88,7 @@ public final class EurekaWebClient {
     /**
      * Sends the heart beat to the Eureka registry.
      */
+    @CheckReturnValue
     public HttpResponse sendHeartBeat(String appName, String instanceId, InstanceInfo instanceInfo,
                                       @Nullable InstanceStatus overriddenStatus) {
         requireNonNull(appName, "appName");
@@ -109,6 +112,7 @@ public final class EurekaWebClient {
     /**
      * Deregisters the specified {@code instanceId} in {@code appName} from the Eureka registry.
      */
+    @CheckReturnValue
     public HttpResponse cancel(String appName, String instanceId) {
         requireNonNull(appName, "appName");
         requireNonNull(instanceId, "instanceId");
@@ -119,6 +123,7 @@ public final class EurekaWebClient {
     /**
      * Retrieves the registry information whose regions are the specified {@code regions} from the Eureka.
      */
+    @CheckReturnValue
     public HttpResponse getApplications(Iterable<String> regions) {
         return getApplications(APPS, requireNonNull(regions, "regions"));
     }
@@ -142,6 +147,7 @@ public final class EurekaWebClient {
      * Retrieves the delta updates between the last fetch and the current one. See
      * https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#fetch-registry.
      */
+    @CheckReturnValue
     public HttpResponse getDelta(Iterable<String> regions) {
         return getApplications(APPS + "delta", requireNonNull(regions, "regions"));
     }
@@ -150,6 +156,7 @@ public final class EurekaWebClient {
      * Retrieves the registry information whose application name is the specified {@code appName}
      * from the Eureka.
      */
+    @CheckReturnValue
     public HttpResponse getApplication(String appName) {
         return sendGetRequest(APPS + requireNonNull(appName, "appName"));
     }
@@ -158,6 +165,7 @@ public final class EurekaWebClient {
      * Retrieves the registry information whose VIP address is the specified {@code vipAddress} and regions
      * are the specified {@code regions} from the Eureka.
      */
+    @CheckReturnValue
     public HttpResponse getVip(String vipAddress, Iterable<String> regions) {
         return getApplications(VIPS + requireNonNull(vipAddress, "vipAddress"),
                                requireNonNull(regions, "regions"));
@@ -167,6 +175,7 @@ public final class EurekaWebClient {
      * Retrieves the registry information whose VIP address is the specified {@code secureVipAddress}
      * and regions are the specified {@code regions} from the Eureka.
      */
+    @CheckReturnValue
     public HttpResponse getSecureVip(String secureVipAddress, Iterable<String> regions) {
         return getApplications(SVIPS + requireNonNull(secureVipAddress, "secureVipAddress"),
                                requireNonNull(regions, "regions"));
@@ -176,6 +185,7 @@ public final class EurekaWebClient {
      * Retrieves the registry information whose application name is the specified {@code appName}
      * and instance ID is the specified {@code instanceId} from the Eureka.
      */
+    @CheckReturnValue
     public HttpResponse getInstance(String appName, String instanceId) {
         return sendGetRequest(APPS + requireNonNull(appName, "appName") + '/' +
                               requireNonNull(instanceId, "instanceId"));
@@ -184,6 +194,7 @@ public final class EurekaWebClient {
     /**
      * Retrieves the registry information whose instance ID is the specified {@code instanceId} from the Eureka.
      */
+    @CheckReturnValue
     public HttpResponse getInstance(String instanceId) {
         return sendGetRequest(INSTANCES + requireNonNull(instanceId, "instanceId"));
     }

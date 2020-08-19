@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 
-import com.linecorp.armeria.spring.web.reactive.ArmeriaClientHttpConnector;
-
 import reactor.core.publisher.Mono;
 
 /**
@@ -21,7 +19,7 @@ public class HelloController {
     private final WebClient webClient;
 
     /**
-     * The given {@link Builder} has been configured to have an {@link ArmeriaClientHttpConnector} as
+     * The given {@link Builder} has been configured to have an {@code ArmeriaClientHttpConnector} as
      * its client connector.
      */
     @Inject

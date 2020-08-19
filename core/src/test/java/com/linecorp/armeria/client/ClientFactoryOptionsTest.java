@@ -16,23 +16,23 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY;
-import static com.linecorp.armeria.client.ClientFactoryOption.CHANNEL_OPTIONS;
-import static com.linecorp.armeria.client.ClientFactoryOption.CONNECTION_POOL_LISTENER;
-import static com.linecorp.armeria.client.ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY;
-import static com.linecorp.armeria.client.ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE;
-import static com.linecorp.armeria.client.ClientFactoryOption.HTTP1_MAX_HEADER_SIZE;
-import static com.linecorp.armeria.client.ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH;
-import static com.linecorp.armeria.client.ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE;
-import static com.linecorp.armeria.client.ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE;
-import static com.linecorp.armeria.client.ClientFactoryOption.HTTP2_MAX_FRAME_SIZE;
-import static com.linecorp.armeria.client.ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE;
-import static com.linecorp.armeria.client.ClientFactoryOption.IDLE_TIMEOUT_MILLIS;
-import static com.linecorp.armeria.client.ClientFactoryOption.METER_REGISTRY;
-import static com.linecorp.armeria.client.ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE;
-import static com.linecorp.armeria.client.ClientFactoryOption.USE_HTTP1_PIPELINING;
-import static com.linecorp.armeria.client.ClientFactoryOption.USE_HTTP2_PREFACE;
-import static com.linecorp.armeria.client.ClientFactoryOption.WORKER_GROUP;
+import static com.linecorp.armeria.client.ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY;
+import static com.linecorp.armeria.client.ClientFactoryOptions.CHANNEL_OPTIONS;
+import static com.linecorp.armeria.client.ClientFactoryOptions.CONNECTION_POOL_LISTENER;
+import static com.linecorp.armeria.client.ClientFactoryOptions.EVENT_LOOP_SCHEDULER_FACTORY;
+import static com.linecorp.armeria.client.ClientFactoryOptions.HTTP1_MAX_CHUNK_SIZE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.HTTP1_MAX_HEADER_SIZE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.HTTP1_MAX_INITIAL_LINE_LENGTH;
+import static com.linecorp.armeria.client.ClientFactoryOptions.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.HTTP2_INITIAL_STREAM_WINDOW_SIZE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.HTTP2_MAX_FRAME_SIZE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.HTTP2_MAX_HEADER_LIST_SIZE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.IDLE_TIMEOUT_MILLIS;
+import static com.linecorp.armeria.client.ClientFactoryOptions.METER_REGISTRY;
+import static com.linecorp.armeria.client.ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.USE_HTTP1_PIPELINING;
+import static com.linecorp.armeria.client.ClientFactoryOptions.USE_HTTP2_PREFACE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.WORKER_GROUP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 

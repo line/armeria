@@ -41,17 +41,17 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseSubscriber extends DefaultTimeoutController implements Subscriber<HttpObject> {
+final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -87,12 +87,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
-        super(ctx.channel().eventLoop());
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
-        setTimeoutTask(newTimeoutTask());
     }
 
     private HttpService service() {
@@ -112,11 +110,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             return;
         }
 
-        // Schedule the initial request timeout.
-        final long requestTimeoutMillis = reqCtx.requestTimeoutMillis();
-        if (requestTimeoutMillis > 0) {
-            scheduleTimeout(requestTimeoutMillis);
-        }
+        // Schedule the initial request timeout with the timeoutNanos in the TimeoutScheduler
+        reqCtx.requestTimeoutScheduler().init(reqCtx.eventLoop(), newTimeoutTask(), 0);
 
         // Start consuming.
         subscription.request(1);
@@ -129,12 +124,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             failAndRespond(new IllegalArgumentException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
                     " (service: " + service() + ')'));
-            ReferenceCountUtil.safeRelease(o);
             return;
         }
 
         if (failIfStreamOrSessionClosed()) {
-            ReferenceCountUtil.safeRelease(o);
+            PooledObjects.close(o);
             return;
         }
 
@@ -189,7 +183,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 }
                 if (o instanceof HttpData) {
                     // We silently ignore the data and call subscription.request(1).
-                    ReferenceCountUtil.safeRelease(o);
+                    ((HttpData) o).close();
                     assert subscription != null;
                     subscription.request(1);
                     return;
@@ -233,7 +227,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 break;
             }
             case DONE:
-                ReferenceCountUtil.safeRelease(o);
+                PooledObjects.close(o);
                 return;
         }
 
@@ -262,7 +256,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         if (cancel && subscription != null) {
             subscription.cancel();
         }
-        cancelTimeout();
+        reqCtx.requestTimeoutScheduler().clearTimeout(false);
         final State oldState = state;
         state = State.DONE;
         return oldState;
@@ -301,7 +295,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     @Override
     public void onComplete() {
-        if (isTimedOut() && reqCtx.requestTimeoutHandler() == null) {
+        if (reqCtx.requestTimeoutScheduler().isTimedOut()) {
             // We have already returned a failed response due to a timeout.
             return;
         }
@@ -414,15 +408,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
             @Override
             public void run() {
-                if (state != State.DONE) {
-                    final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
-                    if (requestTimeoutHandler != null) {
-                        requestTimeoutHandler.run();
-                    } else {
-                        failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
-                                       Http2Error.INTERNAL_ERROR, true);
-                    }
-                }
+                // This method will be invoked only when `canSchedule()` returns true.
+                assert state != State.DONE;
+
+                failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
+                               Http2Error.INTERNAL_ERROR, true);
             }
         };
     }

@@ -23,7 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -42,7 +42,7 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  */
 public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
-    RetryRuleBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
+    RetryRuleBuilder(BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
@@ -110,7 +110,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public RetryRuleBuilder onResponseHeaders(
-            Predicate<? super ResponseHeaders> responseHeadersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
         return (RetryRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
     }
 
@@ -121,7 +121,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public RetryRuleBuilder onResponseTrailers(
-            Predicate<? super HttpHeaders> responseTrailersFilter) {
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (RetryRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
     }
 
@@ -175,7 +175,8 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      * if a response status matches the specified {@code statusFilter}.
      */
     @Override
-    public RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
+    public RetryRuleBuilder onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
         return (RetryRuleBuilder) super.onStatus(statusFilter);
     }
 
@@ -193,7 +194,8 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
     @Override
-    public RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
+    public RetryRuleBuilder onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
         return (RetryRuleBuilder) super.onException(exceptionFilter);
     }
 

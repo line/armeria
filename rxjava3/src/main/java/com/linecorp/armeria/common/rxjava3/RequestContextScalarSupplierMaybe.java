@@ -24,8 +24,7 @@ import io.reactivex.rxjava3.core.MaybeObserver;
 import io.reactivex.rxjava3.core.MaybeSource;
 import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
 
-final class RequestContextScalarSupplierMaybe<T> extends Maybe<T>
-        implements ScalarSupplier<T> {
+final class RequestContextScalarSupplierMaybe<T> extends Maybe<T> implements ScalarSupplier<T> {
     private final MaybeSource<T> source;
     private final RequestContext assemblyContext;
 

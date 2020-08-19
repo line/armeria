@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -88,6 +89,11 @@ class RetrofitMeterIdPrefixFunctionTest {
             sb.service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
         }
     };
+
+    @AfterAll
+    static void closeClientFactory() {
+        clientFactory.closeAsync();
+    }
 
     @Test
     void metrics() {

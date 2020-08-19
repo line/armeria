@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
+import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
@@ -120,6 +121,7 @@ public final class RequestContextUtil {
     /**
      * Returns the {@link SafeCloseable} which doesn't do anything.
      */
+    @MustBeClosed
     public static SafeCloseable noopSafeCloseable() {
         return noopSafeCloseable;
     }
@@ -196,6 +198,7 @@ public final class RequestContextUtil {
      * eventloop might have the wrong {@link RequestContext} in the {@link RequestContextStorage},
      * so we should pop it.
      */
+    @MustBeClosed
     public static SafeCloseable pop() {
         final RequestContext oldCtx = requestContextStorage.currentOrNull();
         if (oldCtx == null) {

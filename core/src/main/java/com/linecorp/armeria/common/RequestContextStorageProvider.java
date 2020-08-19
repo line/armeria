@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Creates a new {@link RequestContextStorage} dynamically via Java SPI (Service Provider Interface).

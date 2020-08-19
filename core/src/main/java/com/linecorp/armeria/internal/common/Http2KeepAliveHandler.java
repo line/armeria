@@ -23,7 +23,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +56,6 @@ import io.netty.handler.codec.http2.Http2PingFrame;
  * @see Flags#defaultServerIdleTimeoutMillis()
  * @see Flags#defaultPingIntervalMillis()
  */
-@NotThreadSafe
 public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
@@ -79,14 +77,14 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
-    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+    protected final ChannelFuture writePing(ChannelHandlerContext ctx) {
         lastPingPayload = random.nextLong();
         final ChannelFuture future = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise());
         ctx.flush();
         return future;
     }
 
-    public void onPingAck(long data) {
+    public final void onPingAck(long data) {
         final long elapsed = getStopwatchElapsedInNanos();
         if (!isGoodPingAck(data)) {
             return;
@@ -104,7 +102,7 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @Override
-    protected boolean pingResetsPreviousPing() {
+    protected final boolean pingResetsPreviousPing() {
         return true;
     }
 
@@ -124,7 +122,7 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
     }
 
     @VisibleForTesting
-    long lastPingPayload() {
+    final long lastPingPayload() {
         return lastPingPayload;
     }
 

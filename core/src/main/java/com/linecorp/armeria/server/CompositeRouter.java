@@ -37,10 +37,6 @@ final class CompositeRouter<I, O> implements Router<O> {
     private final List<Router<I>> delegates;
     private final Function<Routed<I>, Routed<O>> resultMapper;
 
-    CompositeRouter(Router<I> delegate, Function<Routed<I>, Routed<O>> resultMapper) {
-        this(ImmutableList.of(requireNonNull(delegate, "delegate")), resultMapper);
-    }
-
     CompositeRouter(List<Router<I>> delegates, Function<Routed<I>, Routed<O>> resultMapper) {
         this.delegates = requireNonNull(delegates, "delegates");
         this.resultMapper = requireNonNull(resultMapper, "resultMapper");

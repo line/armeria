@@ -50,12 +50,4 @@ public final class AnticipatedException extends RuntimeException {
     public AnticipatedException(@Nullable Throwable cause) {
         super(cause);
     }
-
-    /**
-     * Creates a new instance.
-     */
-    protected AnticipatedException(@Nullable String message, @Nullable Throwable cause,
-                                   boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
 }

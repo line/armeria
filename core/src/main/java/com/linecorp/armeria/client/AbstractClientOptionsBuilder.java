@@ -43,7 +43,7 @@ public class AbstractClientOptionsBuilder {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
-    private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
+    private final HttpHeadersBuilder headers = HttpHeaders.builder();
 
     /**
      * Creates a new instance.
@@ -104,11 +104,11 @@ public class AbstractClientOptionsBuilder {
     public <T> AbstractClientOptionsBuilder option(ClientOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
         final ClientOption<?> opt = optionValue.option();
-        if (opt == ClientOption.DECORATION) {
+        if (opt == ClientOptions.DECORATION) {
             decoration.add((ClientDecoration) optionValue.value());
-        } else if (opt == ClientOption.HTTP_HEADERS) {
+        } else if (opt == ClientOptions.HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
-            setHttpHeaders(h);
+            setHeaders(h);
         } else {
             options.put(opt, optionValue);
         }
@@ -120,7 +120,7 @@ public class AbstractClientOptionsBuilder {
      * The default is {@link ClientFactory#ofDefault()}.
      */
     public AbstractClientOptionsBuilder factory(ClientFactory factory) {
-        return option(ClientOption.FACTORY, requireNonNull(factory, "factory"));
+        return option(ClientOptions.FACTORY, requireNonNull(factory, "factory"));
     }
 
     /**
@@ -138,7 +138,7 @@ public class AbstractClientOptionsBuilder {
      * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public AbstractClientOptionsBuilder writeTimeoutMillis(long writeTimeoutMillis) {
-        return option(ClientOption.WRITE_TIMEOUT_MILLIS, writeTimeoutMillis);
+        return option(ClientOptions.WRITE_TIMEOUT_MILLIS, writeTimeoutMillis);
     }
 
     /**
@@ -156,7 +156,7 @@ public class AbstractClientOptionsBuilder {
      * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public AbstractClientOptionsBuilder responseTimeoutMillis(long responseTimeoutMillis) {
-        return option(ClientOption.RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
+        return option(ClientOptions.RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
     }
 
     /**
@@ -165,14 +165,14 @@ public class AbstractClientOptionsBuilder {
      * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
      */
     public AbstractClientOptionsBuilder maxResponseLength(long maxResponseLength) {
-        return option(ClientOption.MAX_RESPONSE_LENGTH, maxResponseLength);
+        return option(ClientOptions.MAX_RESPONSE_LENGTH, maxResponseLength);
     }
 
     /**
      * Sets the {@link Supplier} that generates a {@link RequestId}.
      */
     public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
-        return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
+        return option(ClientOptions.REQUEST_ID_GENERATOR, requestIdGenerator);
     }
 
     /**
@@ -206,13 +206,13 @@ public class AbstractClientOptionsBuilder {
      *
      * <p>Note that the remapping does not occur recursively but only once.</p>
      *
-     * @see ClientOption#ENDPOINT_REMAPPER
+     * @see ClientOptions#ENDPOINT_REMAPPER
      * @see ClientOptions#endpointRemapper()
      */
     public AbstractClientOptionsBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         requireNonNull(endpointRemapper, "endpointRemapper");
-        return option(ClientOption.ENDPOINT_REMAPPER, endpointRemapper);
+        return option(ClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
     }
 
     /**
@@ -233,6 +233,14 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder decorator(DecoratingHttpClientFunction decorator) {
         decoration.add(decorator);
+        return this;
+    }
+
+    /**
+     * Clears all HTTP-level and RPC-level decorators set so far.
+     */
+    public AbstractClientOptionsBuilder clearDecorators() {
+        decoration.clear();
         return this;
     }
 
@@ -260,40 +268,40 @@ public class AbstractClientOptionsBuilder {
     /**
      * Adds the specified HTTP header.
      */
-    public AbstractClientOptionsBuilder addHttpHeader(CharSequence name, Object value) {
+    public AbstractClientOptionsBuilder addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        httpHeaders.addObject(HttpHeaderNames.of(name), value);
+        headers.addObject(HttpHeaderNames.of(name), value);
         return this;
     }
 
     /**
      * Adds the specified HTTP headers.
      */
-    public AbstractClientOptionsBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        requireNonNull(httpHeaders, "httpHeaders");
-        this.httpHeaders.addObject(httpHeaders);
+    public AbstractClientOptionsBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        requireNonNull(headers, "headers");
+        this.headers.addObject(headers);
         return this;
     }
 
     /**
      * Sets the specified HTTP header.
      */
-    public AbstractClientOptionsBuilder setHttpHeader(CharSequence name, Object value) {
+    public AbstractClientOptionsBuilder setHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        httpHeaders.setObject(HttpHeaderNames.of(name), value);
+        headers.setObject(HttpHeaderNames.of(name), value);
         return this;
     }
 
     /**
      * Sets the specified HTTP headers.
      */
-    public AbstractClientOptionsBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        requireNonNull(httpHeaders, "httpHeaders");
-        this.httpHeaders.setObject(httpHeaders);
+    public AbstractClientOptionsBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        requireNonNull(headers, "headers");
+        this.headers.setObject(headers);
         return this;
     }
 
@@ -304,7 +312,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(BasicToken token) {
         requireNonNull(token, "token");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
         return this;
     }
 
@@ -314,7 +322,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
         requireNonNull(token, "token");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
         return this;
     }
 
@@ -324,7 +332,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth2Token token) {
         requireNonNull(token, "token");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
         return this;
     }
 
@@ -344,8 +352,8 @@ public class AbstractClientOptionsBuilder {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
-        optValArray[numOpts] = ClientOption.DECORATION.newValue(decoration.build());
-        optValArray[numOpts + 1] = ClientOption.HTTP_HEADERS.newValue(httpHeaders.build());
+        optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
+        optValArray[numOpts + 1] = ClientOptions.HEADERS.newValue(headers.build());
 
         if (baseOptions != null) {
             return ClientOptions.of(baseOptions, optValArray);

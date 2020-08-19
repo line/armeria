@@ -34,7 +34,7 @@ import org.apache.zookeeper.common.PathUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A skeletal builder implementation for {@link CuratorFramework}.
@@ -94,7 +94,7 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Returns the znode Path.
      */
-    protected String znodePath() {
+    protected final String znodePath() {
         return znodePath;
     }
 

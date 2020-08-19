@@ -20,4 +20,4 @@
 @NonNullByDefault
 package reactor.core.scheduler;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

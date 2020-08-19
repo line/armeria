@@ -21,9 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.common.util.UnstableApi;
-
-import io.netty.util.ReferenceCountUtil;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * A {@link FixedStreamMessage} that publishes an arbitrary number of objects. It is recommended to use
@@ -61,7 +60,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
             try {
                 onRemoval(obj);
             } finally {
-                ReferenceCountUtil.safeRelease(obj);
+                PooledObjects.close(obj);
             }
         }
     }
@@ -149,7 +148,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public boolean isEmpty() {
+    public final boolean isEmpty() {
         return false;
     }
 }

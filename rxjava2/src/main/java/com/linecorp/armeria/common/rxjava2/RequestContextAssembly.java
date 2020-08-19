@@ -19,7 +19,8 @@ package com.linecorp.armeria.common.rxjava2;
 import java.util.concurrent.Callable;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
+
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.RequestContext;
 

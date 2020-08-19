@@ -23,7 +23,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -47,15 +46,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -87,7 +86,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
      */
     public DefaultStreamMessageDuplicator(
             StreamMessage<T> upstream, SignalLengthGetter<? super T> signalLengthGetter,
-           EventExecutor executor, long maxSignalLength) {
+            EventExecutor executor, long maxSignalLength) {
         requireNonNull(upstream, "upstream");
         requireNonNull(signalLengthGetter, "signalLengthGetter");
         this.executor = requireNonNull(executor, "executor");
@@ -102,35 +101,35 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             throw new IllegalStateException("duplicator is closed.");
         }
         unsubscribedUpdater.incrementAndGet(this);
-        return new ChildStreamMessage<T>(this, processor);
+        return new ChildStreamMessage<>(processor);
     }
 
     /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes to a child
      * stream using {@link StreamMessage#subscribe(Subscriber, SubscriptionOption...)}.
      */
-    protected EventExecutor duplicatorExecutor() {
+    protected final EventExecutor duplicatorExecutor() {
         return executor;
     }
 
     @Override
-    public void close() {
+    public final void close() {
         processor.close();
     }
 
     @Override
-    public void abort() {
+    public final void abort() {
         abort(AbortedStreamException.get());
     }
 
     @Override
-    public void abort(Throwable cause) {
+    public final void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         processor.abort(cause);
     }
 
     @VisibleForTesting
-    static class StreamMessageProcessor<T> implements Subscriber<T> {
+    static final class StreamMessageProcessor<T> implements Subscriber<T> {
 
         private enum State {
             DUPLICABLE,
@@ -175,7 +174,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
             signals = new SignalQueue(this.signalLengthGetter);
             upstream.subscribe(this, executor,
-                               WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
+                               SubscriptionOption.WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
         }
 
         StreamMessage<T> upstream() {
@@ -233,7 +232,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private void doPushSignal(Object obj) {
             if (state == State.ABORTED) {
-                ReferenceCountUtil.safeRelease(obj);
+                PooledObjects.close(obj);
                 return;
             }
             if (!(obj instanceof CloseEvent)) {
@@ -453,7 +452,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
     }
 
-    private static class ChildStreamMessage<T> implements StreamMessage<T> {
+    private static final class ChildStreamMessage<T> implements StreamMessage<T> {
 
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<ChildStreamMessage, DownstreamSubscription>
@@ -468,8 +467,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
-        ChildStreamMessage(DefaultStreamMessageDuplicator<T> duplicator,
-                           StreamMessageProcessor<T> processor) {
+        ChildStreamMessage(StreamMessageProcessor<T> processor) {
             this.processor = processor;
         }
 
@@ -562,7 +560,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         private void abort0(Throwable cause) {
-            final DownstreamSubscription<T> currentSubscription = subscription;
+            DownstreamSubscription<T> currentSubscription = subscription;
             if (currentSubscription != null) {
                 currentSubscription.abort(cause);
                 return;
@@ -571,15 +569,16 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
                     this, AbortingSubscriber.get(cause), processor, ImmediateEventExecutor.INSTANCE,
                     false, false);
-            if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-                newSubscription.whenComplete().completeExceptionally(cause);
-            } else {
-                subscription.abort(cause);
+
+            if (!subscribe0(newSubscription)) {
+                currentSubscription = subscription;
+                assert currentSubscription != null;
+                currentSubscription.abort(cause);
             }
         }
     }
 
-    static class DownstreamSubscription<T> implements Subscription {
+    static final class DownstreamSubscription<T> implements Subscription {
 
         private static final int REQUEST_REMOVAL_THRESHOLD = 50;
 
@@ -638,7 +637,9 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         void clearSubscriber() {
             // Replace the subscriber with a placeholder so that it can be garbage-collected and
             // we conform to the Reactive Streams specification rule 3.13.
-            subscriber = NeverInvokedSubscriber.get();
+            if (!(subscriber instanceof AbortingSubscriber)) {
+                subscriber = NeverInvokedSubscriber.get();
+            }
         }
 
         // Called from processor.processorExecutor
@@ -771,19 +772,23 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 offset++;
                 @SuppressWarnings("unchecked")
                 T obj = (T) signal;
-                ReferenceCountUtil.touch(obj);
                 try {
-                    if (withPooledObjects) {
-                        if (obj instanceof ByteBufHolder) {
-                            obj = retainedDuplicate((ByteBufHolder) obj);
-                        } else if (obj instanceof ByteBuf) {
-                            obj = retainedDuplicate((ByteBuf) obj);
-                        }
-                    } else {
-                        if (obj instanceof ByteBufHolder) {
-                            obj = copy((ByteBufHolder) obj);
-                        } else if (obj instanceof ByteBuf) {
-                            obj = copy((ByteBuf) obj);
+                    if (obj instanceof HttpData) {
+                        final HttpData data = (HttpData) obj;
+                        if (data.isPooled()) {
+                            if (withPooledObjects) {
+                                final ByteBuf byteBuf = data.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE);
+                                @SuppressWarnings("unchecked")
+                                final T retained = (T) HttpData.wrap(byteBuf)
+                                                               .withEndOfStream(data.isEndOfStream());
+                                obj = retained;
+                            } else {
+                                final ByteBuf byteBuf = data.byteBuf();
+                                @SuppressWarnings("unchecked")
+                                final T copied = (T) HttpData.copyOf(byteBuf)
+                                                             .withEndOfStream(data.isEndOfStream());
+                                obj = copied;
+                            }
                         }
                     }
                 } catch (Throwable thrown) {
@@ -824,35 +829,14 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         @Override
         public void cancel() {
-            if (cancelledOrAbortedUpdater.compareAndSet(this, null, CancelledSubscriptionException.get())) {
-                signal();
-            }
+            abort(subscriber instanceof AbortingSubscriber ? ((AbortingSubscriber<?>) subscriber).cause()
+                                                           : CancelledSubscriptionException.get());
         }
 
         void abort(Throwable cause) {
             if (cancelledOrAbortedUpdater.compareAndSet(this, null, cause)) {
                 signal();
             }
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T retainedDuplicate(ByteBufHolder o) {
-            return (T) o.replace(o.content().retainedDuplicate());
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T retainedDuplicate(ByteBuf o) {
-            return (T) o.retainedDuplicate();
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T copy(ByteBufHolder o) {
-            return (T) o.replace(Unpooled.copiedBuffer(o.content()));
-        }
-
-        @SuppressWarnings("unchecked")
-        private static <T> T copy(ByteBuf o) {
-            return (T) Unpooled.copiedBuffer(o);
         }
     }
 
@@ -883,7 +867,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
      * can be done by multiple threads.
      */
     @VisibleForTesting
-    static class SignalQueue {
+    static final class SignalQueue {
 
         private static final AtomicIntegerFieldUpdater<SignalQueue> lastRemovalRequestedOffsetUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(SignalQueue.class, "lastRemovalRequestedOffset");
@@ -945,7 +929,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (!(o instanceof CloseEvent)) {
                     removedLength += signalLengthGetter.length(o);
                 }
-                ReferenceCountUtil.safeRelease(o);
+                PooledObjects.close(o);
                 elements[index] = null;
             }
             head = oldHead + numElementsToBeRemoved & bitMask;
@@ -1037,7 +1021,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             elements = null;
             final int t = tail;
             for (int i = head; i < t; i++) {
-                ReferenceCountUtil.safeRelease(oldElements[i]);
+                PooledObjects.close(oldElements[i]);
             }
         }
 

@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -52,7 +53,6 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.NetUtil;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -171,7 +171,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                 newInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
                 } else {
                     logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
-                    scheduleHeartBeat(ctx.eventLoop(), newInfo);
+                    scheduleHeartBeat(ctx.eventLoop().withoutContext(), newInfo);
                 }
                 return null;
             });
@@ -328,7 +328,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
             client.sendHeartBeat(appName, instanceId, instanceInfo, null)
                   .aggregate()
                   .handle((res, cause) -> {
-                      try {
+                      try (HttpData content = res.content()) {
                           if (closed) {
                               return null;
                           }
@@ -341,14 +341,12 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                           } else if (res.headers().status() != HttpStatus.OK) {
                               logger.warn("Failed to send a heart beat to Eureka: {}, " +
                                           "(status: {}, content: {})",
-                                          client.uri(), res.headers().status(), res.contentUtf8());
+                                          client.uri(), res.headers().status(), content.toStringUtf8());
                           }
                           heartBeatFuture = eventLoop.schedule(
                                   this, instanceInfo.getLeaseInfo().getRenewalIntervalInSecs(),
                                   TimeUnit.SECONDS);
                           return null;
-                      } finally {
-                          ReferenceCountUtil.release(res.content());
                       }
                   });
         }

@@ -18,8 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
-import static com.linecorp.armeria.internal.stream.InternalSubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -32,11 +30,10 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.internal.common.util.PooledObjects;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -62,13 +59,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     /**
-     * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
-     * before passing to a subscriber.
+     * (Advanced users only) Creates a new {@link FilteredStreamMessage} that filters objects published by
+     * {@code delegate} before passing to a subscriber.
      *
-     * @param withPooledObjects if {@code true}, {@link #filter(Object)} receives the pooled {@link ByteBuf}
-     *                          and {@link ByteBufHolder} as is, without making a copy. If you don't know what
-     *                          this means, use {@link #FilteredStreamMessage(StreamMessage)}.
+     * @param withPooledObjects if {@code true}, {@link #filter(Object)} receives the pooled {@link HttpData}
+     *                          as is, without making a copy. If you don't know what this means,
+     *                          use {@link #FilteredStreamMessage(StreamMessage)}.
+     * @see PooledObjects
      */
+    @UnstableApi
     protected FilteredStreamMessage(StreamMessage<T> delegate, boolean withPooledObjects) {
         this.delegate = requireNonNull(delegate, "delegate");
         filterSupportsPooledObjects = withPooledObjects;
@@ -105,28 +104,28 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return delegate.isOpen();
     }
 
     @Override
-    public boolean isEmpty() {
+    public final boolean isEmpty() {
         return delegate.isEmpty();
     }
 
     @Override
-    public CompletableFuture<Void> whenComplete() {
+    public final CompletableFuture<Void> whenComplete() {
         return delegate.whenComplete();
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
+    public final void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
         subscribe(subscriber, executor, false, false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
+    public final void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
+                                SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
@@ -144,26 +143,26 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     private SubscriptionOption[] filteringSubscriptionOptions(boolean notifyCancellation) {
         final ArrayList<SubscriptionOption> list = new ArrayList<>(2);
         if (filterSupportsPooledObjects) {
-            list.add(WITH_POOLED_OBJECTS);
+            list.add(SubscriptionOption.WITH_POOLED_OBJECTS);
         }
         if (notifyCancellation) {
-            list.add(NOTIFY_CANCELLATION);
+            list.add(SubscriptionOption.NOTIFY_CANCELLATION);
         }
         return list.toArray(EMPTY_OPTIONS);
     }
 
     @Override
-    public EventExecutor defaultSubscriberExecutor() {
+    public final EventExecutor defaultSubscriberExecutor() {
         return delegate.defaultSubscriberExecutor();
     }
 
     @Override
-    public void abort() {
+    public final void abort() {
         delegate.abort();
     }
 
     @Override
-    public void abort(Throwable cause) {
+    public final void abort(Throwable cause) {
         delegate.abort(requireNonNull(cause, "cause"));
     }
 
@@ -185,10 +184,9 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onNext(T o) {
-            ReferenceCountUtil.touch(o);
             U filtered = filter(o);
             if (!subscribedWithPooledObjects) {
-                filtered = PooledObjects.toUnpooled(filtered);
+                filtered = PooledObjects.copyAndClose(filtered);
             }
             delegate.onNext(filtered);
         }

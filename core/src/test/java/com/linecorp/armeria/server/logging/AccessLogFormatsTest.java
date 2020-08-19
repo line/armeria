@@ -498,6 +498,7 @@ class AccessLogFormatsTest {
         }
     }
 
+    @SuppressWarnings("unused")
     static class AttributeStringifier implements Function<Attr, String> {
         @Override
         public String apply(Attr attr) {

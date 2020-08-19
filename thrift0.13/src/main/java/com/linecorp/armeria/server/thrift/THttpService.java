@@ -62,8 +62,6 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
-import com.linecorp.armeria.common.unsafe.PooledHttpData;
-import com.linecorp.armeria.common.unsafe.PooledHttpRequest;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -79,7 +77,6 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 
 /**
  * An {@link HttpService} that handles a Thrift call.
@@ -354,8 +351,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
-        PooledHttpRequest.of(req).aggregateWithPooledObjects(
-                ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
             if (cause != null) {
                 final HttpResponse errorRes;
                 if (ctx.config().verboseResponses()) {
@@ -421,23 +417,15 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private void decodeAndInvoke(
             ServiceRequestContext ctx, AggregatedHttpRequest req,
             SerializationFormat serializationFormat, CompletableFuture<HttpResponse> httpRes) {
-        final HttpData content = req.content();
-        final ByteBuf buf;
-        if (content instanceof ByteBufHolder) {
-            buf = ((ByteBufHolder) content).content();
-        } else {
-            buf = ctx.alloc().buffer(content.length());
-            buf.writeBytes(content.array());
-        }
-
-        final TByteBufTransport inTransport = new TByteBufTransport(buf);
-        final TProtocol inProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(inTransport);
 
         final int seqId;
         final ThriftFunction f;
         final RpcRequest decodedReq;
 
-        try {
+        try (HttpData content = req.content()) {
+            final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
+            final TProtocol inProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(inTransport);
+
             final TMessage header;
             final TBase<?, ?> args;
 
@@ -494,7 +482,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
-            ctx.logBuilder().name(f.serviceType().getName(), methodName);
 
             // Decode the invocation parameters.
             try {
@@ -515,7 +502,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 return;
             }
         } finally {
-            buf.release();
             ctx.logBuilder().requestContent(null, null);
         }
 
@@ -673,7 +659,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
 
-            final HttpData encoded = PooledHttpData.wrap(buf);
+            final HttpData encoded = HttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {
@@ -720,7 +706,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
 
-            final HttpData encoded = PooledHttpData.wrap(buf);
+            final HttpData encoded = HttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {

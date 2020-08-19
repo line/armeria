@@ -21,7 +21,7 @@ class HelloApplicationIntegrationTest(@Autowired server: Server) {
         val response = client.get("/hello/Spring").aggregate().join()
         assertThat(response.status()).isEqualTo(HttpStatus.OK)
         assertThat(response.contentUtf8())
-                .isEqualTo("Hello, Spring! This message is from Armeria annotated service!")
+            .isEqualTo("Hello, Spring! This message is from Armeria annotated service!")
     }
 
     @Test
@@ -29,6 +29,6 @@ class HelloApplicationIntegrationTest(@Autowired server: Server) {
         val response = client.get("/hello/a").aggregate().join()
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST)
         assertThatJson(response.contentUtf8()).node("message")
-                .isEqualTo("hello.name: name should have between 3 and 10 characters")
+            .isEqualTo("hello.name: name should have between 3 and 10 characters")
     }
 }

@@ -47,7 +47,7 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
         return getters != null ? getters.contentType() : null;
     }
 
-    public SELF contentType(MediaType contentType) {
+    public final SELF contentType(MediaType contentType) {
         setters().contentType(contentType);
         return self();
     }

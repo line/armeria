@@ -36,7 +36,7 @@ class RetryingClientWithEmptyEndpointGroupTest {
     void shouldRetryEvenIfEndpointGroupIsEmpty() {
         final int numAttempts = 3;
         final WebClient client =
-                WebClient.builder(SessionProtocol.HTTP, EndpointGroup.empty())
+                WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
                          .decorator(RetryingClient.builder(RetryRule.builder()
                                                                     .onUnprocessed()
                                                                     .thenBackoff(Backoff.withoutDelay()))

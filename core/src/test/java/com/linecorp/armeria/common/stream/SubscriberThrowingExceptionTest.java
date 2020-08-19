@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
@@ -71,37 +72,40 @@ class SubscriberThrowingExceptionTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void streamMessages(boolean throwExceptionOnOnSubscribe) {
-        final DefaultStreamMessage<Object> defaultStreamMessage = new DefaultStreamMessage<>();
-        ByteBuf data = newUnpooledBuffer();
-        defaultStreamMessage.write(data);
+        final DefaultStreamMessage<HttpData> defaultStreamMessage = new DefaultStreamMessage<>();
+        ByteBuf data0 = newUnpooledBuffer();
+        defaultStreamMessage.write(HttpData.wrap(data0));
         subscribeAndValidate(defaultStreamMessage, throwExceptionOnOnSubscribe);
-        assertThat(data.refCnt()).isZero();
+        assertThat(data0.refCnt()).isZero();
 
-        data = newUnpooledBuffer();
-        final StreamMessage<Object> oneElement = new OneElementFixedStreamMessage<>(data);
+        data0 = newUnpooledBuffer();
+        final StreamMessage<HttpData> oneElement = new OneElementFixedStreamMessage<>(HttpData.wrap(data0));
         subscribeAndValidate(oneElement, throwExceptionOnOnSubscribe);
-        assertThat(data.refCnt()).isZero();
+        assertThat(data0.refCnt()).isZero();
 
-        data = newUnpooledBuffer();
+        data0 = newUnpooledBuffer();
         ByteBuf data1 = newUnpooledBuffer();
-        final StreamMessage<Object> twoElement = new TwoElementFixedStreamMessage<>(data, data1);
+        final StreamMessage<HttpData> twoElement = new TwoElementFixedStreamMessage<>(HttpData.wrap(data0),
+                                                                                      HttpData.wrap(data1));
         subscribeAndValidate(twoElement, throwExceptionOnOnSubscribe);
-        assertThat(data.refCnt()).isZero();
+        assertThat(data0.refCnt()).isZero();
         assertThat(data1.refCnt()).isZero();
 
-        data = newUnpooledBuffer();
+        data0 = newUnpooledBuffer();
         data1 = newUnpooledBuffer();
         final ByteBuf data2 = newUnpooledBuffer();
-        final StreamMessage<Object> regularElement =
-                new RegularFixedStreamMessage<>(new ByteBuf[] { data, data1, data2 });
+        final StreamMessage<HttpData> regularElement =
+                new RegularFixedStreamMessage<>(new HttpData[] {
+                        HttpData.wrap(data0), HttpData.wrap(data1), HttpData.wrap(data2)
+                });
         subscribeAndValidate(regularElement, throwExceptionOnOnSubscribe);
-        assertThat(data.refCnt()).isZero();
+        assertThat(data0.refCnt()).isZero();
         assertThat(data1.refCnt()).isZero();
         assertThat(data2.refCnt()).isZero();
 
-        final DefaultStreamMessage<Object> publisher = new DefaultStreamMessage<>();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final ByteBuf data3 = newUnpooledBuffer();
-        publisher.write(data3);
+        publisher.write(HttpData.wrap(data3));
         final PublisherBasedStreamMessage<Object> publisherBasedStreamMessage =
                 new PublisherBasedStreamMessage<>(publisher);
         subscribeAndValidate(publisherBasedStreamMessage, throwExceptionOnOnSubscribe);
@@ -110,7 +114,7 @@ class SubscriberThrowingExceptionTest {
         await().until(() -> data3.refCnt() == 0);
     }
 
-    private void subscribeAndValidate(StreamMessage<Object> stream, boolean throwExceptionOnOnSubscribe) {
+    private void subscribeAndValidate(StreamMessage<?> stream, boolean throwExceptionOnOnSubscribe) {
         final AtomicReference<Throwable> onErrorCaptor = new AtomicReference<>();
         stream.subscribe(new ExceptionThrowingSubscriber(onErrorCaptor, throwExceptionOnOnSubscribe),
                          ImmediateEventExecutor.INSTANCE);
@@ -124,7 +128,7 @@ class SubscriberThrowingExceptionTest {
         return UnpooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
     }
 
-    private class ExceptionThrowingSubscriber implements Subscriber<Object> {
+    private static class ExceptionThrowingSubscriber implements Subscriber<Object> {
 
         private final AtomicReference<Throwable> onErrorCaptor;
         private final boolean throwExceptionOnOnSubscribe;

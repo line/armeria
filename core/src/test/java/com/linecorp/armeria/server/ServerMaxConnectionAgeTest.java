@@ -172,7 +172,7 @@ class ServerMaxConnectionAgeTest {
                             "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
                             value -> assertThat(value).isEqualTo(maxClosedConnection));
         });
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -215,91 +215,98 @@ class ServerMaxConnectionAgeTest {
     @ParameterizedTest
     void http2MaxConnectionAge(SessionProtocol protocol) throws InterruptedException {
         final int concurrency = 200;
-        final WebClient client = newWebClient(server.uri(protocol));
+        try (ClientFactory factory = newClientFactory(false)) {
+            final WebClient client = newWebClient(factory, server.uri(protocol));
 
-        // Make sure that a connection is opened.
-        assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
-        assertThat(opened).hasValue(1);
+            // Make sure that a connection is opened.
+            assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+            assertThat(opened).hasValue(1);
 
-        final Supplier<HttpResponse> execute = () -> client.get("/");
+            final Supplier<HttpResponse> execute = () -> client.get("/");
 
-        await().untilAsserted(() -> {
-            final List<HttpResponse> responses = IntStream.range(0, concurrency)
-                                                          .mapToObj(unused -> execute.get())
-                                                          .collect(toImmutableList());
-            Throwable cause = null;
-            for (HttpResponse response : responses) {
-                try {
-                    response.aggregate().join();
-                } catch (Exception e) {
-                    cause = e;
-                    break;
+            await().untilAsserted(() -> {
+                final List<HttpResponse> responses = IntStream.range(0, concurrency)
+                                                              .mapToObj(unused -> execute.get())
+                                                              .collect(toImmutableList());
+                Throwable cause = null;
+                for (HttpResponse response : responses) {
+                    try {
+                        response.aggregate().join();
+                    } catch (Exception e) {
+                        if (cause == null) {
+                            cause = e;
+                        }
+                    }
                 }
-            }
 
-            assertThat(cause)
-                    .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(GoAwayReceivedException.class);
-        });
+                assertThat(cause)
+                        .isInstanceOf(CompletionException.class)
+                        .hasCauseInstanceOf(UnprocessedRequestException.class)
+                        .hasRootCauseInstanceOf(GoAwayReceivedException.class);
+            });
 
-        await().untilAsserted(() -> {
-            assertThat(MoreMeters.measureAll(meterRegistry))
-                    .hasEntrySatisfying(
-                            "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
-                            protocol.uriText() + '}',
-                            value -> {
-                                assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
-                            })
-                    .hasEntrySatisfying(
-                            "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
-                            protocol.uriText() + '}',
-                            value -> {
-                                assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
-                            }
-                    )
-                    .hasEntrySatisfying(
-                            "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
-                            value -> assertThat(value).isEqualTo(closed.get()));
-        });
+            await().untilAsserted(() -> {
+                assertThat(MoreMeters.measureAll(meterRegistry))
+                        .hasEntrySatisfying(
+                                "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
+                                protocol.uriText() + '}',
+                                value -> {
+                                    assertThat(value * 1000).isBetween(
+                                            MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                })
+                        .hasEntrySatisfying(
+                                "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
+                                protocol.uriText() + '}',
+                                value -> {
+                                    assertThat(value * 1000).isBetween(
+                                            MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                }
+                        )
+                        .hasEntrySatisfying(
+                                "armeria.server.connections.lifespan#count{protocol=" +
+                                protocol.uriText() + '}',
+                                value -> assertThat(value).isEqualTo(closed.get()));
+            });
+        }
     }
 
     @CsvSource({ "H1C", "H2C" })
     @ParameterizedTest
     void shouldNotDisconnect(SessionProtocol protocol) throws InterruptedException {
-        final WebClient client = newWebClient(serverKeepAlive.uri(protocol));
+        try (ClientFactory factory = newClientFactory(false)) {
+            final WebClient client = newWebClient(factory, serverKeepAlive.uri(protocol));
 
-        for (int i = 0; i < 10; i++) {
-            assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
-            assertThat(opened).hasValue(1);
-            assertThat(closed).hasValue(0);
-            Thread.sleep(100);
+            for (int i = 0; i < 10; i++) {
+                assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+                assertThat(opened).hasValue(1);
+                assertThat(closed).hasValue(0);
+                Thread.sleep(100);
+            }
         }
     }
 
     @CsvSource({ "H1C", "H2C" })
     @ParameterizedTest
     void shouldCloseIdleConnectionByMaxConnectionAge(SessionProtocol protocol) {
-        final WebClient client = newWebClient(server.uri(protocol));
+        try (ClientFactory factory = newClientFactory(false)) {
+            final WebClient client = newWebClient(factory, server.uri(protocol));
 
-        assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
-        await().untilAtomic(opened, Matchers.is(1));
-        await().untilAtomic(closed, Matchers.is(1));
+            assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+            await().untilAtomic(opened, Matchers.is(1));
+            await().untilAtomic(closed, Matchers.is(1));
+        }
     }
 
-    private WebClient newWebClient(URI uri) {
-        return newWebClient(uri, false);
+    private ClientFactory newClientFactory(boolean useHttp1PipeLine) {
+        return ClientFactory.builder()
+                            .connectionPoolListener(connectionPoolListener)
+                            .useHttp1Pipelining(useHttp1PipeLine)
+                            .idleTimeoutMillis(0)
+                            .tlsNoVerify()
+                            .build();
     }
 
-    private WebClient newWebClient(URI uri, boolean useHttp1PipeLine) {
-        final ClientFactory clientFactory = ClientFactory.builder()
-                                                         .connectionPoolListener(connectionPoolListener)
-                                                         .useHttp1Pipelining(useHttp1PipeLine)
-                                                         .idleTimeoutMillis(0)
-                                                         .tlsNoVerify()
-                                                         .build();
+    private static WebClient newWebClient(ClientFactory clientFactory, URI uri) {
         return WebClient.builder(uri)
                         .factory(clientFactory)
                         .responseTimeoutMillis(0)

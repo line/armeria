@@ -236,7 +236,7 @@ public final class RequestContextExporter {
         }
 
         if (needsUpdate) {
-            export(state, ctx, log.partial());
+            export(state, log.partial());
         }
 
         // Create a copy of 'state' to avoid the race between:
@@ -245,7 +245,7 @@ public final class RequestContextExporter {
         return state.clone();
     }
 
-    private void export(State state, RequestContext ctx, RequestLog log) {
+    private void export(State state, RequestLog log) {
         exportBuiltIns(state, log);
         exportAttributes(state);
         exportRequestHeaders(state, log);
