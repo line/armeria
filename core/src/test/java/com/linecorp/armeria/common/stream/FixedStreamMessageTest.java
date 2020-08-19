@@ -37,10 +37,12 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class FixedStreamMessageTest {
 
+    private static final Integer[] EMPTY_INTEGERS = new Integer[0];
+
     @ArgumentsSource(IntsProvider.class)
     @ParameterizedTest
     void spec_306_requestAfterCancel(List<Integer> nums) throws InterruptedException {
-        final Integer[] array = nums.stream().toArray(Integer[]::new);
+        final Integer[] array = nums.toArray(EMPTY_INTEGERS);
         final StreamMessage<Integer> message = StreamMessage.of(array);
         final CompletableFuture<Subscription> subscriptionFuture = new CompletableFuture<>();
         final AtomicInteger received = new AtomicInteger();
@@ -70,7 +72,7 @@ class FixedStreamMessageTest {
         assertThat(received).hasValue(0);
     }
 
-    private static class IntsProvider implements ArgumentsProvider {
+    private static final class IntsProvider implements ArgumentsProvider {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
