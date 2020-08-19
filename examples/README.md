@@ -6,6 +6,10 @@
   - Learn how to write an HTTP service using annotations.
   - See [Annotated services](https://armeria.dev/docs/server-annotated-service).
 
+- `annotated-http-service-kotlin`
+  - Learn how to write an HTTP service using annotations with Kotlin Coroutines.
+  - See [Kotlin Coroutines Support](https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support).
+
 - `context-propagation`
   - Learn how to propagate Armeria's `RequestContext` for use in scenarios like tracing.
   - [`dagger`](https://dagger.dev/producers) provides an example using the Dagger asynchronous framework for

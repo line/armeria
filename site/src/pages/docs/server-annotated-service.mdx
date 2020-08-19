@@ -1428,3 +1428,67 @@ for more information about RPC and HTTP service names, and how to use it.
 </Tip>
 
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html
+
+## Kotlin Coroutines Support
+
+You can implement annotated services with Kotlin Coroutines.
+
+```kotlin
+class MyAnnotatedService {
+    @Get("/users/{name}")
+    suspend fun getUserToken(@Param("name") name: String): HttpResponse {
+        val user = myReactiveRepository.findByName(name).await()
+        return HttpResponse.of(user.token)
+    }
+}
+```
+
+By default, armeria uses a context-aware event loop as a [coroutine dispatcher][CoroutineDispatcher].
+If you annotates methods with `@Blocking` or enables `useBlockingTaskExecutor`,
+a context-aware blocking executor is used as a dispatcher.
+
+```kotlin
+serverBuilder
+    .annotatedService()
+    // enables `useBlockingTaskExecutor`
+    .useBlockingTaskExecutor(true)
+    .build(MyAnnotatedService())
+
+// or
+
+class MyBlockingAnnotatedService {
+    @Blocking
+    @Get("/blocking/users/{name}")
+    suspend fun getUserTokenBlocking(@Param("name") name: String): HttpResponse {
+        val id = myReactiveClient.getId(name).await()
+        val user = myBlockingRepository.findById(id)
+        return HttpResponse.of(user.token)
+    }
+}
+```
+
+<Tip>
+
+If you use [Logback integration][logback] and/or [Zipkin integration][zipkin],
+coroutines should be executed in threads context aware of [RequestContext][ctx].
+
+</Tip>
+
+[CoroutineDispatcher]: https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/
+[ctx]: https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/common/RequestContext.html
+[logback]: /docs/advanced-logging
+[zipkin]: /docs/advanced-zipkin
+
+### CoroutineContextService decorator
+
+Armeria provides a way to configure a coroutine context of annotated service methods
+using `CoroutineContextService` decorator.
+
+```kotlin
+serverBuilder
+    .annotatedService()
+    .decorator(CoroutineContextService.newDecorator { ctx ->
+        CoroutineName(ctx.config().defaultServiceName() ?: "none")
+    })
+    .build(MyAnnotatedService())
+```

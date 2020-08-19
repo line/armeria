@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":kotlin"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     runtimeOnly("org.slf4j:slf4j-simple")
 }
 
