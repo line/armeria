@@ -16,6 +16,7 @@ includeWithFlags ':jetty9',                              'java', 'publish', 'rel
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
+includeWithFlags ':kotlin',                              'java', 'publish', 'relocate'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                           'java', 'publish', 'relocate'
@@ -61,6 +62,7 @@ includeWithFlags ':site'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service',              'java'
+includeWithFlags ':examples:annotated-http-service-kotlin',       'java'
 includeWithFlags ':examples:context-propagation-dagger-example',  'java'
 project(':examples:context-propagation-dagger-example').projectDir = file('examples/context-propagation/dagger')
 includeWithFlags ':examples:context-propagation-kotlin-example',  'java'

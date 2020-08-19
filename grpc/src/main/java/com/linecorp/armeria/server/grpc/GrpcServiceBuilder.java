@@ -30,6 +30,8 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -54,6 +56,7 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
@@ -66,6 +69,23 @@ public final class GrpcServiceBuilder {
 
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
             GrpcSerializationFormats.values();
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcServiceBuilder.class);
+
+    private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
+
+    static {
+        boolean useCoroutineContextInterceptor;
+        final String className = "io.grpc.kotlin.CoroutineContextServerInterceptor";
+        try {
+            Class.forName(className, false, GrpcServiceBuilder.class.getClassLoader());
+            useCoroutineContextInterceptor = true;
+        } catch (Throwable ignored) {
+            useCoroutineContextInterceptor = false;
+        }
+        logger.debug("{}: {}", className, useCoroutineContextInterceptor ? "available" : "unavailable");
+        USE_COROUTINE_CONTEXT_INTERCEPTOR = useCoroutineContextInterceptor;
+    }
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 
@@ -321,7 +341,20 @@ public final class GrpcServiceBuilder {
      * without interfering with other services.
      */
     public GrpcService build() {
-        final HandlerRegistry handlerRegistry = registryBuilder.build();
+        final HandlerRegistry handlerRegistry;
+        if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
+            final HandlerRegistry registry = registryBuilder.build();
+            final ServerInterceptor coroutineContextInterceptor =
+                    new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+            final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
+            for (ServerServiceDefinition serviceDefinition : registry.services()) {
+                registryBuilder.addService(ServerInterceptors.intercept(serviceDefinition,
+                                                                        coroutineContextInterceptor));
+            }
+            handlerRegistry = registryBuilder.build();
+        } else {
+            handlerRegistry = registryBuilder.build();
+        }
 
         final GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,

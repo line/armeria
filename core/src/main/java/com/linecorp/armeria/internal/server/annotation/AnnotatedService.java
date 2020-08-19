@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -97,6 +98,9 @@ public final class AnnotatedService implements HttpService {
 
     private final Object object;
     private final Method method;
+    @Nullable
+    private final MethodHandle callKotlinSuspendingMethod;
+    private final boolean isKotlinSuspendingMethod;
     private final List<AnnotatedValueResolver> resolvers;
 
     private final AggregationStrategy aggregationStrategy;
@@ -121,6 +125,7 @@ public final class AnnotatedService implements HttpService {
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
+        isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
         this.resolvers = requireNonNull(resolvers, "resolvers");
         exceptionHandler =
                 new CompositeExceptionHandlerFunction(object.getClass().getSimpleName(), method.getName(),
@@ -138,9 +143,12 @@ public final class AnnotatedService implements HttpService {
             responseType = ResponseType.HTTP_RESPONSE;
         } else if (CompletionStage.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.COMPLETION_STAGE;
+        } else if (isKotlinSuspendingMethod) {
+            responseType = ResponseType.KOTLIN_COROUTINES;
         } else {
             responseType = ResponseType.OTHER_OBJECTS;
         }
+        callKotlinSuspendingMethod = KotlinUtil.getCallKotlinSuspendingMethod();
 
         ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
         if (serviceName == null) {
@@ -263,6 +271,7 @@ public final class AnnotatedService implements HttpService {
                     return f.thenApply(httpResponseApplyFunction);
                 }
 
+            case KOTLIN_COROUTINES:
             case COMPLETION_STAGE:
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
@@ -278,7 +287,6 @@ public final class AnnotatedService implements HttpService {
                             }
                             return convertResponse(ctx, req, null, result, HttpHeaders.of());
                         });
-
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
                         msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());
@@ -298,7 +306,15 @@ public final class AnnotatedService implements HttpService {
         try (SafeCloseable ignored = ctx.push()) {
             final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
-            return method.invoke(object, arguments);
+            if (isKotlinSuspendingMethod) {
+                assert callKotlinSuspendingMethod != null;
+                return callKotlinSuspendingMethod.invoke(
+                        method, object, arguments,
+                        useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
+                        ctx);
+            } else {
+                return method.invoke(object, arguments);
+            }
         } catch (Throwable cause) {
             return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
         }
@@ -605,6 +621,6 @@ public final class AnnotatedService implements HttpService {
      * Response type classification of the annotated {@link Method}.
      */
     private enum ResponseType {
-        HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
+        HTTP_RESPONSE, COMPLETION_STAGE, KOTLIN_COROUTINES, OTHER_OBJECTS
     }
 }
