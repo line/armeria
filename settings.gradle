@@ -88,3 +88,5 @@ includeWithFlags ':examples:spring-boot-minimal-kotlin',          'java'
 includeWithFlags ':examples:spring-boot-tomcat',                  'java'
 includeWithFlags ':examples:spring-boot-webflux',                 'java'
 includeWithFlags ':examples:static-files',                        'java'
+includeWithFlags ':examples:thrift-example',                      'java'
+project(':examples:thrift-example').projectDir = file('examples/thrift')
