@@ -1456,7 +1456,9 @@ serverBuilder
 
 // or
 
-class MyBlockingAnnotatedService {
+import com.linecorp.armeria.server.annotation.Blocking
+
+class MyAnnotatedService {
     @Blocking
     @Get("/blocking/users/{name}")
     suspend fun getUserTokenBlocking(@Param("name") name: String): HttpResponse {
@@ -1485,6 +1487,8 @@ Armeria provides a way to configure a coroutine context of annotated service met
 using `CoroutineContextService` decorator.
 
 ```kotlin
+import com.linecorp.armeria.server.kotlin.CoroutineContextService
+
 serverBuilder
     .annotatedService()
     .decorator(CoroutineContextService.newDecorator { ctx ->
