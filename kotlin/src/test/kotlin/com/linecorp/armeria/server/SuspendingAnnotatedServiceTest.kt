@@ -175,7 +175,7 @@ class SuspendingAnnotatedServiceTest {
                             return "OK"
                         }
                     })
-                    .decoratorUnder("/customContext", CoroutineContextService.newDecorator { ctx ->
+                    .decoratorUnder("/customContext", CoroutineContextService.newDecorator { _ ->
                         Dispatchers.Default + CoroutineName("test")
                     })
                     .annotatedService("/blocking", object {

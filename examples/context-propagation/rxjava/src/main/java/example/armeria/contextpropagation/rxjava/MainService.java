@@ -16,6 +16,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.internal.functions.Functions;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainService implements HttpService {
@@ -52,39 +53,44 @@ public class MainService implements HttpService {
                       // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
                       // inside the logic (e.g., your DB call will be traced!).
                       .subscribeOn(Schedulers.from(ctx.blockingTaskExecutor()))
-                      .flattenAsFlowable(l -> l);
+                      .flattenAsFlowable(Functions.identity());
 
         final Flowable<Long> extractNumsFromRequest =
                 Single.fromCompletionStage(req.aggregate())
-                               // Unless you know what you're doing, always use subscribeOn with the context
-                               // executor to have the context mounted and stay on a single thread to reduce
-                               // concurrency issues.
-                               .subscribeOn(contextAwareScheduler)
-                               .flatMapPublisher(request -> {
-                                   // The context is mounted in a thread-local, meaning it is available to all
-                                   // logic such as tracing.
-                                   assert ServiceRequestContext.current() == ctx;
-                                   assert ctx.eventLoop().inEventLoop();
+                      // Unless you know what you're doing, always use subscribeOn with the context-aware
+                      // scheduler to have the context mounted and stay on a single thread to reduce
+                      // concurrency issues.
+                      .subscribeOn(contextAwareScheduler)
+                      .flatMapPublisher(request -> {
+                          // The context is mounted in a thread-local, meaning it is available to all
+                          // logic such as tracing.
+                          assert ServiceRequestContext.current() == ctx;
+                          assert ctx.eventLoop().inEventLoop();
 
-                                   final List<Long> nums = new ArrayList<>();
-                                   Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
-                                       nums.add(Long.parseLong(token));
-                                   });
-                                   Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
-                                       nums.add(Long.parseLong(token));
-                                   });
+                          final List<Long> nums = new ArrayList<>();
+                          Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
+                              if (!token.isEmpty()) {
+                                  nums.add(Long.parseLong(token));
+                              }
+                          });
+                          Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
+                              if (!token.isEmpty()) {
+                                  nums.add(Long.parseLong(token));
+                              }
+                          });
 
-                                   return Flowable.fromIterable(nums);
-                               });
+                          return Flowable.fromIterable(nums);
+                      });
 
         final Single<HttpResponse> response =
                 Flowable.concatArrayEager(extractNumsFromRequest, fetchNumsFromFakeDb)
-                        // Unless you know what you're doing, always use subscribeOn with the context executor
-                        // to have the context mounted and stay on a single thread to reduce concurrency issues.
+                        // Unless you know what you're doing, always use subscribeOn with the context-aware
+                        // scheduler to have the context mounted and stay on a single thread
+                        // to reduce concurrency issues.
                         .subscribeOn(contextAwareScheduler)
                         // When concatenating flowables, you should almost always call observeOn with the
-                        // context executor because we don't know here whether the subscription is on it or
-                        // something like a blocking task executor.
+                        // context-aware scheduler because we don't know here whether
+                        // the subscription is on it or something like a blocking task executor.
                         .observeOn(contextAwareScheduler)
                         .flatMapSingle(num -> {
                             // The context is mounted in a thread-local, meaning it is available to all logic
