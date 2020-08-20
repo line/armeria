@@ -84,8 +84,8 @@ public class MainService implements HttpService {
                                        .collect(Collectors.toList());
                         },
                         // Unless you know what you're doing, always use then*Async type methods with the
-                        // context-aware executor to have the context mounted and stay on a single thread to reduce
-                        // concurrency issues.
+                        // context-aware executor to have the context mounted and stay on a single
+                        // thread to reduce concurrency issues.
                         ctxExecutor);
 
         final CompletableFuture<HttpResponse> response =

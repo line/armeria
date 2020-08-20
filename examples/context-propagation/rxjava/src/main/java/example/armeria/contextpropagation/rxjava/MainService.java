@@ -16,6 +16,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.internal.functions.Functions;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainService implements HttpService {
@@ -52,7 +53,7 @@ public class MainService implements HttpService {
                       // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
                       // inside the logic (e.g., your DB call will be traced!).
                       .subscribeOn(Schedulers.from(ctx.blockingTaskExecutor()))
-                      .flattenAsFlowable(l -> l);
+                      .flattenAsFlowable(Functions.identity());
 
         final Flowable<Long> extractNumsFromRequest =
                 Single.fromCompletionStage(req.aggregate())

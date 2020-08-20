@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -52,7 +53,7 @@ public class MainService implements HttpService {
                     // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
                     // inside the logic (e.g., your DB call will be traced!).
                     .subscribeOn(Schedulers.fromExecutor(ctx.blockingTaskExecutor()))
-                    .flatMapIterable(l -> l);
+                    .flatMapIterable(Function.identity());
 
         final Flux<Long> extractNumsFromRequest =
                 Mono.fromCompletionStage(req.aggregate())
