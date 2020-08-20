@@ -14,7 +14,7 @@
  * under the License.
  */
 
-@file:JvmName("CoroutineUtil")
+@file:JvmName("ArmeriaCoroutineUtil")
 
 package com.linecorp.armeria.internal.common.kotlin
 
@@ -33,7 +33,7 @@ import kotlin.reflect.jvm.kotlinFunction
 /**
  * Invokes a suspending function and returns [CompletableFuture].
  */
-fun callKotlinSuspendingMethod(
+internal fun callKotlinSuspendingMethod(
     method: Method,
     obj: Any,
     args: Array<Any>,

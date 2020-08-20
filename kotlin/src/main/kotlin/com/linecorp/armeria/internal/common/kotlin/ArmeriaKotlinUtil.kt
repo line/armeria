@@ -14,7 +14,7 @@
  * under the License.
  */
 
-@file:JvmName("KotlinUtil")
+@file:JvmName("ArmeriaKotlinUtil")
 
 package com.linecorp.armeria.internal.common.kotlin
 
@@ -27,7 +27,7 @@ import kotlin.reflect.jvm.kotlinFunction
  * Returns true if a method is a suspending function.
  */
 @Suppress("unused")
-fun isSuspendingFunction(method: Method): Boolean {
+internal fun isSuspendingFunction(method: Method): Boolean {
     return method.kotlinFunction
         ?.isSuspend
         ?: return false
@@ -37,7 +37,7 @@ fun isSuspendingFunction(method: Method): Boolean {
  * Returns true if a class is kotlin.coroutines.Continuation.
  */
 @Suppress("unused")
-fun isContinuation(type: Class<*>): Boolean {
+internal fun isContinuation(type: Class<*>): Boolean {
     return Continuation::class.java.isAssignableFrom(type)
 }
 
@@ -45,7 +45,7 @@ fun isContinuation(type: Class<*>): Boolean {
  * Returns true if a method returns kotlin.Unit.
  */
 @Suppress("unused")
-fun isReturnTypeUnit(method: Method): Boolean {
+internal fun isReturnTypeUnit(method: Method): Boolean {
     val kFunction = method.kotlinFunction ?: return false
     return kFunction.returnType.jvmErasure == Unit::class
 }
