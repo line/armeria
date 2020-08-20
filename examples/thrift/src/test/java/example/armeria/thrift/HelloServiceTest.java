@@ -13,7 +13,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.server.Server;
 
-
 class HelloServiceTest {
 
     private static Server server;
