@@ -19,22 +19,22 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
 
 import java.net.InetSocketAddress;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
 import io.netty.channel.EventLoop;
@@ -90,7 +90,18 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         return builder.build();
     }
 
-    private final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache = new ConcurrentHashMap<>();
+    private static Cache<String, CompletableFuture<CacheEntry>> buildDnsCache(String spec) {
+        final Caffeine<Object, Object> b = Caffeine.from(spec);
+        b.removalListener((RemovalListener<String, CompletableFuture<CacheEntry>>) (key, value, cause) -> {
+            if (value != null) {
+                value.handle((cacheEntry, throwable) -> {
+                    cacheEntry.clear();
+                    return null;
+                });
+            }
+        });
+        return b.build();
+    }
 
     private final int minTtl;
     private final int maxTtl;
@@ -99,6 +110,10 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
+
+    @Nullable
+    private Cache<String, CompletableFuture<CacheEntry>> dnsCache =
+            Flags.dnsCacheSpec() != null ? buildDnsCache(Flags.dnsCacheSpec()) : null;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
@@ -117,9 +132,15 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         }
     }
 
+    @Nullable
     @VisibleForTesting
-    ConcurrentMap<String, CompletableFuture<CacheEntry>> cache() {
-        return cache;
+    Cache<String, CompletableFuture<CacheEntry>> cache() {
+        return dnsCache;
+    }
+
+    @VisibleForTesting
+    void cache(@Nullable Cache<String, CompletableFuture<CacheEntry>> dnsCache) {
+        this.dnsCache = dnsCache;
     }
 
     @Override
@@ -130,23 +151,15 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
                                                                            queryTimeoutMillis);
-        return new RefreshingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
+        return new RefreshingAddressResolver(eventLoop, dnsCache, resolver, dnsRecordTypes, minTtl, maxTtl,
                                              negativeTtl, refreshBackoff);
     }
 
     @Override
     public void close() {
         super.close();
-        while (!cache.isEmpty()) {
-            for (final Iterator<Entry<String, CompletableFuture<CacheEntry>>> i = cache.entrySet().iterator();
-                 i.hasNext();) {
-                final Entry<String, CompletableFuture<CacheEntry>> entry = i.next();
-                i.remove();
-                entry.getValue().handle((cacheEntry, cause) -> {
-                    cacheEntry.clear();
-                    return null;
-                });
-            }
+        if (cache() != null) {
+            cache().invalidateAll();
         }
     }
 }

@@ -25,7 +25,6 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +33,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
@@ -54,7 +54,8 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
     private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolver.class);
 
-    private final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache;
+    @Nullable
+    private final Cache<String, CompletableFuture<CacheEntry>> cache;
     private final DefaultDnsNameResolver resolver;
     private final List<DnsRecordType> dnsRecordTypes;
     private final int minTtl;
@@ -65,7 +66,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
     private volatile boolean resolverClosed;
 
     RefreshingAddressResolver(EventLoop eventLoop,
-                              ConcurrentMap<String, CompletableFuture<CacheEntry>> cache,
+                              @Nullable Cache<String, CompletableFuture<CacheEntry>> cache,
                               DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
                               int minTtl, int maxTtl, int negativeTtl, Backoff refreshBackoff) {
         super(eventLoop);
@@ -83,6 +84,39 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         return !requireNonNull(address, "address").isUnresolved();
     }
 
+    private CompletableFuture<CacheEntry> loadingCache(InetSocketAddress unresolvedAddress,
+                                                       Promise<InetSocketAddress> promise) {
+        final String hostname = unresolvedAddress.getHostString();
+        final int port = unresolvedAddress.getPort();
+        final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
+        final List<DnsQuestion> questions =
+                dnsRecordTypes.stream()
+                              .map(type -> DnsQuestionWithoutTrailingDot.of(hostname, type))
+                              .collect(toImmutableList());
+        sendQueries(questions, hostname, result);
+        result.handle((entry, unused) -> {
+            final Throwable cause = entry.cause();
+            if (cause != null) {
+                if (cache != null && entry.hasCacheableCause() && negativeTtl > 0) {
+                    executor().schedule(() -> cache.invalidate(hostname), negativeTtl, TimeUnit.SECONDS);
+                } else {
+                    if (cache != null) {
+                        cache.invalidate(hostname);
+                    }
+                }
+                promise.tryFailure(cause);
+                return null;
+            }
+
+            if (cache != null) {
+                entry.scheduleRefresh(entry.ttlMillis());
+            }
+            promise.trySuccess(new InetSocketAddress(entry.address(), port));
+            return null;
+        });
+        return result;
+    }
+
     @Override
     protected void doResolve(InetSocketAddress unresolvedAddress, Promise<InetSocketAddress> promise)
             throws Exception {
@@ -94,51 +128,19 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         }
         final String hostname = unresolvedAddress.getHostString();
         final int port = unresolvedAddress.getPort();
-        final CompletableFuture<CacheEntry> entryFuture = cache.get(hostname);
-        if (entryFuture != null) {
-            handleFromCache(entryFuture, promise, port);
+        if (cache == null) {
+            loadingCache(unresolvedAddress, promise);
             return;
         }
-
-        final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
-        final CompletableFuture<CacheEntry> previous = cache.putIfAbsent(hostname, result);
-        if (previous != null) {
-            handleFromCache(previous, promise, port);
-            return;
-        }
-
-        final List<DnsQuestion> questions =
-                dnsRecordTypes.stream()
-                              .map(type -> DnsQuestionWithoutTrailingDot.of(hostname, type))
-                              .collect(toImmutableList());
-        sendQueries(questions, hostname, result);
-        result.handle((entry, unused) -> {
-            final Throwable cause = entry.cause();
-            if (cause != null) {
-                if (entry.hasCacheableCause() && negativeTtl > 0) {
-                    executor().schedule(() -> cache.remove(hostname), negativeTtl, TimeUnit.SECONDS);
-                } else {
-                    cache.remove(hostname);
-                }
-                promise.tryFailure(cause);
-                return null;
-            }
-
-            entry.scheduleRefresh(entry.ttlMillis());
-            promise.trySuccess(new InetSocketAddress(entry.address(), port));
-            return null;
-        });
-    }
-
-    private void handleFromCache(CompletableFuture<CacheEntry> future, Promise<InetSocketAddress> promise,
-                                 int port) {
-        future.handle((entry, unused) -> {
+        final CompletableFuture<CacheEntry> entryFuture = cache.get(hostname, s ->
+                loadingCache(unresolvedAddress, promise));
+        assert entryFuture != null; // loader does not return null.
+        entryFuture.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
             if (cause != null) {
                 promise.tryFailure(cause);
                 return null;
             }
-            entry.servedFromCache();
             promise.trySuccess(new InetSocketAddress(entry.address(), port));
             return null;
         });
@@ -241,8 +243,6 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
          */
         private int numAttemptsSoFar = 1;
 
-        private volatile boolean servedFromCache;
-
         @VisibleForTesting
         @Nullable
         ScheduledFuture<?> refreshFuture;
@@ -254,10 +254,6 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             this.questions = questions;
             this.cause = cause;
             this.hasCacheableCause = hasCacheableCause;
-        }
-
-        void servedFromCache() {
-            servedFromCache = true;
         }
 
         @Nullable
@@ -300,10 +296,6 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
             assert address != null;
             final String hostName = address.getHostName();
-            if (!servedFromCache) {
-                cache.remove(hostName);
-                return;
-            }
 
             final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
             sendQueries(questions, hostName, result);
@@ -316,7 +308,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 if (cause != null) {
                     final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);
                     if (nextDelayMillis < 0) {
-                        cache.remove(hostName);
+                        cache.invalidate(hostName);
                         return null;
                     }
                     scheduleRefresh(nextDelayMillis);
@@ -324,7 +316,6 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 }
 
                 // Got the response successfully so reset the state.
-                servedFromCache = false;
                 numAttemptsSoFar = 1;
 
                 if (address.equals(entry.address()) && entry.ttlMillis() == ttlMillis) {
@@ -346,7 +337,6 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                               .add("questions", questions)
                               .add("cause", cause)
                               .add("hasCacheableCause", hasCacheableCause)
-                              .add("servedFromCache", servedFromCache)
                               .toString();
         }
     }
