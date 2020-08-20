@@ -56,8 +56,8 @@ public class MainService implements HttpService {
 
         final Flux<Long> extractNumsFromRequest =
                 Mono.fromCompletionStage(req.aggregate())
-                    // Unless you know what you're doing, always use subscribeOn with the context
-                    // executor to have the context mounted and stay on a single thread to reduce
+                    // Unless you know what you're doing, always use subscribeOn with the context-aware
+                    // scheduler to have the context mounted and stay on a single thread to reduce
                     // concurrency issues.
                     .subscribeOn(contextAwareScheduler)
                     .flatMapMany(request -> {
@@ -83,11 +83,12 @@ public class MainService implements HttpService {
 
         final Mono<HttpResponse> response =
                 Flux.concat(extractNumsFromRequest, fetchNumsFromFakeDb)
-                    // Unless you know what you're doing, always use subscribeOn with the context executor
-                    // to have the context mounted and stay on a single thread to reduce concurrency issues.
+                    // Unless you know what you're doing, always use subscribeOn with the context-aware
+                    // scheduler to have the context mounted and stay on a single thread
+                    // to reduce concurrency issues.
                     .subscribeOn(contextAwareScheduler)
                     // When concatenating fluxes, you should almost always call publishOn with the
-                    // context executor because we don't know here whether the subscription is on it or
+                    // context-aware scheduler because we don't know here whether the subscription is on it or
                     // something like a blocking task executor.
                     .publishOn(contextAwareScheduler)
                     .flatMap(num -> {

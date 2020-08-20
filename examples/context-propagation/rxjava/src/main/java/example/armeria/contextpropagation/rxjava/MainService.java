@@ -56,8 +56,8 @@ public class MainService implements HttpService {
 
         final Flowable<Long> extractNumsFromRequest =
                 Single.fromCompletionStage(req.aggregate())
-                      // Unless you know what you're doing, always use subscribeOn with the context
-                      // executor to have the context mounted and stay on a single thread to reduce
+                      // Unless you know what you're doing, always use subscribeOn with the context-aware
+                      // scheduler to have the context mounted and stay on a single thread to reduce
                       // concurrency issues.
                       .subscribeOn(contextAwareScheduler)
                       .flatMapPublisher(request -> {
@@ -83,12 +83,13 @@ public class MainService implements HttpService {
 
         final Single<HttpResponse> response =
                 Flowable.concatArrayEager(extractNumsFromRequest, fetchNumsFromFakeDb)
-                        // Unless you know what you're doing, always use subscribeOn with the context executor
-                        // to have the context mounted and stay on a single thread to reduce concurrency issues.
+                        // Unless you know what you're doing, always use subscribeOn with the context-aware
+                        // scheduler to have the context mounted and stay on a single thread
+                        // to reduce concurrency issues.
                         .subscribeOn(contextAwareScheduler)
                         // When concatenating flowables, you should almost always call observeOn with the
-                        // context executor because we don't know here whether the subscription is on it or
-                        // something like a blocking task executor.
+                        // context-aware scheduler because we don't know here whether
+                        // the subscription is on it or something like a blocking task executor.
                         .observeOn(contextAwareScheduler)
                         .flatMapSingle(num -> {
                             // The context is mounted in a thread-local, meaning it is available to all logic
