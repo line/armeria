@@ -160,7 +160,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
                 .build())
               .service(
                 "/api/thrift",
-                ThriftService.of(myThriftServiceImpl));
+                ThriftService.of(myThriftServiceImpl))
               .service(
                 "prefix:/files",
                 FileService.of(new File("/var/www")))
@@ -262,7 +262,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
             {`
             Server
               .builder()
-              .service((ctx, req) -> ...);
+              .service((ctx, req) -> ...)
               .decorator(
                 MetricCollectingService.newDecorator(...))
               .decorator(
