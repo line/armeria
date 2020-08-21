@@ -1431,7 +1431,7 @@ for more information about RPC and HTTP service names, and how to use it.
 
 ## Kotlin coroutines support
 
-You can implement annotated services with Kotlin coroutines.
+You can implement annotated services with [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
 
 ```kotlin
 class MyAnnotatedService {
@@ -1477,7 +1477,7 @@ coroutines should be executed in threads context aware of [RequestContext][ctx].
 
 [ctx]: https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/common/RequestContext.html
 
-### CoroutineContextService decorator
+### `CoroutineContextService` decorator
 
 Armeria provides a way to configure a coroutine context of annotated service methods
 using <type://CoroutineContextService> decorator.
