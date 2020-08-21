@@ -73,6 +73,8 @@ includeWithFlags ':examples:context-propagation-reactor-example', 'java'
 project(':examples:context-propagation-reactor-example').projectDir = file('examples/context-propagation/reactor')
 includeWithFlags ':examples:context-propagation-rxjava-example',  'java'
 project(':examples:context-propagation-rxjava-example').projectDir = file('examples/context-propagation/rxjava')
+// '*-example' pattern is used intentionally to avoid a cycling dependency issue between project('examples:*')
+// and project(':*'). See https://github.com/gradle/gradle/issues/847 for more information.
 includeWithFlags ':examples:dropwizard-example',                  'java'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:grpc-example',                        'java'

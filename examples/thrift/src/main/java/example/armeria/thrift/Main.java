@@ -3,9 +3,15 @@ package example.armeria.thrift;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.thrift.THttpService;
+
+import example.armeria.thrift.HelloService.blockingHello_args;
+import example.armeria.thrift.HelloService.hello_args;
+import example.armeria.thrift.HelloService.lazyHello_args;
 
 public final class Main {
 
@@ -40,10 +46,10 @@ public final class Main {
                      // See https://armeria.dev/docs/server-docservice for more information.
                      .serviceUnder("/docs",
                                    DocService.builder()
-                                             .exampleRequests(HelloService.class, "hello", exampleRequest)
-                                             .exampleRequests(HelloService.class, "lazyHello", exampleRequest)
-                                             .exampleRequests(HelloService.class, "blockingHello",
-                                                              exampleRequest)
+                                             .exampleRequests(ImmutableList.of(
+                                                     new hello_args(exampleRequest),
+                                                     new lazyHello_args(exampleRequest),
+                                                     new blockingHello_args(exampleRequest)))
                                              .build())
                      .build();
     }
