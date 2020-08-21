@@ -9,7 +9,6 @@
 - `annotated-http-service-kotlin` <a href="https://gitpod.io/#project=annotated-http-service-kotlin/https://github.com/line/armeria-examples/tree/master/annotated-http-service-kotlin/src/main/kotlin/example/armeria/server/annotated/kotlin/Main.kt">
                                     <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
                                   </a>
-  - Learn how to write an HTTP service using annotations.
   - Learn how to write an HTTP service using annotations with Kotlin Coroutines.
   - See [Kotlin coroutines support](https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support).
 
