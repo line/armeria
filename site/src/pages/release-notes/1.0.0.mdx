@@ -1,0 +1,213 @@
+---
+date: 2020-08-21
+---
+
+## 🌟 New features
+
+- You can now check whether a <type://RequestContext> contains an attribute or not conveniently using
+  <type://RequestContext#hasAttr(AttributeKey)> and <type://RequestContext#hasOwnAttr(AttributeKey)>. #3014
+- You can now specify the default service and log name programmatically for an annotated service. #2979
+  - It was previously only possible to specify a service name with <type://@ServiceName> annotation.
+  ```java
+  Server.builder()
+        .annotatedService().defaultServiceName("my-service")
+                           .build(myAnnotatedService);
+  ```
+- Annotated services now support [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
+  #2983 #3010 #3011
+  - See [Kotlin coroutines support](/docs/server-annotated-service#kotlin-coroutines-support) for more
+    information.
+  ```kotlin
+  class MyAnnotatedService {
+      @Get("/users/{name}")
+      suspend fun getUserToken(@Param name: String): String {
+          val user = myReactiveRepository.findByName(name).await()
+          return user.token
+      }
+  }
+  ```
+- You can now get the current <type://ServiceRequestContext> from the Kotlin coroutine context when using
+  [grpc-kotlin](https://github.com/grpc/grpc-kotlin). #3001
+- You can now use <type://GrpcMeterIdPrefixFunction> to create meters with a `grpc-status` tag for gRPC clients
+  and servers. #2762 #2971
+  ```java
+  Server.builder()
+        .route().defaultServiceName("my-grpc-services")
+                .build(GrpcService.builder()
+                                  .addService(serviceFoo)
+                                  .addService(serviceBar)
+                                  .build()
+                                  .decorate(MetricCollectingService.newDecorator(
+                                      GrpcMeterIdPrefixFunction.of("my.grpc.svcs"))))
+                                  //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        .build();
+  ```
+- Added a new module `armeria-reactor3` that provides automatic <type://RequestContext> propagation for
+  [Project Reactor](https://projectreactor.io/). #2999
+  - See [the complete example](https://github.com/line/armeria-examples/tree/master/context-propagation/reactor)
+    for more information.
+  ```java
+  // Enable the hooks.
+  RequestContextHooks.enable();
+
+  RequestContext ctx = ...;
+  Flux<String> flux;
+  try (SafeCloseable ignored = ctx.push()) {
+      // The callbacks of the 'flux' will have thread-local RequestContext set.
+      flux = Flux.just("foo").publishOn(Schedulers.single());
+  }
+
+  StepVerifier.create(flux)
+              .expectSubscriptionMatches(s -> RequestContext.current() == ctx)
+              .expectNextMatches(s -> RequestContext.current() == ctx &&
+                                      "foo".equals(s))
+              .verifyComplete();
+  ```
+
+## 📈 Improvements
+
+- <type://RequestContext#setAttr(AttributeKey,Object)> now returns an old value being replaced. #2997 #3004
+  ```java
+  static final AttributeKey<String> ATTR_KEY =
+      AttributeKey.valueOf(MyClass.class, "KEY");
+
+  RequestContext ctx = ...;
+  ctx.setAttr(ATTR_KEY, "foo");
+  String oldValue = ctx.setAttr(ATTR_KEY, "bar");
+  assert "foo".equals(oldValue);
+  ```
+- You can now bind a <type://ServiceWithRoutes> (e.g. <type://GrpcService>) using the fluent builder API. #2996
+  ```java
+  HttpService myGrpcService =
+      GrpcService.builder()
+                 .addService(serviceFoo)
+                 .addService(serviceBar)
+                 .build()
+                 .decorate(LoggingService.newDecorator())
+                 .decorate(MetricCollectingService.newDecorator(...))
+
+  Server.builder()
+        .route().defaultServiceName("my-grpc-service")
+                // Note that we didn't specify any paths.
+                .build(myGrpcService)
+        .build();
+  ```
+- `localAddress()` and `remoteAddress()` builder methods in <type://ServiceRequestContextBuilder> and
+  <type://ClientRequestContextBuilder> now accept `SocketAddress` instead of `InetSocketAddress`, so we have
+  more freedom in the future when we add support for UNIX domain sockets. #2996
+
+## 🛠️ Bug fixes
+
+- Fixed some of our `Publisher` implementations so they do not raise an `AssertionError` when its `Subscriber`
+  attempts to request elements after the subscription is cancelled. #3003
+- The default <type://MeterIdPrefixFunction> now always sets the `service` tag so that it doesn't violate the
+  constraints enforced by some monitoring systems, e.g. Prometheus. #2977
+- <type://TimeoutMode#SET_FROM_START> now schedules a timeout correctly. #2968
+- HAProxy protocol server doesn't raise a `NullPointerException` anymore when it receives a request with
+  `AF_UNSPEC` socket family. #2984 #2985
+- Fixed a bug that prevented you from overriding the service name of a gRPC or Thrift service. #2994
+- The `content-type` header of a trailer-only gRPC response is now set correctly. #2969
+- Fixed a bug where a Retrofit call is sometimes left unfinished. #3006 #3008
+- A Spring WebFlux integration doesn't leave noisy error logs anymore for a `HEAD` route that produces
+  content. #2965
+- Fixed a bug where a Spring WebFlux server fails to start if the `management.server.port` property is
+  specified. #2980
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- Removed all deprecated classes, fields and methods from the public API.
+  - The `-Dcom.linecorp.armeria.useLegacyMeterNames` flag does not work anymore.
+- Removed `HTTP_` or `Http` from various fields and methods.
+  - <type://ClientOptions>:
+    - `HTTP_HEADERS` → `HEADERS`
+    - `httpHeaders()` → `headers()`
+  - <type://Clients>:
+    - `withHttpHeader()` → `withHeader()`
+    - `withHttpHeaders()` → `withHeaders()`
+  - <type://AbstractClientOptionsBuilder> and all its subtypes
+    - `setHttpHeader()` → `setHeader()`
+    - `setHttpHeaders()` → `setHeaders()`
+    - `addHttpHeader()` → `addHeader()`
+    - `addHttpHeaders()` → `addHeaders()`
+- Removed redundant `add` prefix to some builder methods.
+  - <type://RequestContextExporterBuilder>
+    - `addBuiltIn()` → `builtIn()`
+    - `addAttribute()` → `attr()`
+    - `addRequestHeader()` → `requestHeader()`
+    - `addResponseHeader()` → `responseHeader()`
+    - `addKeyPattern()` → `keyPattern()`
+  - <type://KeyStoreCredentialResolverBuilder>
+    - `addKeyPassword()` → `keyPassword()`
+    - `addKeyPasswords()` → `keyPasswords()`
+- Renamed the methods in <type://DocService>, <type://DocServiceBuilder> and their related classes.
+  - `exampleHttpHeaders` → `exampleHeaders`
+  - `exampleRequest()` → `exampleRequests()`
+  - `exampleRequestForMethod()` → `exampleRequests()`
+    - Removed `exampleRequests(Object...)` to avoid ambiguity.
+  - `injectedScript()` → `injectedScripts()`
+  - Removed `http_` from all query parameters
+    - `http_headers` → `headers`
+    - `http_headers_sticky` → `sticky_headers`
+- Renamed the methods in <type://ServerListenerBuilder>.
+  - `addStartingCallback()` → `whenStarting()`
+  - `addStartedCallback()` → `whenStarted()`
+  - `addStopingCallback()` → `whenStoping()`
+  - `addStopedCallback()` → `whenStoped()`
+  - Removed all methods that accept `Runnable` in favor of those that
+    accept `Consumer`.
+  - Fixed the type parameters of `Iterable`s.
+- Renamed the methods in <type://EncodingServiceBuilder>.
+  - `encodableContentTypePredicate()` → `encodableContentTypes()`
+  - `encodableRequestHeadersPredicate()` → `encodableRequestHeaders()`
+- Renamed the methods in <type://TokenBucketThrottlingStrategyBuilder>.
+  - Removed the `with` from the builder methods.
+    - `withMinimumBackoff()` → `minimumBackoff()`
+    - `withHeadersScheme()` → `headersScheme()`
+- <type://BasicToken#toHeaderValue()>, <type://OAuth1aToken#toHeaderValue()> and <type://OAuth2Token#toHeaderValue()>
+  have been renamed to `asHeaderValue()` for consistency. #3012
+- <type://RequestLogProperty#NAME> is not always available for annotated service methods anymore. #2979
+  - Use <type://RequestLog#whenComplete()> as usual.
+- `RequestContext.setAttrIfAbsent()` and `computeAttrIfAbsent()` have been removed. #2997 #3004
+  - Use <type://RequestContext#setAttr(AttributeKey,Object)> guarded by <type://RequestContext#hasOwnAttr(AttributeKey)>.
+
+## ⛓ Dependencies
+
+- Dropwizard Metrics 4.1.11 → 4.1.12.1
+- gRPC 1.31.0 → 1.31.1
+- grpc-kotlin 0.1.4 → 0.1.5
+- kafka-clients 2.5.0 → 2.6.0
+- Micrometer 1.5.3 → 1.5.4, 1.3.11 → 1.3.12
+- Project Reactor 3.3.8 → 3.3.9
+- RxJava 3.0.5 → 3.0.6
+- Spring Boot 2.3.2 → 2.3.3
+- Shaded dependencies:
+  - fastutil 8.4.0 → 8.4.1
+  - JCTools 3.0.0 → 3.1.0
+- Examples:
+  - scalapb-runtime 0.10.7 → 0.10.8
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'anuraaga',
+    'cj848',
+    'cnabro',
+    'eunchan-kim',
+    'gary-lo',
+    'ikhoon',
+    'jorgheymans',
+    'jrhee17',
+    'KarboniteKream',
+    'matsumana',
+    'minwoox',
+    'okue',
+    'TimurKasatkin',
+    'trustin',
+    'xmeng1',
+  ]}
+/>
