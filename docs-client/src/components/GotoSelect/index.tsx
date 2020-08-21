@@ -53,6 +53,7 @@ interface OptionType {
 
 interface GroupType {
   label: string;
+  value: string;
   options: OptionType[];
 }
 
@@ -288,6 +289,7 @@ function makeSuggestions(
   if (specification.getServices().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Services',
+      value: 'group:services',
       options: specification.getServices().flatMap((service) => {
         return service.methods
           .map((method) => {
@@ -304,6 +306,7 @@ function makeSuggestions(
   if (specification.getEnums().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Enums',
+      value: 'group:enums',
       options: specification
         .getEnums()
         .map((enm) => {
@@ -319,6 +322,7 @@ function makeSuggestions(
   if (specification.getStructs().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Structs',
+      value: 'group:structs',
       options: specification
         .getStructs()
         .map((struct) => {
@@ -334,6 +338,7 @@ function makeSuggestions(
   if (specification.getExceptions().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Exceptions',
+      value: 'group:exceptions',
       options: specification
         .getExceptions()
         .map((exception) => {
