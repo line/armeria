@@ -262,7 +262,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
             {`
             Server
               .builder()
-              .service((ctx, req) -> ...);
+              .service((ctx, req) -> ...)
               .decorator(
                 MetricCollectingService.newDecorator(...))
               .decorator(
