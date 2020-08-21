@@ -11,7 +11,7 @@
                                   </a>
   - Learn how to write an HTTP service using annotations.
   - Learn how to write an HTTP service using annotations with Kotlin Coroutines.
-  - See [Kotlin Coroutines Support](https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support).
+  - See [Kotlin coroutines support](https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support).
 
 - `context-propagation`
   - Learn how to propagate Armeria's `RequestContext` for use in scenarios like tracing.
