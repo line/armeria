@@ -1444,12 +1444,23 @@ dependencies {
 ```kotlin
 class MyAnnotatedService {
     @Get("/users/{name}")
-    suspend fun getUserToken(@Param name: String): String {
+    suspend fun getUserToken(@Param("name") name: String): String {
         val user = myReactiveRepository.findByName(name).await()
         return user.token
     }
 }
 ```
+
+Note that you can omit the value of <type://@Param> if you compiled your Kotlin code with [`java-parameters`](https://kotlinlang.org/docs/reference/compiler-reference.html#-java-parameters) option.
+
+```kotlin
+class MyAnnotatedService {
+    @Get("/users/{name}")
+    suspend fun getUserToken(@Param name: String): String { ... }
+}
+```
+
+### Coroutine dispatcher
 
 By default, Armeria uses a context-aware event loop as a [coroutine dispatcher](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/).
 A context-aware blocking executor is used as a dispatcher if you annotate a service method with <type://@Blocking> or enable <type://AnnotatedServiceBindingBuilder#useBlockingTaskExecutor(boolean)>.
@@ -1468,7 +1479,7 @@ import com.linecorp.armeria.server.annotation.Blocking
 class MyAnnotatedService {
     @Blocking
     @Get("/blocking/users/{name}")
-    suspend fun getUserTokenBlocking(@Param name: String): String {
+    suspend fun getUserTokenBlocking(@Param("name") name: String): String {
         val id = myReactiveClient.getId(name).await()
         val user = myBlockingRepository.findById(id)
         return user.token
