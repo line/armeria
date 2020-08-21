@@ -178,7 +178,7 @@ public final class OAuth1aToken {
     /**
      * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
      */
-    public String toHeaderValue() {
+    public String asHeaderValue() {
         if (headerValue != null) {
             return headerValue;
         }
