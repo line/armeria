@@ -1429,28 +1429,28 @@ for more information about RPC and HTTP service names, and how to use it.
 
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html
 
-## Kotlin Coroutines Support
+## Kotlin coroutines support
 
-You can implement annotated services with Kotlin Coroutines.
+You can implement annotated services with Kotlin coroutines.
 
 ```kotlin
 class MyAnnotatedService {
     @Get("/users/{name}")
-    suspend fun getUserToken(@Param("name") name: String): HttpResponse {
+    suspend fun getUserToken(@Param("name") name: String): String {
         val user = myReactiveRepository.findByName(name).await()
-        return HttpResponse.of(user.token)
+        return user.token
     }
 }
 ```
 
-By default, armeria uses a context-aware event loop as a [coroutine dispatcher][CoroutineDispatcher].
+By default, Armeria uses a context-aware event loop as a [coroutine dispatcher](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/).
 If you annotates methods with `@Blocking` or enables `useBlockingTaskExecutor`,
 a context-aware blocking executor is used as a dispatcher.
 
 ```kotlin
 serverBuilder
     .annotatedService()
-    // enables `useBlockingTaskExecutor`
+    // Enable `useBlockingTaskExecutor`.
     .useBlockingTaskExecutor(true)
     .build(MyAnnotatedService())
 
@@ -1461,25 +1461,22 @@ import com.linecorp.armeria.server.annotation.Blocking
 class MyAnnotatedService {
     @Blocking
     @Get("/blocking/users/{name}")
-    suspend fun getUserTokenBlocking(@Param("name") name: String): HttpResponse {
+    suspend fun getUserTokenBlocking(@Param("name") name: String): String {
         val id = myReactiveClient.getId(name).await()
         val user = myBlockingRepository.findById(id)
-        return HttpResponse.of(user.token)
+        return user.token
     }
 }
 ```
 
 <Tip>
 
-If you use [Logback integration][logback] and/or [Zipkin integration][zipkin],
+If you use [Logback integration](/docs/advanced-logging) or [Zipkin integration](/docs/advanced-zipkin),
 coroutines should be executed in threads context aware of [RequestContext][ctx].
 
 </Tip>
 
-[CoroutineDispatcher]: https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/
 [ctx]: https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/common/RequestContext.html
-[logback]: /docs/advanced-logging
-[zipkin]: /docs/advanced-zipkin
 
 ### CoroutineContextService decorator
 
