@@ -1444,7 +1444,7 @@ class MyAnnotatedService {
 ```
 
 By default, Armeria uses a context-aware event loop as a [coroutine dispatcher](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/).
-A context-aware blocking executor is used as a dispatcher if you annotate a service method with <type://@Blocking> or enable the `useBlockingTaskExecutor` property.
+A context-aware blocking executor is used as a dispatcher if you annotate a service method with <type://@Blocking> or enable <type://AnnotatedServiceBindingBuilder#useBlockingTaskExecutor(boolean)>.
 
 ```kotlin
 serverBuilder
@@ -1480,7 +1480,7 @@ coroutines should be executed in threads context aware of [RequestContext][ctx].
 ### CoroutineContextService decorator
 
 Armeria provides a way to configure a coroutine context of annotated service methods
-using `CoroutineContextService` decorator.
+using <type://CoroutineContextService> decorator.
 
 ```kotlin
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
