@@ -23,7 +23,7 @@
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",
     "react-select": "^3.1.0",
-    "react-syntax-highlighter": "^12.2.1",
+    "react-syntax-highlighter": "^13.5.1",
     "regenerator-runtime": "^0.13.7"
   },
   "devDependencies": {
