@@ -75,6 +75,16 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     }
 
     @Override
+    public boolean hasAttr(AttributeKey<?> key) {
+        return delegate().hasAttr(key);
+    }
+
+    @Override
+    public boolean hasOwnAttr(AttributeKey<?> key) {
+        return delegate().hasOwnAttr(key);
+    }
+
+    @Override
     public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         return delegate().attrs();
     }
