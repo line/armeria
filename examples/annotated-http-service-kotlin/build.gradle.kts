@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     application
     kotlin("jvm")
@@ -11,4 +13,13 @@ dependencies {
 
 application {
     mainClassName = "example.armeria.server.annotated.kotlin.MainKt"
+}
+
+tasks.withType<KotlinCompile> {
+    kotlinOptions {
+        freeCompilerArgs = listOf(
+            "-Xjsr305=strict",
+            "-java-parameters"
+        )
+    }
 }

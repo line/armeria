@@ -1444,7 +1444,7 @@ dependencies {
 ```kotlin
 class MyAnnotatedService {
     @Get("/users/{name}")
-    suspend fun getUserToken(@Param("name") name: String): String {
+    suspend fun getUserToken(@Param name: String): String {
         val user = myReactiveRepository.findByName(name).await()
         return user.token
     }
@@ -1468,7 +1468,7 @@ import com.linecorp.armeria.server.annotation.Blocking
 class MyAnnotatedService {
     @Blocking
     @Get("/blocking/users/{name}")
-    suspend fun getUserTokenBlocking(@Param("name") name: String): String {
+    suspend fun getUserTokenBlocking(@Param name: String): String {
         val id = myReactiveClient.getId(name).await()
         val user = myBlockingRepository.findById(id)
         return user.token

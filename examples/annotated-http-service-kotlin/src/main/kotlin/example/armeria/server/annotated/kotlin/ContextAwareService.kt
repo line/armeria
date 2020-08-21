@@ -13,7 +13,7 @@ class ContextAwareService {
 
     @Get("/foo")
     @ProducesJson
-    suspend fun foo(@Param("name") name: String, @Param("id") id: Int): FooResponse {
+    suspend fun foo(@Param name: String, @Param id: Int): FooResponse {
         log.info("Hello $name")
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()
