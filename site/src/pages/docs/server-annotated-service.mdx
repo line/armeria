@@ -1471,11 +1471,9 @@ class MyAnnotatedService {
 <Tip>
 
 If you use [Logback integration](/docs/advanced-logging) or [Zipkin integration](/docs/advanced-zipkin),
-coroutines should be executed in threads context aware of [RequestContext][ctx].
+coroutines should be executed in a thread that is aware of <type://RequestContext>.
 
 </Tip>
-
-[ctx]: https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/common/RequestContext.html
 
 ### `CoroutineContextService` decorator
 
