@@ -1431,7 +1431,15 @@ for more information about RPC and HTTP service names, and how to use it.
 
 ## Kotlin coroutines support
 
-You can implement annotated services with [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
+You can implement annotated services with [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html)
+by adding the following dependency.
+
+```groovy
+dependencies {
+    implementation 'com.linecorp.armeria:armeria'
+    implementation 'com.linecorp.armeria:armeria-kotlin'
+}
+```
 
 ```kotlin
 class MyAnnotatedService {
