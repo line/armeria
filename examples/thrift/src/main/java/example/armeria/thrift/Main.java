@@ -1,9 +1,9 @@
 package example.armeria.thrift;
 
+import java.util.Arrays;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
@@ -46,7 +46,7 @@ public final class Main {
                      // See https://armeria.dev/docs/server-docservice for more information.
                      .serviceUnder("/docs",
                                    DocService.builder()
-                                             .exampleRequests(ImmutableList.of(
+                                             .exampleRequests(Arrays.asList(
                                                      new hello_args(exampleRequest),
                                                      new lazyHello_args(exampleRequest),
                                                      new blockingHello_args(exampleRequest)))
