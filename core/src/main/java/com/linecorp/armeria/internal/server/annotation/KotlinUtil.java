@@ -54,7 +54,7 @@ final class KotlinUtil {
         MethodHandle callKotlinSuspendingMethod = null;
         try {
             final Class<?> coroutineUtilClass =
-                    getClass("com.linecorp.armeria.internal.common.kotlin.CoroutineUtil");
+                    getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaCoroutineUtil");
 
             callKotlinSuspendingMethod = MethodHandles.lookup().findStatic(
                     coroutineUtilClass, "callKotlinSuspendingMethod",
@@ -75,7 +75,7 @@ final class KotlinUtil {
         Method isReturnTypeUnit = null;
         try {
             final Class<?> kotlinUtilClass =
-                    getClass("com.linecorp.armeria.internal.common.kotlin.KotlinUtil");
+                    getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil");
 
             isContinuation = kotlinUtilClass.getMethod("isContinuation", Class.class);
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
