@@ -38,7 +38,7 @@ date: 2020-08-21
                                   .addService(serviceBar)
                                   .build()
                                   .decorate(MetricCollectingService.newDecorator(
-                                      GrpcMeterIdPrefixFunction.of('my.grpc.svcs'))))
+                                      GrpcMeterIdPrefixFunction.of("my.grpc.svcs"))))
                                   //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         .build();
   ```
