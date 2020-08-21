@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.netty.util.AttributeKey;
+
 class ClientRequestContextTest {
 
     @Test
@@ -226,6 +228,36 @@ class ClientRequestContextTest {
             assertCurrentCtx(cctx1);
         }
         assertCurrentCtx(null);
+    }
+
+    @Test
+    void hasAttr() {
+        final AttributeKey<String> key = AttributeKey.valueOf(ClientRequestContextTest.class, "KEY");
+        final ServiceRequestContext sctx = serviceRequestContext();
+        try (SafeCloseable ignored = sctx.push()) {
+            final ClientRequestContext cctx = clientRequestContext();
+            assertThat(sctx.hasAttr(key)).isFalse();
+            assertThat(cctx.hasAttr(key)).isFalse();
+
+            sctx.setAttr(key, "foo");
+            assertThat(sctx.hasAttr(key)).isTrue();
+            assertThat(cctx.hasAttr(key)).isTrue();
+        }
+    }
+
+    @Test
+    void hasOwnAttr() {
+        final AttributeKey<String> key = AttributeKey.valueOf(ClientRequestContextTest.class, "KEY");
+        final ServiceRequestContext sctx = serviceRequestContext();
+        try (SafeCloseable ignored = sctx.push()) {
+            final ClientRequestContext cctx = clientRequestContext();
+            assertThat(sctx.hasOwnAttr(key)).isFalse();
+            assertThat(cctx.hasOwnAttr(key)).isFalse();
+
+            sctx.setAttr(key, "foo");
+            assertThat(sctx.hasOwnAttr(key)).isTrue();
+            assertThat(cctx.hasOwnAttr(key)).isFalse();
+        }
     }
 
     private static void assertCurrentCtx(@Nullable RequestContext ctx) {
