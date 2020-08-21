@@ -18,7 +18,7 @@ cglib:
 
 # Akka is used only for testing in it:grpcweb module.
 ch.megard:
-  akka-http-cors_2.13: { version: '1.1.0' }
+  akka-http-cors_2.13: { version: '1.0.0' }
 
 ch.qos.logback:
   logback-classic:
