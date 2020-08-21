@@ -6,7 +6,7 @@
   - Learn how to write an HTTP service using annotations.
   - See [Annotated services](https://armeria.dev/docs/server-annotated-service).
 
-- `annotated-http-service-kotlin` <a href="https://gitpod.io/#project=annotated-http-service/https://github.com/line/armeria-examples/tree/master/annotated-http-service-kotlin/src/main/kotlin/example/armeria/server/annotated/kotlin/Main.kt">
+- `annotated-http-service-kotlin` <a href="https://gitpod.io/#project=annotated-http-service-kotlin/https://github.com/line/armeria-examples/tree/master/annotated-http-service-kotlin/src/main/kotlin/example/armeria/server/annotated/kotlin/Main.kt">
                                     <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
                                   </a>
   - Learn how to write an HTTP service using annotations.
