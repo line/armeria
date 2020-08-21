@@ -119,8 +119,8 @@ public interface RequestContext {
     ServiceRequestContext root();
 
     /**
-     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
-     * {@link #setAttr(AttributeKey, Object)}.
+     * Returns the value associated with the given {@link AttributeKey} or {@code null} if there's no value
+     * set by {@link #setAttr(AttributeKey, Object)}.
      *
      * <h3>Searching for attributes in a root context</h3>
      *
@@ -150,8 +150,8 @@ public interface RequestContext {
     <V> V attr(AttributeKey<V> key);
 
     /**
-     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
-     * {@link #setAttr(AttributeKey, Object)}.
+     * Returns the value associated with the given {@link AttributeKey} or {@code null} if there's no value
+     * set by {@link #setAttr(AttributeKey, Object)}.
      *
      * <p>Unlike {@link #attr(AttributeKey)}, this does not search in {@link #root()}.</p>
      *
@@ -159,6 +159,28 @@ public interface RequestContext {
      */
     @Nullable
     <V> V ownAttr(AttributeKey<V> key);
+
+    /**
+     * Returns {@code true} if and only if the value associated with the specified {@link AttributeKey} is
+     * not {@code null}.
+     *
+     * @see #hasOwnAttr(AttributeKey)
+     */
+    default boolean hasAttr(AttributeKey<?> key) {
+        return attr(key) != null;
+    }
+
+    /**
+     * Returns {@code true} if and only if the value associated with the specified {@link AttributeKey} is
+     * not {@code null}.
+     *
+     * <p>Unlike {@link #hasAttr(AttributeKey)}, this does not search in {@link #root()}.</p>
+     *
+     * @see #hasAttr(AttributeKey)
+     */
+    default boolean hasOwnAttr(AttributeKey<?> key) {
+        return ownAttr(key) != null;
+    }
 
     /**
      * Returns the {@link Iterator} of all {@link Entry}s this context contains.
