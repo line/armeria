@@ -86,6 +86,15 @@
                  </a> 
   - Learn how to serve static files.
   - See [Serving static files](https://armeria.dev/docs/server-http-file).
+  
+- `thrift` <a href="https://gitpod.io/#project=grpc/https://github.com/line/armeria-examples/tree/master/thrift/src/main/java/example/armeria/thrift/Main.java">
+             <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
+           </a> 
+  - Learn how to write a Thrift service with Armeria Thrift module.
+  - See [Running a Thrift service](https://armeria.dev/docs/server-thrift) and
+    [Calling a Thrift service](https://armeria.dev/docs/client-thrift).
+  - Install Thrift compiler locally before generating Thrift services.
+    - Use `brew install thrift` for macOS.
 
 ## Configure `-parameters` javac option 
 
