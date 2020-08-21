@@ -160,7 +160,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
                 .build())
               .service(
                 "/api/thrift",
-                ThriftService.of(myThriftServiceImpl));
+                ThriftService.of(myThriftServiceImpl))
               .service(
                 "prefix:/files",
                 FileService.of(new File("/var/www")))
