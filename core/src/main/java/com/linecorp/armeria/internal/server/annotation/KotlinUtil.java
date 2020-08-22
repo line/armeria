@@ -21,6 +21,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
@@ -35,8 +36,13 @@ final class KotlinUtil {
 
     private static final boolean IS_KOTLIN_REFLECTION_PRESENT;
 
+    private static final boolean IS_ARMERIA_KOTLIN_DEPENDENCY_PRESENT;
+
     @Nullable
     private static final Class<? extends Annotation> METADATA_CLASS;
+
+    @Nullable
+    private static final Class<?> CONTINUATION_CLASS;
 
     @Nullable
     private static final MethodHandle CALL_KOTLIN_SUSPENDING_METHOD;
@@ -45,17 +51,16 @@ final class KotlinUtil {
     private static final Method IS_SUSPENDING_FUNCTION;
 
     @Nullable
-    private static final Method IS_CONTINUATION;
-
-    @Nullable
     private static final Method IS_RETURN_TYPE_UNIT;
 
     static {
+        boolean isArmeriaKotlinDependencyPresent = false;
         MethodHandle callKotlinSuspendingMethod = null;
         try {
             final Class<?> coroutineUtilClass =
                     getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaCoroutineUtil");
 
+            isArmeriaKotlinDependencyPresent = true;
             callKotlinSuspendingMethod = MethodHandles.lookup().findStatic(
                     coroutineUtilClass, "callKotlinSuspendingMethod",
                     MethodType.methodType(
@@ -68,22 +73,20 @@ final class KotlinUtil {
             // ignore
         } finally {
             CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
+            IS_ARMERIA_KOTLIN_DEPENDENCY_PRESENT = isArmeriaKotlinDependencyPresent;
         }
 
-        Method isContinuation = null;
         Method isSuspendingFunction = null;
         Method isReturnTypeUnit = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil");
 
-            isContinuation = kotlinUtilClass.getMethod("isContinuation", Class.class);
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
-            IS_CONTINUATION = isContinuation;
             IS_SUSPENDING_FUNCTION = isSuspendingFunction;
             IS_RETURN_TYPE_UNIT = isReturnTypeUnit;
         }
@@ -106,6 +109,15 @@ final class KotlinUtil {
         } finally {
             METADATA_CLASS = metadataClass;
         }
+
+        Class<?> continuationClass = null;
+        try {
+            continuationClass = getClass("kotlin.coroutines.Continuation");
+        } catch (ClassNotFoundException e) {
+            // ignore
+        } finally {
+            CONTINUATION_CLASS = continuationClass;
+        }
     }
 
     /**
@@ -117,11 +129,26 @@ final class KotlinUtil {
     }
 
     /**
+     * Returns true if `armeria-kotlin` dependency is present.
+     */
+    static boolean isArmeriaKotlinDependencyPresent() {
+        return IS_ARMERIA_KOTLIN_DEPENDENCY_PRESENT;
+    }
+
+    /**
      * Returns true if a method is written in Kotlin.
      */
     static boolean isKotlinMethod(Method method) {
         return METADATA_CLASS != null &&
                method.getDeclaringClass().getAnnotation(METADATA_CLASS) != null;
+    }
+
+    /**
+     * Returns true if the last parameter of a method is a kotlin.coroutines.Continuation.
+     */
+    static boolean maybeSuspendingFunction(Method method) {
+        return Arrays.stream(method.getParameters())
+                     .anyMatch(param -> isContinuation(param.getType()));
     }
 
     /**
@@ -142,12 +169,7 @@ final class KotlinUtil {
      * Returns true if a class is kotlin.coroutines.Continuation.
      */
     static boolean isContinuation(Class<?> type) {
-        try {
-            return IS_CONTINUATION != null &&
-                   (boolean) IS_CONTINUATION.invoke(null, type);
-        } catch (Exception e) {
-            return false;
-        }
+        return CONTINUATION_CLASS != null && CONTINUATION_CLASS.isAssignableFrom(type);
     }
 
     /**

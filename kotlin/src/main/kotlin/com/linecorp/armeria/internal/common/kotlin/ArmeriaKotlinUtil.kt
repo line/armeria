@@ -19,7 +19,6 @@
 package com.linecorp.armeria.internal.common.kotlin
 
 import java.lang.reflect.Method
-import kotlin.coroutines.Continuation
 import kotlin.reflect.jvm.jvmErasure
 import kotlin.reflect.jvm.kotlinFunction
 
@@ -31,14 +30,6 @@ internal fun isSuspendingFunction(method: Method): Boolean {
     return method.kotlinFunction
         ?.isSuspend
         ?: return false
-}
-
-/**
- * Returns true if a class is kotlin.coroutines.Continuation.
- */
-@Suppress("unused")
-internal fun isContinuation(type: Class<*>): Boolean {
-    return Continuation::class.java.isAssignableFrom(type)
 }
 
 /**

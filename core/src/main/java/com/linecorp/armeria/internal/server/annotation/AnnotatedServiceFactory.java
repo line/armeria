@@ -242,6 +242,12 @@ public final class AnnotatedServiceFactory {
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers) {
 
+        if (!KotlinUtil.isArmeriaKotlinDependencyPresent() && KotlinUtil.maybeSuspendingFunction(method)) {
+            throw new IllegalArgumentException(
+                    "Kotlin suspending functions cannot be used. You should add the armeria-kotlin dependency."
+            );
+        }
+
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
