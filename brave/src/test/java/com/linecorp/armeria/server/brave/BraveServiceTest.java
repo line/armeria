@@ -152,6 +152,55 @@ class BraveServiceTest {
         assertThat(scopeDecoratorCallingCounter.get()).isOne();
     }
 
+    @Test
+    void httpRequestResponseParsersAreOverriddenIfDefault() throws Exception {
+        final CurrentTraceContext traceContext =
+                RequestContextCurrentTraceContext.builder()
+                                                 .build();
+        final SpanCollector collector = new SpanCollector();
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .addSpanHandler(collector)
+                                       .currentTraceContext(traceContext)
+                                       .sampler(Sampler.ALWAYS_SAMPLE)
+                                       .build();
+        final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).build();
+        testServiceInvocation(httpTracing);
+
+        // check span name
+        final MutableSpan span = collector.spans().take();
+
+        // check tags
+        assertTags(span);
+
+        // check service name
+        assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
+    }
+
+    @Test
+    void onlyHttpResponseParsersIsOverridden() throws Exception {
+        final CurrentTraceContext traceContext =
+                RequestContextCurrentTraceContext.builder()
+                                                 .build();
+        final SpanCollector collector = new SpanCollector();
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .addSpanHandler(collector)
+                                       .currentTraceContext(traceContext)
+                                       .sampler(Sampler.ALWAYS_SAMPLE)
+                                       .build();
+        final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).serverRequestParser(
+                (request, context, span) -> span.tag("customized", "true")).build();
+        testServiceInvocation(httpTracing);
+
+        // check span name
+        final MutableSpan span = collector.spans().take();
+        assertThat(span.tag("customized")).isEqualTo("true");
+        assertThat(span.tags()).doesNotContainKey("http.host");
+        // span name is set by the Armeria ServerResponseAdapter.
+        assertThat(span.name()).isEqualTo("hello");
+    }
+
     private static RequestLog testServiceInvocation(SpanHandler spanHandler,
                                                     CurrentTraceContext traceContext,
                                                     float samplingRate) throws Exception {
@@ -166,7 +215,10 @@ class BraveServiceTest {
                                                    .serverRequestParser(ArmeriaHttpServerParser.get())
                                                    .serverResponseParser(ArmeriaHttpServerParser.get())
                                                    .build();
+        return testServiceInvocation(httpTracing);
+    }
 
+    private static RequestLog testServiceInvocation(HttpTracing httpTracing) throws Exception {
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
