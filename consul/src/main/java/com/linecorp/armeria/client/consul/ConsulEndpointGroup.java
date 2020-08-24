@@ -94,6 +94,9 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
         }
 
         response.handle((endpoints, cause) -> {
+            if (isClosing()) {
+                return null;
+            }
             if (cause != null) {
                 logger.warn("Unexpected exception while fetching the registry from: {}." +
                             " (serviceName: {})", consulClient.uri(), serviceName, cause);

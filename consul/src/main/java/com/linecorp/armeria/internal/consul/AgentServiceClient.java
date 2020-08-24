@@ -17,9 +17,6 @@ package com.linecorp.armeria.internal.consul;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.Map;
-
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -31,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
@@ -56,15 +54,7 @@ final class AgentServiceClient {
      */
     HttpResponse register(String serviceId, String serviceName, String address, int port,
                           @Nullable Check check) {
-        final Service service = new Service();
-        service.id = serviceId;
-        service.name = serviceName;
-        service.address = address;
-        service.port = port;
-        if (check != null) {
-            service.check = check;
-        }
-
+        final Service service = new Service(serviceId, serviceName, address, port, check);
         try {
             return client.put("/agent/service/register", mapper.writeValueAsString(service));
         } catch (JsonProcessingException e) {
@@ -77,88 +67,47 @@ final class AgentServiceClient {
      */
     HttpResponse deregister(String serviceId) {
         requireNonNull(serviceId, "serviceId");
-        return client.put("/agent/service/deregister/" + serviceId, "");
+        return client.put("/agent/service/deregister/" + serviceId, HttpData.empty());
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(Include.NON_NULL)
-    public static final class Service {
-
-        @Nullable
-        @JsonProperty("Service")
-        String service;
-
-        @Nullable
-        @JsonProperty("Name")
-        String name;
+    private static final class Service {
 
         @JsonProperty("ID")
-        String id;
+        private final String id;
 
-        @Nullable
-        @JsonProperty("Tags")
-        String[] tags;
+        @JsonProperty("Name")
+        private final String name;
 
-        @Nullable
         @JsonProperty("Address")
-        String address;
-
-        @Nullable
-        @JsonProperty("TaggedAddresses")
-        Map<String, Object> taggedAddresses;
-
-        @Nullable
-        @JsonProperty("Meta")
-        Map<String, String> meta;
+        private final String address;
 
         @JsonProperty("Port")
-        int port;
-
-        @Nullable
-        @JsonProperty("Kind")
-        String kind;
-
-        @Nullable
-        @JsonProperty("Proxy")
-        Object proxy;
-
-        @Nullable
-        @JsonProperty("Connect")
-        Object connect;
+        private final int port;
 
         @Nullable
         @JsonProperty("Check")
-        Check check;
+        private final Check check;
 
-        @Nullable
-        @JsonProperty("Checks")
-        List<Check> checks;
-
-        @JsonProperty("EnableTagOverride")
-        boolean enableTagOverride;
-
-        @Nullable
-        @JsonProperty("Weights")
-        Map<String, Object> weights;
+        Service(String id, String name, String address, int port,
+                       @Nullable Check check) {
+            this.id = id;
+            this.name = name;
+            this.address = address;
+            this.port = port;
+            this.check = check;
+        }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                              .add("service", service)
-                              .add("name", name)
+                              .omitNullValues()
                               .add("id", id)
-                              .add("tags", tags)
+                              .add("name", name)
                               .add("address", address)
-                              .add("taggedAddresses", taggedAddresses)
-                              .add("meta", meta)
                               .add("port", port)
-                              .add("kind", kind)
-                              .add("proxy", proxy)
-                              .add("connect", connect)
                               .add("check", check)
-                              .add("checks", checks)
-                              .add("enableTagOverride", enableTagOverride)
-                              .add("weights", weights)
                               .toString();
         }
     }

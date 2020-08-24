@@ -34,9 +34,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
@@ -73,15 +71,6 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
     @AfterAll
     static void stopServers() throws Exception {
         servers.forEach(Server::close);
-    }
-
-    @Test
-    void shouldStartConsul() throws Throwable {
-        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
-            final AggregatedHttpResponse response = client().consulWebClient()
-                                                            .get("/agent/self").aggregate().join();
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        });
     }
 
     @Test

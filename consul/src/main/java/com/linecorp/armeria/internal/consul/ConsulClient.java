@@ -43,6 +43,8 @@ public final class ConsulClient {
                     RetryingClient.newDecorator(RetryRule.failsafe(), 3))));
 
     private final WebClient webClient;
+    private final AgentServiceClient agentClient;
+    private final CatalogClient catalogClient;
     private final HealthClient healthClient;
 
     public ConsulClient(URI uri) {
@@ -57,6 +59,8 @@ public final class ConsulClient {
             builder.addHeader("X-Consul-Token", token);
         }
         webClient = builder.build();
+        agentClient = AgentServiceClient.of(this);
+        catalogClient = CatalogClient.of(this);
         healthClient = HealthClient.of(this);
     }
 
@@ -78,8 +82,7 @@ public final class ConsulClient {
      */
     public HttpResponse register(String serviceId, String serviceName, Endpoint endpoint,
                                  @Nullable Check check) {
-        return AgentServiceClient.of(this)
-                                 .register(serviceId, serviceName, endpoint.host(), endpoint.port(), check);
+        return agentClient.register(serviceId, serviceName, endpoint.host(), endpoint.port(), check);
     }
 
     /**
@@ -88,14 +91,14 @@ public final class ConsulClient {
      * @param serviceId a service ID that identifying a service
      */
     public HttpResponse deregister(String serviceId) {
-        return AgentServiceClient.of(this).deregister(serviceId);
+        return agentClient.deregister(serviceId);
     }
 
     /**
      * Get registered endpoints with service name from Consul agent.
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
-        return CatalogClient.of(this).endpoints(serviceName);
+        return catalogClient.endpoints(serviceName);
     }
 
     /**
@@ -108,7 +111,7 @@ public final class ConsulClient {
     /**
      * Returns a {@code WebClient} for accessing to Consul server.
      */
-    public WebClient consulWebClient() {
+    WebClient consulWebClient() {
         return webClient;
     }
 
