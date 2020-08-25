@@ -28,6 +28,7 @@ import React, {
   ChangeEvent,
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useState,
 } from 'react';
@@ -195,6 +196,26 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setSnackbarOpen(false);
   }, []);
 
+  const validateRpcEndpointPath = useCallback(
+    (newEndpointPath: string) => {
+      if (!newEndpointPath) {
+        throw new Error('You must specify the endpoint path.');
+      }
+      if (
+        !method.endpoints
+          .map((endpoint) => endpoint.pathMapping)
+          .includes(newEndpointPath)
+      ) {
+        throw new Error(
+          `The path: '${newEndpointPath}' should be one of the: ${method.endpoints.map(
+            (endpoint) => endpoint.pathMapping,
+          )}`,
+        );
+      }
+    },
+    [method],
+  );
+
   const validateEndpointPath = useCallback(
     (newEndpointPath: string) => {
       if (!newEndpointPath) {
@@ -324,6 +345,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
             `'${host}${escapeSingleQuote(additionalPath)}'` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
+      } else if (additionalPath.length > 0) {
+        validateRpcEndpointPath(additionalPath);
+        uri = `'${host}${escapeSingleQuote(additionalPath)}'`;
       } else {
         uri = `'${host}${escapeSingleQuote(path)}'`;
       }
@@ -358,6 +382,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     additionalQueries,
     exactPathMapping,
     validateEndpointPath,
+    validateRpcEndpointPath,
     additionalPath,
   ]);
 
@@ -390,6 +415,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
         if (!exactPathMapping) {
           executedEndpointPath = params.get('endpoint_path') || undefined;
         }
+      } else {
+        executedEndpointPath = params.get('endpoint_path') || undefined;
       }
 
       const headersText = params.get('headers');
@@ -442,6 +469,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
           validateEndpointPath(additionalPath);
           params.set('endpoint_path', additionalPath);
         }
+      } else if (additionalPath.length > 0) {
+        validateRpcEndpointPath(additionalPath);
+        params.set('endpoint_path', additionalPath);
+      } else {
+        // Fall back to default endpoint.
+        params.delete('endpoint_path');
       }
 
       if (headers) {
@@ -482,9 +515,27 @@ const DebugPage: React.FunctionComponent<Props> = ({
     requestBody,
     exactPathMapping,
     validateEndpointPath,
+    validateRpcEndpointPath,
     additionalPath,
     history,
   ]);
+
+  const supportedExamplePaths = useMemo(() => {
+    const transport = TRANSPORTS.getDebugTransport(method);
+    if (!transport) {
+      throw new Error("This method doesn't have a debug transport.");
+    }
+    return examplePaths.filter((path) =>
+      method.endpoints.some((endpoint) => {
+        return (
+          endpoint.pathMapping === path.value &&
+          endpoint.availableMimeTypes.some((mimeType) => {
+            return transport.supportsMimeType(mimeType);
+          })
+        );
+      }),
+    );
+  }, [examplePaths, method]);
 
   return (
     <Section>
@@ -507,7 +558,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
               .
             </Alert>
             <EndpointPath
-              examplePaths={examplePaths}
+              examplePaths={supportedExamplePaths}
               editable={!exactPathMapping}
               endpointPathOpen={endpointPathOpen}
               additionalPath={additionalPath}

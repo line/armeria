@@ -118,8 +118,7 @@ public final class MethodInfo {
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
 
         requireNonNull(examplePaths, "examplePaths");
-        final ImmutableList.Builder<String> examplePathsBuilder =
-                ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
+        final ImmutableList.Builder<String> examplePathsBuilder = ImmutableList.builder();
         for (String path : examplePaths) {
             final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
             checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: %s", path);

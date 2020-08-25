@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
@@ -276,6 +277,10 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                          return builder.availableMimeTypes(e.availableMimeTypes()).build();
                                      })
                                      .collect(toImmutableSet());
+
+        final List<String> examplePaths =
+                Streams.stream(methodEndpoints).map(EndpointInfo::pathMapping).collect(toImmutableList());
+
         return new MethodInfo(
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
@@ -286,7 +291,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 methodEndpoints,
                 /* exampleHeaders */ ImmutableList.of(),
                 defaultExamples(method),
-                /* examplePaths */ ImmutableList.of(),
+                examplePaths,
                 /* exampleQueries */ ImmutableList.of(),
                 HttpMethod.POST,
                 /* docString */ null);
