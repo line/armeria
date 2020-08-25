@@ -50,8 +50,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
@@ -747,8 +745,6 @@ class GrpcClientTest {
             assertThat(rpcRes.get()).isEqualTo(recorder.getValues().get(0));
         });
     }
-
-    private static final Logger logger = LoggerFactory.getLogger(GrpcClientTest.class);
 
     @Test
     void serverStreamingShouldBeFlowControlled() throws Exception {

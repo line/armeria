@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.client.grpc;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -64,7 +62,6 @@ import io.netty.channel.EventLoop;
 
 class GrpcWebTextTest {
 
-    // TODO(ikhoon): Fix broken tests
     static final String PAYLOAD = "abcdefghijklmnopqrstuvwxyz";
 
     @RegisterExtension
@@ -170,8 +167,8 @@ class GrpcWebTextTest {
             final ArmeriaMessageDeframer deframer =
                     new ArmeriaMessageDeframer(eventLoop, alloc, Integer.MAX_VALUE, true);
             StreamMessage.of(framed)
-                         .subscribe(deframer);
-            deframer.subscribe(singleSubscriber(deframed));
+                         .subscribe(deframer, eventLoop);
+            deframer.subscribe(singleSubscriber(deframed), eventLoop);
             return deframed;
         }
 

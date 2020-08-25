@@ -231,8 +231,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             if (upstream == null) {
                 pendingRequests += numMessages;
             } else {
-                upstream.request(pendingRequests + numMessages);
-                pendingRequests = 0;
+                upstream.request(numMessages);
             }
         } else {
             ctx.eventLoop().execute(() -> request(numMessages));

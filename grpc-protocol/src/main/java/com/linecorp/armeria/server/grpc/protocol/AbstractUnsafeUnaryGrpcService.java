@@ -110,8 +110,8 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
         final ArmeriaMessageDeframer deframer =
                 new ArmeriaMessageDeframer(eventLoop, alloc, Integer.MAX_VALUE, false);
-        StreamMessage.of(framed).subscribe(deframer);
-        deframer.subscribe(singleSubscriber(deframed));
+        StreamMessage.of(framed).subscribe(deframer, eventLoop);
+        deframer.subscribe(singleSubscriber(deframed), eventLoop);
         return deframed;
     }
 

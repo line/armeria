@@ -193,8 +193,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             if (upstream == null) {
                 pendingRequests += numMessages;
             } else {
-                upstream.request(pendingRequests + numMessages);
-                pendingRequests = 0;
+                upstream.request(numMessages);
             }
         } else {
             ctx.eventLoop().execute(() -> request(numMessages));
