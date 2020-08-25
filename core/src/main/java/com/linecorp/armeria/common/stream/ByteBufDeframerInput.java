@@ -150,6 +150,12 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
     public ByteBuf readBytes(int length) {
         checkArgument(length > 0, "length %s (expected: length > 0)", length);
         final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw new IndexOutOfBoundsException(
+                    "readerIndex: " + readerIndex() +
+                    " (expected: 0 <= readerIndex < writerIndex(" + writerIndex() + "))");
+        }
+
         if (firstBuf.readableBytes() >= length) {
             return firstBuf.readRetainedSlice(length);
         }
