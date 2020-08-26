@@ -69,17 +69,6 @@ public final class MethodInfo {
                       TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
-                      Iterable<EndpointInfo> endpoints) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, HttpMethod.POST, null);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public MethodInfo(String name,
-                      TypeSignature returnTypeSignature,
-                      Iterable<FieldInfo> parameters,
-                      Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       @Nullable String docString) {
