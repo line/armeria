@@ -33,7 +33,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -116,8 +115,7 @@ public final class MethodInfo {
         this.examplePaths = examplePathsBuilder.build();
 
         requireNonNull(exampleQueries, "exampleQueries");
-        final ImmutableList.Builder<String> exampleQueriesBuilder =
-                ImmutableList.builderWithExpectedSize(Iterables.size(exampleQueries));
+        final ImmutableList.Builder<String> exampleQueriesBuilder = ImmutableList.builder();
         for (String query : exampleQueries) {
             final PathAndQuery pathAndQuery = PathAndQuery.parse('?' + query);
             checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: %s", query);
