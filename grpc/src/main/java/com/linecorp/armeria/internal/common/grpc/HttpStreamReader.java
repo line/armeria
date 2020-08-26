@@ -103,7 +103,7 @@ public final class HttpStreamReader extends ArmeriaMessageDeframer {
     protected void processTrailers(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
-            GrpcStatus.reportStatus(headers, this, transportStatusListener);
+            whenConsumed().thenRun(() -> GrpcStatus.reportStatus(headers, this, transportStatusListener));
         }
     }
 
