@@ -502,6 +502,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
   ]);
 
   const supportedExamplePaths = useMemo(() => {
+    if (isAnnotatedService) {
+      return examplePaths;
+    }
     const transport = TRANSPORTS.getDebugTransport(method);
     if (!transport) {
       throw new Error("This method doesn't have a debug transport.");
@@ -516,7 +519,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         );
       }),
     );
-  }, [examplePaths, method]);
+  }, [examplePaths, method, isAnnotatedService]);
 
   return (
     <Section>
