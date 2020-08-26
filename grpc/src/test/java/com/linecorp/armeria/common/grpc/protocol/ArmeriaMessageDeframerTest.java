@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
@@ -65,17 +66,20 @@ class ArmeriaMessageDeframerTest {
     private static final int MAX_MESSAGE_SIZE = 1024;
 
     private ArmeriaMessageDeframer deframer;
+    private DeframedMessage deframedMessage;
 
     @BeforeEach
     void setUp() {
         deframer = new ArmeriaMessageDeframer(ImmediateEventExecutor.INSTANCE,
                                               UnpooledByteBufAllocator.DEFAULT, MAX_MESSAGE_SIZE, false)
                 .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
+        deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }
 
     @AfterEach
     void tearDown() {
         deframer.close();
+        deframedMessage.buf().release();
     }
 
     @ArgumentsSource(DeframerProvider.class)
@@ -105,7 +109,7 @@ class ArmeriaMessageDeframerTest {
         StepVerifier.create(deframer)
                     .expectNextCount(0)
                     .thenRequest(1)
-                    .expectNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
     }
 
@@ -119,7 +123,7 @@ class ArmeriaMessageDeframerTest {
         StepVerifier.create(deframer)
                     .thenRequest(1)
                     .then(() -> source.subscribe(deframer))
-                    .expectNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
     }
 
@@ -151,7 +155,7 @@ class ArmeriaMessageDeframerTest {
                         streamMessage.write(HttpData.wrap(fragments.get(fragments.size() - 1)));
                         streamMessage.close();
                     })
-                    .expectNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
     }
 
@@ -180,7 +184,7 @@ class ArmeriaMessageDeframerTest {
                         source.write(HttpData.wrap(src));
                         source.close();
                     })
-                    .expectNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
     }
 
@@ -194,9 +198,9 @@ class ArmeriaMessageDeframerTest {
         source.subscribe(deframer);
         StepVerifier.create(deframer)
                     .thenRequest(1)
-                    .expectNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
                     .thenRequest(1)
-                    .expectNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
     }
 
@@ -207,8 +211,8 @@ class ArmeriaMessageDeframerTest {
         StepVerifier.create(deframer)
                     .thenRequest(2)
                     .then(() -> newStreamMessage(maybeEncoded, maybeEncoded).subscribe(deframer))
-                    .expectNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0),
-                                new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
+                    .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
     }
 
@@ -327,5 +331,13 @@ class ArmeriaMessageDeframerTest {
             final byte[] data = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
             return Arguments.of(deframer, decodeBase64, data);
         }
+    }
+
+    private static Predicate<DeframedMessage> compareAndRelease(DeframedMessage second) {
+        return first -> {
+            final boolean result = first.equals(second);
+            first.buf().release();
+            return result;
+        };
     }
 }

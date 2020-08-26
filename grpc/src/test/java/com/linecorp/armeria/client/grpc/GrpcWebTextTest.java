@@ -168,8 +168,7 @@ class GrpcWebTextTest {
             final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
             final ArmeriaMessageDeframer deframer =
                     new ArmeriaMessageDeframer(eventLoop, alloc, Integer.MAX_VALUE, true);
-            StreamMessage.of(framed)
-                         .subscribe(deframer, eventLoop);
+            StreamMessage.of(framed).subscribe(deframer, eventLoop);
             deframer.subscribe(singleSubscriber(deframed), eventLoop);
             return deframed;
         }

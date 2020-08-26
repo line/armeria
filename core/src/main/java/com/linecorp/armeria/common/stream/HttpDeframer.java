@@ -101,6 +101,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
                 final ResponseHeaders responseHeaders = (ResponseHeaders) headers;
                 if (responseHeaders.status().isInformational()) {
                     processInformationalHeaders(responseHeaders, outputQueue::addLast);
+                    return;
                 }
             }
 
@@ -110,6 +111,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
             } else {
                 processTrailers((HttpHeaders) data, outputQueue::addLast);
             }
+            return;
         }
 
         if (data instanceof HttpData) {

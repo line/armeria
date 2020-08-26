@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -40,8 +41,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.test.StepVerifier;
 
 class HttpStreamReaderTest {
-
-    //TODO(ikhoon): Add TCK test for HttpStreamReader
 
     private static final ResponseHeaders HEADERS = ResponseHeaders.of(HttpStatus.OK);
     private static final HttpHeaders TRAILERS = HttpHeaders.of(GrpcHeaderNames.GRPC_STATUS, 2);
@@ -84,11 +83,17 @@ class HttpStreamReaderTest {
 
     @Test
     void onMessage() throws Exception {
+        final DeframedMessage deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
         final StreamMessage<HttpObject> source = StreamMessage.of(DATA);
         source.subscribe(reader);
         StepVerifier.create(reader)
                     .thenRequest(1)
-                    .expectNextCount(1)
+                    .expectNextMatches(message -> {
+                        final boolean result = message.equals(deframedMessage);
+                        message.buf().release();
+                        deframedMessage.buf().release();
+                        return result;
+                    })
                     .verifyComplete();
     }
 

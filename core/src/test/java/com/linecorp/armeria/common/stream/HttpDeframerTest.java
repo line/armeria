@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -115,7 +114,7 @@ class HttpDeframerTest {
     @Test
     void headerAwareData() {
         final Flux<HttpHeaders> headers = Flux.just(ResponseHeaders.of(HttpStatus.CONTINUE),
-                                                    HttpHeaders.of(HttpHeaderNames.CONTENT_LENGTH, 11));
+                                                    HttpHeaders.of("length", 11));
         final Flux<HttpData> stream = Flux.just("A012345",
                                                 "6789B0",
                                                 "12",
@@ -175,7 +174,7 @@ class HttpDeframerTest {
 
         @Override
         protected void processHeaders(HttpHeaders in, HttpDeframerOutput<String> out) {
-            length = in.getInt(HttpHeaderNames.CONTENT_LENGTH);
+            length = in.getInt("length");
         }
 
         @Override

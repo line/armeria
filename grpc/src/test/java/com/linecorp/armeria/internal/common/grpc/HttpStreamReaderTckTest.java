@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.LongStream;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
+import org.testng.annotations.AfterTest;
 import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
@@ -29,6 +32,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
@@ -42,7 +46,17 @@ public class HttpStreamReaderTckTest extends PublisherVerification<DeframedMessa
             HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
 
     public HttpStreamReaderTckTest() {
-        super(new TestEnvironment(200L));
+        super(new TestEnvironment(200));
+    }
+
+    private final List<ByteBuf> byteBufs = new ArrayList<>();
+
+    @AfterTest
+    void afterTest() {
+        for (ByteBuf byteBuf : byteBufs) {
+            byteBuf.release();
+        }
+        byteBufs.clear();
     }
 
     @Override
@@ -56,7 +70,7 @@ public class HttpStreamReaderTckTest extends PublisherVerification<DeframedMessa
                                      ImmediateEventExecutor.INSTANCE,
                                      ByteBufAllocator.DEFAULT, -1, false);
         source.subscribe(reader, ImmediateEventExecutor.INSTANCE);
-        return reader;
+        return Flux.from(reader).doOnNext(message -> byteBufs.add(message.buf()));
     }
 
     @Override

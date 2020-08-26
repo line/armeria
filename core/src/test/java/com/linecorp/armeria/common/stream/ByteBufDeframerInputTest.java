@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,11 @@ class ByteBufDeframerInputTest {
         final ByteBuf readableBuffer = Unpooled.wrappedBuffer(new byte[]{-1, 9});
         readableBuffer.readByte();
         input.add(readableBuffer);
+    }
+
+    @AfterEach
+    void tearDown() {
+        input.clear();
     }
 
     @Test
@@ -87,12 +93,12 @@ class ByteBufDeframerInputTest {
         input.add(Unpooled.wrappedBuffer(new byte[] {-1}));
         assertThat(input.readUnsignedByte()).isEqualTo((byte) 1);
         assertThat((byte) input.readUnsignedByte()).isEqualTo((byte) 0xFF);
+        input.clear();
     }
 
     @Test
     void readBytes() {
-        final ByteBufDeframerInput input =
-                new ByteBufDeframerInput(UnpooledByteBufAllocator.DEFAULT);
+        final ByteBufDeframerInput input = new ByteBufDeframerInput(UnpooledByteBufAllocator.DEFAULT);
         final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4});
         final ByteBuf byteBuf2 = Unpooled.buffer(4);
         byteBuf2.writeByte(5);
@@ -111,15 +117,18 @@ class ByteBufDeframerInputTest {
         assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{1, 2, 3, 4});
         assertThat(buf.refCnt()).isEqualTo(2);
         assertThat(buf.unwrap()).isSameAs(byteBuf1);
+        buf.release();
 
         buf = input.readBytes(1);
         assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{5});
         assertThat(buf.unwrap()).isSameAs(byteBuf2);
         assertThat(buf.refCnt()).isEqualTo(2);
+        buf.release();
 
         buf = input.readBytes(3);
         assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{6, 7, 8});
         assertThat(buf.refCnt()).isEqualTo(1);
+        buf.release();
 
         buf = input.readBytes(1);
         assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{9});
@@ -128,5 +137,7 @@ class ByteBufDeframerInputTest {
         assertThatThrownBy(() -> input.readBytes(1))
                 .isInstanceOf(IndexOutOfBoundsException.class)
                 .hasMessageContaining("readerIndex: 10 (expected: 0 < readerIndex + 1 <= writerIndex(10))");
+        buf.release();
+        input.clear();
     }
 }
