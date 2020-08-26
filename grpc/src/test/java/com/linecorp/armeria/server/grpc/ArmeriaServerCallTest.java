@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -102,7 +103,7 @@ public class ArmeriaServerCallTest {
         when(res.whenComplete()).thenReturn(completionFuture);
 
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))
-                                   .eventLoop(eventLoop.get())
+                                   .eventLoop(EventLoopGroups.directEventLoop())
                                    .build();
 
         call = new ArmeriaServerCall<>(
@@ -129,8 +130,7 @@ public class ArmeriaServerCallTest {
 
     @After
     public void tearDown() {
-        // HttpStreamReader must be invoked from an event loop.
-        eventLoop.get().submit(() -> call.messageReader().cancel()).syncUninterruptibly();
+        call.messageReader().cancel();
         if (!call.isCloseCalled()) {
             call.close(Status.OK, new Metadata());
         }
@@ -141,11 +141,8 @@ public class ArmeriaServerCallTest {
         call.close(Status.ABORTED, new Metadata());
 
         // messageRead is always called from the event loop.
-        eventLoop.get().submit(() -> {
-            call.onNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
-
-            verify(listener, never()).onMessage(any());
-        }).syncUninterruptibly();
+        call.onNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        verify(listener, never()).onMessage(any());
     }
 
     @Test
@@ -187,13 +184,10 @@ public class ArmeriaServerCallTest {
     public void messageReadAfterClose_stream() {
         call.close(Status.ABORTED, new Metadata());
 
-        // messageRead is always called from the event loop.
-        eventLoop.get().submit(() -> {
-            call.onNext(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
-                                            0));
+        call.onNext(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
+                                        0));
 
-            verify(listener, never()).onMessage(any());
-        }).syncUninterruptibly();
+        verify(listener, never()).onMessage(any());
     }
 
     @Test
