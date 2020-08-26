@@ -49,7 +49,7 @@ export default class ThriftTransport extends Transport {
     if (!bodyJson) {
       throw new Error('A Thrift request must have body.');
     }
-    const endpoint = this.findDebugMimeTypeEndpoint(method);
+    const endpoint = this.findDebugMimeTypeEndpoint(method, endpointPath);
 
     const thriftMethod = ThriftTransport.thriftMethod(endpoint, method);
 
@@ -59,7 +59,7 @@ export default class ThriftTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    const httpResponse = await fetch(endpointPath || endpoint.pathMapping, {
+    const httpResponse = await fetch(endpoint.pathMapping, {
       headers: hdrs,
       method: 'POST',
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,

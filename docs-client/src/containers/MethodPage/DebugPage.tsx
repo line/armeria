@@ -196,26 +196,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setSnackbarOpen(false);
   }, []);
 
-  const validateRpcEndpointPath = useCallback(
-    (newEndpointPath: string) => {
-      if (!newEndpointPath) {
-        throw new Error('You must specify the endpoint path.');
-      }
-      if (
-        !method.endpoints
-          .map((endpoint) => endpoint.pathMapping)
-          .includes(newEndpointPath)
-      ) {
-        throw new Error(
-          `The path: '${newEndpointPath}' should be one of the: ${method.endpoints.map(
-            (endpoint) => endpoint.pathMapping,
-          )}`,
-        );
-      }
-    },
-    [method],
-  );
-
   const validateEndpointPath = useCallback(
     (newEndpointPath: string) => {
       if (!newEndpointPath) {
@@ -324,20 +304,17 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
 
       const httpMethod = method.httpMethod;
-      const endpoint = transport.findDebugMimeTypeEndpoint(method);
-      const path = endpoint.pathMapping;
-      const body = transport.getCurlBody(
-        endpoint,
-        method,
-        escapeSingleQuote(requestBody),
-      );
       let uri;
+      let endpoint;
 
       if (isAnnotatedService) {
+        endpoint = transport.findDebugMimeTypeEndpoint(method);
         const queries = additionalQueries;
         if (exactPathMapping) {
           uri =
-            `'${host}${escapeSingleQuote(path.substring('exact:'.length))}` +
+            `'${host}${escapeSingleQuote(
+              endpoint.pathMapping.substring('exact:'.length),
+            )}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
           validateEndpointPath(additionalPath);
@@ -346,11 +323,18 @@ const DebugPage: React.FunctionComponent<Props> = ({
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
       } else if (additionalPath.length > 0) {
-        validateRpcEndpointPath(additionalPath);
+        endpoint = transport.findDebugMimeTypeEndpoint(method, additionalPath);
         uri = `'${host}${escapeSingleQuote(additionalPath)}'`;
       } else {
-        uri = `'${host}${escapeSingleQuote(path)}'`;
+        endpoint = transport.findDebugMimeTypeEndpoint(method);
+        uri = `'${host}${escapeSingleQuote(endpoint.pathMapping)}'`;
       }
+
+      const body = transport.getCurlBody(
+        endpoint,
+        method,
+        escapeSingleQuote(requestBody),
+      );
 
       headers['content-type'] = transport.getDebugMimeType();
       if (process.env.WEBPACK_DEV === 'true') {
@@ -382,7 +366,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     additionalQueries,
     exactPathMapping,
     validateEndpointPath,
-    validateRpcEndpointPath,
     additionalPath,
   ]);
 
@@ -470,7 +453,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
           params.set('endpoint_path', additionalPath);
         }
       } else if (additionalPath.length > 0) {
-        validateRpcEndpointPath(additionalPath);
         params.set('endpoint_path', additionalPath);
       } else {
         // Fall back to default endpoint.
@@ -515,7 +497,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     requestBody,
     exactPathMapping,
     validateEndpointPath,
-    validateRpcEndpointPath,
     additionalPath,
     history,
   ]);

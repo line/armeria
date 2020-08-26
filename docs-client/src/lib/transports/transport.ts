@@ -51,9 +51,14 @@ export default abstract class Transport {
     return this.doSend(method, filledHeaders, bodyJson, endpointPath, queries);
   }
 
-  public findDebugMimeTypeEndpoint(method: Method): Endpoint {
-    const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(this.getDebugMimeType()),
+  public findDebugMimeTypeEndpoint(
+    method: Method,
+    endpointPath?: string,
+  ): Endpoint {
+    const endpoint = method.endpoints.find(
+      (ep) =>
+        ep.availableMimeTypes.includes(this.getDebugMimeType()) &&
+        (endpointPath === undefined || endpointPath === ep.pathMapping),
     );
     if (!endpoint) {
       throw new Error(

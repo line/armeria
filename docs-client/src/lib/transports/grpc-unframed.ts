@@ -40,7 +40,7 @@ export default class GrpcUnframedTransport extends Transport {
     if (!bodyJson) {
       throw new Error('A gRPC request must have body.');
     }
-    const endpoint = this.findDebugMimeTypeEndpoint(method);
+    const endpoint = this.findDebugMimeTypeEndpoint(method, endpointPath);
 
     const hdrs = new Headers();
     hdrs.set('content-type', GRPC_UNFRAMED_MIME_TYPE);
@@ -48,7 +48,7 @@ export default class GrpcUnframedTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    const httpResponse = await fetch(endpointPath || endpoint.pathMapping, {
+    const httpResponse = await fetch(endpoint.pathMapping, {
       headers: hdrs,
       method: 'POST',
       body: bodyJson,
