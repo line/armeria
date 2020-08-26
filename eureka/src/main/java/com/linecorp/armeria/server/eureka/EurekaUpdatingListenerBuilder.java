@@ -58,12 +58,12 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
  * <h2>Examples</h2>
  * <pre>{@code
  * EurekaUpdatingListener listener =
- *     EurekaUpdatingListener.builder("eureka.com:8001/eureka/v2")
- *                           .instanceId("i-00000000")
- *                           .setHostname("armeria.service.1")
- *                           .ipAddr("192.168.10.10")
- *                           .vipAddress("armeria.service.com:8080");
- *                           .build();
+ *         EurekaUpdatingListener.builder("eureka.com:8001/eureka/v2")
+ *                               .instanceId("i-00000000")
+ *                               .setHostname("armeria.service.1")
+ *                               .ipAddr("192.168.10.10")
+ *                               .vipAddress("armeria.service.com:8080");
+ *                               .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>

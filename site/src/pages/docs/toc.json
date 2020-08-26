@@ -16,7 +16,8 @@
     "server-servlet",
     "server-access-log",
     "server-cors",
-    "server-sse"
+    "server-sse",
+    "server-service-registration"
   ],
   "Client": [
     "client-http",
@@ -38,7 +39,6 @@
     "advanced-unit-testing",
     "advanced-production-checklist",
     "advanced-zipkin",
-    "advanced-zookeeper",
     "advanced-saml",
     "advanced-spring-webflux-integration",
     "advanced-dropwizard-integration"
