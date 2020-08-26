@@ -263,6 +263,4 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     private void cleanup() {
         input.clear();
     }
-
-    protected void doClose() {}
 }

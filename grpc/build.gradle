@@ -21,6 +21,7 @@ dependencies {
     testImplementation 'io.grpc:grpc-testing'
     testImplementation 'io.micrometer:micrometer-registry-prometheus'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.reactivestreams:reactive-streams-tck'
 }
 
 tasks {

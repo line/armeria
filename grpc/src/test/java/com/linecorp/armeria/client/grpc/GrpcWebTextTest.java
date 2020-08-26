@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.grpc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Base64;
