@@ -253,8 +253,9 @@ The <type://ZooKeeperEndpointGroup> is used to fetch the binary representation o
 The <type://ZooKeeperDiscoverySpec> converts the binary representation to an <type://Endpoint>.
 
 <type://ZooKeeperDiscoverySpec#curator(String)> uses the format of
-[Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html). If you registered your
-server with <type://ZooKeeperRegistrationSpec#curator(String)>, you must use
+[Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html) which is compatible
+with [Spring Cloud Zookeeper](https://cloud.spring.io/spring-cloud-zookeeper/reference/html/). If you
+registered your server with <type://ZooKeeperRegistrationSpec#curator(String)>, you must use
 <type://ZooKeeperDiscoverySpec#curator(String)>.
 
 You can use an existing
