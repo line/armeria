@@ -448,7 +448,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void onError(Throwable t) {
-        close(GrpcStatus.fromThrowable(t), new Metadata());
+        if (!closeCalled) {
+            close(GrpcStatus.fromThrowable(t), new Metadata());
+        }
     }
 
     private void invokeHalfClose() {

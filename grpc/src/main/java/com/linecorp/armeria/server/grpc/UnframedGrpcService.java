@@ -276,7 +276,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     }
 
     private static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
-                                                               CompletableFuture<HttpResponse> res) {
+                                                                CompletableFuture<HttpResponse> res) {
         return new Subscriber<DeframedMessage>() {
 
             @Override
