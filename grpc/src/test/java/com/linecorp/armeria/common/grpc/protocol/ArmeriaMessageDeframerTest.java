@@ -128,8 +128,7 @@ class ArmeriaMessageDeframerTest {
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_frameWithManyFragments(ArmeriaMessageDeframer deframer, boolean base64, byte[] data)
-            throws Exception {
+    void deframe_frameWithManyFragments(ArmeriaMessageDeframer deframer, boolean base64, byte[] data) {
         final List<byte[]> fragments;
         if (base64) {
             fragments = base64EncodedFragments(data);
@@ -140,7 +139,7 @@ class ArmeriaMessageDeframerTest {
         }
 
         final DefaultStreamMessage<HttpData> streamMessage = new DefaultStreamMessage<>();
-        streamMessage.subscribe(deframer, ImmediateEventExecutor.INSTANCE);
+        streamMessage.subscribe(deframer);
         StepVerifier.create(deframer)
                     .thenRequest(1)
                     .then(() -> {
