@@ -37,7 +37,21 @@ public class Main {
                  .annotatedService("/injection", new InjectionService())
                  .annotatedService("/messageConverter", new MessageConverterService())
                  .annotatedService("/exception", new ExceptionHandlerService())
-                 .serviceUnder("/docs", new DocService())
+                 .serviceUnder("/docs",
+                               DocService.builder()
+                                         .examplePaths(PathPatternService.class,
+                                                       "pathsVar",
+                                                       "/pathPattern/paths/first/foo",
+                                                       "/pathPattern/paths/second/foo")
+                                         .examplePaths(PathPatternService.class,
+                                                       "pathVar",
+                                                       "/pathPattern/path/foo",
+                                                       "/pathPattern/path/bar")
+                                         .exampleRequests(MessageConverterService.class,
+                                                          "json1",
+                                                          "{\"name\":\"bar\"}"
+                                         )
+                                         .build())
                  .build();
     }
 }
