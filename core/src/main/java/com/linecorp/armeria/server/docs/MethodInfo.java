@@ -33,6 +33,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -106,7 +107,8 @@ public final class MethodInfo {
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
 
         requireNonNull(examplePaths, "examplePaths");
-        final ImmutableList.Builder<String> examplePathsBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<String> examplePathsBuilder =
+                ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
         for (String path : examplePaths) {
             final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
             checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: %s", path);
@@ -115,7 +117,8 @@ public final class MethodInfo {
         this.examplePaths = examplePathsBuilder.build();
 
         requireNonNull(exampleQueries, "exampleQueries");
-        final ImmutableList.Builder<String> exampleQueriesBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<String> exampleQueriesBuilder =
+                ImmutableList.builderWithExpectedSize(Iterables.size(exampleQueries));
         for (String query : exampleQueries) {
             final PathAndQuery pathAndQuery = PathAndQuery.parse('?' + query);
             checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: %s", query);

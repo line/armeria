@@ -350,7 +350,8 @@ public final class DocService extends SimpleDecoratingHttpService {
     }
 
     private static <T> Iterable<T> concatAndDedup(Iterable<T> first, Iterable<T> second) {
-        return Stream.concat(Streams.stream(first), Streams.stream(second)).distinct()::iterator;
+        return Stream.concat(Streams.stream(first), Streams.stream(second)).distinct()
+                     .collect(toImmutableList());
     }
 
     private DocServiceVfs vfs() {
