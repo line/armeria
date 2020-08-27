@@ -132,7 +132,7 @@ final class KotlinUtil {
     }
 
     /**
-     * Returns true if the last parameter of a method is a kotlin.coroutines.Continuation.
+     * Returns true if the last parameter of a method is a {@code kotlin.coroutines.Continuation}.
      */
     static boolean maybeSuspendingFunction(Method method) {
         return Arrays.stream(method.getParameters())
@@ -154,14 +154,14 @@ final class KotlinUtil {
     }
 
     /**
-     * Returns true if a class is kotlin.coroutines.Continuation.
+     * Returns true if a class is {@code kotlin.coroutines.Continuation}.
      */
     static boolean isContinuation(Class<?> type) {
         return CONTINUATION_CLASS != null && CONTINUATION_CLASS.isAssignableFrom(type);
     }
 
     /**
-     * Returns true if a method is suspending function and it returns kotlin.Unit.
+     * Returns true if a method is suspending function and it returns {@code kotlin.Unit}.
      */
     static boolean isSuspendingAndReturnTypeUnit(Method method) {
         try {
