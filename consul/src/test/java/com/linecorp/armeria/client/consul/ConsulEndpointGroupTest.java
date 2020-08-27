@@ -23,13 +23,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
@@ -37,12 +36,10 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListener;
 
 public class ConsulEndpointGroupTest extends ConsulTestBase {
 
-    @Nullable
-    static List<Server> servers;
+    static final List<Server> servers = new ArrayList<>();
 
     @BeforeAll
     static void startServers() {
-        servers = new ArrayList<>();
 
         for (Endpoint endpoint : sampleEndpoints) {
             final Server server = Server.builder()
@@ -50,8 +47,10 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .service("/", new EchoService())
                                         .build();
             final ServerListener listener = ConsulUpdatingListener.builder(serviceName)
-                                                                  .consulUri(client().uri().toString())
-                                                                  .endpoint(endpoint)
+                                                                  .consulProtocol(SessionProtocol.HTTP)
+                                                                  .consulAddress(consul().getAddress())
+                                                                  .consulPort(consul().getHttpPort())
+                                                                  .consulApiVersion("v1")
                                                                   .build();
             server.addListener(listener);
             server.start().join();
@@ -62,31 +61,32 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
     @AfterAll
     static void stopServers() throws Exception {
         servers.forEach(Server::close);
+        servers.clear();
     }
 
     @Test
     void testConsulEndpointGroupWithClient() {
         try (ConsulEndpointGroup endpointGroup =
                      ConsulEndpointGroup.builder(serviceName)
-                                        .consulClient(client())
+                                        .consulProtocol(SessionProtocol.HTTP)
+                                        .consulAddress(consul().getAddress())
+                                        .consulPort(consul().getHttpPort())
+                                        .consulApiVersion("v1")
                                         .registryFetchIntervalSeconds(1)
                                         .build()) {
             await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() ->
+                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
             // stop a server
             servers.get(0).stop();
             await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1);
-                   });
+                   .untilAsserted(() ->
+                                  assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1));
             // restart the server
             servers.get(0).start();
             await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() ->
+                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
         }
     }
 
@@ -94,25 +94,22 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
     void testConsulEndpointGroupWithUrl() {
         try (ConsulEndpointGroup endpointGroup =
                      ConsulEndpointGroup.builder(serviceName)
-                                        .consulUri(client().uri().toString())
+                                        .consulPort(consul().getHttpPort())
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
             await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() ->
+                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
             // stop a server
             servers.get(0).stop().join();
             await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1);
-                   });
+                   .untilAsserted(() ->
+                                  assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1));
             // restart the server
             servers.get(0).start().join();
             await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() ->
+                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
         }
     }
 }

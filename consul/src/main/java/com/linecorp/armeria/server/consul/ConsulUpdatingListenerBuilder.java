@@ -26,7 +26,9 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulClient;
+import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.Server;
 
 /**
@@ -34,20 +36,16 @@ import com.linecorp.armeria.server.Server;
  * <h3>Examples</h3>
  * <pre>{@code
  * ConsulUpdatingListener listener = ConsulUpdatingListener.builder("myService")
- *                                                         .consulUri("http://myConsulHost:8500")
+ *                                                         .consulPort(8501")
  *                                                         .build();
- * Server.builder()
- *       .addListener(listener);
+ * server.addListener(listener);
  * }</pre>
  */
 public final class ConsulUpdatingListenerBuilder {
 
-    private static final URI DEFAULT_CONSUL_URI = URI.create("http://127.0.0.1:8500/v1");
     private static final String DEFAULT_CHECK_INTERVAL = "10s";
-
+    private final ConsulClientBuilder consulClientBuilder = ConsulClient.builder();
     private final String serviceName;
-
-    private URI consulUri = DEFAULT_CONSUL_URI;
 
     @Nullable
     private Endpoint serviceEndpoint;
@@ -69,26 +67,55 @@ public final class ConsulUpdatingListenerBuilder {
     }
 
     /**
-     * Sets the specified Consul's URI.
-     * If not set, {@code "http://127.0.0.1:8500/v1"} is used by default.
-     *
-     * @param consulUri the URI of Consul agent, e.g.: http://127.0.0.1:8500
+     * Sets the specified Consul's API service protocol scheme.
+     * @param consulProtocol the protocol scheme of Consul API service, default: HTTP
      */
-    public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
-        this.consulUri = requireNonNull(consulUri, "consulUri");
+    public ConsulUpdatingListenerBuilder consulProtocol(SessionProtocol consulProtocol) {
+        requireNonNull(consulProtocol, "consulProtocol");
+        consulClientBuilder.protocol(consulProtocol);
         return this;
     }
 
     /**
-     * Sets the specified Consul's URI.
-     * If not set, {@code "http://127.0.0.1:8500/v1"} is used by default.
-     *
-     * @param consulUri the URI of Consul agent, e.g.: http://127.0.0.1:8500
+     * Sets the specified Consul's API service host address.
+     * @param consulAddress the host address of Consul API service, default: 127.0.0.1
      */
-    public ConsulUpdatingListenerBuilder consulUri(String consulUri) {
-        requireNonNull(consulUri, "consulUri");
-        checkArgument(!consulUri.isEmpty(), "consulUri can't be empty");
-        consulUri(URI.create(consulUri));
+    public ConsulUpdatingListenerBuilder consulAddress(String consulAddress) {
+        requireNonNull(consulAddress, "consulAddress");
+        checkArgument(!consulAddress.isEmpty(), "consulPort can't be empty");
+        consulClientBuilder.address(consulAddress);
+        return this;
+    }
+
+    /**
+     * Sets the specified Consul's HTTP service port.
+     * @param consulPort the port of Consul agent, default: 8500
+     */
+    public ConsulUpdatingListenerBuilder consulPort(int consulPort) {
+        checkArgument(consulPort > 0, "consulPort can't be zero or negative");
+        consulClientBuilder.port(consulPort);
+        return this;
+    }
+
+    /**
+     * Sets the specified Consul's API version.
+     * @param consulApiVersion the version of Consul API service, default: v1
+     */
+    public ConsulUpdatingListenerBuilder consulApiVersion(String consulApiVersion) {
+        requireNonNull(consulApiVersion, "consulApiVersion");
+        checkArgument(!consulApiVersion.isEmpty(), "consulApiVersion can't be empty");
+        consulClientBuilder.apiVersion(consulApiVersion);
+        return this;
+    }
+
+    /**
+     * Sets the specified token for Consul's API.
+     * @param consulToken the token for accessing Consul API, default: null
+     */
+    public ConsulUpdatingListenerBuilder consulToken(String consulToken) {
+        requireNonNull(consulToken, "consulToken");
+        checkArgument(!consulToken.isEmpty(), "consulToken can't be empty");
+        consulClientBuilder.token(consulToken);
         return this;
     }
 
@@ -176,7 +203,7 @@ public final class ConsulUpdatingListenerBuilder {
             }
         }
 
-        final ConsulClient client = new ConsulClient(consulUri);
+        final ConsulClient client = consulClientBuilder.build();
         return new ConsulUpdatingListener(client, serviceName, serviceEndpoint, checkUri, checkMethod,
                                           firstNonNull(checkInterval, DEFAULT_CHECK_INTERVAL));
     }

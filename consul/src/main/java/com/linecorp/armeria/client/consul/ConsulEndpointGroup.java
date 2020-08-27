@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.consul;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
@@ -69,8 +71,8 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
     ConsulEndpointGroup(ConsulClient consulClient, String serviceName, long registryFetchIntervalSeconds,
                         boolean useHealthyEndpoints) {
-        this.consulClient = consulClient;
-        this.serviceName = serviceName;
+        this.consulClient = requireNonNull(consulClient, "consulClient");
+        this.serviceName = requireNonNull(serviceName, "serviceName");
         this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
         this.useHealthyEndpoints = useHealthyEndpoints;
 

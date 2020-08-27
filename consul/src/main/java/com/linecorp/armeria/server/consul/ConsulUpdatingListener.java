@@ -46,32 +46,6 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(ConsulUpdatingListener.class);
 
     /**
-     * Returns a newly-created {@link ConsulUpdatingListener} which registers the {@link Server} into Consul.
-     *
-     * <p>If you need a fully customized {@link ConsulUpdatingListener} instance, use
-     * {@link #builder()} or {@link #builder(String)} instead.
-     *
-     * @param consulUri the Consul connection {@link URI}
-     * @param serviceName the Consul node path(under which this server will be registered)
-     */
-    public static ConsulUpdatingListener of(URI consulUri, String serviceName) {
-        return builder(serviceName).consulUri(consulUri).build();
-    }
-
-    /**
-     * Returns a newly-created {@link ConsulUpdatingListener} which registers the {@link Server} into Consul.
-     *
-     * <p>If you need a fully customized {@link ConsulUpdatingListener} instance, use
-     * {@link #builder()} or {@link #builder(String)} instead.
-     *
-     * @param consulUri the Consul connection string
-     * @param serviceName the Consul node path(under which this server will be registered)
-     */
-    public static ConsulUpdatingListener of(String consulUri, String serviceName) {
-        return builder(serviceName).consulUri(consulUri).build();
-    }
-
-    /**
      * Returns a {@link ConsulUpdatingListenerBuilder} that builds {@link ConsulUpdatingListener}.
      * @param serviceName the service name which is registered into Consul.
      */
@@ -79,20 +53,19 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
         return new ConsulUpdatingListenerBuilder(serviceName);
     }
 
-    private final ConsulClient client;
+    private final ConsulClient consulClient;
     private final String serviceName;
 
     @Nullable
     private final Endpoint endpoint;
     @Nullable
     private final Check check;
-
     @Nullable
     private String serviceId;
 
-    ConsulUpdatingListener(ConsulClient client, String serviceName, @Nullable Endpoint endpoint,
+    ConsulUpdatingListener(ConsulClient consulClient, String serviceName, @Nullable Endpoint endpoint,
                            @Nullable URI checkUrl, @Nullable HttpMethod checkMethod, String checkInterval) {
-        this.client = requireNonNull(client, "client");
+        this.consulClient = requireNonNull(consulClient, "consulClient");
         this.serviceName = requireNonNull(serviceName, "serviceName");
         this.endpoint = endpoint;
 
@@ -113,23 +86,24 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
     public void serverStarted(Server server) throws Exception {
         final Endpoint endpoint = getEndpoint(server);
         final String serviceId = serviceName + '.' + Long.toHexString(ThreadLocalRandom.current().nextLong());
-        client.register(serviceId, serviceName, endpoint, check)
-              .aggregate()
-              .handle((res, cause) -> {
+        consulClient.register(serviceId, serviceName, endpoint, check)
+                    .aggregate()
+                    .handle((res, cause) -> {
                   if (cause != null) {
                       logger.warn("Failed to register {}:{} to Consul: {}",
-                                  endpoint.host(), endpoint.port(), client.uri(), cause);
+                                  endpoint.host(), endpoint.port(), consulClient.uri(), cause);
                       return null;
                   }
 
                   if (res.status() != HttpStatus.OK) {
                       logger.warn("Failed to register {}:{} to Consul: {}. (status: {}, content: {})",
-                                  endpoint.host(), endpoint.port(), client.uri(), res.status(),
+                                  endpoint.host(), endpoint.port(), consulClient.uri(), res.status(),
                                   res.contentUtf8());
                       return null;
                   }
 
-                  logger.info("Registered {}:{} to Consul: {}", endpoint.host(), endpoint.port(), client.uri());
+                  logger.info("Registered {}:{} to Consul: {}",
+                              endpoint.host(), endpoint.port(), consulClient.uri());
                   this.serviceId = serviceId;
                   return null;
               });
@@ -167,16 +141,16 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
     @Override
     public void serverStopping(Server server) {
         if (serviceId != null) {
-            client.deregister(serviceId)
-                  .aggregate()
-                  .handle((res, cause) -> {
+            consulClient.deregister(serviceId)
+                        .aggregate()
+                        .handle((res, cause) -> {
                       if (cause != null) {
                           logger.warn("Failed to deregister {} from Consul: {}",
-                                      serviceId, client.uri(), cause);
+                                      serviceId, consulClient.uri(), cause);
                       }
                       if (res.status() != HttpStatus.OK) {
                           logger.warn("Failed to deregister {} from Consul: {}. (status: {}, content: {})",
-                                      serviceId, client.uri(), res.status(),
+                                      serviceId, consulClient.uri(), res.status(),
                                       res.contentUtf8());
                       }
                       return null;

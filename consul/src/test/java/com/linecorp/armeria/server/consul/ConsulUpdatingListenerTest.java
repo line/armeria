@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -41,13 +39,10 @@ import com.linecorp.armeria.server.ServerListener;
 
 class ConsulUpdatingListenerTest extends ConsulTestBase {
 
-    @Nullable
-    static List<Server> servers;
+    static final List<Server> servers = new ArrayList<>();
 
     @BeforeAll
     static void startServers() throws JsonProcessingException {
-        servers = new ArrayList<>();
-
         for (Endpoint endpoint : sampleEndpoints) {
             final Server server = Server.builder()
                                         .http(endpoint.port())
@@ -55,7 +50,7 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                         .build();
             final ServerListener listener =
                     ConsulUpdatingListener.builder(serviceName)
-                                          .consulUri(client().uri().toString())
+                                          .consulPort(consul().getHttpPort())
                                           .endpoint(endpoint)
                                           .checkUri("http://" + endpoint.host() +
                                                     ':' + endpoint.port() + "/echo")
@@ -71,20 +66,19 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
     @AfterAll
     static void stopServers() throws Exception {
         servers.forEach(Server::close);
+        servers.clear();
     }
 
     @Test
     void testBuild() {
         assertThat(ConsulUpdatingListener.builder(serviceName).build()).isNotNull();
         assertThat(ConsulUpdatingListener.builder(serviceName)
-                                         .consulUri("http://localhost:8080")
                                          .build()).isNotNull();
     }
 
     @Test
     void shouldRaiseExceptionWhenCheckUrlMissed() {
         assertThatThrownBy(ConsulUpdatingListener.builder(serviceName)
-                                                 .consulUri("http://localhost:8080")
                                                  .checkMethod(HttpMethod.POST)
                                                  .checkIntervalMillis(1000)::build
         ).isInstanceOf(IllegalStateException.class);
@@ -93,16 +87,14 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
     @Test
     void testEndpointsCountOfListeningServiceWithAServerStopAndStart() {
         // Checks sample endpoints created when initialized.
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
-               });
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() ->
+                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
 
         // When we close one server then the listener deregister it automatically from consul agent.
-        assert servers != null;
         servers.get(0).stop().join();
 
-        await().atMost(5, TimeUnit.SECONDS)
+        await().atMost(10, TimeUnit.SECONDS)
                .untilAsserted(() -> {
                    final List<Endpoint> results = client().endpoints(serviceName).join();
                    assertThat(results).hasSize(sampleEndpoints.size() - 1);
@@ -111,20 +103,17 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
         // Endpoints increased after service restart.
         servers.get(0).start().join();
 
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
-               });
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() ->
+                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
     }
 
     @Test
     void testHealthyServiceWithAdditionalCheckRule() {
         // Checks sample endpoints created when initialized.
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThat(client().healthyEndpoints(serviceName).join())
-                           .hasSameSizeAs(sampleEndpoints);
-               });
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() ->
+                     assertThat(client().healthyEndpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
 
         // Make a service to produce 503 error for checking by consul.
         sampleEndpoints.stream()
@@ -137,17 +126,15 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                        });
 
         // And then, consul marks the service to an unhealthy state.
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThat(client().healthyEndpoints(serviceName).join())
-                           .hasSize(sampleEndpoints.size() - 1);
-               });
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() ->
+                      assertThat(client().healthyEndpoints(serviceName).join())
+                              .hasSize(sampleEndpoints.size() - 1));
 
         // But, the size of endpoints does not changed.
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
-               });
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() ->
+                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
 
         // Make a service to produce 200 OK for checking by consul.
         sampleEndpoints.stream()
@@ -158,9 +145,8 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                     .aggregate()
                                     .join();
                        });
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThat(client().healthyEndpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
-               });
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() ->
+                      assertThat(client().healthyEndpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
     }
 }

@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.consul;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.URI;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -70,7 +69,7 @@ public abstract class ConsulTestBase {
                                      .withConsulVersion("1.8.3")
                                      .build().start();
         // Initialize Consul client
-        consulClient = new ConsulClient(URI.create("http://localhost:" + consul.getHttpPort() + "/v1"));
+        consulClient = ConsulClient.builder().port(consul.getHttpPort()).build();
     }
 
     @AfterAll
@@ -82,6 +81,13 @@ public abstract class ConsulTestBase {
         if (consulClient != null) {
             consulClient = null;
         }
+    }
+
+    protected static ConsulProcess consul() {
+        if (consul == null) {
+            throw new IllegalStateException("embedded consul has not initialized");
+        }
+        return consul;
     }
 
     protected static ConsulClient client() {

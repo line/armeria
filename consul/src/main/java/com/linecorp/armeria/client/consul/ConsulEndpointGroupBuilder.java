@@ -21,30 +21,20 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
-import javax.annotation.Nullable;
-
-import com.google.common.annotations.VisibleForTesting;
-
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulClient;
+import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
 /**
  * A builder class for {@link ConsulEndpointGroup}.
  */
 public final class ConsulEndpointGroupBuilder {
-
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS = 10;
 
-    private long registryFetchIntervalSeconds = DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS;
+    private final ConsulClientBuilder consulClientBuilder = ConsulClient.builder();
     private final String serviceName;
-
-    @Nullable
-    private URI consulUri;
-    @Nullable
-    private ConsulClient consulClient;
-    @Nullable
-    private String token;
-
+    private long registryFetchIntervalSeconds = DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS;
     private boolean useHealthyEndpoints;
 
     ConsulEndpointGroupBuilder(String serviceName) {
@@ -52,20 +42,55 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Sets the specified {@code consulUri}.
+     * Sets the specified Consul's API service protocol scheme.
+     * @param consulProtocol the protocol scheme of Consul API service, default: HTTP
      */
-    public ConsulEndpointGroupBuilder consulUri(URI consulUri) {
-        this.consulUri = requireNonNull(consulUri, "consulUri");
+    public ConsulEndpointGroupBuilder consulProtocol(SessionProtocol consulProtocol) {
+        requireNonNull(consulProtocol, "consulProtocol");
+        consulClientBuilder.protocol(consulProtocol);
         return this;
     }
 
     /**
-     * Sets the specified {@code consulUri}.
+     * Sets the specified Consul's API service host address.
+     * @param consulAddress the host address of Consul API service, default: 127.0.0.1
      */
-    public ConsulEndpointGroupBuilder consulUri(String consulUri) {
-        requireNonNull(consulUri, "consulUri");
-        checkArgument(!consulUri.isEmpty(), "consulUri can't be empty");
-        this.consulUri = URI.create(consulUri);
+    public ConsulEndpointGroupBuilder consulAddress(String consulAddress) {
+        requireNonNull(consulAddress, "consulAddress");
+        checkArgument(!consulAddress.isEmpty(), "consulPort can't be empty");
+        consulClientBuilder.address(consulAddress);
+        return this;
+    }
+
+    /**
+     * Sets the specified Consul's HTTP service port.
+     * @param consulPort the port of Consul agent, default: 8500
+     */
+    public ConsulEndpointGroupBuilder consulPort(int consulPort) {
+        checkArgument(consulPort > 0, "consulPort can't be zero or negative");
+        consulClientBuilder.port(consulPort);
+        return this;
+    }
+
+    /**
+     * Sets the specified Consul's API version.
+     * @param consulApiVersion the version of Consul API service, default: v1
+     */
+    public ConsulEndpointGroupBuilder consulApiVersion(String consulApiVersion) {
+        requireNonNull(consulApiVersion, "consulApiVersion");
+        checkArgument(!consulApiVersion.isEmpty(), "consulApiVersion can't be empty");
+        consulClientBuilder.apiVersion(consulApiVersion);
+        return this;
+    }
+
+    /**
+     * Sets the specified token for Consul's API.
+     * @param consulToken the token for accessing Consul API, default: null
+     */
+    public ConsulEndpointGroupBuilder consulToken(String consulToken) {
+        requireNonNull(consulToken, "consulToken");
+        checkArgument(!consulToken.isEmpty(), "consulToken can't be empty");
+        consulClientBuilder.token(consulToken);
         return this;
     }
 
@@ -92,14 +117,6 @@ public final class ConsulEndpointGroupBuilder {
     }
 
     /**
-     * Sets the specified {@code token} for accessing Consul server.
-     */
-    public ConsulEndpointGroupBuilder token(String token) {
-        this.token = requireNonNull(token, "token");
-        return this;
-    }
-
-    /**
      * Sets whether to use <a href="https://www.consul.io/api/health.html">Health HTTP endpoint</a>.
      * Before enabling this feature, make sure that your target endpoints are health-checked by Consul.
      *
@@ -114,16 +131,8 @@ public final class ConsulEndpointGroupBuilder {
      * Returns a newly-created {@link ConsulEndpointGroup}.
      */
     public ConsulEndpointGroup build() {
-        if (consulClient == null) {
-            consulClient = new ConsulClient(consulUri, token);
-        }
+        final ConsulClient consulClient = consulClientBuilder.build();
         return new ConsulEndpointGroup(consulClient, serviceName, registryFetchIntervalSeconds,
                                        useHealthyEndpoints);
-    }
-
-    @VisibleForTesting
-    ConsulEndpointGroupBuilder consulClient(ConsulClient consulClient) {
-        this.consulClient = requireNonNull(consulClient, "consulClient");
-        return this;
     }
 }

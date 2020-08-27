@@ -47,11 +47,11 @@ public final class ConsulClient {
     private final CatalogClient catalogClient;
     private final HealthClient healthClient;
 
-    public ConsulClient(URI uri) {
-        this(uri, null);
+    public static ConsulClientBuilder builder() {
+        return new ConsulClientBuilder();
     }
 
-    public ConsulClient(URI uri, @Nullable String token) {
+    ConsulClient(URI uri, @Nullable String token) {
         final WebClientBuilder builder = WebClient.builder(uri);
         builder.options(retryingClientOptions);
         if (token != null) {
@@ -67,7 +67,7 @@ public final class ConsulClient {
     /**
      * Returns an {@link ObjectMapper} that is used to encode and decode Consul requests and responses.
      */
-    public ObjectMapper getObjectMapper() {
+    ObjectMapper getObjectMapper() {
         return objectMapper;
     }
 

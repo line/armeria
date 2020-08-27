@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * A Consul client that is responsible for
  * <a href="https://www.consul.io/api/catalog.html">Catalog HTTP API</a>.
  */
-public final class CatalogClient {
+final class CatalogClient {
 
     private static final CollectionType collectionTypeForNode =
             TypeFactory.defaultInstance().constructCollectionType(List.class, Node.class);
@@ -134,6 +134,7 @@ public final class CatalogClient {
         @JsonProperty("ModifyIndex")
         int modifyIndex;
 
+        @Nullable
         @JsonProperty("ServiceAddress")
         String serviceAddress;
 
