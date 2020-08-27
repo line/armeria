@@ -185,7 +185,6 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
         }
     }
 
-
     @Override
     public final void onNext(HttpObject data) {
         if (eventLoop.inEventLoop()) {
