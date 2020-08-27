@@ -36,8 +36,6 @@ final class KotlinUtil {
 
     private static final boolean IS_KOTLIN_REFLECTION_PRESENT;
 
-    private static final boolean IS_ARMERIA_KOTLIN_DEPENDENCY_PRESENT;
-
     @Nullable
     private static final Class<? extends Annotation> METADATA_CLASS;
 
@@ -54,13 +52,11 @@ final class KotlinUtil {
     private static final Method IS_RETURN_TYPE_UNIT;
 
     static {
-        boolean isArmeriaKotlinDependencyPresent = false;
         MethodHandle callKotlinSuspendingMethod = null;
         try {
             final Class<?> coroutineUtilClass =
                     getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaCoroutineUtil");
 
-            isArmeriaKotlinDependencyPresent = true;
             callKotlinSuspendingMethod = MethodHandles.lookup().findStatic(
                     coroutineUtilClass, "callKotlinSuspendingMethod",
                     MethodType.methodType(
@@ -73,7 +69,6 @@ final class KotlinUtil {
             // ignore
         } finally {
             CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
-            IS_ARMERIA_KOTLIN_DEPENDENCY_PRESENT = isArmeriaKotlinDependencyPresent;
         }
 
         Method isSuspendingFunction = null;
@@ -126,13 +121,6 @@ final class KotlinUtil {
     @Nullable
     static MethodHandle getCallKotlinSuspendingMethod() {
         return CALL_KOTLIN_SUSPENDING_METHOD;
-    }
-
-    /**
-     * Returns true if `armeria-kotlin` dependency is present.
-     */
-    static boolean isArmeriaKotlinDependencyPresent() {
-        return IS_ARMERIA_KOTLIN_DEPENDENCY_PRESENT;
     }
 
     /**

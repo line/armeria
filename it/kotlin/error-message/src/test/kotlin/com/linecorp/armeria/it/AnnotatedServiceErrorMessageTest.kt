@@ -17,6 +17,7 @@
 package com.linecorp.armeria.it
 
 import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.Get
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -24,8 +25,7 @@ import org.junit.jupiter.api.Test
 class AnnotatedServiceErrorMessageTest {
     @Test
     fun test() {
-        val serverBuilder = Server.builder()
-            .http(8888)
+        val serverBuilder: ServerBuilder = Server.builder()
             .annotatedService(MyAnnotatedService())
 
         assertThatThrownBy { serverBuilder.build() }

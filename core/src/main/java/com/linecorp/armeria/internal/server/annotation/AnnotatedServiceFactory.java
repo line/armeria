@@ -242,7 +242,7 @@ public final class AnnotatedServiceFactory {
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers) {
 
-        if (!KotlinUtil.isArmeriaKotlinDependencyPresent() && KotlinUtil.maybeSuspendingFunction(method)) {
+        if (KotlinUtil.getCallKotlinSuspendingMethod() == null && KotlinUtil.maybeSuspendingFunction(method)) {
             throw new IllegalArgumentException(
                     "Kotlin suspending functions cannot be used. You should add the armeria-kotlin dependency."
             );
