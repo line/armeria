@@ -142,16 +142,6 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     protected void processOnError(Throwable cause) {}
 
     @Override
-    public final void onSubscribe(Subscription subscription) {
-        requireNonNull(subscription, "subscription");
-        if (upstreamUpdater.compareAndSet(this, null, subscription)) {
-            deferredInit();
-        } else {
-            subscription.cancel();
-        }
-    }
-
-    @Override
     final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
         if (subscribedUpdater.compareAndSet(this, 0, 1)) {
@@ -161,6 +151,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     }
 
     private void deferredInit() {
+        final Subscription upstream = this.upstream;
         if (upstream != null && subscribed != 0) {
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
                 if (demand() > 0) {
@@ -185,6 +176,17 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     }
 
     @Override
+    public final void onSubscribe(Subscription subscription) {
+        requireNonNull(subscription, "subscription");
+        if (upstreamUpdater.compareAndSet(this, null, subscription)) {
+            deferredInit();
+        } else {
+            subscription.cancel();
+        }
+    }
+
+
+    @Override
     public final void onNext(HttpObject data) {
         if (eventLoop.inEventLoop()) {
             onNext0(data);
@@ -197,6 +199,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
         try {
             process(data);
 
+            final Subscription upstream = this.upstream;
             if (outputQueue.isEmpty()) {
                 upstream.request(1);
             } else {
@@ -225,6 +228,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
 
     private void cancelAndCleanup() {
         cancelled = true;
+        final Subscription upstream = this.upstream;
         if (upstream != null) {
             upstream.cancel();
         }
