@@ -70,8 +70,7 @@ class ArmeriaMessageDeframerTest {
 
     @BeforeEach
     void setUp() {
-        deframer = new ArmeriaMessageDeframer(ImmediateEventExecutor.INSTANCE,
-                                              UnpooledByteBufAllocator.DEFAULT, MAX_MESSAGE_SIZE, false)
+        deframer = new ArmeriaMessageDeframer(UnpooledByteBufAllocator.DEFAULT, MAX_MESSAGE_SIZE, false)
                 .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
         deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }
@@ -324,8 +323,7 @@ class ArmeriaMessageDeframerTest {
 
         private static Arguments newDeframerWithData(boolean decodeBase64) {
             final ArmeriaMessageDeframer deframer =
-                    new ArmeriaMessageDeframer(ImmediateEventExecutor.INSTANCE,
-                                               UnpooledByteBufAllocator.DEFAULT, MAX_MESSAGE_SIZE, decodeBase64)
+                    new ArmeriaMessageDeframer(UnpooledByteBufAllocator.DEFAULT, MAX_MESSAGE_SIZE, decodeBase64)
                             .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
 
             final byte[] data = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());

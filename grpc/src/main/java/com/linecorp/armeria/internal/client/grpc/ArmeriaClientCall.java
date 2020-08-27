@@ -217,8 +217,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         responseReader = new HttpStreamReader(decompressorRegistry, this,
-                                              ctx.eventLoop(), ctx.alloc(),
-                                              maxInboundMessageSizeBytes, grpcWebText);
+                                              ctx.alloc(), maxInboundMessageSizeBytes, grpcWebText);
         responseReader.subscribe(this, ctx.eventLoop());
 
         res.subscribe(responseReader, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);

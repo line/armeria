@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link Processor} to read HTTP messages and pass to gRPC business logic.
@@ -46,9 +45,8 @@ public final class HttpStreamReader extends ArmeriaMessageDeframer {
 
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
                             TransportStatusListener transportStatusListener,
-                            EventExecutor eventLoop, ByteBufAllocator alloc,
-                            int maxMessageSizeBytes, boolean decodeBase64) {
-        super(eventLoop, alloc, maxMessageSizeBytes, decodeBase64);
+                            ByteBufAllocator alloc, int maxMessageSizeBytes, boolean decodeBase64) {
+        super(alloc, maxMessageSizeBytes, decodeBase64);
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
     }

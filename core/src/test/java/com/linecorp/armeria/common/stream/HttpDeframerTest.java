@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -144,7 +143,7 @@ class HttpDeframerTest {
         private final int length;
 
         private FixedLengthDecoder(int length) {
-            super(ImmediateEventExecutor.INSTANCE, UnpooledByteBufAllocator.DEFAULT);
+            super(UnpooledByteBufAllocator.DEFAULT);
             this.length = length;
         }
 
@@ -169,7 +168,7 @@ class HttpDeframerTest {
         private int length;
 
         private HeaderAwareDecoder() {
-            super(ImmediateEventExecutor.INSTANCE, UnpooledByteBufAllocator.DEFAULT);
+            super(UnpooledByteBufAllocator.DEFAULT);
         }
 
         @Override

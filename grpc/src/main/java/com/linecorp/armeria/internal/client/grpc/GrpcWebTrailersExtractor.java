@@ -71,7 +71,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
             throws Exception {
         final HttpResponse response = delegate.execute(ctx, req);
         final ArmeriaMessageDeframer deframer =
-                new ArmeriaMessageDeframer(ctx.eventLoop(), ctx.alloc(), maxMessageSizeBytes, grpcWebText);
+                new ArmeriaMessageDeframer(ctx.alloc(), maxMessageSizeBytes, grpcWebText);
 
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         publisher.subscribe(deframer, ctx.eventLoop());

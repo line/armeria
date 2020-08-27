@@ -67,7 +67,6 @@ public class HttpStreamReaderTckTest extends PublisherVerification<DeframedMessa
         final StreamMessage<HttpData> source = StreamMessage.of(data);
         final HttpStreamReader reader =
                 new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), noopListener,
-                                     ImmediateEventExecutor.INSTANCE,
                                      ByteBufAllocator.DEFAULT, -1, false);
         source.subscribe(reader, ImmediateEventExecutor.INSTANCE);
         return Flux.from(reader).doOnNext(message -> byteBufs.add(message.buf()));
@@ -78,7 +77,6 @@ public class HttpStreamReaderTckTest extends PublisherVerification<DeframedMessa
         final Flux<HttpData> source = Flux.error(new RuntimeException());
         final HttpStreamReader reader =
                 new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), noopListener,
-                                     ImmediateEventExecutor.INSTANCE,
                                      ByteBufAllocator.DEFAULT, -1, false);
         source.subscribe(reader);
         return reader;

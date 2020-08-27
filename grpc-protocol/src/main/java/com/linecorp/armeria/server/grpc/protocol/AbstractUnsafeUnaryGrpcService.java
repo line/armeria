@@ -109,7 +109,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                                                              ByteBufAllocator alloc) {
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
         final ArmeriaMessageDeframer deframer =
-                new ArmeriaMessageDeframer(eventLoop, alloc, Integer.MAX_VALUE, false);
+                new ArmeriaMessageDeframer(alloc, Integer.MAX_VALUE, false);
         StreamMessage.of(framed).subscribe(deframer, eventLoop);
         deframer.subscribe(singleSubscriber(deframed), eventLoop);
         return deframed;

@@ -71,7 +71,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A deframer of messages transported in the gRPC wire format. See
@@ -194,9 +193,8 @@ public class ArmeriaMessageDeframer extends HttpDeframer<DeframedMessage> implem
     /**
      * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
      */
-    public ArmeriaMessageDeframer(EventExecutor eventLoop, ByteBufAllocator alloc,
-                                  int maxMessageSizeBytes, boolean decodeBase64) {
-        super(requireNonNull(eventLoop, "eventLoop"), requireNonNull(requireNonNull(alloc, "alloc")));
+    public ArmeriaMessageDeframer(ByteBufAllocator alloc, int maxMessageSizeBytes, boolean decodeBase64) {
+        super(requireNonNull(requireNonNull(alloc, "alloc")));
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
         if (decodeBase64) {
             base64Decoder = new Base64Decoder(alloc);

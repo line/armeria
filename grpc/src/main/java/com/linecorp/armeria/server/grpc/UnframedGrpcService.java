@@ -268,7 +268,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         }
 
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
-                ctx.eventLoop(), ctx.alloc(),
+                ctx.alloc(),
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE, false);
         StreamMessage.of(grpcResponse.content()).subscribe(deframer, ctx.eventLoop());

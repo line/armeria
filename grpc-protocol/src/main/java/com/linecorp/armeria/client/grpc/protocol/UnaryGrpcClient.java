@@ -162,8 +162,7 @@ public final class UnaryGrpcClient {
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
                            final ArmeriaMessageDeframer deframer =
-                                   new ArmeriaMessageDeframer(ctx.eventLoop(), ctx.alloc(),
-                                                              Integer.MAX_VALUE, false);
+                                   new ArmeriaMessageDeframer(ctx.alloc(), Integer.MAX_VALUE, false);
 
                            StreamMessage.of(msg.content()).subscribe(deframer, ctx.eventLoop());
                            deframer.subscribe(singleSubscriber(msg, responseFuture), ctx.eventLoop());

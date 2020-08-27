@@ -58,11 +58,12 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
             AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "subscribed");
 
     private final ByteBufDeframerInput input;
-    private final EventExecutor eventLoop;
     private final ArrayDeque<T> outputQueue = new ArrayDeque<>();
 
     private boolean sawLeadingHeaders;
 
+    @Nullable
+    private volatile EventExecutor eventLoop;
     @Nullable
     private volatile Subscription upstream;
     private volatile boolean cancelled;
@@ -73,11 +74,9 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
      * Returns a new {@link HttpDeframer} with the specified {@link EventExecutor} and
      * {@link ByteBufAllocator}.
      */
-    protected HttpDeframer(EventExecutor eventLoop, ByteBufAllocator alloc) {
-        requireNonNull(eventLoop, "eventLoop");
+    protected HttpDeframer(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
         input = new ByteBufDeframerInput(alloc);
-        this.eventLoop = eventLoop;
     }
 
     /**
@@ -145,7 +144,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
         if (subscribedUpdater.compareAndSet(this, 0, 1)) {
-            assert eventLoop == subscription.executor();
+            eventLoop = subscription.executor();
             deferredInit();
         }
         return subscriptionImpl;
@@ -188,6 +187,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
 
     @Override
     public final void onNext(HttpObject data) {
+        final EventExecutor eventLoop = this.eventLoop;
         if (eventLoop.inEventLoop()) {
             onNext0(data);
         } else {
@@ -241,8 +241,9 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
         if (cancelled) {
             return;
         }
+        final EventExecutor eventLoop = this.eventLoop;
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> onError(cause));
+            this.eventLoop.execute(() -> onError(cause));
             return;
         }
 
@@ -257,6 +258,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
             return;
         }
 
+        final EventExecutor eventLoop = this.eventLoop;
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(this::onComplete);
             return;

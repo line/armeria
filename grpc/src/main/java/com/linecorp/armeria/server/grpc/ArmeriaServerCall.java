@@ -159,8 +159,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         requireNonNull(decompressorRegistry, "decompressorRegistry");
         messageReader = new HttpStreamReader(decompressorRegistry, this,
-                                             ctx.eventLoop(), ctx.alloc(),
-                                             maxInboundMessageSizeBytes, grpcWebText);
+                                             ctx.alloc(), maxInboundMessageSizeBytes, grpcWebText);
         messageReader.decompressor(clientDecompressor(clientHeaders, decompressorRegistry))
                      .subscribe(this, ctx.eventLoop());
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);

@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.test.StepVerifier;
 
 class HttpStreamReaderTest {
@@ -57,7 +56,6 @@ class HttpStreamReaderTest {
         final TransportStatusListener transportStatusListener = (status, metadata) -> statusRef.set(status);
         reader = new HttpStreamReader(
                 DecompressorRegistry.getDefaultInstance(), transportStatusListener,
-                ImmediateEventExecutor.INSTANCE,
                 ByteBufAllocator.DEFAULT, /* maxMessageSizeBytes */ -1, /* decodeBase64 */false);
     }
 
