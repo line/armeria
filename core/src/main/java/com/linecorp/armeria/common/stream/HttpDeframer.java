@@ -211,6 +211,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
                     }
                 }
                 whenConsumed().thenRun(() -> {
+                    assert eventLoop.inEventLoop();
                     if (demand() > 0) {
                         upstream.request(1);
                     }
