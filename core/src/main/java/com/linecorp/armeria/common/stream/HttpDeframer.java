@@ -145,6 +145,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
         if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+            assert eventLoop == subscription.executor();
             deferredInit();
         }
         return subscriptionImpl;
@@ -211,7 +212,6 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
                     }
                 }
                 whenConsumed().thenRun(() -> {
-                    assert eventLoop.inEventLoop();
                     if (demand() > 0) {
                         upstream.request(1);
                     }
