@@ -42,7 +42,7 @@ public class Main {
                                          .examplePaths(PathPatternService.class,
                                                        "pathsVar",
                                                        "/pathPattern/paths/first/foo",
-                                                       "/pathPattern/paths/second/foo")
+                                                       "/pathPattern/paths/second/bar")
                                          .examplePaths(PathPatternService.class,
                                                        "pathVar",
                                                        "/pathPattern/path/foo",
