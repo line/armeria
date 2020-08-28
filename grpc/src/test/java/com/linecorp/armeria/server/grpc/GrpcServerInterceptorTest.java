@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.it.grpc;
+package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -30,7 +30,6 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Metadata;
@@ -73,11 +72,11 @@ class GrpcServerInterceptorTest {
         private static final Listener<Object> NOOP_LISTENER = new ServerCall.Listener<Object>() {};
 
         @Override
-        public <ReqT, RespT> Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call, Metadata metadata,
-                                                          ServerCallHandler<ReqT, RespT> next) {
+        public <Req, Res> Listener<Req> interceptCall(ServerCall<Req, Res> call, Metadata metadata,
+                                                      ServerCallHandler<Req, Res> next) {
             call.close(Status.PERMISSION_DENIED, metadata);
             @SuppressWarnings("unchecked")
-            final Listener<ReqT> cast = (Listener<ReqT>) NOOP_LISTENER;
+            final Listener<Req> cast = (Listener<Req>) NOOP_LISTENER;
             return cast;
         }
     }
