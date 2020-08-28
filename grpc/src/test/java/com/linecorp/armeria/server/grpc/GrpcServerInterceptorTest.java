@@ -72,11 +72,11 @@ class GrpcServerInterceptorTest {
         private static final Listener<Object> NOOP_LISTENER = new ServerCall.Listener<Object>() {};
 
         @Override
-        public <Req, Res> Listener<Req> interceptCall(ServerCall<Req, Res> call, Metadata metadata,
-                                                      ServerCallHandler<Req, Res> next) {
+        public <I, O> Listener<I> interceptCall(ServerCall<I, O> call, Metadata metadata,
+                                                ServerCallHandler<I, O> next) {
             call.close(Status.PERMISSION_DENIED, metadata);
             @SuppressWarnings("unchecked")
-            final Listener<Req> cast = (Listener<Req>) NOOP_LISTENER;
+            final Listener<I> cast = (Listener<I>) NOOP_LISTENER;
             return cast;
         }
     }
