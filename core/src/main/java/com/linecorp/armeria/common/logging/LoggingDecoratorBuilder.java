@@ -84,7 +84,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets ths {@link Logger} to use when logging using loggerName.
+     * Sets the specified loggerName which is used to create a new {@link Logger}.
      * If unset, a default {@link Logger} will be used.
      */
     public LoggingDecoratorBuilder logger(String loggerName) {
