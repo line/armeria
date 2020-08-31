@@ -58,6 +58,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -259,7 +260,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         configurePorts(sb, settings.getPorts());
         configureServerWithArmeriaSettings(sb, settings,
                                            firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
-                                           findBeans(HealthChecker.class));
+                                           findBeans(HealthChecker.class),
+                                           firstNonNull(findBean(MeterIdPrefixFunction.class),
+                                                        MeterIdPrefixFunction.ofDefault("armeria.server")));
         if (settings.getSsl() != null) {
             configureTls(sb, settings.getSsl());
         }
