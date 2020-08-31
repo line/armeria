@@ -20,6 +20,8 @@ import java.lang.reflect.Type;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
@@ -87,5 +89,10 @@ public final class ObservableResponseConverterFunctionProvider implements Respon
             return (Class<?>) ((ParameterizedType) type).getRawType();
         }
         return null;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).toString();
     }
 }

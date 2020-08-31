@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -84,10 +86,6 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
-    static final ServiceLoader<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
-            ServiceLoader.load(ResponseConverterFunctionProvider.class,
-                               AnnotatedService.class.getClassLoader());
-
     /**
      * A default {@link ResponseConverterFunction}s.
      */
@@ -95,6 +93,18 @@ public final class AnnotatedService implements HttpService {
             ImmutableList.of(new JacksonResponseConverterFunction(),
                              new StringResponseConverterFunction(),
                              new ByteArrayResponseConverterFunction());
+
+    static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
+            Streams.stream(
+                    ServiceLoader.load(ResponseConverterFunctionProvider.class,
+                                       AnnotatedService.class.getClassLoader())).collect(toImmutableList());
+
+    static {
+        if (!responseConverterFunctionProviders.isEmpty()) {
+            logger.info("Found {}: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
+                        responseConverterFunctionProviders);
+        }
+    }
 
     private final Object object;
     private final Method method;

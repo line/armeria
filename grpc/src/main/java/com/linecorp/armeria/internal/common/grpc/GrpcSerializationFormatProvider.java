@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.MediaType.create;
 
 import java.util.Set;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SerializationFormat;
@@ -39,5 +40,10 @@ public final class GrpcSerializationFormatProvider extends SerializationFormatPr
                 new Entry("gjson-web", create("application", "grpc-web+json")),
                 new Entry("gproto-web-text", create("application", "grpc-web-text+proto"),
                           create("application", "grpc-web-text")));
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).toString();
     }
 }

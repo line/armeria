@@ -51,6 +51,7 @@ import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TType;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -537,5 +538,10 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         }
 
         return exampleTBase;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).toString();
     }
 }
