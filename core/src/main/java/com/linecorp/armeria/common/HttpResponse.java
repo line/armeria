@@ -507,4 +507,16 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(executor, "executor");
         return new DefaultHttpResponseDuplicator(this, executor, maxResponseLength);
     }
+
+    /**
+     * Returns a new {@link HttpResponseBodyStream} which publishes HTTP payloads as a stream of
+     * {@link HttpData}.
+     * {@link HttpResponseBodyStream#informationalHeaders()}, {@link HttpResponseBodyStream#headers()} will be
+     * completed before publishing the first element of {@link HttpData}.
+     * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
+     * consumed.
+     */
+    default HttpResponseBodyStream toBodyStream() {
+        return new DefaultHttpResponseBodyStream(this);
+    }
 }
