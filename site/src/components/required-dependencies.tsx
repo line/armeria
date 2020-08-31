@@ -8,6 +8,7 @@ const versions: any = versionsJson;
 interface Dependency {
   groupId: string;
   artifactId: string;
+  version?: string;
 }
 
 interface RequiredDependenciesProps {
@@ -18,8 +19,14 @@ interface RequiredDependenciesProps {
 function groovyBom(boms: Dependency[]) {
   return `${boms
     .map((bom) => {
-      const key = `${bom.groupId}:${bom.artifactId}`;
-      return `    implementation platform('${bom.groupId}:${bom.artifactId}:${versions[key]}')`;
+      let version;
+      if (bom.version != null) {
+        version = bom.version;
+      } else {
+        const key = `${bom.groupId}:${bom.artifactId}`;
+        version = versions[key];
+      }
+      return `    implementation platform('${bom.groupId}:${bom.artifactId}:${version}')`;
     })
     .join('\n')}\n\n`;
 }
@@ -44,11 +51,17 @@ function mavenBom(boms: Dependency[]) {
   <dependencies>
 ${boms
   .map((bom) => {
-    const key = `${bom.groupId}:${bom.artifactId}`;
+    let version;
+    if (bom.version != null) {
+      version = bom.version;
+    } else {
+      const key = `${bom.groupId}:${bom.artifactId}`;
+      version = versions[key];
+    }
     return `    <dependency>
-      <groupId>com.linecorp.armeria</groupId>
-      <artifactId>armeria-bom</artifactId>
-      <version>${versions[key]}</version>
+      <groupId>${bom.groupId}</groupId>
+      <artifactId>${bom.artifactId}</artifactId>
+      <version>${version}</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>`;
