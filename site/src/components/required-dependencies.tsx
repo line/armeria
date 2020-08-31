@@ -19,14 +19,14 @@ interface RequiredDependenciesProps {
 function groovyBom(boms: Dependency[]) {
   return `${boms
     .map((bom) => {
+      const key = `${bom.groupId}:${bom.artifactId}`;
       let version;
       if (bom.version != null) {
         version = bom.version;
       } else {
-        const key = `${bom.groupId}:${bom.artifactId}`;
         version = versions[key];
       }
-      return `    implementation platform('${bom.groupId}:${bom.artifactId}:${version}')`;
+      return `    implementation platform('${key}:${version}')`;
     })
     .join('\n')}\n\n`;
 }
