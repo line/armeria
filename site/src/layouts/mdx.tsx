@@ -19,6 +19,7 @@ import Emoji from '../components/emoji';
 import Mailchimp from '../components/mailchimp';
 import MaxWidth from '../components/max-width';
 import NoWrap from '../components/nowrap';
+import RequiredDependencies from '../components/required-dependencies';
 import BaseLayout from './base';
 import pagePath from './page-path';
 import styles from './mdx.module.less';
@@ -125,6 +126,7 @@ const mdxComponents: any = {
   Mailchimp,
   MaxWidth,
   NoWrap,
+  RequiredDependencies,
   Tabs: (props: any) => {
     return <AntdTabs animated={{ inkBar: true, tabPane: false }} {...props} />;
   },
