@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
@@ -92,7 +92,7 @@ public final class DnsResolverGroupBuilder {
     @Nullable
     private Boolean decodeIdn;
     @Nullable
-    private PrometheusMeterRegistry metricRegistry;
+    private MeterRegistry meterRegistry;
 
     DnsResolverGroupBuilder() {}
 
@@ -297,11 +297,11 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets MeterRegistry.
-     * @param metricRegistry {@link PrometheusMeterRegistry}.
+     * @param meterRegistry {@link MeterRegistry}.
      * @return DnsResolverGroupBuilder.
      */
-    public DnsResolverGroupBuilder metricRegistry(PrometheusMeterRegistry metricRegistry) {
-        this.metricRegistry = metricRegistry;
+    public DnsResolverGroupBuilder metricRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
         return this;
     }
 
@@ -357,6 +357,6 @@ public final class DnsResolverGroupBuilder {
         };
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
                                                   queryTimeoutMillis, refreshBackoff,
-                                                    resolvedAddressTypes, metricRegistry);
+                                                  resolvedAddressTypes, meterRegistry);
     }
 }

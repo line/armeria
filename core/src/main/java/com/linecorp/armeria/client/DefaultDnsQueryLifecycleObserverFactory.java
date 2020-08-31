@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.resolver.dns.DnsQueryLifecycleObserver;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
@@ -28,10 +28,10 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
  */
 final class DefaultDnsQueryLifecycleObserverFactory implements DnsQueryLifecycleObserverFactory {
 
-    private final PrometheusMeterRegistry meterRegistry;
+    private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
 
-    DefaultDnsQueryLifecycleObserverFactory(PrometheusMeterRegistry meterRegistry,
+    DefaultDnsQueryLifecycleObserverFactory(MeterRegistry meterRegistry,
                                             MeterIdPrefix meterIdPrefix) {
         this.meterRegistry = meterRegistry;
         this.meterIdPrefix = meterIdPrefix;

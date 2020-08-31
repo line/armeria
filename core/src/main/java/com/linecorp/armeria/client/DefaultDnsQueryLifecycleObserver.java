@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.ChannelFuture;
@@ -33,10 +34,6 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserver;
  * A {@link DnsQueryLifecycleObserver} that helps capture custom dns metrics.
  */
 final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
-
-    private final PrometheusMeterRegistry registry;
-    private final MeterIdPrefix meterIdPrefix;
-    private final DnsQuestion question;
     private static final String NAME_TAG = "name";
     private static final String RESULT_TAG = "result";
     private static final String SERVER_TAG = "server";
@@ -44,43 +41,47 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private static final String CAUSE_TAG = "cause";
     private static final String CNAME_TAG = "cname";
 
+    private final PrometheusMeterRegistry meterRegistry;
+    private final MeterIdPrefix meterIdPrefix;
+    private final DnsQuestion question;
+
     /**
      * Accepts meterRegistry.
      * @param meterRegistry {@link PrometheusMeterRegistry} PrometheusMeterRegistry to capture metrics.
      * @param question {@link DnsQuestion} DnsQuestion.
      */
-    DefaultDnsQueryLifecycleObserver(PrometheusMeterRegistry meterRegistry,
+    DefaultDnsQueryLifecycleObserver(MeterRegistry meterRegistry,
                                      DnsQuestion question, MeterIdPrefix prefix) {
-        registry = meterRegistry;
+        this.meterRegistry = (PrometheusMeterRegistry)meterRegistry;
         meterIdPrefix = prefix;
         this.question = question;
     }
 
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
-        registry.counter(meterIdPrefix.name().concat(".written"),
+        meterRegistry.counter(meterIdPrefix.name().concat(".written"),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()),
-                        Tag.of(SERVER_TAG, dnsServerAddress.getAddress().toString()))).increment();
+                        Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress()))).increment();
     }
 
     @Override
     public void queryCancelled(int queriesRemaining) {
-        registry.counter(meterIdPrefix.name().concat(".cancelled"),
+        meterRegistry.counter(meterIdPrefix.name().concat(".cancelled"),
                 NAME_TAG, question.name()).increment();
     }
 
     @Override
     public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
-        registry.counter(meterIdPrefix.name().concat(".redirected"),
+        meterRegistry.counter(meterIdPrefix.name().concat(".redirected"),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(SERVER_TAG,
-                        nameServers.stream().map(addr -> addr.getAddress().toString())
+                        nameServers.stream().map(addr -> addr.getAddress().getHostAddress())
                                 .collect(Collectors.joining(","))))).increment();
         return this;
     }
 
     @Override
     public DnsQueryLifecycleObserver queryCNAMEd(DnsQuestion cnameQuestion) {
-        registry.counter(meterIdPrefix.name().concat(".cnamed"),
+        meterRegistry.counter(meterIdPrefix.name().concat(".cnamed"),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()),
                         Tag.of(CNAME_TAG, cnameQuestion.name()))).increment();
         return this;
@@ -88,7 +89,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        registry.counter(meterIdPrefix.name().concat(".noanswer"),
+        meterRegistry.counter(meterIdPrefix.name().concat(".noanswer"),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()),
                         Tag.of(CODE_TAG, code.toString()))).increment();
         return this;
@@ -96,14 +97,14 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public void queryFailed(Throwable cause) {
-        registry.counter(meterIdPrefix.name(),
+        meterRegistry.counter(meterIdPrefix.name(),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "failure"),
                         Tag.of(CAUSE_TAG, cause.getMessage()))).increment();
     }
 
     @Override
     public void querySucceed() {
-        registry.counter(meterIdPrefix.name(),
+        meterRegistry.counter(meterIdPrefix.name(),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "success"),
                         Tag.of(CAUSE_TAG, ""))).increment();
     }

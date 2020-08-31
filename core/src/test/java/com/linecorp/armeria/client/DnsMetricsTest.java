@@ -15,74 +15,208 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
+import static io.netty.handler.codec.dns.DnsRecordType.A;
+import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
+import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.EventLoop;
+import io.netty.handler.codec.dns.DatagramDnsQuery;
+import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsOpCode;
+import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.resolver.AddressResolver;
+import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 
 public class DnsMetricsTest {
 
+    @RegisterExtension
+    static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
+
     @Test
     void dns_metric_test_for_successful_query_writes() throws ExecutionException, InterruptedException {
-        final ClientFactory factory = ClientFactory.builder()
-                .meterRegistry(PrometheusMeterRegistries.newRegistry())
-                .build();
 
-        final WebClient client2 = WebClient.builder()
-                .factory(factory)
-                .build();
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))
+                        .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4")),
+                new DefaultDnsQuestion("foo.com.", AAAA),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
+        ))) {
+            final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+                    hostname -> DnsServerAddresses.sequential(
+                            Stream.of(server).map(TestDnsServer::addr).collect(toImmutableList())).stream();
+            final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
+            final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
+                    .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
+                    .metricRegistry(pm1)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .traceEnabled(false);
 
-        client2.execute(RequestHeaders.of(HttpMethod.GET, "http://wikipedia.com")).aggregate().get();
+            final EventLoop eventLoop = eventLoopExtension.get();
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final Future<InetSocketAddress> foo = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                try (ClientFactory factory = ClientFactory.builder()
+                        .addressResolverGroupFactory(builder::build)
+                        .meterRegistry(pm1)
+                        .build()) {
+                    final WebClient client2 = WebClient.builder()
+                            .factory(factory)
+                            .build();
 
-        final double count = ((PrometheusMeterRegistry) factory.meterRegistry())
-                .getPrometheusRegistry()
-                .getSampleValue("armeria_client_dns_queries_total",
-                        new String[] {"cause","name","result"},
-                        new String[] {"","wikipedia.com.", "success"});
-        assertThat(count > 1.0).isTrue();
-    }
+                    client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com")).aggregate().get();
 
-    @Test
-    void dns_metric_test_for_query_failures() throws ExecutionException, InterruptedException {
-        final ClientFactory factory = ClientFactory.builder()
-                .meterRegistry(PrometheusMeterRegistries.newRegistry())
-                .build();
-        try {
-            final WebClient client2 = WebClient.builder()
-                    .factory(factory)
-                    .build();
-            client2.execute(RequestHeaders.of(HttpMethod.GET, "http://googleusercontent.com")).aggregate().get();
-        } catch (Exception ex) {
-            final double count = ((PrometheusMeterRegistry) factory.meterRegistry())
-                    .getPrometheusRegistry()
-                    .getSampleValue("armeria_client_dns_queries_total",
-                            new String[] {"cause","name","result"},
-                            new String[] {"No matching record type found","googleusercontent.com.", "failure"});
-            assertThat(count > 1.0).isTrue();
+                    final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
+                    final double count = registry.getPrometheusRegistry()
+                            .getSampleValue("armeria_client_dns_queries_total",
+                                    new String[] {"cause","name","result"},
+                                    new String[] {"","foo.com.", "success"});
+                    assertThat(count > 1.0).isTrue();
+                }
+            }
         }
     }
 
     @Test
-    void no_dns_registry_used_when_not_provided_externally() throws ExecutionException, InterruptedException {
-        final ClientFactory factory = ClientFactory.builder()
-                .build();
+    void dns_metric_test_for_query_failures() throws ExecutionException, InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new AlwaysTimeoutHandler())) {
+            final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+                    hostname -> DnsServerAddresses.sequential(
+                            Stream.of(server).map(TestDnsServer::addr).collect(toImmutableList())).stream();
+            final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
+            final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
+                    .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
+                    .metricRegistry(pm1)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .traceEnabled(false);
 
-        final WebClient client2 = WebClient.builder()
-                .factory(factory)
-                .build();
+            final EventLoop eventLoop = eventLoopExtension.get();
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final Future<InetSocketAddress> foo = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                try (ClientFactory factory = ClientFactory.builder()
+                        .addressResolverGroupFactory(builder::build)
+                        .meterRegistry(pm1)
+                        .build()) {
+                    final WebClient client2 = WebClient.builder()
+                            .factory(factory)
+                            .build();
 
-        client2.execute(RequestHeaders.of(HttpMethod.GET, "http://wikipedia.com")).aggregate().get();
+                    assertThatThrownBy(() -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
+                            .aggregate().join())
+                            .hasCauseInstanceOf(UnprocessedRequestException.class)
+                            .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
 
-        assertThat(factory.meterRegistry() instanceof PrometheusMeterRegistry).isFalse();
-        assertThat(MoreMeters.measureAll(factory.meterRegistry())
-                   .toString().contains("armeria.client.connections.lifespan")).isTrue();
+                    final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
+
+                    final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
+                            .metricFamilySamples()).iterator();
+                    while (var4.hasNext()) {
+                        System.out.println(var4.next());
+                    }
+
+                    final double count = registry.getPrometheusRegistry()
+                            .getSampleValue("armeria_client_dns_queries_total",
+                                    new String[] {"cause","name","result"},
+                                    new String[] {"No name servers returned an answer","foo.com.", "failure"});
+                    assertThat(count > 1.0).isTrue();
+                }
+            }
+        }
+    }
+
+    @Test
+    void dns_test_no_answer() throws ExecutionException, InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("bar.com.", A),
+                new DefaultDnsResponse(0, DnsOpCode.QUERY, DnsResponseCode.NOTZONE)
+        ))) {
+            final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+                    hostname -> DnsServerAddresses.sequential(
+                            Stream.of(server).map(TestDnsServer::addr).collect(toImmutableList())).stream();
+            final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
+            final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
+                    .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
+                    .metricRegistry(pm1)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .traceEnabled(false);
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final Future<InetSocketAddress> foo = resolver.resolve(
+                        InetSocketAddress.createUnresolved("bar.com", 36462));
+                try (ClientFactory factory = ClientFactory.builder()
+                        .addressResolverGroupFactory(builder::build)
+                        .meterRegistry(pm1)
+                        .build()) {
+                    final WebClient client2 = WebClient.builder()
+                            .factory(factory)
+                            .build();
+
+                    try {
+                        client2.execute(RequestHeaders.of(HttpMethod.GET, "http://bar.com"))
+                                .aggregate().get();
+                    } catch (Exception ex) {
+                        final PrometheusMeterRegistry registry =
+                                (PrometheusMeterRegistry) factory.meterRegistry();
+                        final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
+                                .metricFamilySamples()).iterator();
+                        while (var4.hasNext()) {
+                            System.out.println(var4.next());
+                        }
+                        final double count = registry.getPrometheusRegistry()
+                                .getSampleValue("armeria_client_dns_queries_noanswer_total",
+                                        new String[] {"code","name"},
+                                        new String[] {"NotZone(10)","bar.com."});
+                        assertThat(count > 1.0).isTrue();
+                    }
+                }
+            }
+        }
+    }
+
+    private static class AlwaysTimeoutHandler extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof DatagramDnsQuery) {
+                // Just release the msg and return so that the client request is timed out.
+                ReferenceCountUtil.safeRelease(msg);
+                return;
+            }
+            super.channelRead(ctx, msg);
+        }
     }
 }

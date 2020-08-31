@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -39,7 +38,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.AddressResolver;
@@ -102,13 +101,13 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
-    private final PrometheusMeterRegistry metricRegistry;
+    private final MeterRegistry meterRegistry;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                                    Backoff refreshBackoff,
                                    @Nullable ResolvedAddressTypes resolvedAddressTypes,
-                                   @Nonnull PrometheusMeterRegistry metricRegistry) {
+                                   MeterRegistry meterRegistry) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
@@ -121,7 +120,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
 
-        this.metricRegistry = metricRegistry;
+        this.meterRegistry = meterRegistry;
     }
 
     @VisibleForTesting
@@ -134,9 +133,9 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         assert executor instanceof EventLoop;
         final EventLoop eventLoop = (EventLoop) executor;
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
-        if (metricRegistry != null) {
+        if (meterRegistry != null) {
             builder.dnsQueryLifecycleObserverFactory(
-                    new DefaultDnsQueryLifecycleObserverFactory(metricRegistry,
+                    new DefaultDnsQueryLifecycleObserverFactory(meterRegistry,
                             new MeterIdPrefix("armeria.client.dns.queries")));
         }
         resolverConfigurator.accept(builder);
