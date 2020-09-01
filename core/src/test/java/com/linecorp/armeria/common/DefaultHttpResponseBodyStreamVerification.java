@@ -58,20 +58,21 @@ public class DefaultHttpResponseBodyStreamVerification extends StreamMessageVeri
     @Override
     public StreamMessage<HttpData> createAbortedPublisher(long elements) {
         final HttpResponse response = newHttpResponse(elements);
-        final DefaultHttpResponseBodyStream bodyStream =
-                (DefaultHttpResponseBodyStream) response.toBodyStream();
         if (elements == 0) {
-            bodyStream.abort();
+            response.abort();
+            return response.toBodyStream();
         } else {
+            final DefaultHttpResponseBodyStream bodyStream =
+                    (DefaultHttpResponseBodyStream) response.toBodyStream();
             final HttpResponseWriter writer = (HttpResponseWriter) response;
             writer.whenConsumed().thenRun(bodyStream::abort);
+            return bodyStream;
         }
-        return bodyStream;
     }
 
     @Ignore
     @Override
     public void required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue() throws Throwable {
-        // Long.MAX_VALUE is too big to create stream data
+        // Long.MAX_VALUE is too big to create fixed stream data
     }
 }
