@@ -77,7 +77,6 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
     private final HttpResponse response;
     private final EventExecutor executor;
 
-
     @Nullable
     private volatile HeadersFuture<List<ResponseHeaders>> informationalHeadersFuture;
     @Nullable
