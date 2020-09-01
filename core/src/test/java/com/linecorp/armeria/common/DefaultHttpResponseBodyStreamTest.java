@@ -39,6 +39,13 @@ class DefaultHttpResponseBodyStreamTest {
     }
 
     @Test
+    void completeHeadersBeforeConsumeBody() {
+        final HttpResponse response = HttpResponse.of(HttpStatus.OK);
+        final HttpResponseBodyStream bodyStream = response.toBodyStream();
+        assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void informationalHeaders() {
         final HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.CONTINUE),
                                                       ResponseHeaders.of(HttpStatus.PROCESSING),
@@ -53,6 +60,22 @@ class DefaultHttpResponseBodyStreamTest {
         assertThat(bodyStream.informationalHeaders().join()).containsExactly(
                 ResponseHeaders.of(HttpStatus.CONTINUE), ResponseHeaders.of(HttpStatus.PROCESSING));
         assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void trailers() {
+        final HttpResponse response = HttpResponse.of(Flux.just(ResponseHeaders.of(HttpStatus.OK),
+                                                                HttpData.ofUtf8("Hello1"),
+                                                                HttpData.ofUtf8("Hello2"),
+                                                                HttpHeaders.of("grpc-status", "0")));
+        final HttpResponseBodyStream bodyStream = response.toBodyStream();
+
+        assertThat(bodyStream.trailers()).isNotDone();
+        StepVerifier.create(bodyStream)
+                    .thenRequest(2)
+                    .expectNextCount(2)
+                    .verifyComplete();
+        assertThat(bodyStream.trailers().join().get("grpc-status")).isEqualTo("0");
     }
 
     @Test
@@ -87,14 +110,15 @@ class DefaultHttpResponseBodyStreamTest {
     void cancelResponse() {
         final HttpResponse response = HttpResponse.of(Flux.just(ResponseHeaders.of(HttpStatus.OK),
                                                                 HttpData.ofUtf8("Hello1"),
-                                                                HttpData.ofUtf8("Hello2")));
+                                                                HttpData.ofUtf8("Hello2"),
+                                                                HttpHeaders.of("grpc-status", 0)));
         final HttpResponseBodyStream bodyStream = response.toBodyStream();
         StepVerifier.create(bodyStream)
                     .thenCancel()
                     .verify();
 
         assertThat(bodyStream.informationalHeaders().join()).isEmpty();
-        assertThat(bodyStream.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.UNKNOWN));
+        assertThat(bodyStream.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.OK));
         assertThat(bodyStream.trailers().join().isEmpty()).isTrue();
     }
 }

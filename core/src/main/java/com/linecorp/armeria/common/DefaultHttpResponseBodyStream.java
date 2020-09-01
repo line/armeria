@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -26,19 +27,28 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
+import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
 
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpResponseBodyStream.class);
+
     private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscription> upstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscription.class, "upstream");
+
+    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class, "downstream");
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
     private static final HeadersFuture<List<ResponseHeaders>> EMPTY_INFORMATIONAL_HEADERS;
@@ -63,7 +73,10 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
             .newUpdater(DefaultHttpResponseBodyStream.class, HeadersFuture.class, "trailersFuture");
 
     private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
+    private final BodySubscriber bodySubscriber = new BodySubscriber();
     private final HttpResponse response;
+    private final EventExecutor executor;
+
 
     @Nullable
     private volatile HeadersFuture<List<ResponseHeaders>> informationalHeadersFuture;
@@ -71,9 +84,15 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
     private volatile boolean wroteAny;
 
-    DefaultHttpResponseBodyStream(HttpResponse response) {
+    DefaultHttpResponseBodyStream(HttpResponse response, EventExecutor executor,
+                                  SubscriptionOption... options) {
         requireNonNull(response, "response");
         this.response = response;
+        this.executor = executor;
+
+        response.subscribe(bodySubscriber, executor, options);
+        // Prefetch headers
+        bodySubscriber.request(1);
     }
 
     @Override
@@ -119,14 +138,13 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
-        response.subscribe(new BodySubscriber(subscriber), executor);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        response.subscribe(new BodySubscriber(subscriber), executor, options);
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor unused) {
+        requireNonNull(subscriber, "subscriber");
+        if (executor.inEventLoop()) {
+            bodySubscriber.setDownStream(subscriber);
+        } else {
+            executor.execute(() -> bodySubscriber.setDownStream(subscriber));
+        }
     }
 
     @Override
@@ -141,20 +159,38 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
 
     private final class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
-        private final Subscriber<? super HttpData> downstream;
         @Nullable
         private ImmutableList.Builder<ResponseHeaders> informationalHeadersBuilder;
+        @Nullable
+        private Throwable cause;
+        private boolean completing;
 
         private boolean sawLeadingHeaders;
 
+        @Nullable
+        volatile Subscriber<? super HttpData> downstream;
         @Nullable
         volatile Subscription upstream;
         private volatile long pendingRequests;
         private volatile boolean cancelCalled;
 
-        BodySubscriber(Subscriber<? super HttpData> downstream) {
-            this.downstream = requireNonNull(downstream, "downstream");
-            downstream.onSubscribe(this);
+        private void setDownStream(Subscriber<? super HttpData> downstream) {
+            try {
+                if (!downstreamUpdater.compareAndSet(this, null, downstream)) {
+                    downstream.onSubscribe(NoopSubscription.get());
+                    downstream.onError(new IllegalStateException("subscribed by other subscriber already"));
+                    return;
+                }
+                downstream.onSubscribe(this);
+                if (cause != null) {
+                    downstream.onError(cause);
+                } else if (completing) {
+                    downstream.onComplete();
+                }
+            } catch (Throwable t) {
+                throwIfFatal(t);
+                logger.warn("Subscriber should not throw an exception. subscriber: {}", downstream, t);
+            }
         }
 
         @Override
@@ -187,7 +223,11 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
 
         @Override
         public void cancel() {
+            if (cancelCalled) {
+                return;
+            }
             cancelCalled = true;
+            downstream = NoopSubscriber.get();
             maybeCompleteHeaders();
             if (upstream != null) {
                 upstream.cancel();
@@ -207,22 +247,22 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
                         }
                         informationalHeadersBuilder.add(headers);
                     }
+                    upstream.request(1);
                 } else {
                     sawLeadingHeaders = true;
                     completeInformationHeaders();
                     completeHeaders(headers);
                 }
-                upstream.request(1);
                 return;
             }
 
             if (httpObject instanceof HttpHeaders) {
                 final HttpHeaders trailers = (HttpHeaders) httpObject;
                 completeTrailers(trailers);
-                upstream.request(1);
                 return;
             }
 
+            assert downstream != null;
             assert httpObject instanceof HttpData;
             final HttpData data = (HttpData) httpObject;
             wroteAny = true;
@@ -276,13 +316,23 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         @Override
         public void onError(Throwable t) {
             maybeCompleteHeaders();
-            downstream.onError(t);
+            final Subscriber<? super HttpData> downstream = this.downstream;
+            if (downstream == null) {
+                cause = t;
+            } else {
+                downstream.onError(t);
+            }
         }
 
         @Override
         public void onComplete() {
             maybeCompleteHeaders();
-            downstream.onComplete();
+            final Subscriber<? super HttpData> downstream = this.downstream;
+            if (downstream == null) {
+                completing = true;
+            } else {
+                downstream.onComplete();
+            }
         }
 
         private void maybeCompleteHeaders() {

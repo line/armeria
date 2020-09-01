@@ -517,6 +517,30 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * consumed.
      */
     default HttpResponseBodyStream toBodyStream() {
-        return new DefaultHttpResponseBodyStream(this);
+        return toBodyStream(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Returns a new {@link HttpResponseBodyStream} which publishes HTTP payloads as a stream of
+     * {@link HttpData}.
+     * {@link HttpResponseBodyStream#informationalHeaders()}, {@link HttpResponseBodyStream#headers()} will be
+     * completed before publishing the first element of {@link HttpData}.
+     * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
+     * consumed.
+     */
+    default HttpResponseBodyStream toBodyStream(EventExecutor executor) {
+        return new DefaultHttpResponseBodyStream(this, executor);
+    }
+
+    /**
+     * Returns a new {@link HttpResponseBodyStream} which publishes HTTP payloads as a stream of
+     * {@link HttpData}.
+     * {@link HttpResponseBodyStream#informationalHeaders()}, {@link HttpResponseBodyStream#headers()} will be
+     * completed before publishing the first element of {@link HttpData}.
+     * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
+     * consumed.
+     */
+    default HttpResponseBodyStream toBodyStream(EventExecutor executor, SubscriptionOption... options) {
+        return new DefaultHttpResponseBodyStream(this, executor, options);
     }
 }

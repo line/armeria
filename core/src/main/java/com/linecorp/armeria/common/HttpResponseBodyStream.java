@@ -19,7 +19,12 @@ package com.linecorp.armeria.common;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.reactivestreams.Subscriber;
+
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * An HTTP response body stream which publishes HTTP payloads as a stream of {@link HttpData}.
@@ -45,4 +50,14 @@ public interface HttpResponseBodyStream extends StreamMessage<HttpData> {
      * with an {@link HttpHeaders#of() empty headers}.
      */
     CompletableFuture<HttpHeaders> trailers();
+
+    /**
+     * Unsupported operation, use {@link HttpResponse#toBodyStream(EventExecutor, SubscriptionOption...)}
+     * instead.
+     */
+    @Override
+    default void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
+                           SubscriptionOption... options) {
+        throw new UnsupportedOperationException("Use 'HttpResponse.toBodyStream(executor, options)' instead");
+    }
 }

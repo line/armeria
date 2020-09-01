@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -292,7 +293,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         private static void failLateProcessorSubscriber(DownstreamSubscription<?> subscription) {
             final Subscriber<?> lateSubscriber = subscription.subscriber();
             try {
-                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                lateSubscriber.onSubscribe(NoopSubscription.get());
                 lateSubscriber.onError(
                         new IllegalStateException("duplicator is closed or no more downstream can be added."));
             } catch (Throwable t) {
@@ -534,7 +535,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
             executor.execute(() -> {
                 try {
-                    lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                    lateSubscriber.onSubscribe(NoopSubscription.get());
                     lateSubscriber.onError(cause);
                 } catch (Throwable t) {
                     throwIfFatal(t);

@@ -35,6 +35,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -129,7 +130,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     private static void handleLateSubscriber(Subscriber<?> lateSubscriber, Throwable cause) {
         try {
-            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+            lateSubscriber.onSubscribe(NoopSubscription.get());
             lateSubscriber.onError(cause);
         } catch (Throwable t) {
             throwIfFatal(t);

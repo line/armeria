@@ -73,7 +73,11 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            assertThat(stream.whenComplete()).isNotDone();
+            if (!(stream instanceof HttpResponseBodyStream)) {
+                // HttpResponseBodyStream could complete early to read HTTP headers from HttpResponse before
+                // publishing body
+                assertThat(stream.whenComplete()).isNotDone();
+            }
             sub.requestEndOfStream();
 
             await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());
