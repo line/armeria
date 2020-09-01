@@ -258,11 +258,12 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     private void configureArmeriaService(ServerBuilder sb, DocServiceBuilder docServiceBuilder,
                                          ArmeriaSettings settings) {
         configurePorts(sb, settings.getPorts());
+        final MeterIdPrefixFunction meterIdPrefixFunction = findBean(MeterIdPrefixFunction.class);
         configureServerWithArmeriaSettings(sb, settings,
                                            firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
                                            findBeans(HealthChecker.class),
-                                           firstNonNull(findBean(MeterIdPrefixFunction.class),
-                                                        MeterIdPrefixFunction.ofDefault("armeria.server")));
+                                           meterIdPrefixFunction != null ? meterIdPrefixFunction :
+                                           MeterIdPrefixFunction.ofDefault("armeria.server"));
         if (settings.getSsl() != null) {
             configureTls(sb, settings.getSsl());
         }
