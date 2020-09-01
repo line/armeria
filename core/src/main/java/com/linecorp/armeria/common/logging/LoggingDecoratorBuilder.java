@@ -89,7 +89,7 @@ public abstract class LoggingDecoratorBuilder {
      */
     public LoggingDecoratorBuilder logger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
-        this.logger = LoggerFactory.getLogger(loggerName);
+        logger = LoggerFactory.getLogger(loggerName);
         return this;
     }
 
