@@ -45,9 +45,9 @@ public interface HttpResponseBodyStream extends StreamMessage<HttpData> {
     CompletableFuture<ResponseHeaders> headers();
 
     /**
-     * Returns a {@link CompletableFuture} which completes a {@link HttpHeaders trailers}.
-     * If a {@link HttpResponse} does not contain trailers, the returned {@link CompletableFuture} completes
-     * with an {@link HttpHeaders#of() empty headers}.
+     * Returns a {@link CompletableFuture} which completes a {@linkplain HttpHeaders trailers}.
+     * If a {@link HttpResponse} does not contain trailers, the returned {@link CompletableFuture} will complete
+     * an {@linkplain HttpHeaders#of() empty headers}.
      */
     CompletableFuture<HttpHeaders> trailers();
 

@@ -44,11 +44,19 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultHttpResponseBodyStream.class);
 
-    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscription> upstreamUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscription.class, "upstream");
-
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class, "downstream");
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultHttpResponseBodyStream, HeadersFuture>
+            informationalHeadersFutureUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(DefaultHttpResponseBodyStream.class, HeadersFuture.class, "informationalHeadersFuture");
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultHttpResponseBodyStream, HeadersFuture>
+            trailersFutureUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(DefaultHttpResponseBodyStream.class, HeadersFuture.class, "trailersFuture");
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
     private static final HeadersFuture<List<ResponseHeaders>> EMPTY_INFORMATIONAL_HEADERS;
@@ -61,16 +69,6 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         EMPTY_TRAILERS = new HeadersFuture<>();
         EMPTY_TRAILERS.doComplete(HttpHeaders.of());
     }
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultHttpResponseBodyStream, HeadersFuture>
-            informationalHeadersFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultHttpResponseBodyStream.class, HeadersFuture.class, "informationalHeadersFuture");
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultHttpResponseBodyStream, HeadersFuture>
-            trailersFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultHttpResponseBodyStream.class, HeadersFuture.class, "trailersFuture");
 
     private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
     private final BodySubscriber bodySubscriber = new BodySubscriber();
@@ -85,13 +83,10 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
 
     DefaultHttpResponseBodyStream(HttpResponse response, EventExecutor executor,
                                   SubscriptionOption... options) {
-        requireNonNull(response, "response");
-        this.response = response;
-        this.executor = executor;
+        this.response = requireNonNull(response, "response");
+        this.executor = requireNonNull(executor, "executor");
 
         response.subscribe(bodySubscriber, executor, options);
-        // Prefetch headers
-        bodySubscriber.request(1);
     }
 
     @Override
@@ -162,15 +157,18 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         private ImmutableList.Builder<ResponseHeaders> informationalHeadersBuilder;
         @Nullable
         private Throwable cause;
-        private boolean completing;
 
+        private boolean completing;
         private boolean sawLeadingHeaders;
+
+        // 1 is used for prefetching headers
+        private long pendingRequests = 1;
 
         @Nullable
         volatile Subscriber<? super HttpData> downstream;
         @Nullable
-        volatile Subscription upstream;
-        private volatile long pendingRequests;
+        private volatile Subscription upstream;
+
         private volatile boolean cancelCalled;
 
         private void setDownStream(Subscriber<? super HttpData> downstream) {
@@ -195,13 +193,12 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            if (!upstreamUpdater.compareAndSet(this, null, subscription) || cancelCalled) {
+            if (cancelCalled || upstream != null) {
                 subscription.cancel();
                 return;
             }
-            if (pendingRequests != 0) {
-                subscription.request(pendingRequests);
-            }
+            upstream = subscription;
+            subscription.request(pendingRequests);
         }
 
         @Override
@@ -212,6 +209,14 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
                 return;
             }
+            if (executor.inEventLoop()) {
+                request0(n);
+            } else {
+                executor.execute(() -> request0(n));
+            }
+        }
+
+        private void request0(long n) {
             final Subscription upstream = this.upstream;
             if (upstream == null) {
                 pendingRequests = LongMath.saturatedAdd(n, pendingRequests);
@@ -228,6 +233,7 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
             cancelCalled = true;
             downstream = NoopSubscriber.get();
             maybeCompleteHeaders();
+            final Subscription upstream = this.upstream;
             if (upstream != null) {
                 upstream.cancel();
             }
@@ -261,6 +267,7 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
                 return;
             }
 
+            final Subscriber<? super HttpData> downstream = this.downstream;
             assert downstream != null;
             assert httpObject instanceof HttpData;
             final HttpData data = (HttpData) httpObject;

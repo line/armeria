@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -516,6 +517,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
      * consumed.
      */
+    @CheckReturnValue
     default HttpResponseBodyStream toBodyStream() {
         return toBodyStream(defaultSubscriberExecutor());
     }
@@ -528,6 +530,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
      * consumed.
      */
+    @CheckReturnValue
     default HttpResponseBodyStream toBodyStream(EventExecutor executor) {
         return new DefaultHttpResponseBodyStream(this, executor);
     }
@@ -540,6 +543,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
      * consumed.
      */
+    @CheckReturnValue
     default HttpResponseBodyStream toBodyStream(EventExecutor executor, SubscriptionOption... options) {
         return new DefaultHttpResponseBodyStream(this, executor, options);
     }
