@@ -24,8 +24,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
@@ -184,11 +182,6 @@ public class DnsMetricsTest {
                     } catch (Exception ex) {
                         final PrometheusMeterRegistry registry =
                                 (PrometheusMeterRegistry) factory.meterRegistry();
-                        final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
-                                .metricFamilySamples()).iterator();
-                        while (var4.hasNext()) {
-                            System.out.println(var4.next());
-                        }
                         final double count = registry.getPrometheusRegistry()
                                 .getSampleValue("armeria_client_dns_queries_noanswer_total",
                                         new String[] {"code","name"},
@@ -203,28 +196,24 @@ public class DnsMetricsTest {
     @Test
     void test_with_real_dns_query() throws ExecutionException, InterruptedException {
         final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
-        final ClientFactory factory = ClientFactory.builder()
+
+        try (ClientFactory factory = ClientFactory.builder()
                 .meterRegistry(pm1)
-                .build();
+                .build()) {
+            final WebClient client2 = WebClient.builder()
+                    .factory(factory)
+                    .build();
 
-        final WebClient client2 = WebClient.builder()
-                .factory(factory)
-                .build();
+            client2.execute(RequestHeaders.of(HttpMethod.GET, "http://wikipedia.com")).aggregate().get();
+            final PrometheusMeterRegistry registry =
+                    (PrometheusMeterRegistry) factory.meterRegistry();
 
-        client2.execute(RequestHeaders.of(HttpMethod.GET, "http://wikipedia.com")).aggregate().get();
-        final PrometheusMeterRegistry registry =
-                (PrometheusMeterRegistry) factory.meterRegistry();
-
-        final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
-                .metricFamilySamples()).iterator();
-        while (var4.hasNext()) {
-            System.out.println(var4.next());
+            final double count = registry.getPrometheusRegistry()
+                    .getSampleValue("armeria_client_dns_queries_total",
+                            new String[] {"cause","name","result"},
+                            new String[] {"none","wikipedia.com.", "success"});
+            assertThat(count > 1.0).isTrue();
         }
-        final double count = registry.getPrometheusRegistry()
-                .getSampleValue("armeria_client_dns_queries_total",
-                        new String[] {"cause","name","result"},
-                        new String[] {"none","wikipedia.com.", "success"});
-        assertThat(count > 1.0).isTrue();
     }
 
     private static class AlwaysTimeoutHandler extends ChannelInboundHandlerAdapter {
