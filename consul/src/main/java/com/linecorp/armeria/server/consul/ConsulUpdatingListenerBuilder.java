@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.Server;
 
@@ -41,10 +40,9 @@ import com.linecorp.armeria.server.Server;
  * server.addListener(listener);
  * }</pre>
  */
-public final class ConsulUpdatingListenerBuilder {
+public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
     private static final String DEFAULT_CHECK_INTERVAL = "10s";
-    private final ConsulClientBuilder consulClientBuilder = ConsulClient.builder();
     private final String serviceName;
 
     @Nullable
@@ -66,57 +64,39 @@ public final class ConsulUpdatingListenerBuilder {
         checkArgument(!this.serviceName.isEmpty(), "serviceName can't be empty");
     }
 
-    /**
-     * Sets the specified Consul's API service protocol scheme.
-     * @param consulProtocol the protocol scheme of Consul API service, default: HTTP
-     */
+    @Override
+    public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
+        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulUri(String consulUri) {
+        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
+    }
+
+    @Override
     public ConsulUpdatingListenerBuilder consulProtocol(SessionProtocol consulProtocol) {
-        requireNonNull(consulProtocol, "consulProtocol");
-        consulClientBuilder.protocol(consulProtocol);
-        return this;
+        return (ConsulUpdatingListenerBuilder) super.consulProtocol(consulProtocol);
     }
 
-    /**
-     * Sets the specified Consul's API service host address.
-     * @param consulAddress the host address of Consul API service, default: 127.0.0.1
-     */
+    @Override
     public ConsulUpdatingListenerBuilder consulAddress(String consulAddress) {
-        requireNonNull(consulAddress, "consulAddress");
-        checkArgument(!consulAddress.isEmpty(), "consulPort can't be empty");
-        consulClientBuilder.address(consulAddress);
-        return this;
+        return (ConsulUpdatingListenerBuilder) super.consulAddress(consulAddress);
     }
 
-    /**
-     * Sets the specified Consul's HTTP service port.
-     * @param consulPort the port of Consul agent, default: 8500
-     */
+    @Override
     public ConsulUpdatingListenerBuilder consulPort(int consulPort) {
-        checkArgument(consulPort > 0, "consulPort can't be zero or negative");
-        consulClientBuilder.port(consulPort);
-        return this;
+        return (ConsulUpdatingListenerBuilder) super.consulPort(consulPort);
     }
 
-    /**
-     * Sets the specified Consul's API version.
-     * @param consulApiVersion the version of Consul API service, default: v1
-     */
+    @Override
     public ConsulUpdatingListenerBuilder consulApiVersion(String consulApiVersion) {
-        requireNonNull(consulApiVersion, "consulApiVersion");
-        checkArgument(!consulApiVersion.isEmpty(), "consulApiVersion can't be empty");
-        consulClientBuilder.apiVersion(consulApiVersion);
-        return this;
+        return (ConsulUpdatingListenerBuilder) super.consulApiVersion(consulApiVersion);
     }
 
-    /**
-     * Sets the specified token for Consul's API.
-     * @param consulToken the token for accessing Consul API, default: null
-     */
+    @Override
     public ConsulUpdatingListenerBuilder consulToken(String consulToken) {
-        requireNonNull(consulToken, "consulToken");
-        checkArgument(!consulToken.isEmpty(), "consulToken can't be empty");
-        consulClientBuilder.token(consulToken);
-        return this;
+        return (ConsulUpdatingListenerBuilder) super.consulToken(consulToken);
     }
 
     /**
@@ -202,9 +182,7 @@ public final class ConsulUpdatingListenerBuilder {
                 throw new IllegalStateException("'checkInterval' should declare with checkUri.");
             }
         }
-
-        final ConsulClient client = consulClientBuilder.build();
-        return new ConsulUpdatingListener(client, serviceName, serviceEndpoint, checkUri, checkMethod,
+        return new ConsulUpdatingListener(buildClient(), serviceName, serviceEndpoint, checkUri, checkMethod,
                                           firstNonNull(checkInterval, DEFAULT_CHECK_INTERVAL));
     }
 }

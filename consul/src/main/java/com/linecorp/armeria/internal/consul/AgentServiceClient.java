@@ -90,8 +90,7 @@ final class AgentServiceClient {
         @JsonProperty("Check")
         private final Check check;
 
-        Service(String id, String name, String address, int port,
-                       @Nullable Check check) {
+        Service(String id, String name, String address, int port, @Nullable Check check) {
             this.id = id;
             this.name = name;
             this.address = address;

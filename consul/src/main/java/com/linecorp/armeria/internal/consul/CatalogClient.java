@@ -175,6 +175,7 @@ final class CatalogClient {
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
+                              .omitNullValues()
                               .add("id", id)
                               .add("node", node)
                               .add("address", address)

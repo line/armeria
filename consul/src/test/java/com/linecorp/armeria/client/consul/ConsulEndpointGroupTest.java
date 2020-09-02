@@ -47,10 +47,8 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .service("/", new EchoService())
                                         .build();
             final ServerListener listener = ConsulUpdatingListener.builder(serviceName)
-                                                                  .consulProtocol(SessionProtocol.HTTP)
-                                                                  .consulAddress(consul().getAddress())
-                                                                  .consulPort(consul().getHttpPort())
-                                                                  .consulApiVersion("v1")
+                                                                  .consulUri("http://127.0.0.1:" +
+                                                                             consul().getHttpPort() + "/v1")
                                                                   .build();
             server.addListener(listener);
             server.start().join();

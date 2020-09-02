@@ -69,7 +69,7 @@ public abstract class ConsulTestBase {
                                      .withConsulVersion("1.8.3")
                                      .build().start();
         // Initialize Consul client
-        consulClient = ConsulClient.builder().port(consul.getHttpPort()).build();
+        consulClient = ConsulClient.builder().consulPort(consul.getHttpPort()).buildClient();
     }
 
     @AfterAll

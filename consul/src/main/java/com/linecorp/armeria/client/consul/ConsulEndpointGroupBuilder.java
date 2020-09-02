@@ -22,17 +22,15 @@ import java.net.URI;
 import java.time.Duration;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
 /**
  * A builder class for {@link ConsulEndpointGroup}.
  */
-public final class ConsulEndpointGroupBuilder {
+public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS = 10;
 
-    private final ConsulClientBuilder consulClientBuilder = ConsulClient.builder();
     private final String serviceName;
     private long registryFetchIntervalSeconds = DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS;
     private boolean useHealthyEndpoints;
@@ -41,57 +39,39 @@ public final class ConsulEndpointGroupBuilder {
         this.serviceName = requireNonNull(serviceName, "serviceName");
     }
 
-    /**
-     * Sets the specified Consul's API service protocol scheme.
-     * @param consulProtocol the protocol scheme of Consul API service, default: HTTP
-     */
+    @Override
+    public ConsulEndpointGroupBuilder consulUri(URI consulUri) {
+        return (ConsulEndpointGroupBuilder) super.consulUri(consulUri);
+    }
+
+    @Override
+    public ConsulEndpointGroupBuilder consulUri(String consulUri) {
+        return (ConsulEndpointGroupBuilder) super.consulUri(consulUri);
+    }
+
+    @Override
     public ConsulEndpointGroupBuilder consulProtocol(SessionProtocol consulProtocol) {
-        requireNonNull(consulProtocol, "consulProtocol");
-        consulClientBuilder.protocol(consulProtocol);
-        return this;
+        return (ConsulEndpointGroupBuilder) super.consulProtocol(consulProtocol);
     }
 
-    /**
-     * Sets the specified Consul's API service host address.
-     * @param consulAddress the host address of Consul API service, default: 127.0.0.1
-     */
+    @Override
     public ConsulEndpointGroupBuilder consulAddress(String consulAddress) {
-        requireNonNull(consulAddress, "consulAddress");
-        checkArgument(!consulAddress.isEmpty(), "consulPort can't be empty");
-        consulClientBuilder.address(consulAddress);
-        return this;
+        return (ConsulEndpointGroupBuilder) super.consulAddress(consulAddress);
     }
 
-    /**
-     * Sets the specified Consul's HTTP service port.
-     * @param consulPort the port of Consul agent, default: 8500
-     */
+    @Override
     public ConsulEndpointGroupBuilder consulPort(int consulPort) {
-        checkArgument(consulPort > 0, "consulPort can't be zero or negative");
-        consulClientBuilder.port(consulPort);
-        return this;
+        return (ConsulEndpointGroupBuilder) super.consulPort(consulPort);
     }
 
-    /**
-     * Sets the specified Consul's API version.
-     * @param consulApiVersion the version of Consul API service, default: v1
-     */
+    @Override
     public ConsulEndpointGroupBuilder consulApiVersion(String consulApiVersion) {
-        requireNonNull(consulApiVersion, "consulApiVersion");
-        checkArgument(!consulApiVersion.isEmpty(), "consulApiVersion can't be empty");
-        consulClientBuilder.apiVersion(consulApiVersion);
-        return this;
+        return (ConsulEndpointGroupBuilder) super.consulApiVersion(consulApiVersion);
     }
 
-    /**
-     * Sets the specified token for Consul's API.
-     * @param consulToken the token for accessing Consul API, default: null
-     */
+    @Override
     public ConsulEndpointGroupBuilder consulToken(String consulToken) {
-        requireNonNull(consulToken, "consulToken");
-        checkArgument(!consulToken.isEmpty(), "consulToken can't be empty");
-        consulClientBuilder.token(consulToken);
-        return this;
+        return (ConsulEndpointGroupBuilder) super.consulToken(consulToken);
     }
 
     /**
@@ -131,8 +111,7 @@ public final class ConsulEndpointGroupBuilder {
      * Returns a newly-created {@link ConsulEndpointGroup}.
      */
     public ConsulEndpointGroup build() {
-        final ConsulClient consulClient = consulClientBuilder.build();
-        return new ConsulEndpointGroup(consulClient, serviceName, registryFetchIntervalSeconds,
+        return new ConsulEndpointGroup(buildClient(), serviceName, registryFetchIntervalSeconds,
                                        useHealthyEndpoints);
     }
 }

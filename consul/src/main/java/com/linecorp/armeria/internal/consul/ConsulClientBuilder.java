@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.internal.consul;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -28,47 +32,113 @@ public class ConsulClientBuilder {
     private static final int DEFAULT_CONSUL_PORT = 8500;
     private static final String DEFAULT_CONSUL_API_VERSION = "v1";
 
-    private SessionProtocol protocol = DEFAULT_CONSUL_PROTOCOL;
-    private String address = DEFAULT_CONSUL_ADDRESS;
-    private int port = DEFAULT_CONSUL_PORT;
-    private String apiVersion = DEFAULT_CONSUL_API_VERSION;
     @Nullable
-    private String token;
+    private URI consulUri;
+    private SessionProtocol consulProtocol = DEFAULT_CONSUL_PROTOCOL;
+    private String consulAddress = DEFAULT_CONSUL_ADDRESS;
+    private int consulPort = DEFAULT_CONSUL_PORT;
+    private String consulApiVersion = DEFAULT_CONSUL_API_VERSION;
+    @Nullable
+    private String consulToken;
+    private boolean flagToPreventConflict;
 
-    ConsulClientBuilder() {
+    protected ConsulClientBuilder() {
     }
 
-    public ConsulClientBuilder protocol(SessionProtocol protocol) {
-        this.protocol = protocol;
+    /**
+     * Sets the specified Consul's API service URI.
+     * The URI should include the Consul API version at path, like: /v1
+     * @param consulUri the URI of Consul API service, default: HTTP://127.0.0.1:8500/v1
+     */
+    public ConsulClientBuilder consulUri(URI consulUri) {
+        requireNonNull(consulUri, "consulUri");
+        checkState(!flagToPreventConflict, "consulUri can't comes with other addressing options");
+        this.consulUri = consulUri;
         return this;
     }
 
-    public ConsulClientBuilder address(String address) {
-        this.address = address;
+    /**
+     * Sets the specified Consul's API service URI.
+     * The URI should include the Consul API version at path, like: /v1
+     * @param consulUri the URI of Consul API service, default: HTTP://127.0.0.1:8500/v1
+     */
+    public ConsulClientBuilder consulUri(String consulUri) {
+        return consulUri(URI.create(requireNonNull(consulUri, "consulUri")));
+    }
+
+    /**
+     * Sets the specified Consul's API service protocol scheme.
+     * @param consulProtocol the protocol scheme of Consul API service, default: HTTP
+     */
+    public ConsulClientBuilder consulProtocol(SessionProtocol consulProtocol) {
+        requireNonNull(consulProtocol, "consulProtocol");
+        checkState(consulUri == null, "consulProtocol can't comes with consulUri");
+        this.consulProtocol = consulProtocol;
+        flagToPreventConflict = true;
         return this;
     }
 
-    public ConsulClientBuilder port(int port) {
-        this.port = port;
+    /**
+     * Sets the specified Consul's API service host address.
+     * @param consulAddress the host address of Consul API service, default: 127.0.0.1
+     */
+    public ConsulClientBuilder consulAddress(String consulAddress) {
+        requireNonNull(consulAddress, "consulAddress");
+        checkArgument(!consulAddress.isEmpty(), "consulAddress can't be empty");
+        checkState(consulUri == null, "consulAddress can't comes with consulUri");
+        this.consulAddress = consulAddress;
+        flagToPreventConflict = true;
         return this;
     }
 
-    public ConsulClientBuilder apiVersion(String apiVersion) {
-        this.apiVersion = apiVersion;
+    /**
+     * Sets the specified Consul's HTTP service port.
+     * @param consulPort the port of Consul agent, default: 8500
+     */
+    public ConsulClientBuilder consulPort(int consulPort) {
+        checkArgument(consulPort > 0, "consulPort can't be zero or negative");
+        checkState(consulUri == null, "consulPort can't comes with consulUri");
+        this.consulPort = consulPort;
+        flagToPreventConflict = true;
         return this;
     }
 
-    public ConsulClientBuilder token(@Nullable String token) {
-        this.token = token;
+    /**
+     * Sets the specified Consul's API version.
+     * @param consulApiVersion the version of Consul API service, default: v1
+     */
+    public ConsulClientBuilder consulApiVersion(String consulApiVersion) {
+        requireNonNull(consulApiVersion, "consulApiVersion");
+        checkArgument(!consulApiVersion.isEmpty(), "consulApiVersion can't be empty");
+        checkState(consulUri == null, "consulApiVersion can't comes with consulUri");
+        this.consulApiVersion = consulApiVersion;
+        flagToPreventConflict = true;
         return this;
     }
 
-    public ConsulClient build() {
-        try {
-            final URI uri = new URI(protocol.uriText(), null, address, port, '/' + apiVersion, null, null);
-            return new ConsulClient(uri, token);
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Can not build URI for the Consul service", e);
+    /**
+     * Sets the specified token for Consul's API.
+     * @param consulToken the token for accessing Consul API, default: null
+     */
+    public ConsulClientBuilder consulToken(String consulToken) {
+        requireNonNull(consulToken, "consulToken");
+        checkArgument(!consulToken.isEmpty(), "consulToken can't be empty");
+        this.consulToken = consulToken;
+        return this;
+    }
+
+    protected final ConsulClient buildClient() {
+        final URI uri;
+        if (consulUri != null) {
+            uri = consulUri;
+        } else {
+            try {
+                uri = new URI(consulProtocol.uriText(), null, consulAddress, consulPort,
+                              '/' + consulApiVersion, null, null);
+            } catch (URISyntaxException e) {
+                throw new IllegalArgumentException("Can not build URI for the Consul service", e);
+            }
         }
+        return new ConsulClient(uri, consulToken);
     }
 }
