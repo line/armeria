@@ -17,10 +17,14 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
@@ -102,7 +106,22 @@ class DefaultHttpResponseBodyStreamTest {
                     .expectError(ResponseTimeoutException.class)
                     .verify();
         assertThat(bodyStream.informationalHeaders().join()).isEmpty();
-        assertThat(bodyStream.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.UNKNOWN));
+        assertThatThrownBy(() -> bodyStream.headers().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ResponseTimeoutException.class);
+        assertThat(bodyStream.trailers().join().isEmpty()).isTrue();
+    }
+
+    @Test
+    void abortedResponse() {
+        final HttpResponse response = HttpResponse.ofFailure(AbortedStreamException.get());
+        final HttpResponseBodyStream bodyStream = response.toBodyStream();
+        StepVerifier.create(bodyStream)
+                    .thenRequest(1)
+                    .expectError(AbortedStreamException.class)
+                    .verify();
+        assertThat(bodyStream.informationalHeaders().join()).isEmpty();
+        assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.UNKNOWN);
         assertThat(bodyStream.trailers().join().isEmpty()).isTrue();
     }
 

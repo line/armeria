@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
@@ -33,6 +33,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseBodyStream;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -40,7 +49,7 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
+public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultHttpResponseBodyStream.class);
 
@@ -81,8 +90,8 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
     private volatile boolean wroteAny;
 
-    DefaultHttpResponseBodyStream(HttpResponse response, EventExecutor executor,
-                                  SubscriptionOption... options) {
+    public DefaultHttpResponseBodyStream(HttpResponse response, EventExecutor executor,
+                                         SubscriptionOption... options) {
         this.response = requireNonNull(response, "response");
         this.executor = requireNonNull(executor, "executor");
 
@@ -232,7 +241,7 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
             }
             cancelCalled = true;
             downstream = NoopSubscriber.get();
-            maybeCompleteHeaders();
+            maybeCompleteHeaders(null);
             final Subscription upstream = this.upstream;
             if (upstream != null) {
                 upstream.cancel();
@@ -256,7 +265,7 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
                 } else {
                     sawLeadingHeaders = true;
                     completeInformationHeaders();
-                    completeHeaders(headers);
+                    headersFuture.doComplete(headers);
                 }
                 return;
             }
@@ -294,17 +303,6 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         }
 
         /**
-         * Completes the specified non-informational headers.
-         */
-        private void completeHeaders(ResponseHeaders headers) {
-            if (headersFuture.isDone()) {
-                return;
-            }
-
-            headersFuture.doComplete(headers);
-        }
-
-        /**
          * Completes the specified trailers.
          */
         private void completeTrailers(HttpHeaders trailers) {
@@ -320,19 +318,19 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         }
 
         @Override
-        public void onError(Throwable t) {
-            maybeCompleteHeaders();
+        public void onError(Throwable cause) {
+            maybeCompleteHeaders(cause);
             final Subscriber<? super HttpData> downstream = this.downstream;
             if (downstream == null) {
-                cause = t;
+                this.cause = cause;
             } else {
-                downstream.onError(t);
+                downstream.onError(cause);
             }
         }
 
         @Override
         public void onComplete() {
-            maybeCompleteHeaders();
+            maybeCompleteHeaders(null);
             final Subscriber<? super HttpData> downstream = this.downstream;
             if (downstream == null) {
                 completing = true;
@@ -341,9 +339,18 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
             }
         }
 
-        private void maybeCompleteHeaders() {
+        private void maybeCompleteHeaders(@Nullable Throwable cause) {
             completeInformationHeaders();
-            completeHeaders(HEADERS_WITH_UNKNOWN_STATUS);
+
+            if (!headersFuture.isDone()) {
+                if (cause != null && !(cause instanceof CancelledSubscriptionException) &&
+                    !(cause instanceof AbortedStreamException)) {
+                    headersFuture.doCompleteExceptionally(cause);
+                } else {
+                    headersFuture.doComplete(HEADERS_WITH_UNKNOWN_STATUS);
+                }
+            }
+
             if (trailersFuture == null) {
                 trailersFutureUpdater.compareAndSet(DefaultHttpResponseBodyStream.this, null, EMPTY_TRAILERS);
             }
@@ -354,6 +361,11 @@ final class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         @Override
         protected void doComplete(@Nullable T value) {
             super.doComplete(value);
+        }
+
+        @Override
+        protected void doCompleteExceptionally(Throwable cause) {
+            super.doCompleteExceptionally(cause);
         }
     }
 }

@@ -22,6 +22,7 @@ import org.testng.annotations.Ignore;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageVerification;
+import com.linecorp.armeria.internal.common.DefaultHttpResponseBodyStream;
 
 import reactor.core.publisher.Flux;
 

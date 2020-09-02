@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -48,7 +49,8 @@ public class ArmeriaClientHttpResponseTest {
                             Flux.just("a", "b", "c", "d", "e")
                                 .map(HttpData::ofUtf8)));
         final ArmeriaClientHttpResponse response =
-                response(new ArmeriaHttpClientResponseSubscriber(httpResponse), httpHeaders);
+                response(new ArmeriaHttpResponseBodyStream(httpResponse, ImmediateEventExecutor.INSTANCE),
+                         httpHeaders);
 
         assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
 
@@ -74,7 +76,8 @@ public class ArmeriaClientHttpResponseTest {
                                                            HttpHeaderNames.SET_COOKIE, "a=1; b=2");
         final HttpResponse httpResponse = HttpResponse.of(httpHeaders);
         final ArmeriaClientHttpResponse response =
-                response(new ArmeriaHttpClientResponseSubscriber(httpResponse), httpHeaders);
+                response(new ArmeriaHttpResponseBodyStream(httpResponse, ImmediateEventExecutor.INSTANCE),
+                         httpHeaders);
 
         // HttpResponse would be completed after ResponseHeader is completed, because there's no body.
         assertThat(httpResponse.whenComplete().isDone()).isTrue();
@@ -97,7 +100,8 @@ public class ArmeriaClientHttpResponseTest {
         final ResponseHeaders httpHeaders = ResponseHeaders.of(HttpStatus.OK);
         final HttpResponse httpResponse = HttpResponse.of(Flux.concat(Mono.just(httpHeaders), bodyPub));
         final ArmeriaClientHttpResponse response =
-                response(new ArmeriaHttpClientResponseSubscriber(httpResponse), httpHeaders);
+                response(new ArmeriaHttpResponseBodyStream(httpResponse, ImmediateEventExecutor.INSTANCE),
+                         httpHeaders);
 
         assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
 
@@ -120,14 +124,11 @@ public class ArmeriaClientHttpResponseTest {
         await().untilTrue(completedWithError);
     }
 
-    private static ArmeriaClientHttpResponse response(ArmeriaHttpClientResponseSubscriber subscriber,
+    private static ArmeriaClientHttpResponse response(ArmeriaHttpResponseBodyStream bodyStream,
                                                       HttpHeaders expectedHttpHeaders) {
-        await().until(() -> subscriber.headersFuture().isDone());
-
-        final ResponseHeaders h = subscriber.headersFuture().join();
+        final ResponseHeaders h = bodyStream.headers().join();
         assertThat(h).isEqualTo(expectedHttpHeaders);
 
-        return new ArmeriaClientHttpResponse(h, subscriber.toResponseBodyPublisher(),
-                                             DataBufferFactoryWrapper.DEFAULT);
+        return new ArmeriaClientHttpResponse(h, bodyStream, DataBufferFactoryWrapper.DEFAULT);
     }
 }
