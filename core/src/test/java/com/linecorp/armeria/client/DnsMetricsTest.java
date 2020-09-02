@@ -64,7 +64,6 @@ public class DnsMetricsTest {
 
     @Test
     void dns_metric_test_for_successful_query_writes() throws ExecutionException, InterruptedException {
-
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))
@@ -78,7 +77,7 @@ public class DnsMetricsTest {
             final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
             final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
                     .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
-                    .metricRegistry(pm1)
+                    .meterRegistry(pm1)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .traceEnabled(false);
 
@@ -101,7 +100,7 @@ public class DnsMetricsTest {
                     final double count = registry.getPrometheusRegistry()
                             .getSampleValue("armeria_client_dns_queries_total",
                                     new String[] {"cause","name","result"},
-                                    new String[] {"","foo.com.", "success"});
+                                    new String[] {"none","foo.com.", "success"});
                     assertThat(count > 1.0).isTrue();
                 }
             }
@@ -117,7 +116,7 @@ public class DnsMetricsTest {
             final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
             final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
                     .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
-                    .metricRegistry(pm1)
+                    .meterRegistry(pm1)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .traceEnabled(false);
 
@@ -140,13 +139,6 @@ public class DnsMetricsTest {
                             .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
 
                     final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
-
-                    final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
-                            .metricFamilySamples()).iterator();
-                    while (var4.hasNext()) {
-                        System.out.println(var4.next());
-                    }
-
                     final double count = registry.getPrometheusRegistry()
                             .getSampleValue("armeria_client_dns_queries_total",
                                     new String[] {"cause","name","result"},
@@ -169,7 +161,7 @@ public class DnsMetricsTest {
             final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
             final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
                     .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
-                    .metricRegistry(pm1)
+                    .meterRegistry(pm1)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .traceEnabled(false);
 
@@ -200,12 +192,39 @@ public class DnsMetricsTest {
                         final double count = registry.getPrometheusRegistry()
                                 .getSampleValue("armeria_client_dns_queries_noanswer_total",
                                         new String[] {"code","name"},
-                                        new String[] {"NotZone(10)","bar.com."});
+                                        new String[] {"10","bar.com."});
                         assertThat(count > 1.0).isTrue();
                     }
                 }
             }
         }
+    }
+
+    @Test
+    void test_with_real_dns_query() throws ExecutionException, InterruptedException {
+        final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
+        final ClientFactory factory = ClientFactory.builder()
+                .meterRegistry(pm1)
+                .build();
+
+        final WebClient client2 = WebClient.builder()
+                .factory(factory)
+                .build();
+
+        client2.execute(RequestHeaders.of(HttpMethod.GET, "http://wikipedia.com")).aggregate().get();
+        final PrometheusMeterRegistry registry =
+                (PrometheusMeterRegistry) factory.meterRegistry();
+
+        final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
+                .metricFamilySamples()).iterator();
+        while (var4.hasNext()) {
+            System.out.println(var4.next());
+        }
+        final double count = registry.getPrometheusRegistry()
+                .getSampleValue("armeria_client_dns_queries_total",
+                        new String[] {"cause","name","result"},
+                        new String[] {"none","wikipedia.com.", "success"});
+        assertThat(count > 1.0).isTrue();
     }
 
     private static class AlwaysTimeoutHandler extends ChannelInboundHandlerAdapter {

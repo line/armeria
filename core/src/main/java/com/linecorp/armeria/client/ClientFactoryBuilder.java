@@ -599,7 +599,7 @@ public final class ClientFactoryBuilder {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
                         }
                         return builder
-                                .metricRegistry(options.containsKey(ClientFactoryOptions.METER_REGISTRY) ?
+                                .meterRegistry(options.containsKey(ClientFactoryOptions.METER_REGISTRY) ?
                                         (MeterRegistry) options.get(ClientFactoryOptions.METER_REGISTRY).value()
                                         : PrometheusMeterRegistries.newRegistry()).build(eventLoopGroup);
                     };

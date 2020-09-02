@@ -133,11 +133,9 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         assert executor instanceof EventLoop;
         final EventLoop eventLoop = (EventLoop) executor;
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
-        if (meterRegistry != null) {
-            builder.dnsQueryLifecycleObserverFactory(
-                    new DefaultDnsQueryLifecycleObserverFactory(meterRegistry,
-                            new MeterIdPrefix("armeria.client.dns.queries")));
-        }
+        builder.dnsQueryLifecycleObserverFactory(
+                new DefaultDnsQueryLifecycleObserverFactory(meterRegistry,
+                        new MeterIdPrefix("armeria.client.dns.queries")));
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
                                                                            queryTimeoutMillis);

@@ -91,7 +91,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
         meterRegistry.counter(meterIdPrefix.name().concat(".noanswer"),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()),
-                        Tag.of(CODE_TAG, code.toString()))).increment();
+                        Tag.of(CODE_TAG, String.valueOf(code.intValue())))).increment();
         return this;
     }
 
@@ -106,6 +106,6 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     public void querySucceed() {
         meterRegistry.counter(meterIdPrefix.name(),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "success"),
-                        Tag.of(CAUSE_TAG, ""))).increment();
+                        Tag.of(CAUSE_TAG, "none"))).increment();
     }
 }

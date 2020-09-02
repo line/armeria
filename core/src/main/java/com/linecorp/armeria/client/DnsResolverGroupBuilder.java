@@ -300,7 +300,7 @@ public final class DnsResolverGroupBuilder {
      * @param meterRegistry {@link MeterRegistry}.
      * @return DnsResolverGroupBuilder.
      */
-    public DnsResolverGroupBuilder metricRegistry(MeterRegistry meterRegistry) {
+    DnsResolverGroupBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
         return this;
     }
