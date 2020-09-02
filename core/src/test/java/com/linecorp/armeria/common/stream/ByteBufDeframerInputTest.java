@@ -49,7 +49,7 @@ class ByteBufDeframerInputTest {
 
     @AfterEach
     void tearDown() {
-        input.clear();
+        input.close();
     }
 
     @Test
@@ -88,12 +88,12 @@ class ByteBufDeframerInputTest {
 
     @Test
     void readUnsignedBytes() {
-        final ByteBufDeframerInput input = new ByteBufDeframerInput(UnpooledByteBufAllocator.DEFAULT);
-        input.add(Unpooled.wrappedBuffer(new byte[] {1}));
-        input.add(Unpooled.wrappedBuffer(new byte[] {-1}));
-        assertThat(input.readUnsignedByte()).isEqualTo((byte) 1);
-        assertThat((byte) input.readUnsignedByte()).isEqualTo((byte) 0xFF);
-        input.clear();
+        try (ByteBufDeframerInput input = new ByteBufDeframerInput(UnpooledByteBufAllocator.DEFAULT)) {
+            input.add(Unpooled.wrappedBuffer(new byte[]{ 1 }));
+            input.add(Unpooled.wrappedBuffer(new byte[]{ -1 }));
+            assertThat(input.readUnsignedByte()).isEqualTo((byte) 1);
+            assertThat((byte) input.readUnsignedByte()).isEqualTo((byte) 0xFF);
+        }
     }
 
     @Test
@@ -138,6 +138,6 @@ class ByteBufDeframerInputTest {
                 .isInstanceOf(IndexOutOfBoundsException.class)
                 .hasMessageContaining("readerIndex: 10 (expected: 0 < readerIndex + 1 <= writerIndex(10))");
         buf.release();
-        input.clear();
+        input.close();
     }
 }

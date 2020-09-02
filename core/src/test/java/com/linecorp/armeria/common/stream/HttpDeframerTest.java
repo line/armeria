@@ -16,9 +16,17 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -33,9 +41,9 @@ import reactor.test.StepVerifier;
 class HttpDeframerTest {
 
     @Test
-    void insufficientData() {
+    void mapNToZero() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final Flux<HttpData> stream = Flux.just(HttpData.ofUtf8("A012345"));
+        final Flux<HttpData> stream = Flux.just(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("67"));
         stream.subscribe(decoder);
         StepVerifier.create(decoder)
                     .expectComplete()
@@ -43,7 +51,7 @@ class HttpDeframerTest {
     }
 
     @Test
-    void truncatedData() {
+    void mapTwoToOne() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
         final Flux<HttpData> stream = Flux.just("A012345", "6789B1234")
                                           .map(HttpData::ofUtf8);
@@ -55,7 +63,7 @@ class HttpDeframerTest {
     }
 
     @Test
-    void uniformData() {
+    void mapNToN() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
         final Flux<HttpData> stream = Flux.just("A0123456789",
                                                 "B0123456789",
@@ -75,19 +83,7 @@ class HttpDeframerTest {
     }
 
     @Test
-    void withEmptyData() {
-        final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final Flux<HttpData> stream = Flux.just(HttpData.empty(), HttpData.ofUtf8("A0123456"),
-                                                HttpData.empty(), HttpData.ofUtf8("789B"));
-        stream.subscribe(decoder);
-        StepVerifier.create(decoder)
-                    .expectNext("A0123456789")
-                    .expectComplete()
-                    .verify();
-    }
-
-    @Test
-    void scatteredData() {
+    void mapMToN() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
         final Flux<HttpData> stream = Flux.just("A012345",
                                                 "6789B0",
@@ -108,6 +104,73 @@ class HttpDeframerTest {
                     .expectNext("E0123456789")
                     .expectComplete()
                     .verify();
+    }
+
+    @Test
+    void mapNToOne() {
+        final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
+        final Flux<HttpData> stream = Flux.just(HttpData.empty(), HttpData.ofUtf8("A0123456"),
+                                                HttpData.empty(), HttpData.ofUtf8("789B"));
+        stream.subscribe(decoder);
+        StepVerifier.create(decoder)
+                    .expectNext("A0123456789")
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void consumeExpectedCount() throws InterruptedException {
+        final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
+        final Flux<HttpData> stream = Flux.just("A012345",
+                                                "6789B0",
+                                                "12",
+                                                "",
+                                                "3",
+                                                "456789",
+                                                "C01234",
+                                                "56789D",
+                                                "0123456789E0123456789")
+                                          .map(HttpData::ofUtf8);
+
+        stream.subscribe(decoder);
+        final List<String> consumed = new ArrayList<>();
+        final AtomicBoolean completed = new AtomicBoolean();
+        final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
+        decoder.subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                subscriptionRef.set(s);
+                s.request(2);
+            }
+
+            @Override
+            public void onNext(String s) {
+                consumed.add(s);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                completed.set(true);
+            }
+
+            @Override
+            public void onComplete() {
+                completed.set(true);
+            }
+        });
+        // Give enough time to subscribe
+        Thread.sleep(1000);
+
+        assertThat(completed).isFalse();
+        assertThat(consumed).containsExactly("A0123456789", "B0123456789");
+        subscriptionRef.get().request(1);
+
+        // Give enough time to subscribe
+        Thread.sleep(1000);
+
+        assertThat(completed).isFalse();
+        assertThat(consumed).containsExactly("A0123456789", "B0123456789", "C0123456789");
+        decoder.cancel();
     }
 
     @Test

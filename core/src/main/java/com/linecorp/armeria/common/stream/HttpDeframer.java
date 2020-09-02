@@ -243,7 +243,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
         }
         final EventExecutor eventLoop = this.eventLoop;
         if (!eventLoop.inEventLoop()) {
-            this.eventLoop.execute(() -> onError(cause));
+            eventLoop.execute(() -> onError(cause));
             return;
         }
 
@@ -269,6 +269,6 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     }
 
     private void cleanup() {
-        input.clear();
+        input.close();
     }
 }

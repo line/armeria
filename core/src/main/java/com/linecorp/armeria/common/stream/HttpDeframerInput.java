@@ -17,13 +17,14 @@
 package com.linecorp.armeria.common.stream;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
 
 /**
  * An input of {@link HttpDeframer} which is used to read a stream of {@link HttpData}.
  */
-public interface HttpDeframerInput {
+public interface HttpDeframerInput extends SafeCloseable {
 
     /**
      * Returns the number of readable bytes.

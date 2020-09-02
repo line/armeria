@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 
 import io.grpc.DecompressorRegistry;
@@ -114,7 +113,7 @@ public final class HttpStreamReader extends ArmeriaMessageDeframer {
      * Cancel this stream and prevents further subscription.
      */
     public void cancel() {
-       abort(CancelledSubscriptionException.get());
+       abort();
     }
 
     @Override

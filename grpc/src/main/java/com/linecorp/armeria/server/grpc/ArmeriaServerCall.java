@@ -416,7 +416,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         } catch (Throwable e) {
             upstream.cancel();
             close(GrpcStatus.fromThrowable(e), new Metadata());
-            return;
         }
     }
 

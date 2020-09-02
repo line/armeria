@@ -197,7 +197,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
     }
 
     /**
-     * Discards the {@link ByteBuf}s that has been fully consumed and is not readable anymore.
+     * Discards the {@link ByteBuf}s that have been fully consumed and are not readable anymore.
      */
     void discardReadBytes() {
         for (;;) {
@@ -210,7 +210,8 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         }
     }
 
-    void clear() {
+    @Override
+    public void close() {
         for (ByteBuf buf : queue) {
             buf.release();
         }
