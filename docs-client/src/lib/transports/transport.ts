@@ -53,14 +53,42 @@ export default abstract class Transport {
 
   public findDebugMimeTypeEndpoint(
     method: Method,
+    endpointPath?: string | null,
+  ): Endpoint | undefined {
+    return method.endpoints.find((ep) => {
+      return (
+        ep.availableMimeTypes.includes(this.getDebugMimeType()) &&
+        (!endpointPath || !this.validatePath(ep, endpointPath).error)
+      );
+    });
+  }
+
+  public getDebugMimeTypeEndpoint(
+    method: Method,
     endpointPath?: string,
   ): Endpoint {
-    const endpoint = method.endpoints.find(
-      (ep) =>
-        ep.availableMimeTypes.includes(this.getDebugMimeType()) &&
-        (endpointPath === undefined || endpointPath === ep.pathMapping),
-    );
+    // Provide better error message to the UI if there is only one endpoint.
+    const targetEndpoints = this.listDebugMimeTypeEndpoint(method);
+    if (targetEndpoints.length === 1) {
+      if (endpointPath) {
+        const errorMsg = this.validatePath(targetEndpoints[0], endpointPath)
+          .error;
+        if (errorMsg) {
+          throw new Error(errorMsg);
+        }
+      }
+      return targetEndpoints[0];
+    }
+
+    // General error message if not found.
+    const endpoint = this.findDebugMimeTypeEndpoint(method, endpointPath);
     if (!endpoint) {
+      if (endpointPath) {
+        throw new Error(
+          `Endpoint does not support debug transport. MimeType: ${this.getDebugMimeType()}, Supported paths: 
+          ${targetEndpoints.map((ep) => ep.pathMapping).join()}`,
+        );
+      }
       throw new Error(
         `Endpoint does not support debug transport. MimeType: ${this.getDebugMimeType()}`,
       );
@@ -76,6 +104,19 @@ export default abstract class Transport {
     return body;
   }
 
+  /**
+   * Checking if the endpoint's path supports target path.
+   * Default implementation is suitable for RPC, using endpoint.pathMapping === path.
+   */
+  protected validatePath(endpoint: Endpoint, path: string): { error?: string } {
+    if (endpoint.pathMapping !== path) {
+      return {
+        error: `The path: '${path}' must be equal to ${endpoint.pathMapping}`,
+      };
+    }
+    return {};
+  }
+
   protected abstract doSend(
     method: Method,
     headers: { [name: string]: string },
@@ -83,4 +124,10 @@ export default abstract class Transport {
     endpointPath?: string,
     queries?: string,
   ): Promise<string>;
+
+  private listDebugMimeTypeEndpoint(method: Method): Endpoint[] {
+    return method.endpoints.filter((endpoint) =>
+      endpoint.availableMimeTypes.includes(this.getDebugMimeType()),
+    );
+  }
 }
