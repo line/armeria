@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
@@ -40,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -95,9 +93,8 @@ public final class AnnotatedService implements HttpService {
                              new ByteArrayResponseConverterFunction());
 
     static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
-            Streams.stream(
-                    ServiceLoader.load(ResponseConverterFunctionProvider.class,
-                                       AnnotatedService.class.getClassLoader())).collect(toImmutableList());
+            ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
+                                                    AnnotatedService.class.getClassLoader()));
 
     static {
         if (!responseConverterFunctionProviders.isEmpty()) {

@@ -37,6 +37,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
@@ -75,10 +76,9 @@ public final class SerializationFormat implements Comparable<SerializationFormat
                                    "unknown", create("application", "x-unknown")));
 
         // Load all serialization formats from the providers.
-        final List<SerializationFormatProvider> providers = Streams.stream(
+        final List<SerializationFormatProvider> providers = ImmutableList.copyOf(
                 ServiceLoader.load(SerializationFormatProvider.class,
-                                   SerializationFormatProvider.class.getClassLoader())).collect(
-                toImmutableList());
+                                   SerializationFormatProvider.class.getClassLoader()));
         if (!providers.isEmpty()) {
             logger.info("Loaded {}: {}", SerializationFormatProvider.class.getSimpleName(), providers);
 

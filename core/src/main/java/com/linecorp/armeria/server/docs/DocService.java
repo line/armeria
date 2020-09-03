@@ -92,8 +92,8 @@ public final class DocService extends SimpleDecoratingHttpService {
     private static final ObjectMapper jsonMapper = new ObjectMapper()
             .setSerializationInclusion(Include.NON_ABSENT);
 
-    static final List<DocServicePlugin> plugins = Streams.stream(ServiceLoader.load(
-            DocServicePlugin.class, DocService.class.getClassLoader())).collect(toImmutableList());
+    static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
+            DocServicePlugin.class, DocService.class.getClassLoader()));
 
     static {
         logger.info("Loaded {}: {}", DocServicePlugin.class.getSimpleName(), plugins);

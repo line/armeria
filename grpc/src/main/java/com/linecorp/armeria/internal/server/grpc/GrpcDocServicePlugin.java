@@ -32,7 +32,6 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -404,11 +403,6 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 enumDescriptor.getValues().stream()
                               .map(d -> new EnumValueInfo(d.getName(), d.getNumber()))
                               .collect(toImmutableList()));
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).toString();
     }
 
     private static TypeSignature namedMessageSignature(Descriptor descriptor) {

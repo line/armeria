@@ -64,9 +64,4 @@ public final class ThriftSerializationFormatProvider extends SerializationFormat
     private static MediaType create(String subtype, String protocol) {
         return create(subtype).withParameter("protocol", protocol);
     }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).toString();
-    }
 }
