@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logWhenComplete;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
@@ -106,8 +107,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().whenRequestComplete().thenAccept(requestLogger);
-            ctx.log().whenComplete().thenAccept(responseLogger);
+            logWhenComplete(logger, ctx, requestLogger, responseLogger);
         }
         return unwrap().execute(ctx, req);
     }
