@@ -96,7 +96,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             DocServicePlugin.class, DocService.class.getClassLoader())).collect(toImmutableList());
 
     static {
-        logger.info("Found {}: {}", DocServicePlugin.class.getSimpleName(), plugins);
+        logger.info("Loaded {}: {}", DocServicePlugin.class.getSimpleName(), plugins);
     }
 
     /**

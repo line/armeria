@@ -101,7 +101,7 @@ public final class AnnotatedService implements HttpService {
 
     static {
         if (!responseConverterFunctionProviders.isEmpty()) {
-            logger.info("Found {}: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
+            logger.info("Loaded {}: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
                         responseConverterFunctionProviders);
         }
     }

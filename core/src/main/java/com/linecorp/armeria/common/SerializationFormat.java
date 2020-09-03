@@ -80,7 +80,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
                                    SerializationFormatProvider.class.getClassLoader())).collect(
                 toImmutableList());
         if (!providers.isEmpty()) {
-            logger.info("Found {}: {}", SerializationFormatProvider.class.getSimpleName(), providers);
+            logger.info("Loaded {}: {}", SerializationFormatProvider.class.getSimpleName(), providers);
 
             providers.forEach(p -> p.entries().forEach(e -> register(mutableUriTextToFormats,
                                                                      mutableSimplifiedMediaTypeToFormats, e)));
