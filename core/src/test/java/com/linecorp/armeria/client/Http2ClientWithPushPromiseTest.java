@@ -69,7 +69,7 @@ class Http2ClientWithPushPromiseTest {
         assertThat(rstStreamIds).contains(promisedStreamId);
     }
 
-    private static class PushPromisedH2CHandler extends SimpleH2CServerHandler {
+    private static final class PushPromisedH2CHandler extends SimpleH2CServerHandler {
 
         PushPromisedH2CHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                Http2Settings initialSettings) {
