@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.MediaType.create;
 import static java.util.Objects.requireNonNull;
 
@@ -40,7 +39,6 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Streams;
 
 /**
  * Serialization format of a remote procedure call and its reply.
