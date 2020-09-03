@@ -20,7 +20,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.util.Set;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
