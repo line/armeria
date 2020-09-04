@@ -23,6 +23,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
@@ -46,16 +47,6 @@ class SimpleH2CServerHandler extends Http2ConnectionHandler implements Http2Fram
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
-                          boolean endOfStream) {
-        final int processed = data.readableBytes() + padding;
-        if (endOfStream) {
-            sendResponse(ctx, streamId, data.retain());
-        }
-        return processed;
-    }
-
-    @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                               Http2Headers headers, int padding, boolean endOfStream) {
         if (endOfStream) {
@@ -63,7 +54,7 @@ class SimpleH2CServerHandler extends Http2ConnectionHandler implements Http2Fram
             content.writeBytes(RESPONSE_BYTES.duplicate());
             ctx.flush();
             ByteBufUtil.writeAscii(content, " - via HTTP/2");
-            sendResponse(ctx, streamId, content);
+            sendResponse(ctx, streamId, OK, content);
         }
     }
 
@@ -75,16 +66,30 @@ class SimpleH2CServerHandler extends Http2ConnectionHandler implements Http2Fram
     }
 
     @Override
-    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {}
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
+                          boolean endOfStream) {
+        final int processed = data.readableBytes() + padding;
+        if (endOfStream) {
+            sendResponse(ctx, streamId, OK, data.retain());
+        }
+        return processed;
+    }
 
-    private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
-        // Send a frame for the response status
-        final Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
+    /**
+     * Sends an {@link Http2Headers} with the specified {@link HttpResponseStatus} and
+     * {@code DATA} with the specified {@code payload}.
+     */
+    protected void sendResponse(ChannelHandlerContext ctx, int streamId, HttpResponseStatus status,
+                                ByteBuf payload) {
+        final Http2Headers headers = new DefaultHttp2Headers().status(status.codeAsText());
         encoder().writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
         encoder().writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
     }
 
     // NO-OPs
+
+    @Override
+    public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {}
 
     @Override
     public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency,
@@ -116,5 +121,4 @@ class SimpleH2CServerHandler extends Http2ConnectionHandler implements Http2Fram
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
                                Http2Flags flags, ByteBuf payload) {}
-
 }

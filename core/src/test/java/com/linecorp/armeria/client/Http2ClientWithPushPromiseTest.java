@@ -31,13 +31,14 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder;
 import io.netty.handler.codec.http2.EmptyHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
-import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Settings;
 
 class Http2ClientWithPushPromiseTest {
@@ -77,14 +78,12 @@ class Http2ClientWithPushPromiseTest {
         }
 
         @Override
-        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                                  boolean endOfStream) {
-            if (endOfStream) {
-                promisedStreamId = streamId + 1;
-                encoder().writePushPromise(ctx, streamId, promisedStreamId, EmptyHttp2Headers.INSTANCE, 0,
-                                           ctx.newPromise());
-            }
-            super.onHeadersRead(ctx, streamId, headers, padding, endOfStream);
+        protected void sendResponse(ChannelHandlerContext ctx, int streamId, HttpResponseStatus status,
+                                    ByteBuf payload) {
+            promisedStreamId = streamId + 1;
+            encoder().writePushPromise(ctx, streamId, promisedStreamId, EmptyHttp2Headers.INSTANCE, 0,
+                                       ctx.newPromise());
+            super.sendResponse(ctx, streamId, status, payload);
         }
 
         @Override
