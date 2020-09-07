@@ -339,6 +339,7 @@ public class ArmeriaAutoConfigurationTest {
                                              .aggregate().join()
                                              .contentUtf8();
         assertThat(metricReport).contains("# TYPE custom_armeria_server_response_duration_seconds_max gauge");
-        assertThat(metricReport).contains("custom_armeria_server_response_duration_seconds_max{grpc_status=\"0\"");
+        assertThat(metricReport).contains(
+                "custom_armeria_server_response_duration_seconds_max{grpc_status=\"0\"");
     }
 }
