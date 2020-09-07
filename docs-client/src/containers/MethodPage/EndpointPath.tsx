@@ -33,54 +33,52 @@ interface Props {
   onPathFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const EndpointPath: React.FunctionComponent<Props> = (props) => {
-  return (
-    <>
-      <Typography variant="body2" paragraph />
-      <Button color="secondary" onClick={props.onEditEndpointPathClick}>
-        Endpoint path
-      </Button>
-      <Typography variant="body2" paragraph />
-      {props.endpointPathOpen && (
-        <>
-          {props.isAnnotatedService ? (
-            <>
-              {props.examplePaths.length > 0 && (
-                <>
-                  <Typography variant="body2" paragraph />
-                  <Dropdown
-                    placeholder="Select an example path..."
-                    options={props.examplePaths}
-                    onChange={props.onSelectedPathChange}
-                  />
-                </>
-              )}
-              <Typography variant="body2" paragraph />
-              <TextField
-                fullWidth
-                value={props.additionalPath}
-                placeholder={endpointPathPlaceHolder}
-                onChange={props.onPathFormChange}
-                inputProps={{
-                  readOnly: !props.editable,
-                  className: 'code',
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <Typography variant="body2" paragraph />
-              <Dropdown
-                options={props.examplePaths}
-                onChange={props.onSelectedPathChange}
-                value={props.additionalPath}
-              />
-            </>
-          )}
-        </>
-      )}
-    </>
-  );
-};
+const EndpointPath: React.FunctionComponent<Props> = (props) => (
+  <>
+    <Typography variant="body2" paragraph />
+    <Button color="secondary" onClick={props.onEditEndpointPathClick}>
+      Endpoint path
+    </Button>
+    <Typography variant="body2" paragraph />
+    {props.endpointPathOpen && (
+      <>
+        {props.isAnnotatedService ? (
+          <>
+            {props.examplePaths.length > 0 && (
+              <>
+                <Typography variant="body2" paragraph />
+                <Dropdown
+                  placeholder="Select an example path..."
+                  options={props.examplePaths}
+                  onChange={props.onSelectedPathChange}
+                />
+              </>
+            )}
+            <Typography variant="body2" paragraph />
+            <TextField
+              fullWidth
+              value={props.additionalPath}
+              placeholder={endpointPathPlaceHolder}
+              onChange={props.onPathFormChange}
+              inputProps={{
+                readOnly: !props.editable,
+                className: 'code',
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <Typography variant="body2" paragraph />
+            <Dropdown
+              options={props.examplePaths}
+              onChange={props.onSelectedPathChange}
+              value={props.additionalPath}
+            />
+          </>
+        )}
+      </>
+    )}
+  </>
+);
 
 export default React.memo(EndpointPath);

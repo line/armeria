@@ -97,7 +97,6 @@ class ThriftDocServicePluginTest {
         assertThat(methods).containsKey("bar4");
         final MethodInfo bar4 = methods.get("bar4");
         assertThat(bar4.exampleRequests()).isEmpty();
-        assertThat(bar4.examplePaths()).containsExactly("/foo");
         assertThat(bar4.endpoints())
                 .containsExactly(EndpointInfo.builder("*", "/foo")
                                              .defaultFormat(ThriftSerializationFormats.COMPACT).build());
@@ -128,7 +127,6 @@ class ThriftDocServicePluginTest {
                 fooServiceInfo.methods().stream()
                               .collect(toImmutableMap(MethodInfo::name, Function.identity()));
         final MethodInfo bar4 = methods.get("bar4");
-        assertThat(bar4.examplePaths()).containsExactlyInAnyOrder("/foo1", "/foo2");
         assertThat(bar4.endpoints())
                 .containsExactlyInAnyOrder(
                         EndpointInfo.builder("*", "/foo1")

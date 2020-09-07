@@ -104,6 +104,12 @@ export default abstract class Transport {
     return body;
   }
 
+  public listDebugMimeTypeEndpoint(method: Method): Endpoint[] {
+    return method.endpoints.filter((endpoint) =>
+      endpoint.availableMimeTypes.includes(this.getDebugMimeType()),
+    );
+  }
+
   /**
    * Checking if the endpoint's path supports target path.
    * Default implementation is suitable for RPC, using endpoint.pathMapping === path.
@@ -124,10 +130,4 @@ export default abstract class Transport {
     endpointPath?: string,
     queries?: string,
   ): Promise<string>;
-
-  private listDebugMimeTypeEndpoint(method: Method): Endpoint[] {
-    return method.endpoints.filter((endpoint) =>
-      endpoint.availableMimeTypes.includes(this.getDebugMimeType()),
-    );
-  }
 }

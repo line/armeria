@@ -85,25 +85,16 @@ class GrpcDocServicePluginTest {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.TestService/" + m.name());
             });
-            m.examplePaths().forEach(p -> {
-                assertThat(p).isEqualTo("/armeria.grpc.testing.TestService/" + m.name());
-            });
         });
         services.get(UnitTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).isEqualTo("/test/armeria.grpc.testing.UnitTestService/" + m.name());
-            });
-            m.examplePaths().forEach(p -> {
-                assertThat(p).isEqualTo("/test/armeria.grpc.testing.UnitTestService/" + m.name());
             });
         });
         services.get(ReconnectServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" +
                                                       m.name());
-            });
-            m.examplePaths().forEach(p -> {
-                assertThat(p).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" + m.name());
             });
         });
     }

@@ -477,9 +477,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
     if (isAnnotatedService) {
       return examplePaths;
     }
-    return examplePaths.filter((path) =>
-      transport.findDebugMimeTypeEndpoint(method, path.value),
-    );
+    return transport.listDebugMimeTypeEndpoint(method).map((endpoint) => {
+      return {
+        label: endpoint.pathMapping,
+        value: endpoint.pathMapping,
+      };
+    });
   }, [examplePaths, method, isAnnotatedService, transport]);
 
   return (
