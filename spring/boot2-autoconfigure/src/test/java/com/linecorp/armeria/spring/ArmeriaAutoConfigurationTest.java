@@ -156,7 +156,7 @@ public class ArmeriaAutoConfigurationTest {
 
         @Bean
         public MeterIdPrefixFunction myMeterIdPrefixFunction() {
-            return GrpcMeterIdPrefixFunction.of("armeria.server");
+            return GrpcMeterIdPrefixFunction.of("custom.armeria.server");
         }
     }
 
@@ -338,7 +338,7 @@ public class ArmeriaAutoConfigurationTest {
                                              .get("/internal/metrics")
                                              .aggregate().join()
                                              .contentUtf8();
-        assertThat(metricReport).contains("# TYPE armeria_server_response_duration_seconds_max gauge");
-        assertThat(metricReport).contains("armeria_server_response_duration_seconds_max{grpc_status=\"0\"");
+        assertThat(metricReport).contains("# TYPE custom_armeria_server_response_duration_seconds_max gauge");
+        assertThat(metricReport).contains("custom_armeria_server_response_duration_seconds_max{grpc_status=\"0\"");
     }
 }
