@@ -20,4 +20,4 @@
 @NonNullByDefault
 package com.linecorp.armeria.client.auth.oauth2;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
