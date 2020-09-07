@@ -62,7 +62,7 @@ class GrpcServerInterceptorTest {
                        .build(TestServiceBlockingStub.class);
         final Throwable cause = catchThrowable(() -> client.unaryCall(SimpleRequest.getDefaultInstance()));
         assertThat(cause).isInstanceOf(StatusRuntimeException.class);
-        assertThat(((StatusRuntimeException)cause).getStatus()).isEqualTo(Status.PERMISSION_DENIED);
+        assertThat(((StatusRuntimeException) cause).getStatus()).isEqualTo(Status.PERMISSION_DENIED);
     }
 
     private static class NoPassInterceptor implements ServerInterceptor {
