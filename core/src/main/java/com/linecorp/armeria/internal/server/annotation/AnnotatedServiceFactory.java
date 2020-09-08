@@ -244,9 +244,10 @@ public final class AnnotatedServiceFactory {
 
         if (KotlinUtil.getCallKotlinSuspendingMethod() == null && KotlinUtil.maybeSuspendingFunction(method)) {
             throw new IllegalArgumentException(
-                    "Kotlin suspending functions are supported only when you added 'armeria-kotlin' as a dependency.\n"
-                    + "See https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support for more information."
-            );
+                    "Kotlin suspending functions are supported " +
+                    "only when you added 'armeria-kotlin' as a dependency.\n" +
+                    "See https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support " +
+                    "for more information.");
         }
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
