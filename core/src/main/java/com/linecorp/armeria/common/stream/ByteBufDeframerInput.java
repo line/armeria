@@ -52,30 +52,6 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         return readableBytes;
     }
 
-    private int readerIndex() {
-        if (queue.isEmpty()) {
-            return 0;
-        }
-
-        int value = 0;
-        for (ByteBuf buf : queue) {
-            value += buf.readerIndex();
-        }
-        return value;
-    }
-
-    private int writerIndex() {
-        if (queue.isEmpty()) {
-            return 0;
-        }
-
-        int value = 0;
-        for (ByteBuf buf : queue) {
-            value += buf.writerIndex();
-        }
-        return value;
-    }
-
     @Override
     public byte readByte() {
         for (ByteBuf buf : queue) {
@@ -84,18 +60,14 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
             }
             return buf.readByte();
         }
-        throw new IndexOutOfBoundsException(
-                "readerIndex: " + readerIndex() +
-                " (expected: 0 <= readerIndex < writerIndex(" + writerIndex() + "))");
+        throw newEndOfInputException();
     }
 
     @Override
     public int readInt() {
         final ByteBuf firstBuf = queue.peek();
         if (firstBuf == null) {
-            throw new IndexOutOfBoundsException(
-                    "readerIndex: " + readerIndex() +
-                    " (expected: 0 <= readerIndex < writerIndex(" + writerIndex() + "))");
+            throw newEndOfInputException();
         }
 
         if (firstBuf.readableBytes() >= 4) {
@@ -140,9 +112,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         if (remained == 0) {
             return value;
         } else {
-            throw new IndexOutOfBoundsException(
-                    "readerIndex: " + (readerIndex() - 4 + remained) +
-                    " (expected: 0 < readerIndex + 4 <= writerIndex(" + writerIndex() + "))");
+            throw newEndOfInputException();
         }
     }
 
@@ -151,9 +121,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         checkArgument(length > 0, "length %s (expected: length > 0)", length);
         final ByteBuf firstBuf = queue.peek();
         if (firstBuf == null) {
-            throw new IndexOutOfBoundsException(
-                    "readerIndex: " + readerIndex() +
-                    " (expected: 0 <= readerIndex < writerIndex(" + writerIndex() + "))");
+            throw newEndOfInputException();
         }
 
         if (firstBuf.readableBytes() >= length) {
@@ -188,9 +156,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
 
         if (remained > 0 || value == null) {
             ReferenceCountUtil.release(value);
-            throw new IndexOutOfBoundsException(
-                    "readerIndex: " + readerIndex() +
-                    " (expected: 0 < readerIndex + " + length + " <= writerIndex(" + writerIndex() + "))");
+            throw newEndOfInputException();
         }
 
         return value;
@@ -210,11 +176,19 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         }
     }
 
+    private static IllegalStateException newEndOfInputException() {
+        return new IllegalStateException("end of deframer input");
+    }
+
     @Override
     public void close() {
-        for (ByteBuf buf : queue) {
-            buf.release();
+        for (;;) {
+            final ByteBuf buf = queue.poll();
+            if (buf != null) {
+                buf.release();
+            } else {
+                break;
+            }
         }
-        queue.clear();
     }
 }

@@ -21,11 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
@@ -43,7 +43,7 @@ import io.netty.util.concurrent.EventExecutor;
  * A skeletal {@link Processor} implementation that decodes a stream of {@link HttpObject}s to N objects.
  */
 @UnstableApi
-public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements Processor<HttpObject, T> {
+public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Processor<HttpObject, T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<HttpDeframer, Subscription> upstreamUpdater =
@@ -57,8 +57,10 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     private static final AtomicIntegerFieldUpdater<HttpDeframer> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "subscribed");
 
-    private final ByteBufDeframerInput input;
     private final ArrayDeque<T> outputQueue = new ArrayDeque<>();
+    private final HttpDeframerHandler<T> handler;
+    private final ByteBufDeframerInput input;
+    private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
 
     private boolean sawLeadingHeaders;
 
@@ -71,26 +73,23 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     private volatile int subscribed;
 
     /**
-     * Returns a new {@link HttpDeframer} with the specified {@link EventExecutor} and
+     * Returns a new {@link HttpDeframer} with the specified {@link HttpDeframerHandler} and
      * {@link ByteBufAllocator}.
      */
-    protected HttpDeframer(ByteBufAllocator alloc) {
-        requireNonNull(alloc, "alloc");
-        input = new ByteBufDeframerInput(alloc);
+    public HttpDeframer(HttpDeframerHandler<T> handler, ByteBufAllocator alloc) {
+        this(handler, alloc, HttpData::byteBuf);
     }
 
     /**
-     * Converts the specified {@link HttpData} to {@link ByteBuf}.
+     * Returns a new {@link HttpDeframer} with the specified {@link HttpDeframerHandler},
+     * {@link ByteBufAllocator} and {@code byteBufConverter}.
      */
-    protected ByteBuf convertToByteBuf(HttpData data) {
-        return data.byteBuf();
+    public HttpDeframer(HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
+                        Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+        this.handler = requireNonNull(handler, "handler");
+        input = new ByteBufDeframerInput(requireNonNull(alloc, "alloc"));
+        this.byteBufConverter = byteBufConverter;
     }
-
-    /**
-     * Decodes a stream of {@link HttpData}s to N objects.
-     * This method will be called whenever an {@link HttpData} is signaled from {@link Publisher}.
-     */
-    protected abstract void process(HttpDeframerInput in, HttpDeframerOutput<T> out);
 
     private void process(HttpObject data) {
         if (data instanceof HttpHeaders) {
@@ -99,49 +98,31 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
             if (headers instanceof ResponseHeaders) {
                 final ResponseHeaders responseHeaders = (ResponseHeaders) headers;
                 if (responseHeaders.status().isInformational()) {
-                    processInformationalHeaders(responseHeaders, outputQueue::addLast);
+                    handler.processInformationalHeaders(responseHeaders, outputQueue::addLast);
                     return;
                 }
             }
 
             if (!sawLeadingHeaders) {
                 sawLeadingHeaders = true;
-                processHeaders((HttpHeaders) data, outputQueue::addLast);
+                handler.processHeaders((HttpHeaders) data, outputQueue::addLast);
             } else {
-                processTrailers((HttpHeaders) data, outputQueue::addLast);
+                handler.processTrailers((HttpHeaders) data, outputQueue::addLast);
             }
             return;
         }
 
         if (data instanceof HttpData) {
-            input.add(convertToByteBuf((HttpData) data));
-            process(input, outputQueue::addLast);
+            final ByteBuf byteBuf = byteBufConverter.apply((HttpData) data);
+            requireNonNull(byteBuf, "byteBufConverter returned null");
+            input.add(byteBuf);
+            handler.process(input, outputQueue::addLast);
             input.discardReadBytes();
         }
     }
 
-    /**
-     * Decodes an informational {@link ResponseHeaders} to N objects.
-     */
-    protected void processInformationalHeaders(ResponseHeaders in, HttpDeframerOutput<T> out) {}
-
-    /**
-     * Decodes an non-informational {@link HttpHeaders} to N objects.
-     */
-    protected void processHeaders(HttpHeaders in, HttpDeframerOutput<T> out) {}
-
-    /**
-     * Decodes a {@link HttpHeaders trailers} to N objects.
-     */
-    protected void processTrailers(HttpHeaders in, HttpDeframerOutput<T> out) {}
-
-    /**
-     * Invoked when a {@link Throwable} is raised while deframing.
-     */
-    protected void processOnError(Throwable cause) {}
-
     @Override
-    final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
+    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
         if (subscribedUpdater.compareAndSet(this, 0, 1)) {
             eventLoop = subscription.executor();
@@ -176,7 +157,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     }
 
     @Override
-    public final void onSubscribe(Subscription subscription) {
+    public void onSubscribe(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         if (upstreamUpdater.compareAndSet(this, null, subscription)) {
             deferredInit();
@@ -186,7 +167,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     }
 
     @Override
-    public final void onNext(HttpObject data) {
+    public void onNext(HttpObject data) {
         final EventExecutor eventLoop = this.eventLoop;
         if (eventLoop.inEventLoop()) {
             onNext0(data);
@@ -220,7 +201,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
             input.discardReadBytes();
         } catch (Throwable ex) {
             Exceptions.throwIfFatal(ex);
-            processOnError(ex);
+            handler.processOnError(ex);
             cancelAndCleanup();
             abort(ex);
         }
@@ -236,7 +217,7 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
     }
 
     @Override
-    public final void onError(Throwable cause) {
+    public void onError(Throwable cause) {
         requireNonNull(cause, "cause");
         if (cancelled) {
             return;
@@ -247,13 +228,13 @@ public abstract class HttpDeframer<T> extends DefaultStreamMessage<T> implements
             return;
         }
 
-        processOnError(cause);
+        handler.processOnError(cause);
         cleanup();
         abort(cause);
     }
 
     @Override
-    public final void onComplete() {
+    public void onComplete() {
         if (cancelled) {
             return;
         }

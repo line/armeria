@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 
@@ -49,6 +50,7 @@ import io.grpc.ClientInterceptor;
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Utilities for working with <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a>.
@@ -70,8 +72,10 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
     public HttpResponse execute(HttpClient delegate, ClientRequestContext ctx, HttpRequest req)
             throws Exception {
         final HttpResponse response = delegate.execute(ctx, req);
-        final ArmeriaMessageDeframer deframer =
-                new ArmeriaMessageDeframer(ctx.alloc(), maxMessageSizeBytes, grpcWebText);
+        final ByteBufAllocator alloc = ctx.alloc();
+
+        final ArmeriaMessageDeframer messageDeframer = new ArmeriaMessageDeframer(maxMessageSizeBytes);
+        final HttpDeframer<DeframedMessage> deframer = messageDeframer.newHttpDeframer(alloc, grpcWebText);
 
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         publisher.subscribe(deframer, ctx.eventLoop());
@@ -111,7 +115,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                             publisher.close();
                             return obj;
                         }
-                        deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                        messageDeframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
                     }
                     return obj;
                 }

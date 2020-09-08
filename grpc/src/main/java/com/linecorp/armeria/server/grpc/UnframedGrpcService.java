@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
@@ -267,10 +268,9 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             }
         }
 
-        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
-                ctx.alloc(),
+        final HttpDeframer<DeframedMessage> deframer = new ArmeriaMessageDeframer(
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
-                Integer.MAX_VALUE, false);
+                Integer.MAX_VALUE).newHttpDeframer(ctx.alloc(), false);
         StreamMessage.of(grpcResponse.content()).subscribe(deframer, ctx.eventLoop());
         deframer.subscribe(singleSubscriber(unframedHeaders, res), ctx.eventLoop());
     }

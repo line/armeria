@@ -130,7 +130,7 @@ public class ArmeriaServerCallTest {
 
     @After
     public void tearDown() {
-        call.messageReader().cancel();
+        call.messageReader().abort();
         if (!call.isCloseCalled()) {
             call.close(Status.OK, new Metadata());
         }
@@ -193,7 +193,7 @@ public class ArmeriaServerCallTest {
     @Test
     public void readyOnStart() {
         assertThat(call.isReady()).isTrue();
-        call.messageReader().cancel();
+        call.messageReader().abort();
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,42 +16,52 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Processor;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
-import io.netty.buffer.ByteBufAllocator;
 
-/**
- * A {@link Processor} to read HTTP messages and pass to gRPC business logic.
- */
-public final class HttpStreamReader extends ArmeriaMessageDeframer {
+public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
 
-    public HttpStreamReader(DecompressorRegistry decompressorRegistry,
-                            TransportStatusListener transportStatusListener,
-                            ByteBufAllocator alloc, int maxMessageSizeBytes, boolean decodeBase64) {
-        super(alloc, maxMessageSizeBytes, decodeBase64);
+    @Nullable
+    private HttpDeframer<DeframedMessage> deframer;
+
+    public HttpStreamDeframer(DecompressorRegistry decompressorRegistry,
+                              TransportStatusListener transportStatusListener,
+                              int maxMessageSizeBytes) {
+        super(maxMessageSizeBytes);
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
     }
 
+    /**
+     * Sets the specified {@link HttpDeframer}.
+     * Note that the deframer should be set before processing the first {@link HttpObject}.
+     */
+    public void setDeframer(HttpDeframer<DeframedMessage> deframer) {
+        requireNonNull(deframer, "deframer");
+        checkState(this.deframer == null, "deframer is already set");
+        this.deframer = deframer;
+    }
+
     @Override
-    protected void processHeaders(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
+    public void processHeaders(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
         // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
         // and client though as everything else is identical.
         final String statusText = headers.get(HttpHeaderNames.STATUS);
@@ -71,10 +81,11 @@ public final class HttpStreamReader extends ArmeriaMessageDeframer {
 
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
+            assert deframer != null;
             // A gRPC client could not receive messages fully yet.
             // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
-            whenComplete().thenRun(() -> {
-                GrpcStatus.reportStatus(headers, this, transportStatusListener);
+            deframer.whenComplete().thenRun(() -> {
+                GrpcStatus.reportStatus(headers, deframer, transportStatusListener);
             });
         }
 
@@ -97,27 +108,22 @@ public final class HttpStreamReader extends ArmeriaMessageDeframer {
     }
 
     @Override
-    protected void processTrailers(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
+    public void processTrailers(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
-            whenConsumed().thenRun(() -> GrpcStatus.reportStatus(headers, this, transportStatusListener));
+            assert deframer != null;
+            deframer.whenConsumed()
+                    .thenRun(() -> GrpcStatus.reportStatus(headers, deframer, transportStatusListener));
         }
     }
 
     @Override
-    protected void processOnError(Throwable cause) {
+    public void processOnError(Throwable cause) {
         transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
     }
 
-    /**
-     * Cancel this stream and prevents further subscription.
-     */
-    public void cancel() {
-       abort();
-    }
-
     @Override
-    public HttpStreamReader decompressor(@Nullable Decompressor decompressor) {
-        return (HttpStreamReader) super.decompressor(decompressor);
+    public HttpStreamDeframer decompressor(@Nullable Decompressor decompressor) {
+        return (HttpStreamDeframer) super.decompressor(decompressor);
     }
 }

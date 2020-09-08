@@ -29,6 +29,7 @@ import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
@@ -65,19 +66,21 @@ public class HttpStreamReaderTckTest extends PublisherVerification<DeframedMessa
                                           .mapToObj(unused -> DATA)
                                           .toArray(HttpData[]::new);
         final StreamMessage<HttpData> source = StreamMessage.of(data);
-        final HttpStreamReader reader =
-                new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), noopListener,
-                                     ByteBufAllocator.DEFAULT, -1, false);
-        source.subscribe(reader, ImmediateEventExecutor.INSTANCE);
-        return Flux.from(reader).doOnNext(message -> byteBufs.add(message.buf()));
+
+        final HttpDeframer<DeframedMessage> deframer =
+                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener, -1)
+                        .newHttpDeframer(ByteBufAllocator.DEFAULT);
+
+        source.subscribe(deframer, ImmediateEventExecutor.INSTANCE);
+        return Flux.from(deframer).doOnNext(message -> byteBufs.add(message.buf()));
     }
 
     @Override
     public Publisher<DeframedMessage> createFailedPublisher() {
         final Flux<HttpData> source = Flux.error(new RuntimeException());
-        final HttpStreamReader reader =
-                new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), noopListener,
-                                     ByteBufAllocator.DEFAULT, -1, false);
+        final HttpDeframer<DeframedMessage> reader =
+                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener, -1)
+                        .newHttpDeframer(ByteBufAllocator.DEFAULT);
         source.subscribe(reader);
         return reader;
     }

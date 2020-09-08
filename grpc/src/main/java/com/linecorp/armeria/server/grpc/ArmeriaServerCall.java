@@ -52,13 +52,15 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -96,7 +98,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private final MethodDescriptor<I, O> method;
 
-    private final HttpStreamReader messageReader;
+    private final HttpDeframer<DeframedMessage> messageReader;
     private final ArmeriaMessageFramer messageFramer;
 
     private final HttpResponseWriter res;
@@ -158,10 +160,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         requireNonNull(decompressorRegistry, "decompressorRegistry");
-        messageReader = new HttpStreamReader(decompressorRegistry, this,
-                                             ctx.alloc(), maxInboundMessageSizeBytes, grpcWebText);
-        messageReader.decompressor(clientDecompressor(clientHeaders, decompressorRegistry))
-                     .subscribe(this, ctx.eventLoop());
+
+        final HttpStreamDeframer streamDeframer =
+                new HttpStreamDeframer(decompressorRegistry, this, maxInboundMessageSizeBytes)
+                        .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
+        messageReader = streamDeframer.newHttpDeframer(ctx.alloc(), grpcWebText);
+        streamDeframer.setDeframer(messageReader);
+        messageReader.subscribe(this, ctx.eventLoop());
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
 
         this.res = requireNonNull(res, "res");
@@ -446,7 +451,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void onError(Throwable t) {
-        if (!closeCalled) {
+        if (!closeCalled && !(t instanceof AbortedStreamException)) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
         }
     }
@@ -476,9 +481,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private void closeListener(Status newStatus) {
         if (!listenerClosed) {
             listenerClosed = true;
+            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             setClientStreamClosed();
             messageFramer.close();
-            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             if (newStatus.isOk()) {
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnComplete);
@@ -531,7 +536,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void setClientStreamClosed() {
         if (!clientStreamClosed) {
-            messageReader().cancel();
+            messageReader().abort();
             clientStreamClosed = true;
         }
     }
@@ -556,7 +561,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         return trailersBuilder.build();
     }
 
-    HttpStreamReader messageReader() {
+    HttpDeframer<DeframedMessage> messageReader() {
         return messageReader;
     }
 

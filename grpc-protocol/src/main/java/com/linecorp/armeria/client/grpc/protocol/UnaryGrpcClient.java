@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
@@ -161,8 +162,8 @@ public final class UnaryGrpcClient {
 
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
-                           final ArmeriaMessageDeframer deframer =
-                                   new ArmeriaMessageDeframer(ctx.alloc(), Integer.MAX_VALUE, false);
+                           final HttpDeframer<DeframedMessage> deframer =
+                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE).newHttpDeframer(ctx.alloc());
 
                            StreamMessage.of(msg.content()).subscribe(deframer, ctx.eventLoop());
                            deframer.subscribe(singleSubscriber(msg, responseFuture), ctx.eventLoop());

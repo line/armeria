@@ -58,10 +58,10 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.HttpDeframerHandler;
 import com.linecorp.armeria.common.stream.HttpDeframerInput;
 import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
@@ -82,7 +82,7 @@ import io.netty.buffer.Unpooled;
  * a {@link ByteBuf} to optimize message parsing.
  */
 @UnstableApi
-public class ArmeriaMessageDeframer extends HttpDeframer<DeframedMessage> implements AutoCloseable {
+public class ArmeriaMessageDeframer implements HttpDeframerHandler<DeframedMessage> {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
@@ -93,6 +93,143 @@ public class ArmeriaMessageDeframer extends HttpDeframer<DeframedMessage> implem
     private static final int RESERVED_MASK = 0x7E;
     // Valid type is always positive.
     private static final int UNINITIALIED_TYPE = -1;
+
+    private final int maxMessageSizeBytes;
+
+    private int currentType = UNINITIALIED_TYPE;
+    private int requiredLength = HEADER_LENGTH;
+    private boolean startedDeframing;
+
+    @Nullable
+    private Decompressor decompressor;
+
+    /**
+     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
+     */
+    public ArmeriaMessageDeframer(int maxMessageSizeBytes) {
+        this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
+    }
+
+    /**
+     * Returns a newly-created {@link HttpDeframer} using this {@link HttpDeframerHandler}.
+     */
+    public final HttpDeframer<DeframedMessage> newHttpDeframer(ByteBufAllocator alloc) {
+        return newHttpDeframer(alloc, false);
+    }
+
+    /**
+     * Returns a newly-created {@link HttpDeframer} using this {@link HttpDeframerHandler}.
+     * If {@code decodeBase64} is set to true, a base64-encoded {@link ByteBuf} is decoded before deframing.
+     */
+    public final HttpDeframer<DeframedMessage> newHttpDeframer(ByteBufAllocator alloc, boolean decodeBase64) {
+        final Base64Decoder base64Decoder;
+        if (decodeBase64) {
+            base64Decoder = new Base64Decoder(alloc);
+        } else {
+            base64Decoder = null;
+        }
+        return new HttpDeframer<>(this, alloc, data -> {
+            if (base64Decoder != null) {
+                return base64Decoder.decode(data.byteBuf());
+            } else {
+                return data.byteBuf();
+            }
+        });
+    }
+
+    @Override
+    public void process(HttpDeframerInput in, HttpDeframerOutput<DeframedMessage> out) {
+        startedDeframing = true;
+        int readableBytes = in.readableBytes();
+        while (readableBytes >= requiredLength) {
+            final int length = requiredLength;
+            if (currentType == UNINITIALIED_TYPE) {
+                readHeader(in);
+            } else {
+                out.add(readBody(in));
+            }
+            readableBytes -= length;
+        }
+    }
+
+    /**
+     * Processes the gRPC compression header which is composed of the compression flag and the outer
+     * frame length.
+     */
+    private void readHeader(HttpDeframerInput in) {
+        final int type = in.readUnsignedByte();
+        if ((type & RESERVED_MASK) != 0) {
+            throw new ArmeriaStatusException(
+                    StatusCodes.INTERNAL,
+                    DEBUG_STRING + ": Frame header malformed: reserved bits not zero");
+        }
+
+        // Update the required length to include the length of the frame.
+        requiredLength = in.readInt();
+        if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
+            throw new ArmeriaStatusException(
+                    StatusCodes.RESOURCE_EXHAUSTED,
+                    String.format("%s: Frame size %d exceeds maximum: %d. ",
+                                  DEBUG_STRING, requiredLength,
+                                  maxMessageSizeBytes));
+        }
+
+        // Store type and continue reading the frame body.
+        currentType = type;
+    }
+
+    /**
+     * Processes the body of the gRPC compression frame. A single compression frame may contain
+     * several gRPC messages within it.
+     */
+    private DeframedMessage readBody(HttpDeframerInput in) {
+        final ByteBuf buf;
+        if (requiredLength == 0) {
+            buf = Unpooled.EMPTY_BUFFER;
+        } else {
+            buf = in.readBytes(requiredLength);
+        }
+        final boolean isCompressed = (currentType & COMPRESSED_FLAG_MASK) != 0;
+        final DeframedMessage msg = isCompressed ? getCompressedBody(buf) : getUncompressedBody(buf);
+        // Done with this frame, begin processing the next header.
+        currentType = UNINITIALIED_TYPE;
+        requiredLength = HEADER_LENGTH;
+        return msg;
+    }
+
+    private DeframedMessage getUncompressedBody(ByteBuf buf) {
+        return new DeframedMessage(buf, currentType);
+    }
+
+    private DeframedMessage getCompressedBody(ByteBuf buf) {
+        if (decompressor == null) {
+            buf.release();
+            throw new ArmeriaStatusException(
+                    StatusCodes.INTERNAL,
+                    DEBUG_STRING + ": Can't decode compressed frame as compression not configured.");
+        }
+
+        try {
+            // Enforce the maxMessageSizeBytes limit on the returned stream.
+            final InputStream unlimitedStream =
+                    decompressor.decompress(new ByteBufInputStream(buf, true));
+            return new DeframedMessage(
+                    new SizeEnforcingInputStream(unlimitedStream, maxMessageSizeBytes, DEBUG_STRING),
+                    currentType);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Sets the {@link Decompressor} for this deframer.
+     */
+    public ArmeriaMessageDeframer decompressor(@Nullable Decompressor decompressor) {
+        checkState(!startedDeframing,
+                   "Deframing has already started, cannot change decompressor mid-stream.");
+        this.decompressor = decompressor;
+        return this;
+    }
 
     /**
      * A deframed message. For uncompressed messages, we have the entire buffer available and return it
@@ -176,132 +313,6 @@ public class ArmeriaMessageDeframer extends HttpDeframer<DeframedMessage> implem
         @Override
         public int hashCode() {
             return Objects.hash(buf, stream);
-        }
-    }
-
-    private final int maxMessageSizeBytes;
-    @Nullable
-    private final Base64Decoder base64Decoder;
-
-    private int currentType = UNINITIALIED_TYPE;
-    private int requiredLength = HEADER_LENGTH;
-    private boolean startedDeframing;
-
-    @Nullable
-    private Decompressor decompressor;
-
-    /**
-     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
-     */
-    public ArmeriaMessageDeframer(ByteBufAllocator alloc, int maxMessageSizeBytes, boolean decodeBase64) {
-        super(requireNonNull(requireNonNull(alloc, "alloc")));
-        this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
-        if (decodeBase64) {
-            base64Decoder = new Base64Decoder(alloc);
-        } else {
-            base64Decoder = null;
-        }
-    }
-
-    /**
-     * Sets the {@link Decompressor} for this deframer.
-     */
-    public ArmeriaMessageDeframer decompressor(@Nullable Decompressor decompressor) {
-        checkState(!startedDeframing, "Deframing has already started, cannot change decompressor mid-stream.");
-        this.decompressor = decompressor;
-        return this;
-    }
-
-    @Override
-    protected final ByteBuf convertToByteBuf(HttpData data) {
-        if (base64Decoder != null) {
-            return base64Decoder.decode(data.byteBuf());
-        }  else {
-            return data.byteBuf();
-        }
-    }
-
-    @Override
-    protected final void process(HttpDeframerInput in, HttpDeframerOutput<DeframedMessage> out) {
-        startedDeframing = true;
-        int readableBytes = in.readableBytes();
-        while (readableBytes >= requiredLength) {
-            final int length = requiredLength;
-            if (currentType == UNINITIALIED_TYPE) {
-                readHeader(in);
-            } else {
-                out.add(readBody(in));
-            }
-            readableBytes -= length;
-        }
-    }
-
-    /**
-     * Processes the gRPC compression header which is composed of the compression flag and the outer
-     * frame length.
-     */
-    private void readHeader(HttpDeframerInput in) {
-        final int type = in.readUnsignedByte();
-        if ((type & RESERVED_MASK) != 0) {
-            throw new ArmeriaStatusException(
-                    StatusCodes.INTERNAL,
-                    DEBUG_STRING + ": Frame header malformed: reserved bits not zero");
-        }
-
-        // Update the required length to include the length of the frame.
-        requiredLength = in.readInt();
-        if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
-            throw new ArmeriaStatusException(
-                    StatusCodes.RESOURCE_EXHAUSTED,
-                    String.format("%s: Frame size %d exceeds maximum: %d. ",
-                                  DEBUG_STRING, requiredLength,
-                                  maxMessageSizeBytes));
-        }
-
-        // Store type and continue reading the frame body.
-        currentType = type;
-    }
-
-    /**
-     * Processes the body of the gRPC compression frame. A single compression frame may contain
-     * several gRPC messages within it.
-     */
-    private DeframedMessage readBody(HttpDeframerInput in) {
-        final ByteBuf buf;
-        if (requiredLength == 0) {
-            buf = Unpooled.EMPTY_BUFFER;
-        } else {
-            buf = in.readBytes(requiredLength);
-        }
-        final boolean isCompressed = (currentType & COMPRESSED_FLAG_MASK) != 0;
-        final DeframedMessage msg = isCompressed ? getCompressedBody(buf) : getUncompressedBody(buf);
-        // Done with this frame, begin processing the next header.
-        currentType = UNINITIALIED_TYPE;
-        requiredLength = HEADER_LENGTH;
-        return msg;
-    }
-
-    private DeframedMessage getUncompressedBody(ByteBuf buf) {
-        return new DeframedMessage(buf, currentType);
-    }
-
-    private DeframedMessage getCompressedBody(ByteBuf buf) {
-        if (decompressor == null) {
-            buf.release();
-            throw new ArmeriaStatusException(
-                    StatusCodes.INTERNAL,
-                    DEBUG_STRING + ": Can't decode compressed frame as compression not configured.");
-        }
-
-        try {
-            // Enforce the maxMessageSizeBytes limit on the returned stream.
-            final InputStream unlimitedStream =
-                    decompressor.decompress(new ByteBufInputStream(buf, true));
-            return new DeframedMessage(
-                    new SizeEnforcingInputStream(unlimitedStream, maxMessageSizeBytes, DEBUG_STRING),
-                    currentType);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 

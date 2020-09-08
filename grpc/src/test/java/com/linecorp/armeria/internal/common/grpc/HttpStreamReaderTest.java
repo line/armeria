@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
@@ -47,23 +48,24 @@ class HttpStreamReaderTest {
             HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
 
     private AtomicReference<Status> statusRef;
-
-    private HttpStreamReader reader;
+    private HttpDeframer<DeframedMessage> deframer;
 
     @BeforeEach
     void setUp() {
         statusRef = new AtomicReference<>();
-        final TransportStatusListener transportStatusListener = (status, metadata) -> statusRef.set(status);
-        reader = new HttpStreamReader(
-                DecompressorRegistry.getDefaultInstance(), transportStatusListener,
-                ByteBufAllocator.DEFAULT, /* maxMessageSizeBytes */ -1, /* decodeBase64 */false);
+        final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
+        final HttpStreamDeframer streamDeframer =
+                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), statusListener,
+                                       Integer.MAX_VALUE);
+        deframer = streamDeframer.newHttpDeframer(ByteBufAllocator.DEFAULT);
+        streamDeframer.setDeframer(deframer);
     }
 
     @Test
     void onHeaders() {
         final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS);
-        source.subscribe(reader);
-        StepVerifier.create(reader)
+        source.subscribe(deframer);
+        StepVerifier.create(deframer)
                     .thenRequest(1)
                     .expectNextCount(0)
                     .verifyComplete();
@@ -72,8 +74,8 @@ class HttpStreamReaderTest {
     @Test
     void onTrailers() {
         final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS, TRAILERS);
-        source.subscribe(reader);
-        StepVerifier.create(reader)
+        source.subscribe(deframer);
+        StepVerifier.create(deframer)
                     .thenRequest(1)
                     .expectNextCount(0)
                     .verifyComplete();
@@ -83,8 +85,8 @@ class HttpStreamReaderTest {
     void onMessage() throws Exception {
         final DeframedMessage deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
         final StreamMessage<HttpObject> source = StreamMessage.of(DATA);
-        source.subscribe(reader);
-        StepVerifier.create(reader)
+        source.subscribe(deframer);
+        StepVerifier.create(deframer)
                     .thenRequest(1)
                     .expectNextMatches(message -> {
                         final boolean result = message.equals(deframedMessage);
@@ -98,9 +100,9 @@ class HttpStreamReaderTest {
     @Test
     void onMessage_deframeError() throws Exception {
         final StreamMessage<HttpData> malformed = StreamMessage.of(HttpData.ofUtf8("foobar"));
-        malformed.subscribe(reader);
+        malformed.subscribe(deframer);
 
-        StepVerifier.create(reader)
+        StepVerifier.create(deframer)
                     .thenRequest(1)
                     .verifyError(ArmeriaStatusException.class);
         await().untilAsserted(() -> {
@@ -112,8 +114,8 @@ class HttpStreamReaderTest {
     void httpNotOk() {
         final StreamMessage<ResponseHeaders> source =
                 StreamMessage.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
-        source.subscribe(reader);
-        StepVerifier.create(reader)
+        source.subscribe(deframer);
+        StepVerifier.create(deframer)
                     .thenRequest(1)
                     .verifyComplete();
 

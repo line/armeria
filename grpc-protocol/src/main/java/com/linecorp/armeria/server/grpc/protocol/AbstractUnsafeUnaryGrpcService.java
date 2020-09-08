@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
@@ -108,8 +109,8 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                                                              EventLoop eventLoop,
                                                              ByteBufAllocator alloc) {
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-        final ArmeriaMessageDeframer deframer =
-                new ArmeriaMessageDeframer(alloc, Integer.MAX_VALUE, false);
+        final HttpDeframer<DeframedMessage> deframer =
+                new ArmeriaMessageDeframer(Integer.MAX_VALUE).newHttpDeframer(alloc);
         StreamMessage.of(framed).subscribe(deframer, eventLoop);
         deframer.subscribe(singleSubscriber(deframed), eventLoop);
         return deframed;

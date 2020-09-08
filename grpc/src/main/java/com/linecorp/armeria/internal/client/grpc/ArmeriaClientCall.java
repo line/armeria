@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -60,7 +61,7 @@ import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
@@ -105,7 +106,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final CompressorRegistry compressorRegistry;
     @Nullable
-    private HttpStreamReader responseReader;
+    private HttpDeframer<DeframedMessage> responseReader;
     private final SerializationFormat serializationFormat;
     private final boolean unsafeWrapResponseBuffers;
     @Nullable
@@ -216,8 +217,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        responseReader = new HttpStreamReader(decompressorRegistry, this,
-                                              ctx.alloc(), maxInboundMessageSizeBytes, grpcWebText);
+        final HttpStreamDeframer streamDeframer =
+                new HttpStreamDeframer(decompressorRegistry, this, maxInboundMessageSizeBytes);
+        responseReader = streamDeframer.newHttpDeframer(ctx.alloc(), grpcWebText);
+        streamDeframer.setDeframer(responseReader);
         responseReader.subscribe(this, ctx.eventLoop());
 
         res.subscribe(responseReader, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
@@ -449,7 +452,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             req.abort(status.asRuntimeException(metadata));
         }
         if (responseReader != null) {
-            responseReader.cancel();
+            responseReader.abort();
         }
 
         try (SafeCloseable ignored = ctx.push()) {

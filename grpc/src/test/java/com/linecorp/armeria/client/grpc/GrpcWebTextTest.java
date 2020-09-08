@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -166,8 +167,8 @@ class GrpcWebTextTest {
                                                                  EventLoop eventLoop,
                                                                  ByteBufAllocator alloc) {
             final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-            final ArmeriaMessageDeframer deframer =
-                    new ArmeriaMessageDeframer(alloc, Integer.MAX_VALUE, true);
+            final HttpDeframer<DeframedMessage> deframer =
+                    new ArmeriaMessageDeframer(Integer.MAX_VALUE).newHttpDeframer(alloc, true);
             StreamMessage.of(framed).subscribe(deframer, eventLoop);
             deframer.subscribe(singleSubscriber(deframed), eventLoop);
             return deframed;

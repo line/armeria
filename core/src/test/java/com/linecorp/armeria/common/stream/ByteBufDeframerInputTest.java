@@ -58,8 +58,8 @@ class ByteBufDeframerInputTest {
             assertThat(input.readByte()).isEqualTo((byte) i);
         }
         assertThatThrownBy(() -> input.readByte())
-                .isInstanceOf(IndexOutOfBoundsException.class)
-                .hasMessageContaining("readerIndex: 10 (expected: 0 <= readerIndex < writerIndex(10))");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
     }
 
     @Test
@@ -82,8 +82,8 @@ class ByteBufDeframerInputTest {
         assertThat(input.readInt()).isEqualTo(expected2);
 
         assertThatThrownBy(() -> input.readInt())
-                .isInstanceOf(IndexOutOfBoundsException.class)
-                .hasMessageContaining("readerIndex: 9 (expected: 0 < readerIndex + 4 <= writerIndex(10))");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
     }
 
     @Test
@@ -135,8 +135,8 @@ class ByteBufDeframerInputTest {
         assertThat(buf.unwrap()).isSameAs(byteBuf4);
 
         assertThatThrownBy(() -> input.readBytes(1))
-                .isInstanceOf(IndexOutOfBoundsException.class)
-                .hasMessageContaining("readerIndex: 10 (expected: 0 < readerIndex + 1 <= writerIndex(10))");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
         buf.release();
         input.close();
     }
