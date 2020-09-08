@@ -48,13 +48,13 @@ public final class LoggingDecorators {
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
         ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
             try (SafeCloseable ignored = ctx.push()) {
-                logger.warn("Unexpected exception while logging request: ", e);
+                logger.warn("{} Unexpected exception while logging request: ", ctx, e);
             }
             return null;
         });
         ctx.log().whenComplete().thenAccept(responseLogger).exceptionally(e -> {
             try (SafeCloseable ignored = ctx.push()) {
-                logger.warn("Unexpected exception while logging response: ", e);
+                logger.warn("{} Unexpected exception while logging response: ", ctx, e);
             }
             return null;
         });
