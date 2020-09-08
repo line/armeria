@@ -5,7 +5,7 @@ a client uses the information to distribute its requests to the servers autonomo
 traditional server-side load balancing where the requests go through a dedicated load balancer such as
 [L4 and L7 switches](https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch).
 
-Armeria provides 2 <type://ServerListener> implementations for registering:
+Armeria provides 2 <type://ServerListener> implementations for service registration:
 - <type://ZooKeeperUpdatingListener> which registers to [ZooKeeper](https://zookeeper.apache.org/)
   as an ephemeral node.
 - <type://EurekaUpdatingListener> which registers to [Eureka](https://github.com/Netflix/eureka/).
@@ -70,8 +70,11 @@ server.start();
 For more information, please refer to the API documentation of the
 [com.linecorp.armeria.server.zookeeper](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/server/zookeeper/package-summary.html) package.
 
-### See also
-- [ZooKeeper service discovery](/docs/client-service-discovery#zookeeper-based-service-discovery-with-zookeeperendpointgroup)
+<Tip>
+
+See [ZooKeeper service discovery](/docs/client-service-discovery#zookeeper-based-service-discovery-with-zookeeperendpointgroup).
+
+</Tip>
 
 ## Eureka-based service registration with `EurekaUpdatingListener`
 
@@ -98,13 +101,13 @@ import com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder;
 
 EurekaUpdatingListenerBuilder builder =
         EurekaUpdatingListener.builder("https://eureka.com:8001/eureka/v2");
-builder.instanceId("i-00000000")
-       .setHostname("armeria.service.1")
-       // If ipAddr is not specified, it's automatically filled using
-       // SystemInfo.defaultNonLoopbackIpV4Address().
-       .ipAddr("192.168.10.10")
-       .vipAddress("armeria.service.com:8080");
-       .build();
+                              .instanceId("i-00000000")
+                              .setHostname("armeria.service.1")
+                              // If ipAddr is not specified, it's automatically filled
+                              // using SystemInfo.defaultNonLoopbackIpV4Address().
+                              .ipAddr("192.168.10.10")
+                              .vipAddress("armeria.service.com:8080");
+                              .build();
 EurekaUpdatingListener listener = builder.build();
 ServerBuilder sb = Server.builder();
 sb.addListener(listener);
@@ -114,5 +117,8 @@ sb.builder().start();
 For more information, please refer to the API documentation of the
 [com.linecorp.armeria.client.eureka](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/eureka/package-summary.html) package.
 
-### See also
-- [Eureka service discovery](/docs/client-service-discovery#eureka-based-service-discovery-with-eurekaendpointgroup)
+<Tip>
+
+See [Eureka service discovery](/docs/client-service-discovery#eureka-based-service-discovery-with-eurekaendpointgroup).
+
+</Tip>
