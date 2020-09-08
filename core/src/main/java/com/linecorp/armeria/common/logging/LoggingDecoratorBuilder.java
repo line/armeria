@@ -84,8 +84,8 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the specified loggerName which is used to create a new {@link Logger}.
-     * If unset, a default {@link Logger} will be used.
+     * Sets the name of the {@link Logger} to use when logging.
+     * This method is a shortcut for {@code this.logger(LoggerFactory.getLogger(loggerName))}.
      */
     public LoggingDecoratorBuilder logger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
