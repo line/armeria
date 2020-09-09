@@ -172,8 +172,9 @@ class LoggingClientTest {
                                                          })
                                                          .build(delegate);
         loggingClient.execute(ctx, req);
-        verify(logger).warn(eq("Unexpected exception while logging request: "), any(CompletionException.class));
-        verify(logger).warn(eq("Unexpected exception while logging response: "),
+        verify(logger).warn(eq("{} Unexpected exception while logging request: "), eq(ctx),
+                            any(CompletionException.class));
+        verify(logger).warn(eq("{} Unexpected exception while logging response: "), eq(ctx),
                             any(CompletionException.class));
         verifyNoMoreInteractions(logger);
         clearInvocations(logger);
