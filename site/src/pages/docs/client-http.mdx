@@ -34,6 +34,7 @@ The ad-hoc <type://WebClient> would be useful in the following cases:
 
 ```java
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpHeaderNames;
 
 // Create a WebClient without a base URI.
 WebClient webClient = WebClient.of();
@@ -57,7 +58,7 @@ AggregatedHttpResponse redirected = webClient.get("http://example.com/redirect")
                                              .aggregate()
                                              .join();
 assert redirected.status() == HttpStatus.TEMPORARY_REDIRECT;
-String location = redirected.headers().get(LOCATION);
+String location = redirected.headers().get(HttpHeaderNames.LOCATION);
 AggregatedHttpResponse actual = webClient.get(location).aggregate().join();
 ```
 
