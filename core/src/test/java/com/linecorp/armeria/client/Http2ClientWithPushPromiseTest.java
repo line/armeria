@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +67,9 @@ class Http2ClientWithPushPromiseTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(promisedStreamId).isNotZero();
-        assertThat(rstStreamIds).contains(promisedStreamId);
+        await().untilAsserted(() -> {
+            assertThat(rstStreamIds).contains(promisedStreamId);
+        });
     }
 
     private static final class PushPromisedH2CHandler extends SimpleH2CServerHandler {
