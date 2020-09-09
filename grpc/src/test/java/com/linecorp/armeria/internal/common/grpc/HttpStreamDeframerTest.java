@@ -40,7 +40,7 @@ import io.grpc.Status;
 import io.netty.buffer.ByteBufAllocator;
 import reactor.test.StepVerifier;
 
-class HttpStreamReaderTest {
+class HttpStreamDeframerTest {
 
     private static final ResponseHeaders HEADERS = ResponseHeaders.of(HttpStatus.OK);
     private static final HttpHeaders TRAILERS = HttpHeaders.of(GrpcHeaderNames.GRPC_STATUS, 2);

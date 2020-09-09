@@ -98,7 +98,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private final MethodDescriptor<I, O> method;
 
-    private final HttpDeframer<DeframedMessage> messageReader;
+    private final HttpDeframer<DeframedMessage> messageDeframer;
     private final ArmeriaMessageFramer messageFramer;
 
     private final HttpResponseWriter res;
@@ -164,9 +164,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final HttpStreamDeframer streamDeframer =
                 new HttpStreamDeframer(decompressorRegistry, this, maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
-        messageReader = streamDeframer.newHttpDeframer(ctx.alloc(), grpcWebText);
-        streamDeframer.setDeframer(messageReader);
-        messageReader.subscribe(this, ctx.eventLoop());
+        messageDeframer = streamDeframer.newHttpDeframer(ctx.alloc(), grpcWebText);
+        streamDeframer.setDeframer(messageDeframer);
+        messageDeframer.subscribe(this, ctx.eventLoop());
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
 
         this.res = requireNonNull(res, "res");
@@ -536,7 +536,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void setClientStreamClosed() {
         if (!clientStreamClosed) {
-            messageReader().abort();
+            messageDeframer().abort();
             clientStreamClosed = true;
         }
     }
@@ -561,8 +561,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         return trailersBuilder.build();
     }
 
-    HttpDeframer<DeframedMessage> messageReader() {
-        return messageReader;
+    HttpDeframer<DeframedMessage> messageDeframer() {
+        return messageDeframer;
     }
 
     void setListener(Listener<I> listener) {

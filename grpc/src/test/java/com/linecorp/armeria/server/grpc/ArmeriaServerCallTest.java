@@ -123,14 +123,14 @@ public class ArmeriaServerCallTest {
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build());
         call.setListener(listener);
-        call.messageReader().onSubscribe(subscription);
+        call.messageDeframer().onSubscribe(subscription);
 
         ctx.setAttr(GrpcUnsafeBufferUtil.BUFFERS, buffersAttr);
     }
 
     @After
     public void tearDown() {
-        call.messageReader().abort();
+        call.messageDeframer().abort();
         if (!call.isCloseCalled()) {
             call.close(Status.OK, new Metadata());
         }
@@ -193,7 +193,7 @@ public class ArmeriaServerCallTest {
     @Test
     public void readyOnStart() {
         assertThat(call.isReady()).isTrue();
-        call.messageReader().abort();
+        call.messageDeframer().abort();
     }
 
     @Test

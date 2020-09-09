@@ -39,14 +39,14 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
 
 @Test
-public class HttpStreamReaderTckTest extends PublisherVerification<DeframedMessage> {
+public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> {
 
     private static final TransportStatusListener noopListener = (status, metadata) -> {};
 
     private static final HttpData DATA =
             HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
 
-    public HttpStreamReaderTckTest() {
+    public HttpDeframerTckTest() {
         super(new TestEnvironment(200));
     }
 

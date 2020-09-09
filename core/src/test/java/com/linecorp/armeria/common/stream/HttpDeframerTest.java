@@ -30,7 +30,10 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 
 import io.netty.buffer.ByteBuf;
@@ -121,6 +124,29 @@ class HttpDeframerTest {
                     .expectNext("A0123456789")
                     .expectComplete()
                     .verify();
+    }
+
+    @Test
+    void example() {
+        final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
+        final HttpDeframer<String> deframer = new HttpDeframer<>(decoder, ByteBufAllocator.DEFAULT);
+
+        final Flux<HttpData> stream = Flux.just("A012345",
+                                                "6789B0",
+                                                "12",
+                                                "",
+                                                "3",
+                                                "456789",
+                                                "C01234",
+                                                "56789D",
+                                                "0123456789E0123456789")
+                                          .map(HttpData::ofUtf8);
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"), stream);
+        request.subscribe(deframer);
+        final List<String> block = Flux.from(deframer)
+                                       .collectList().block();
+        System.out.println(block);
+
     }
 
     @Test

@@ -54,7 +54,7 @@ public interface HttpDeframerInput extends SafeCloseable {
      * Returns a newly retained slice of this {@link ByteBuf} at the current {@code readerIndex}
      * and increases the {@code readerIndex} by the specified {@code length}.
      *
-     * @throws IndexOutOfBoundsException if the specified {@code length} is greater than {@link #length()}
+     * @throws IllegalStateException if the specified {@code length} is greater than {@link #readableBytes()}
      */
     ByteBuf readBytes(int length);
 }

@@ -26,11 +26,13 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Processor;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -40,7 +42,59 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A skeletal {@link Processor} implementation that decodes a stream of {@link HttpObject}s to N objects.
+ * A {@link Processor} implementation that decodes a stream of {@link HttpObject}s to N objects.
+ *
+ * <p>To deframe HTTP payload using {@link HttpDeframer}, you can follow the steps below.
+ * <ol>
+ *   <li>Implement your deframing logic in {@link HttpDeframerHandler}.
+ *       <pre>{@code
+ *       > class FixedLengthDecoder implements HttpDeframerHandler<String> {
+ *       >     private final int length;
+ *
+ *       >     FixedLengthDecoder(int length) {
+ *       >         this.length = length;
+ *       >     }
+ *
+ *       >     @Override
+ *       >     public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
+ *       >         int remained = in.readableBytes();
+ *       >         if (remained < length) {
+ *       >             // The input is not enough to process. Waiting for more data.
+ *       >             return;
+ *       >         }
+ *
+ *       >         while (remained >= length) {
+ *       >             // Read data from 'HttpDeframerInput' and
+ *       >             // write the processed result to 'HttpDeframerOutput'.
+ *       >             ByteBuf buf = in.readBytes(length);
+ *       >             out.add(buf.toString(StandardCharsets.UTF_8));
+ *       >             // Should release the returned 'ByteBuf'
+ *       >             buf.release();
+ *       >             remained -= length;
+ *       >         }
+ *       >     }
+ *       > }
+ *       }</pre>
+ *   </li>
+ *   <li>Create an {@link HttpDeframer} with the {@link HttpDeframerHandler} instance.
+ *       <pre>{@code
+ *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);
+ *       HttpDeframer<String> deframer = new HttpDeframer<>(decoder, ByteBufAllocator.DEFAULT);
+ *       }</pre>
+ *   </li>
+ *   <li>Subscribe to a {@link HttpRequest} using the {@link HttpDeframer}.
+ *       <pre>{@code
+ *       HttpRequest request = ...;
+ *       request.subscribe(deframer);
+ *       }</pre>
+ *   </li>
+ *   <li>Subscribe to the {@link Publisher} of the deframed data using your Reactive Streams library.
+ *       <pre>{@code
+ *       import reactor.core.publisher.Flux;
+ *       Flux<String> block = Flux.from(deframer).map(...);
+ *       }</pre>
+ *   </li>
+ * </ol>
  */
 @UnstableApi
 public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Processor<HttpObject, T> {
@@ -88,7 +142,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         this.handler = requireNonNull(handler, "handler");
         input = new ByteBufDeframerInput(requireNonNull(alloc, "alloc"));
-        this.byteBufConverter = byteBufConverter;
+        this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
     }
 
     private void process(HttpObject data) {
