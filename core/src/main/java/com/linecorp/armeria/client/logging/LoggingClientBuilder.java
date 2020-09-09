@@ -82,6 +82,11 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     }
 
     @Override
+    public LoggingClientBuilder logger(String loggerName) {
+        return (LoggingClientBuilder) super.logger(loggerName);
+    }
+
+    @Override
     public LoggingClientBuilder requestLogLevel(LogLevel requestLogLevel) {
         return (LoggingClientBuilder) super.requestLogLevel(requestLogLevel);
     }

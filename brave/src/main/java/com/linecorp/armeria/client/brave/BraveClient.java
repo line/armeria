@@ -42,6 +42,8 @@ import brave.Tracing;
 import brave.http.HttpClientHandler;
 import brave.http.HttpClientRequest;
 import brave.http.HttpClientResponse;
+import brave.http.HttpRequestParser;
+import brave.http.HttpResponseParser;
 import brave.http.HttpTracing;
 
 /**
@@ -78,8 +80,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     /**
      * Creates a new tracing {@link HttpClient} decorator using the specified {@link HttpTracing} instance.
      */
-    public static Function<? super HttpClient, BraveClient> newDecorator(
-            HttpTracing httpTracing) {
+    public static Function<? super HttpClient, BraveClient> newDecorator(HttpTracing httpTracing) {
         try {
             ensureScopeUsesRequestContext(httpTracing.tracing());
         } catch (IllegalStateException e) {
@@ -87,7 +88,21 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                         "inside an Armeria server (e.g., this is a normal spring-mvc tomcat server).",
                         e.getMessage());
         }
-        return delegate -> new BraveClient(delegate, httpTracing);
+        final HttpRequestParser requestParser = httpTracing.clientRequestParser();
+        final HttpResponseParser responseParser = httpTracing.clientResponseParser();
+        if (requestParser != HttpRequestParser.DEFAULT && responseParser != HttpResponseParser.DEFAULT) {
+            return delegate -> new BraveClient(delegate, httpTracing);
+        }
+
+        // Override the brave default parsers to Armeria default parsers.
+        final HttpTracing.Builder builder = httpTracing.toBuilder();
+        if (requestParser == HttpRequestParser.DEFAULT) {
+            builder.clientRequestParser(ArmeriaHttpClientParser.get());
+        }
+        if (responseParser == HttpResponseParser.DEFAULT) {
+            builder.clientResponseParser(ArmeriaHttpClientParser.get());
+        }
+        return delegate -> new BraveClient(delegate, builder.build());
     }
 
     private final Tracer tracer;

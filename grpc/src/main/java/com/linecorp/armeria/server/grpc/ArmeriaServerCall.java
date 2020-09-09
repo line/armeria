@@ -284,7 +284,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void invokeOnReady() {
         try {
-            listener.onReady();
+            if (listener != null) {
+                listener.onReady();
+            }
         } catch (Throwable t) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
         }
@@ -426,6 +428,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void invokeOnMessage(I request) {
         try (SafeCloseable ignored = ctx.push()) {
+            assert listener != null;
             listener.onMessage(request);
         } catch (Throwable t) {
             upstream.cancel();
@@ -458,6 +461,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void invokeHalfClose() {
         try (SafeCloseable ignored = ctx.push()) {
+            assert listener != null;
             listener.onHalfClose();
         } catch (Throwable t) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
@@ -513,7 +517,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void invokeOnComplete() {
         try (SafeCloseable ignored = ctx.push()) {
-            listener.onComplete();
+            if (listener != null) {
+                listener.onComplete();
+            }
         } catch (Throwable t) {
             // This should not be possible with normal generated stubs which do not implement
             // onComplete, but is conceivable for a completely manually constructed stub.
@@ -523,7 +529,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void invokeOnCancel() {
         try (SafeCloseable ignored = ctx.push()) {
-            listener.onCancel();
+            if (listener != null) {
+                listener.onCancel();
+            }
         } catch (Throwable t) {
             if (!closeCalled) {
                 // A custom error when dealing with client cancel or transport issues should be

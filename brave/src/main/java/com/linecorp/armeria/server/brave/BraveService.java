@@ -31,6 +31,8 @@ import brave.Span;
 import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
+import brave.http.HttpRequestParser;
+import brave.http.HttpResponseParser;
 import brave.http.HttpServerHandler;
 import brave.http.HttpServerRequest;
 import brave.http.HttpServerResponse;
@@ -55,10 +57,26 @@ public final class BraveService extends SimpleDecoratingHttpService {
     /**
      * Creates a new tracing {@link HttpService} decorator using the specified {@link HttpTracing} instance.
      */
-    public static Function<? super HttpService, BraveService>
-    newDecorator(HttpTracing httpTracing) {
+    public static Function<? super HttpService, BraveService> newDecorator(HttpTracing httpTracing) {
         ensureScopeUsesRequestContext(httpTracing.tracing());
-        return service -> new BraveService(service, httpTracing);
+
+        final HttpRequestParser requestParser = httpTracing.serverRequestParser();
+        final HttpResponseParser responseParser = httpTracing.serverResponseParser();
+
+        if (requestParser != HttpRequestParser.DEFAULT && responseParser != HttpResponseParser.DEFAULT) {
+            return service -> new BraveService(service, httpTracing);
+        }
+
+        // Override the brave default parsers to Armeria default parsers.
+        final HttpTracing.Builder builder = httpTracing.toBuilder();
+        if (requestParser == HttpRequestParser.DEFAULT) {
+            builder.serverRequestParser(ArmeriaHttpServerParser.get());
+        }
+        if (responseParser == HttpResponseParser.DEFAULT) {
+            builder.serverResponseParser(ArmeriaHttpServerParser.get());
+        }
+
+        return service -> new BraveService(service, builder.build());
     }
 
     private final Tracer tracer;
