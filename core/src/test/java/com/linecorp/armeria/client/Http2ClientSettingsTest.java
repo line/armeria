@@ -30,17 +30,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -51,18 +47,15 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2EventAdapter;
 import io.netty.handler.codec.http2.Http2Exception;
 
-public class Http2ClientSettingsTest {
+class Http2ClientSettingsTest {
 
     private static final byte[] EMPTY_DATA = new byte[DEFAULT_MAX_FRAME_SIZE];
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
-    public void initialConnectionAndStreamWindowSize() throws Exception {
+    void initialConnectionAndStreamWindowSize() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory =
                      ClientFactory.builder()
@@ -144,7 +137,7 @@ public class Http2ClientSettingsTest {
     }
 
     @Test
-    public void maxFrameSize() throws Exception {
+    void maxFrameSize() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory =
                      ClientFactory.builder()
@@ -225,12 +218,13 @@ public class Http2ClientSettingsTest {
     }
 
     private static void assertSettingsFrameOfWindowSize(InputStream in) throws IOException {
-        final byte[] settingsFrameWithInitialStreamWindowSize = readBytes(in, 21);
         final byte[] expected = {
-                0x00, 0x00, 0x0C, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x12, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x02, 0x00, 0x00,        0x00, 0x00, // SETTINGS_ENABLE_PUSH = 0 (disabled)
                 0x00, 0x04, 0x00, 0x01, (byte) 0x80, 0x00, // INITIAL_WINDOW_SIZE = 32768
                 0x00, 0x06, 0x00, 0x00, 0x20, 0x00         // MAX_HEADER_LIST_SIZE = 8192
         };
+        final byte[] settingsFrameWithInitialStreamWindowSize = readBytes(in, expected.length);
 
         // client sent initial stream window size of 0x18000 which is 96 * 1024.
         assertThat(settingsFrameWithInitialStreamWindowSize).containsExactly(expected);
@@ -320,13 +314,14 @@ public class Http2ClientSettingsTest {
     }
 
     private static void assertSettingsFrameOfMaxFrameSize(InputStream in) throws IOException {
-        final byte[] settingsFrameWithMaxFrameSize = readBytes(in, 21);
         final byte[] expected = {
-                0x00, 0x00, 0x0C, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x12, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
                 // Note that there is no INITIAL_WINDOW_SIZE here because we specified the default (65535).
+                0x00, 0x02, 0x00, 0x00,        0x00, 0x00, // SETTINGS_ENABLE_PUSH = 0 (disabled)
                 0x00, 0x05, 0x00, 0x00, (byte) 0x80, 0x00, // MAX_FRAME_SIZE = 32768
                 0x00, 0x06, 0x00, 0x00, (byte) 0x20, 0x00  // MAX_HEADER_LIST_SIZE = 8192
         };
+        final byte[] settingsFrameWithMaxFrameSize = readBytes(in, expected.length);
 
         // client sent a SETTINGS_MAX_FRAME_SIZE of 0x8000.
         assertThat(settingsFrameWithMaxFrameSize).containsExactly(expected);
