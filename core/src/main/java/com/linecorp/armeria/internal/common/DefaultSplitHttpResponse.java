@@ -37,35 +37,36 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseBodyStream;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
+public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitHttpResponse {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpResponseBodyStream.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultSplitHttpResponse.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater =
             AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class, "downstream");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultHttpResponseBodyStream, HeadersFuture>
+    private static final AtomicReferenceFieldUpdater<DefaultSplitHttpResponse, HeadersFuture>
             informationalHeadersFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultHttpResponseBodyStream.class, HeadersFuture.class, "informationalHeadersFuture");
+            .newUpdater(DefaultSplitHttpResponse.class, HeadersFuture.class, "informationalHeadersFuture");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultHttpResponseBodyStream, HeadersFuture>
+    private static final AtomicReferenceFieldUpdater<DefaultSplitHttpResponse, HeadersFuture>
             trailersFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultHttpResponseBodyStream.class, HeadersFuture.class, "trailersFuture");
+            .newUpdater(DefaultSplitHttpResponse.class, HeadersFuture.class, "trailersFuture");
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
     private static final HeadersFuture<List<ResponseHeaders>> EMPTY_INFORMATIONAL_HEADERS;
@@ -90,8 +91,8 @@ public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
     private volatile boolean wroteAny;
 
-    public DefaultHttpResponseBodyStream(HttpResponse response, EventExecutor executor,
-                                         SubscriptionOption... options) {
+    public DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor,
+                                    SubscriptionOption... options) {
         this.response = requireNonNull(response, "response");
         this.executor = requireNonNull(executor, "executor");
 
@@ -99,7 +100,7 @@ public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
     }
 
     @Override
-    public CompletableFuture<List<ResponseHeaders>> informationalHeaders() {
+    public final CompletableFuture<List<ResponseHeaders>> informationalHeaders() {
         final HeadersFuture<List<ResponseHeaders>> informationalHeadersFuture = this.informationalHeadersFuture;
         if (informationalHeadersFuture != null) {
             return informationalHeadersFuture;
@@ -110,12 +111,17 @@ public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
     }
 
     @Override
-    public CompletableFuture<ResponseHeaders> headers() {
+    public final CompletableFuture<ResponseHeaders> headers() {
         return headersFuture;
     }
 
     @Override
-    public CompletableFuture<HttpHeaders> trailers() {
+    public final StreamMessage<HttpData> body() {
+        return this;
+    }
+
+    @Override
+    public final CompletableFuture<HttpHeaders> trailers() {
         final HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         if (trailersFuture != null) {
             return trailersFuture;
@@ -148,6 +154,13 @@ public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         } else {
             executor.execute(() -> bodySubscriber.setDownStream(subscriber));
         }
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
+                          SubscriptionOption... unused) {
+        // 'SubscriptionOption's are ignored, should specify the 'SubscriptionOption's when creating this class.
+        subscribe(subscriber, executor);
     }
 
     @Override
@@ -290,13 +303,13 @@ public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
         private void completeInformationHeaders() {
             if (informationalHeadersBuilder == null) {
                 if (!informationalHeadersFutureUpdater
-                        .compareAndSet(DefaultHttpResponseBodyStream.this, null,
+                        .compareAndSet(DefaultSplitHttpResponse.this, null,
                                        EMPTY_INFORMATIONAL_HEADERS)) {
                     informationalHeadersFuture.doComplete(ImmutableList.of());
                 }
             } else {
                 informationalHeadersFutureUpdater
-                        .compareAndSet(DefaultHttpResponseBodyStream.this, null,
+                        .compareAndSet(DefaultSplitHttpResponse.this, null,
                                        new HeadersFuture<>());
                 informationalHeadersFuture.doComplete(informationalHeadersBuilder.build());
             }
@@ -307,13 +320,13 @@ public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
          */
         private void completeTrailers(HttpHeaders trailers) {
             final HeadersFuture<HttpHeaders> trailersFuture =
-                    DefaultHttpResponseBodyStream.this.trailersFuture;
+                    DefaultSplitHttpResponse.this.trailersFuture;
             if (trailersFuture != null) {
                 trailersFuture.doComplete(trailers);
             } else {
-                trailersFutureUpdater.compareAndSet(DefaultHttpResponseBodyStream.this,
+                trailersFutureUpdater.compareAndSet(DefaultSplitHttpResponse.this,
                                                     null, new HeadersFuture<>());
-                DefaultHttpResponseBodyStream.this.trailersFuture.doComplete(trailers);
+                DefaultSplitHttpResponse.this.trailersFuture.doComplete(trailers);
             }
         }
 
@@ -352,7 +365,7 @@ public class DefaultHttpResponseBodyStream implements HttpResponseBodyStream {
             }
 
             if (trailersFuture == null) {
-                trailersFutureUpdater.compareAndSet(DefaultHttpResponseBodyStream.this, null, EMPTY_TRAILERS);
+                trailersFutureUpdater.compareAndSet(DefaultSplitHttpResponse.this, null, EMPTY_TRAILERS);
             }
         }
     }

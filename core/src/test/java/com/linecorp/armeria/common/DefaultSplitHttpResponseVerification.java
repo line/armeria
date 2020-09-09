@@ -22,19 +22,19 @@ import org.testng.annotations.Ignore;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageVerification;
-import com.linecorp.armeria.internal.common.DefaultHttpResponseBodyStream;
+import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 
 import reactor.core.publisher.Flux;
 
-public class DefaultHttpResponseBodyStreamVerification extends StreamMessageVerification<HttpData> {
+public class DefaultSplitHttpResponseVerification extends StreamMessageVerification<HttpData> {
 
-    protected DefaultHttpResponseBodyStreamVerification() {
+    protected DefaultSplitHttpResponseVerification() {
         super(new TestEnvironment(1000, 200));
     }
 
     @Override
     public StreamMessage<HttpData> createPublisher(long elements) {
-        return newHttpResponse(elements).toBodyStream();
+        return newHttpResponse(elements).split().body();
     }
 
     private static HttpResponse newHttpResponse(long elements) {
@@ -53,7 +53,7 @@ public class DefaultHttpResponseBodyStreamVerification extends StreamMessageVeri
 
     @Override
     public StreamMessage<HttpData> createFailedPublisher() {
-        return HttpResponse.of(Flux.error(ResponseTimeoutException.get())).toBodyStream();
+        return HttpResponse.of(Flux.error(ResponseTimeoutException.get())).split().body();
     }
 
     @Override
@@ -61,10 +61,10 @@ public class DefaultHttpResponseBodyStreamVerification extends StreamMessageVeri
         final HttpResponse response = newHttpResponse(elements);
         if (elements == 0) {
             response.abort();
-            return response.toBodyStream();
+            return response.split().body();
         } else {
-            final DefaultHttpResponseBodyStream bodyStream =
-                    (DefaultHttpResponseBodyStream) response.toBodyStream();
+            final DefaultSplitHttpResponse bodyStream =
+                    (DefaultSplitHttpResponse) response.split();
             final HttpResponseWriter writer = (HttpResponseWriter) response;
             writer.whenConsumed().thenRun(bodyStream::abort);
             return bodyStream;

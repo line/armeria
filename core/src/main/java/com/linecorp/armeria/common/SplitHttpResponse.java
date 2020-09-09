@@ -19,45 +19,39 @@ package com.linecorp.armeria.common;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.reactivestreams.Subscriber;
+import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
-
-import io.netty.util.concurrent.EventExecutor;
 
 /**
- * An HTTP response body stream which publishes HTTP payloads as a stream of {@link HttpData}.
+ * An {@link HttpResponse} which splits a stream of {@link HttpObject} into HTTP headers and payloads.
  * {@link #informationalHeaders()}, {@link #headers()} will be completed before publishing the first element of
  * {@link HttpData}. {@link #trailers()} might not complete until the entire {@link HttpData} has been consumed.
  */
-public interface HttpResponseBodyStream extends StreamMessage<HttpData> {
+public interface SplitHttpResponse {
+
     /**
-     * Returns a {@link CompletableFuture} which completes a list of
+     * Returns a {@link CompletableFuture} completed with a list of
      * <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#Information_responses">informational
      * </a> {@link ResponseHeaders}.
      */
     CompletableFuture<List<ResponseHeaders>> informationalHeaders();
 
     /**
-     * Returns a {@link CompletableFuture} which completes a non-informational {@link ResponseHeaders}.
+     * Returns a {@link CompletableFuture} completed with a non-informational {@link ResponseHeaders}.
      */
     CompletableFuture<ResponseHeaders> headers();
 
     /**
-     * Returns a {@link CompletableFuture} which completes a {@linkplain HttpHeaders trailers}.
-     * If a {@link HttpResponse} does not contain trailers, the returned {@link CompletableFuture} will complete
-     * an {@linkplain HttpHeaders#of() empty headers}.
+     * Returns a {@link StreamMessage} publishes HTTP payloads as a stream of {@link HttpData}.
      */
-    CompletableFuture<HttpHeaders> trailers();
+    @CheckReturnValue
+    StreamMessage<HttpData> body();
 
     /**
-     * Unsupported operation, use {@link HttpResponse#toBodyStream(EventExecutor, SubscriptionOption...)}
-     * instead.
+     * Returns a {@link CompletableFuture} completed with a {@linkplain HttpHeaders trailers}.
+     * If a {@link HttpResponse} does not contain trailers, the returned {@link CompletableFuture} will be
+     * completed with an {@linkplain HttpHeaders#of() empty headers}.
      */
-    @Override
-    default void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
-                           SubscriptionOption... options) {
-        throw new UnsupportedOperationException("Use 'HttpResponse.toBodyStream(executor, options)' instead");
-    }
+    CompletableFuture<HttpHeaders> trailers();
 }

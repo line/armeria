@@ -24,12 +24,12 @@ import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.DefaultHttpResponseBodyStream;
+import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 
 import io.netty.util.concurrent.EventExecutor;
 import reactor.core.publisher.Mono;
 
-final class ArmeriaHttpResponseBodyStream extends DefaultHttpResponseBodyStream {
+final class ArmeriaHttpResponseBodyStream extends DefaultSplitHttpResponse {
 
     private static final AtomicIntegerFieldUpdater<ArmeriaHttpResponseBodyStream> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaHttpResponseBodyStream.class, "subscribed");

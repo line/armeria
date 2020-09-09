@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
-import com.linecorp.armeria.internal.common.DefaultHttpResponseBodyStream;
+import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -511,41 +511,46 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpResponseBodyStream} which publishes HTTP payloads as a stream of
-     * {@link HttpData}.
-     * {@link HttpResponseBodyStream#informationalHeaders()}, {@link HttpResponseBodyStream#headers()} will be
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject} into
+     * {@link HttpHeaders} and {@link HttpData}.
+     * {@link SplitHttpResponse#informationalHeaders()}, {@link SplitHttpResponse#headers()} will be
      * completed before publishing the first element of {@link HttpData}.
-     * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire {@link HttpData} has been
      * consumed.
      */
     @CheckReturnValue
-    default HttpResponseBodyStream toBodyStream() {
-        return toBodyStream(defaultSubscriberExecutor());
+    default SplitHttpResponse split() {
+        return split(defaultSubscriberExecutor());
     }
 
     /**
-     * Returns a new {@link HttpResponseBodyStream} which publishes HTTP payloads as a stream of
-     * {@link HttpData}.
-     * {@link HttpResponseBodyStream#informationalHeaders()}, {@link HttpResponseBodyStream#headers()} will be
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject} into
+     * {@link HttpHeaders} and {@link HttpData}.
+     * {@link SplitHttpResponse#informationalHeaders()}, {@link SplitHttpResponse#headers()} will be
      * completed before publishing the first element of {@link HttpData}.
-     * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire {@link HttpData} has been
      * consumed.
      */
     @CheckReturnValue
-    default HttpResponseBodyStream toBodyStream(EventExecutor executor) {
-        return new DefaultHttpResponseBodyStream(this, executor);
+    default SplitHttpResponse split(EventExecutor executor) {
+        return new DefaultSplitHttpResponse(this, executor);
     }
 
     /**
-     * Returns a new {@link HttpResponseBodyStream} which publishes HTTP payloads as a stream of
-     * {@link HttpData}.
-     * {@link HttpResponseBodyStream#informationalHeaders()}, {@link HttpResponseBodyStream#headers()} will be
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject} into
+     * {@link HttpHeaders} and {@link HttpData}.
+     * {@link SplitHttpResponse#informationalHeaders()}, {@link SplitHttpResponse#headers()} will be
      * completed before publishing the first element of {@link HttpData}.
-     * {@link HttpResponseBodyStream#trailers()} might not complete until the entire {@link HttpData} has been
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire {@link HttpData} has been
      * consumed.
+     *
+     * <p>(Advanced users only) If you want to get pooled objects from {@link SplitHttpResponse#body()},
+     * you should call this method with {@link SubscriptionOption#WITH_POOLED_OBJECTS}.
+     * The {@link SubscriptionOption}s which you are specified when subscribing to
+     * {@link SplitHttpResponse#body()} will be ignored.
      */
     @CheckReturnValue
-    default HttpResponseBodyStream toBodyStream(EventExecutor executor, SubscriptionOption... options) {
-        return new DefaultHttpResponseBodyStream(this, executor, options);
+    default SplitHttpResponse split(EventExecutor executor, SubscriptionOption... options) {
+        return new DefaultSplitHttpResponse(this, executor, options);
     }
 }

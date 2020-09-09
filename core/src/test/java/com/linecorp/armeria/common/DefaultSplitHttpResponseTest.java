@@ -29,23 +29,23 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-class DefaultHttpResponseBodyStreamTest {
+class DefaultSplitHttpResponseTest {
 
     @Test
     void emptyBody() {
         final HttpResponse response = HttpResponse.of(HttpStatus.NO_CONTENT);
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
-        StepVerifier.create(bodyStream)
+        final SplitHttpResponse splitHttpResponse = response.split();
+        StepVerifier.create(splitHttpResponse.body())
                     .thenRequest(1)
                     .expectNextCount(0)
                     .verifyComplete();
-        assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(splitHttpResponse.headers().join().status()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
     void completeHeadersBeforeConsumeBody() {
         final HttpResponse response = HttpResponse.of(HttpStatus.OK);
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
+        final SplitHttpResponse bodyStream = response.split();
         assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.OK);
     }
 
@@ -55,15 +55,15 @@ class DefaultHttpResponseBodyStreamTest {
                                                       ResponseHeaders.of(HttpStatus.PROCESSING),
                                                       ResponseHeaders.of(HttpStatus.OK),
                                                       HttpData.ofUtf8("Hello"));
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
+        final SplitHttpResponse splitHttpResponse = response.split();
 
-        StepVerifier.create(bodyStream)
+        StepVerifier.create(splitHttpResponse.body())
                     .thenRequest(1)
                     .expectNext(HttpData.ofUtf8("Hello"))
                     .verifyComplete();
-        assertThat(bodyStream.informationalHeaders().join()).containsExactly(
+        assertThat(splitHttpResponse.informationalHeaders().join()).containsExactly(
                 ResponseHeaders.of(HttpStatus.CONTINUE), ResponseHeaders.of(HttpStatus.PROCESSING));
-        assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.OK);
+        assertThat(splitHttpResponse.headers().join().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -72,14 +72,14 @@ class DefaultHttpResponseBodyStreamTest {
                                                                 HttpData.ofUtf8("Hello1"),
                                                                 HttpData.ofUtf8("Hello2"),
                                                                 HttpHeaders.of("grpc-status", "0")));
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
+        final SplitHttpResponse splitHttpResponse = response.split();
 
-        assertThat(bodyStream.trailers()).isNotDone();
-        StepVerifier.create(bodyStream)
+        assertThat(splitHttpResponse.trailers()).isNotDone();
+        StepVerifier.create(splitHttpResponse.body())
                     .thenRequest(2)
                     .expectNextCount(2)
                     .verifyComplete();
-        assertThat(bodyStream.trailers().join().get("grpc-status")).isEqualTo("0");
+        assertThat(splitHttpResponse.trailers().join().get("grpc-status")).isEqualTo("0");
     }
 
     @Test
@@ -88,8 +88,8 @@ class DefaultHttpResponseBodyStreamTest {
                                                                 HttpData.ofUtf8("Hello1"),
                                                                 HttpData.ofUtf8("Hello2")));
 
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
-        StepVerifier.create(bodyStream)
+        final SplitHttpResponse splitHttpResponse = response.split();
+        StepVerifier.create(splitHttpResponse.body())
                     .thenRequest(1)
                     .expectNext(HttpData.ofUtf8("Hello1"))
                     .thenRequest(1)
@@ -100,29 +100,29 @@ class DefaultHttpResponseBodyStreamTest {
     @Test
     void failedResponse() {
         final HttpResponse response = HttpResponse.ofFailure(ResponseTimeoutException.get());
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
-        StepVerifier.create(bodyStream)
+        final SplitHttpResponse splitHttpResponse = response.split();
+        StepVerifier.create(splitHttpResponse.body())
                     .thenRequest(1)
                     .expectError(ResponseTimeoutException.class)
                     .verify();
-        assertThat(bodyStream.informationalHeaders().join()).isEmpty();
-        assertThatThrownBy(() -> bodyStream.headers().join())
+        assertThat(splitHttpResponse.informationalHeaders().join()).isEmpty();
+        assertThatThrownBy(() -> splitHttpResponse.headers().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
-        assertThat(bodyStream.trailers().join().isEmpty()).isTrue();
+        assertThat(splitHttpResponse.trailers().join().isEmpty()).isTrue();
     }
 
     @Test
     void abortedResponse() {
         final HttpResponse response = HttpResponse.ofFailure(AbortedStreamException.get());
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
-        StepVerifier.create(bodyStream)
+        final SplitHttpResponse splitHttpResponse = response.split();
+        StepVerifier.create(splitHttpResponse.body())
                     .thenRequest(1)
                     .expectError(AbortedStreamException.class)
                     .verify();
-        assertThat(bodyStream.informationalHeaders().join()).isEmpty();
-        assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.UNKNOWN);
-        assertThat(bodyStream.trailers().join().isEmpty()).isTrue();
+        assertThat(splitHttpResponse.informationalHeaders().join()).isEmpty();
+        assertThat(splitHttpResponse.headers().join().status()).isEqualTo(HttpStatus.UNKNOWN);
+        assertThat(splitHttpResponse.trailers().join().isEmpty()).isTrue();
     }
 
     @Test
@@ -131,13 +131,13 @@ class DefaultHttpResponseBodyStreamTest {
                                                                 HttpData.ofUtf8("Hello1"),
                                                                 HttpData.ofUtf8("Hello2"),
                                                                 HttpHeaders.of("grpc-status", 0)));
-        final HttpResponseBodyStream bodyStream = response.toBodyStream();
-        StepVerifier.create(bodyStream)
+        final SplitHttpResponse splitHttpResponse = response.split();
+        StepVerifier.create(splitHttpResponse.body())
                     .thenCancel()
                     .verify();
 
-        assertThat(bodyStream.informationalHeaders().join()).isEmpty();
-        assertThat(bodyStream.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.OK));
-        assertThat(bodyStream.trailers().join().isEmpty()).isTrue();
+        assertThat(splitHttpResponse.informationalHeaders().join()).isEmpty();
+        assertThat(splitHttpResponse.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.OK));
+        assertThat(splitHttpResponse.trailers().join().isEmpty()).isTrue();
     }
 }
