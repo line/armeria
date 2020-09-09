@@ -648,6 +648,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             settings.maxFrameSize(maxFrameSize);
         }
         settings.maxHeaderListSize(clientFactory.http2MaxHeaderListSize());
+        settings.pushEnabled(false);
         return settings;
     }
 
