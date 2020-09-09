@@ -17,18 +17,18 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 
 import io.netty.buffer.ByteBuf;
@@ -39,6 +39,7 @@ import io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder;
 import io.netty.handler.codec.http2.EmptyHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 
 class Http2ClientWithPushPromiseTest {
@@ -51,24 +52,24 @@ class Http2ClientWithPushPromiseTest {
         }
     };
 
-    private static int promisedStreamId;
-    private static List<Integer> rstStreamIds;
+    private static final AtomicReference<Throwable> errorCaptor = new AtomicReference<>();
 
     @BeforeEach
     void setUp() {
-        promisedStreamId = 0;
-        rstStreamIds = new ArrayList<>();
+        errorCaptor.set(null);
     }
 
     @Test
-    void resetStreamOnPushPromise() {
+    void disablePushPromise() {
         final WebClient client = WebClient.of(SessionProtocol.H2C, h2cServer.endpoint());
-        final AggregatedHttpResponse response = client.get("/").aggregate().join();
+        assertThatThrownBy(() ->  client.get("/push").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ClosedStreamException.class);
 
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(promisedStreamId).isNotZero();
         await().untilAsserted(() -> {
-            assertThat(rstStreamIds).contains(promisedStreamId);
+            assertThat(errorCaptor.get())
+                    .isInstanceOf(Http2Exception.class)
+                    .hasMessageContaining("Server push not allowed");
         });
     }
 
@@ -80,17 +81,18 @@ class Http2ClientWithPushPromiseTest {
         }
 
         @Override
-        protected void sendResponse(ChannelHandlerContext ctx, int streamId, HttpResponseStatus status,
-                                    ByteBuf payload) {
-            promisedStreamId = streamId + 1;
-            encoder().writePushPromise(ctx, streamId, promisedStreamId, EmptyHttp2Headers.INSTANCE, 0,
-                                       ctx.newPromise());
-            super.sendResponse(ctx, streamId, status, payload);
+        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
+            assertThat(settings.pushEnabled()).isFalse();
         }
 
         @Override
-        public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
-            rstStreamIds.add(streamId);
+        protected void sendResponse(ChannelHandlerContext ctx, int streamId, HttpResponseStatus status,
+                                    ByteBuf payload) {
+            // PUSH_PROMISE is disable by Armeria client
+            encoder().writePushPromise(ctx, streamId, streamId + 1, EmptyHttp2Headers.INSTANCE, 0,
+                                       ctx.newPromise())
+                     .addListener(f -> errorCaptor.set(f.cause()));
+            super.sendResponse(ctx, streamId, status, payload);
         }
     }
 
