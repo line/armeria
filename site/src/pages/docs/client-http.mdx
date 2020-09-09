@@ -1,5 +1,7 @@
 # Calling an HTTP service
 
+You can create <type://WebClient> with a base URI and send a request with a relative path.
+
 ```java
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -21,6 +23,42 @@ AggregatedHttpResponse res2 = webClient.execute(getJson).aggregate().join();
 // Send a simple POST request encoded in UTF-8.
 AggregatedHttpResponse res3 = webClient.post("/upload", "{ \"foo\": \"bar\" }")
                                        .aggregate().join();
+```
+
+You can also create <type://WebClient> without a base URI and send a request with an absolute URI.
+The ad-hoc <type://WebClient> would be useful in the following cases:
+
+- Send requests to arbitrary endpoints
+- Build a proxy server
+- Handle redirected requests
+
+```java
+import com.linecorp.armeria.common.HttpStatus;
+
+// Create a WebClient without a base URI.
+WebClient webClient = WebClient.of();
+
+// Send a request with an absolute URI.
+AggregatedHttpResponse res1 = webClient.get("http://example.com/foo/bar.txt")
+                                       .aggregate()
+                                       .join();
+
+// Send a GET request with an authority header.
+HttpRequest request = HttpRequest.of(RequestHeaders.builder()
+                                                   .scheme(SessionProtocol.HTTP)
+                                                   .authority("example.com")
+                                                   .method(HttpMethod.GET)
+                                                   .path("/foo/bar.txt")
+                                                   .build());
+AggregatedHttpResponse res2 = webClient.execute(request).aggregate().join();
+
+// Handle a redirected request
+AggregatedHttpResponse redirected = webClient.get("http://example.com/redirect")
+                                             .aggregate()
+                                             .join();
+assert redirected.status() == HttpStatus.TEMPORARY_REDIRECT;
+String location = redirected.headers().get(LOCATION);
+AggregatedHttpResponse actual = webClient.get(location).aggregate().join();
 ```
 
 ## See also
