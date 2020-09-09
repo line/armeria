@@ -35,10 +35,12 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithoutMeterTest.NoMeterTestConfiguration;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
@@ -49,6 +51,9 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithoutMeterTest.NoMe
 @ActiveProfiles({ "local", "autoConfTest" })
 public class ArmeriaAutoConfigurationWithoutMeterTest {
 
+    /**
+     * {@link MeterIdPrefixFunction} and {@link MeterRegistry} are not registered as bean.
+     */
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
     public static class NoMeterTestConfiguration {
@@ -66,13 +71,17 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() throws Exception {
-        final WebClient client = WebClient.of(newUrl("h1c"));
-
-        final HttpResponse response = client.get("/ok");
-
-        final AggregatedHttpResponse msg = response.aggregate().get();
+    public void test() {
+        final AggregatedHttpResponse msg = WebClient.of(newUrl("h1c"))
+                                                    .get("/ok")
+                                                    .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.contentUtf8()).isEqualTo("ok");
+
+        final String metricReport = WebClient.of(newUrl("http"))
+                                             .get("/internal/metrics")
+                                             .aggregate().join()
+                                             .contentUtf8();
+        assertThat(metricReport).contains("# TYPE armeria_server_response_duration_seconds_max gauge");
     }
 }

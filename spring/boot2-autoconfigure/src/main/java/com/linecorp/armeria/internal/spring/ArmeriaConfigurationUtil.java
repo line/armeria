@@ -84,7 +84,8 @@ public final class ArmeriaConfigurationUtil {
      */
     public static void configureServerWithArmeriaSettings(ServerBuilder server, ArmeriaSettings settings,
                                                           MeterRegistry meterRegistry,
-                                                          List<HealthChecker> healthCheckers) {
+                                                          List<HealthChecker> healthCheckers,
+                                                          MeterIdPrefixFunction meterIdPrefixFunction) {
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
         requireNonNull(meterRegistry, "meterRegistry");
@@ -107,8 +108,7 @@ public final class ArmeriaConfigurationUtil {
         server.meterRegistry(meterRegistry);
 
         if (settings.isEnableMetrics()) {
-            server.decorator(
-                    MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("armeria.server")));
+            server.decorator(MetricCollectingService.newDecorator(meterIdPrefixFunction));
 
             if (!Strings.isNullOrEmpty(settings.getMetricsPath())) {
                 final boolean hasPrometheus = hasAllClasses(
