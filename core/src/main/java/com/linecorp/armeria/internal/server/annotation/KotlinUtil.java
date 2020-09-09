@@ -21,6 +21,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
@@ -39,13 +40,13 @@ final class KotlinUtil {
     private static final Class<? extends Annotation> METADATA_CLASS;
 
     @Nullable
+    private static final Class<?> CONTINUATION_CLASS;
+
+    @Nullable
     private static final MethodHandle CALL_KOTLIN_SUSPENDING_METHOD;
 
     @Nullable
     private static final Method IS_SUSPENDING_FUNCTION;
-
-    @Nullable
-    private static final Method IS_CONTINUATION;
 
     @Nullable
     private static final Method IS_RETURN_TYPE_UNIT;
@@ -70,20 +71,17 @@ final class KotlinUtil {
             CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
         }
 
-        Method isContinuation = null;
         Method isSuspendingFunction = null;
         Method isReturnTypeUnit = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil");
 
-            isContinuation = kotlinUtilClass.getMethod("isContinuation", Class.class);
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
-            IS_CONTINUATION = isContinuation;
             IS_SUSPENDING_FUNCTION = isSuspendingFunction;
             IS_RETURN_TYPE_UNIT = isReturnTypeUnit;
         }
@@ -106,6 +104,15 @@ final class KotlinUtil {
         } finally {
             METADATA_CLASS = metadataClass;
         }
+
+        Class<?> continuationClass = null;
+        try {
+            continuationClass = getClass("kotlin.coroutines.Continuation");
+        } catch (ClassNotFoundException e) {
+            // ignore
+        } finally {
+            CONTINUATION_CLASS = continuationClass;
+        }
     }
 
     /**
@@ -125,6 +132,14 @@ final class KotlinUtil {
     }
 
     /**
+     * Returns true if the last parameter of a method is a {@code kotlin.coroutines.Continuation}.
+     */
+    static boolean maybeSuspendingFunction(Method method) {
+        return Arrays.stream(method.getParameters())
+                     .anyMatch(param -> isContinuation(param.getType()));
+    }
+
+    /**
      * Returns true if a method is a suspending function.
      */
     static boolean isSuspendingFunction(Method method) {
@@ -139,19 +154,14 @@ final class KotlinUtil {
     }
 
     /**
-     * Returns true if a class is kotlin.coroutines.Continuation.
+     * Returns true if a class is {@code kotlin.coroutines.Continuation}.
      */
     static boolean isContinuation(Class<?> type) {
-        try {
-            return IS_CONTINUATION != null &&
-                   (boolean) IS_CONTINUATION.invoke(null, type);
-        } catch (Exception e) {
-            return false;
-        }
+        return CONTINUATION_CLASS != null && CONTINUATION_CLASS.isAssignableFrom(type);
     }
 
     /**
-     * Returns true if a method is suspending function and it returns kotlin.Unit.
+     * Returns true if a method is suspending function and it returns {@code kotlin.Unit}.
      */
     static boolean isSuspendingAndReturnTypeUnit(Method method) {
         try {

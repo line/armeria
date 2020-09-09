@@ -35,6 +35,9 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -84,11 +87,17 @@ import com.linecorp.armeria.server.file.HttpVfs;
  */
 public final class DocService extends SimpleDecoratingHttpService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DocService.class);
+
     private static final ObjectMapper jsonMapper = new ObjectMapper()
             .setSerializationInclusion(Include.NON_ABSENT);
 
-    static final List<DocServicePlugin> plugins = Streams.stream(ServiceLoader.load(
-            DocServicePlugin.class, DocService.class.getClassLoader())).collect(toImmutableList());
+    static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
+            DocServicePlugin.class, DocService.class.getClassLoader()));
+
+    static {
+        logger.info("Loaded {}: {}", DocServicePlugin.class.getSimpleName(), plugins);
+    }
 
     /**
      * Returns a new {@link DocServiceBuilder}.

@@ -23,6 +23,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -79,6 +80,16 @@ public abstract class LoggingDecoratorBuilder {
      */
     public LoggingDecoratorBuilder logger(Logger logger) {
         this.logger = requireNonNull(logger, "logger");
+        return this;
+    }
+
+    /**
+     * Sets the name of the {@link Logger} to use when logging.
+     * This method is a shortcut for {@code this.logger(LoggerFactory.getLogger(loggerName))}.
+     */
+    public LoggingDecoratorBuilder logger(String loggerName) {
+        requireNonNull(loggerName, "loggerName");
+        logger = LoggerFactory.getLogger(loggerName);
         return this;
     }
 

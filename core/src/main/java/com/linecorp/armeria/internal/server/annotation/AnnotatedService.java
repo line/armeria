@@ -84,10 +84,6 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
-    static final ServiceLoader<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
-            ServiceLoader.load(ResponseConverterFunctionProvider.class,
-                               AnnotatedService.class.getClassLoader());
-
     /**
      * A default {@link ResponseConverterFunction}s.
      */
@@ -95,6 +91,17 @@ public final class AnnotatedService implements HttpService {
             ImmutableList.of(new JacksonResponseConverterFunction(),
                              new StringResponseConverterFunction(),
                              new ByteArrayResponseConverterFunction());
+
+    static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
+            ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
+                                                    AnnotatedService.class.getClassLoader()));
+
+    static {
+        if (!responseConverterFunctionProviders.isEmpty()) {
+            logger.info("Loaded {}: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
+                        responseConverterFunctionProviders);
+        }
+    }
 
     private final Object object;
     private final Method method;

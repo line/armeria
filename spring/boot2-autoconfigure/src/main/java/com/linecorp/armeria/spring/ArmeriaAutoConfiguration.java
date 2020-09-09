@@ -39,6 +39,7 @@ import org.springframework.context.annotation.Configuration;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -73,10 +74,10 @@ public class ArmeriaAutoConfiguration {
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
             Optional<List<HealthChecker>> healthCheckers,
+            Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
-            Optional<List<DocServiceConfigurator>> docServiceConfigurators)
-            throws InterruptedException {
+            Optional<List<DocServiceConfigurator>> docServiceConfigurators) {
 
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
@@ -101,7 +102,9 @@ public class ArmeriaAutoConfiguration {
         final String docsPath = armeriaSettings.getDocsPath();
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
                                            meterRegistry.orElse(Metrics.globalRegistry),
-                                           healthCheckers.orElseGet(Collections::emptyList));
+                                           healthCheckers.orElseGet(Collections::emptyList),
+                                           meterIdPrefixFunction.orElse(
+                                                   MeterIdPrefixFunction.ofDefault("armeria.server")));
 
         armeriaServerConfigurators.ifPresent(
                 configurators -> configurators.forEach(
