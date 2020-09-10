@@ -50,7 +50,6 @@ import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -599,9 +598,8 @@ public final class ClientFactoryBuilder {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
                         }
                         return builder
-                                .meterRegistry(options.containsKey(ClientFactoryOptions.METER_REGISTRY) ?
-                                        (MeterRegistry) options.get(ClientFactoryOptions.METER_REGISTRY).value()
-                                        : PrometheusMeterRegistries.newRegistry()).build(eventLoopGroup);
+                                .meterRegistry(ClientFactoryOptions.of().meterRegistry())
+                                .build(eventLoopGroup);
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
