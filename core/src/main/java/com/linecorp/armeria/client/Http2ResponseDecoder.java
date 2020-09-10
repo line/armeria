@@ -285,10 +285,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-                                  Http2Headers headers, int padding) {
-        encoder.writeRstStream(ctx, promisedStreamId, Http2Error.REFUSED_STREAM.code(), ctx.newPromise());
-        ctx.flush();
-    }
+                                  Http2Headers headers, int padding) {}
 
     @Override
     public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
