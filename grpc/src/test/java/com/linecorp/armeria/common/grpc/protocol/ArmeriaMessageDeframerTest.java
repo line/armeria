@@ -59,7 +59,6 @@ import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.test.StepVerifier;
 
 class ArmeriaMessageDeframerTest {
@@ -164,7 +163,7 @@ class ArmeriaMessageDeframerTest {
     void deframe_frameWithHeaderAndBodyFragment(HttpDeframer<DeframedMessage> deframer, boolean base64,
                                                 byte[] data) {
         final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
-        source.subscribe(deframer, ImmediateEventExecutor.INSTANCE);
+        source.subscribe(deframer);
 
         StepVerifier.create(deframer)
                     .thenRequest(1)

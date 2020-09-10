@@ -88,10 +88,10 @@ import io.netty.util.concurrent.EventExecutor;
  *       request.subscribe(deframer);
  *       }</pre>
  *   </li>
- *   <li>Subscribe to the {@link Publisher} of the deframed data using your Reactive Streams library.
+ *   <li>Subscribe to the {@link Publisher} of the deframed data and connect to your business logic.
  *       <pre>{@code
  *       import reactor.core.publisher.Flux;
- *       Flux<String> block = Flux.from(deframer).map(...);
+ *       Flux.from(deframer).map(...); // Consume and manipulate the deframed data.
  *       }</pre>
  *   </li>
  * </ol>
@@ -282,9 +282,12 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
             return;
         }
 
-        handler.processOnError(cause);
-        cleanup();
+        if (!(cause instanceof AbortedStreamException)) {
+            handler.processOnError(cause);
+        }
+
         abort(cause);
+        cleanup();
     }
 
     @Override

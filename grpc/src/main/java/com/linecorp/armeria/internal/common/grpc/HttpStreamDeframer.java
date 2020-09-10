@@ -84,7 +84,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             assert deframer != null;
             // A gRPC client could not receive messages fully yet.
             // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
-            deframer.whenComplete().thenRun(() -> {
+            deframer.whenComplete().whenComplete((unused1, unused2) -> {
                 GrpcStatus.reportStatus(headers, deframer, transportStatusListener);
             });
         }
