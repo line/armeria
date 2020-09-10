@@ -28,6 +28,8 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 
 /**
  * Utilities for logging decorators.
@@ -100,6 +102,11 @@ public final class LoggingDecorators {
                                                                  requestTrailersSanitizer));
                 }
 
+                if (expected(responseCause)) {
+                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
+                    return;
+                }
+
                 final Object sanitizedResponseCause = responseCauseSanitizer.apply(ctx, responseCause);
                 if (sanitizedResponseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
@@ -115,5 +122,9 @@ public final class LoggingDecorators {
                 }
             }
         }
+    }
+
+    private static boolean expected(Throwable responseCause) {
+        return responseCause instanceof HttpResponseException || responseCause instanceof HttpStatusException;
     }
 }
