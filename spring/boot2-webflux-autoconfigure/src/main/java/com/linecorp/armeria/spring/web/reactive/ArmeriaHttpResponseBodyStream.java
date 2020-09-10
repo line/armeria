@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,7 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -33,11 +34,15 @@ final class ArmeriaHttpResponseBodyStream extends DefaultSplitHttpResponse {
 
     private static final AtomicIntegerFieldUpdater<ArmeriaHttpResponseBodyStream> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaHttpResponseBodyStream.class, "subscribed");
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<ArmeriaHttpResponseBodyStream, Publisher>
+            publisherForLateSubscribersUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(ArmeriaHttpResponseBodyStream.class, Publisher.class, "publisherForLateSubscribers");
 
     private volatile int subscribed;
 
     @Nullable
-    private Publisher<HttpData> publisherForLateSubscribers;
+    private volatile Publisher<HttpData> publisherForLateSubscribers;
 
     ArmeriaHttpResponseBodyStream(HttpResponse httpResponse, EventExecutor executor) {
         super(httpResponse, executor);
@@ -50,13 +55,20 @@ final class ArmeriaHttpResponseBodyStream extends DefaultSplitHttpResponse {
             super.subscribe(s);
         } else {
             // The other subscribers - notify whether completed successfully only.
-            if (publisherForLateSubscribers == null) {
-                @SuppressWarnings({ "unchecked", "rawtypes" })
-                final Publisher<HttpData> newPublisher =
-                        (Publisher) Mono.fromFuture(whenComplete());
-                publisherForLateSubscribers = newPublisher;
+            final Publisher<HttpData> publisherForLateSubscribers = this.publisherForLateSubscribers;
+            if (publisherForLateSubscribers != null) {
+                publisherForLateSubscribers.subscribe(s);
+                return;
             }
-            publisherForLateSubscribers.subscribe(s);
+
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            final Publisher<HttpData> newPublisher =
+                    (Publisher) Mono.fromFuture(whenComplete());
+            if (publisherForLateSubscribersUpdater.compareAndSet(this, null, newPublisher)) {
+                newPublisher.subscribe(s);
+            } else {
+                this.publisherForLateSubscribers.subscribe(s);
+            }
         }
     }
 }

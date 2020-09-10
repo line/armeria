@@ -50,7 +50,7 @@ public interface SplitHttpResponse {
 
     /**
      * Returns a {@link CompletableFuture} completed with a {@linkplain HttpHeaders trailers}.
-     * If a {@link HttpResponse} does not contain trailers, the returned {@link CompletableFuture} will be
+     * If an {@link HttpResponse} does not contain trailers, the returned {@link CompletableFuture} will be
      * completed with an {@linkplain HttpHeaders#of() empty headers}.
      */
     CompletableFuture<HttpHeaders> trailers();

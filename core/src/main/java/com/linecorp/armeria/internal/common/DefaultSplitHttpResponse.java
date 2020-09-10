@@ -101,13 +101,17 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     @Override
     public final CompletableFuture<List<ResponseHeaders>> informationalHeaders() {
-        final HeadersFuture<List<ResponseHeaders>> informationalHeadersFuture = this.informationalHeadersFuture;
+        HeadersFuture<List<ResponseHeaders>> informationalHeadersFuture = this.informationalHeadersFuture;
         if (informationalHeadersFuture != null) {
             return informationalHeadersFuture;
         }
 
-        informationalHeadersFutureUpdater.compareAndSet(this, null, new HeadersFuture<>());
-        return this.informationalHeadersFuture;
+        informationalHeadersFuture = new HeadersFuture<>();
+        if (informationalHeadersFutureUpdater.compareAndSet(this, null, informationalHeadersFuture)) {
+            return informationalHeadersFuture;
+        } else {
+            return this.informationalHeadersFuture;
+        }
     }
 
     @Override
@@ -122,13 +126,17 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     @Override
     public final CompletableFuture<HttpHeaders> trailers() {
-        final HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
+        HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         if (trailersFuture != null) {
             return trailersFuture;
         }
 
-        trailersFutureUpdater.compareAndSet(this, null, new HeadersFuture<>());
-        return this.trailersFuture;
+        trailersFuture = new HeadersFuture<>();
+        if (trailersFutureUpdater.compareAndSet(this, null, trailersFuture)) {
+            return trailersFuture;
+        } else {
+            return this.trailersFuture;
+        }
     }
 
     @Override
@@ -159,8 +167,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... unused) {
-        // 'SubscriptionOption's are ignored, should specify the 'SubscriptionOption's when creating this class.
-        subscribe(subscriber, executor);
+        throw new UnsupportedOperationException("Use 'HttpResponse.split(executor, options)' instead.");
     }
 
     @Override
@@ -308,10 +315,20 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                     informationalHeadersFuture.doComplete(ImmutableList.of());
                 }
             } else {
-                informationalHeadersFutureUpdater
-                        .compareAndSet(DefaultSplitHttpResponse.this, null,
-                                       new HeadersFuture<>());
-                informationalHeadersFuture.doComplete(informationalHeadersBuilder.build());
+                final List<ResponseHeaders> informationalHeaders = informationalHeadersBuilder.build();
+                HeadersFuture<List<ResponseHeaders>> headersFuture = informationalHeadersFuture;
+                if (headersFuture != null) {
+                    headersFuture.doComplete(informationalHeaders);
+                    return;
+                }
+
+                headersFuture = new HeadersFuture<>();
+                if (informationalHeadersFutureUpdater
+                        .compareAndSet(DefaultSplitHttpResponse.this, null, headersFuture)) {
+                    headersFuture.doComplete(informationalHeaders);
+                } else {
+                    informationalHeadersFuture.doComplete(informationalHeaders);
+                }
             }
         }
 
@@ -319,13 +336,16 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
          * Completes the specified trailers.
          */
         private void completeTrailers(HttpHeaders trailers) {
-            final HeadersFuture<HttpHeaders> trailersFuture =
-                    DefaultSplitHttpResponse.this.trailersFuture;
+            HeadersFuture<HttpHeaders> trailersFuture = DefaultSplitHttpResponse.this.trailersFuture;
             if (trailersFuture != null) {
                 trailersFuture.doComplete(trailers);
+                return;
+            }
+
+            trailersFuture = new HeadersFuture<>();
+            if (trailersFutureUpdater.compareAndSet(DefaultSplitHttpResponse.this, null, trailersFuture)) {
+                trailersFuture.doComplete(trailers);
             } else {
-                trailersFutureUpdater.compareAndSet(DefaultSplitHttpResponse.this,
-                                                    null, new HeadersFuture<>());
                 DefaultSplitHttpResponse.this.trailersFuture.doComplete(trailers);
             }
         }

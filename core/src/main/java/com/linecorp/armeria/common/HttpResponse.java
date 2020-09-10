@@ -546,8 +546,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      *
      * <p>(Advanced users only) If you want to get pooled objects from {@link SplitHttpResponse#body()},
      * you should call this method with {@link SubscriptionOption#WITH_POOLED_OBJECTS}.
-     * The {@link SubscriptionOption}s which you are specified when subscribing to
-     * {@link SplitHttpResponse#body()} will be ignored.
+     * Note that if you specify {@link SubscriptionOption}s when subscribing to
+     * {@link SplitHttpResponse#body()}, {@link UnsupportedOperationException} will be raised.
      */
     @CheckReturnValue
     default SplitHttpResponse split(EventExecutor executor, SubscriptionOption... options) {
