@@ -1,0 +1,20 @@
+armeria:
+  ports:
+    - port: 0
+      protocol: HTTP
+    - ip: 127.0.0.1
+      port: 0
+      protocol: HTTP
+    - ip: 0.0.0.0
+      port: 0
+      protocol: HTTP
+  metrics-path: ''
+
+management:
+  server:
+    port: 9112
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+      base-path: /internal/actuator
