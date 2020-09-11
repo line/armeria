@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common.logging;
 
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -38,6 +39,26 @@ public final class LoggingDecorators {
     private static final String RESPONSE_FORMAT2 = "{} Response: {}, cause: {}";
 
     private LoggingDecorators() {}
+
+    /**
+     * Logs request and response using the specified {@code requestLogger} and {@code responseLogger}.
+     */
+    public static void logWhenComplete(
+            Logger logger, RequestContext ctx,
+            Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
+        ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn("{} Unexpected exception while logging request: ", ctx, e);
+            }
+            return null;
+        });
+        ctx.log().whenComplete().thenAccept(responseLogger).exceptionally(e -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn("{} Unexpected exception while logging response: ", ctx, e);
+            }
+            return null;
+        });
+    }
 
     /**
      * Logs a stringified request of {@link RequestLog}.
