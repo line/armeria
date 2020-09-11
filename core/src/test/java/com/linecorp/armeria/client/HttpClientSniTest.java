@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
@@ -48,6 +49,7 @@ class HttpClientSniTest {
 
     private static int httpsPort;
     private static ClientFactory clientFactory;
+    private static ClientFactory clientFactoryIgnoreHosts;
     private static final SelfSignedCertificate sscA;
     private static final SelfSignedCertificate sscB;
 
@@ -83,12 +85,18 @@ class HttpClientSniTest {
                              .tlsNoVerify()
                              .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
                              .build();
+        clientFactoryIgnoreHosts =
+                ClientFactory.builder()
+                        .tlsNoVerifyHosts("a.com", "b.com", "127.0.0.1", "mismatch.com")
+                        .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                        .build();
     }
 
     @AfterAll
     static void destroy() throws Exception {
         CompletableFuture.runAsync(() -> {
             clientFactory.close();
+            clientFactoryIgnoreHosts.close();
             server.stop();
             sscA.delete();
             sscB.delete();
@@ -103,6 +111,7 @@ class HttpClientSniTest {
 
     private static void testMatch(String fqdn) throws Exception {
         assertThat(get(fqdn)).isEqualTo(fqdn + ": CN=" + fqdn);
+        assertThat(get0(fqdn)).isEqualTo(fqdn + ": CN=" + fqdn);
     }
 
     @Test
@@ -113,12 +122,30 @@ class HttpClientSniTest {
 
     private static void testMismatch(String fqdn) throws Exception {
         assertThat(get(fqdn)).isEqualTo("b.com: CN=b.com");
+        assertThat(get0(fqdn)).isEqualTo("b.com: CN=b.com");
+    }
+
+    @Test
+    void testHandshakeFail() {
+        assertThatThrownBy(() -> get0("c.com"))
+                .hasStackTraceContaining("javax.net.ssl.SSLHandshakeException");
     }
 
     private static String get(String fqdn) throws Exception {
         final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
                                           .factory(clientFactory)
                                           .build();
+
+        final AggregatedHttpResponse response = client.get("/").aggregate().get();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        return response.contentUtf8();
+    }
+
+    private static String get0(String fqdn) throws Exception {
+        final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
+                .factory(clientFactoryIgnoreHosts)
+                .build();
 
         final AggregatedHttpResponse response = client.get("/").aggregate().get();
 

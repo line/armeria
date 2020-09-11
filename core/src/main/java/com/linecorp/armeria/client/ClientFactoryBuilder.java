@@ -255,6 +255,17 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Disables the verification of server's key certificate chain for specific hosts.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ClientFactoryBuilder tlsNoVerifyHosts(String... insecureHosts) {
+        tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.from(insecureHosts)));
+        return this;
+    }
+
+    /**
      * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
      * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager(TrustManagerFactory)}
      * to configure a custom server CA or {@link SslContextBuilder#keyManager(KeyManagerFactory)} to configure
