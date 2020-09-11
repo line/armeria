@@ -1,6 +1,6 @@
 # Calling an HTTP service
 
-You can create <type://WebClient> with a base URI and send a request with a relative path.
+You can create a <type://WebClient> with a base URI and send a request with a relative path.
 
 ```java
 import com.linecorp.armeria.client.WebClient;
@@ -25,12 +25,12 @@ AggregatedHttpResponse res3 = webClient.post("/upload", "{ \"foo\": \"bar\" }")
                                        .aggregate().join();
 ```
 
-You can also create <type://WebClient> without a base URI and send a request with an absolute URI.
+You can also create a <type://WebClient> without a base URI and send a request with an absolute URI.
 The ad-hoc <type://WebClient> would be useful in the following cases:
 
-- Send requests to arbitrary endpoints
-- Build a proxy server
-- Handle redirected requests
+- Sending requests to arbitrary endpoints
+- Building a proxy server
+- Handling redirected requests
 
 ```java
 import com.linecorp.armeria.common.HttpStatus;
