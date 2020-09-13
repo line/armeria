@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -402,6 +403,7 @@ class RefreshingAddressResolverTest {
                         Stream.of(servers).map(TestDnsServer::addr).collect(toImmutableList())).stream();
         return new DnsResolverGroupBuilder()
                 .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
+                .meterRegistry(PrometheusMeterRegistries.newRegistry())
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .traceEnabled(false);
     }
