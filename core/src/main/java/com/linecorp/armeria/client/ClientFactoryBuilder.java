@@ -597,8 +597,14 @@ public final class ClientFactoryBuilder {
                         if (dnsResolverGroupCustomizers != null) {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
                         }
+
+                        final ClientFactoryOptionValue<?> opt = options
+                                .getOrDefault(ClientFactoryOptions.METER_REGISTRY,
+                                ClientFactoryOptions.METER_REGISTRY
+                                        .newValue(ClientFactoryOptions.of().meterRegistry()));
+
                         return builder
-                                .meterRegistry(ClientFactoryOptions.of().meterRegistry())
+                                .meterRegistry((MeterRegistry) opt.value())
                                 .build(eventLoopGroup);
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);

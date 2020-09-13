@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
@@ -138,11 +137,18 @@ public class DnsMetricsTest {
                             .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
 
                     final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
-                    final double count = registry.getPrometheusRegistry()
+
+                    final double count1 = registry.getPrometheusRegistry()
                             .getSampleValue("armeria_client_dns_queries_total",
                                     new String[] {"cause","name","result"},
-                                    new String[] {"No name servers returned an answer","foo.com.", "failure"});
-                    assertThat(count > 1.0).isTrue();
+                                    new String[] {"NAME_SERVERS_EXHAUSTED_EXCEPTION","foo.com.", "failure"});
+                    assertThat(count1 > 1.0).isTrue();
+
+                    final double count2 = registry.getPrometheusRegistry()
+                            .getSampleValue("armeria_client_dns_queries_total",
+                                    new String[] {"cause","name","result"},
+                                    new String[] {"DNS_RESOLVER_TIMEOUT_EXCEPTION","foo.com.", "failure"});
+                    assertThat(count2 > 1.0).isTrue();
                 }
             }
         }
@@ -183,11 +189,26 @@ public class DnsMetricsTest {
                     } catch (Exception ex) {
                         final PrometheusMeterRegistry registry =
                                 (PrometheusMeterRegistry) factory.meterRegistry();
+
                         final double count = registry.getPrometheusRegistry()
                                 .getSampleValue("armeria_client_dns_queries_noanswer_total",
                                         new String[] {"code","name"},
                                         new String[] {"10","bar.com."});
                         assertThat(count > 1.0).isTrue();
+
+                        final double count2 = registry.getPrometheusRegistry()
+                                .getSampleValue("armeria_client_dns_queries_total",
+                                        new String[] {"cause","name", "result"},
+                                        new String[] {"NAME_SERVERS_EXHAUSTED_EXCEPTION",
+                                                      "bar.com.", "failure"});
+                        assertThat(count2 > 1.0).isTrue();
+
+                        final double count3 = registry.getPrometheusRegistry()
+                                .getSampleValue("armeria_client_dns_queries_total",
+                                        new String[] {"cause","name","result"},
+                                        new String[] {"NX_DOMAIN_QUERY_FAILED_EXCEPTION",
+                                                      "bar.com.", "failure"});
+                        assertThat(count3 > 1.0).isTrue();
                     }
                 }
             }
@@ -196,15 +217,22 @@ public class DnsMetricsTest {
 
     @Test
     void test_with_real_dns_query() throws ExecutionException, InterruptedException {
-
-        try (ClientFactory factory = ClientFactory.builder().build()) {
+        try (ClientFactory factory = ClientFactory.builder()
+                .meterRegistry(PrometheusMeterRegistries.newRegistry())
+                .build()) {
             final WebClient client2 = WebClient.builder()
                     .factory(factory)
                     .build();
 
             client2.execute(RequestHeaders.of(HttpMethod.GET, "http://google.com")).aggregate().get();
-            final MeterRegistry registry = factory.meterRegistry();
-            System.out.println(MoreMeters.measureAll(registry));
+            final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
+
+            final double count = registry.getPrometheusRegistry()
+                    .getSampleValue("armeria_client_dns_queries_total",
+                            new String[] {"cause","name","result"},
+                            new String[] {"none",
+                                    "google.com.", "success"});
+            assertThat(count > 1.0).isTrue();
         }
     }
 
