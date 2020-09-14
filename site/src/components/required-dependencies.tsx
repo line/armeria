@@ -1,5 +1,5 @@
 import React from 'react';
-import {Tabs as AntdTabs} from 'antd';
+import { Tabs as AntdTabs } from 'antd';
 import CodeBlock from './code-block';
 import versionsJson from '../../gen-src/versions.json';
 
