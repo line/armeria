@@ -13,8 +13,11 @@ to Armeria. By doing so, you get the following benefits:
 First, you need `armeria-retrofit2` dependency:
 
 <RequiredDependencies
-  boms={[{groupId:"com.linecorp.armeria", artifactId:"armeria-bom"}]}
-  dependencies={[{groupId:"com.linecorp.armeria", artifactId:"armeria-retrofit2"}]} />
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-retrofit2' },
+  ]}
+/>
 
 Now, you can build `Retrofit` using <type://ArmeriaRetrofit#builder(String)>:
 

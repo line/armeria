@@ -22,9 +22,17 @@ Armeria can be plugged in as the underlying HTTP server for a Spring Boot 2 WebF
 the following dependency:
 
 <RequiredDependencies
-  boms={[{groupId:"com.linecorp.armeria", artifactId:"armeria-bom"},
-         {groupId:"io.netty", artifactId:"netty-bom"}]}
-  dependencies={[{groupId:"com.linecorp.armeria", artifactId:"armeria-spring-boot2-webflux-starter"}]} />
+  boms={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' },
+    { groupId: 'io.netty', artifactId: 'netty-bom' },
+  ]}
+  dependencies={[
+    {
+      groupId: 'com.linecorp.armeria',
+      artifactId: 'armeria-spring-boot2-webflux-starter',
+    },
+  ]}
+/>
 
 The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to `application.yml`
 when the application starts up. A user can customize the server configuration with the same properties

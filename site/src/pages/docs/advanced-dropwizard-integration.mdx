@@ -25,9 +25,18 @@ Armeria can be plugged in as the underlying HTTP server for a Dropwizard applica
 the following dependency:
 
 <RequiredDependencies
-  boms={[{groupId:"com.linecorp.armeria", artifactId:"armeria-bom"},
-         {groupId:"io.dropwizard", artifactId:"dropwizard-bom", version:`${versions['io.dropwizard:dropwizard-core']}`}]}
-  dependencies={[{groupId:"com.linecorp.armeria", artifactId:"armeria-dropwizard2"}]} />
+  boms={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' },
+    {
+      groupId: 'io.dropwizard',
+      artifactId: 'dropwizard-bom',
+      version: `${versions['io.dropwizard:dropwizard-core']}`,
+    },
+  ]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-dropwizard2' },
+  ]}
+/>
 
 The above dependencies import a new `ServerFactory` for Dropwizard to run on by referring to the `armeria` type
 server in the Dropwizard configuration file. A user can customize the server configuration with `the same properties

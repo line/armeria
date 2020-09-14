@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs as AntdTabs } from 'antd';
+import {Tabs as AntdTabs} from 'antd';
 import CodeBlock from './code-block';
 import versionsJson from '../../gen-src/versions.json';
 
@@ -16,7 +16,7 @@ interface RequiredDependenciesProps {
   dependencies: Dependency[];
 }
 
-function groovyBom(boms: Dependency[]) {
+function gradleBom(boms: Dependency[]) {
   return `${boms
     .map((bom) => {
       const key = `${bom.groupId}:${bom.artifactId}`;
@@ -31,7 +31,7 @@ function groovyBom(boms: Dependency[]) {
     .join('\n')}\n\n`;
 }
 
-function groovyDependency(props: RequiredDependenciesProps) {
+function gradleDependency(props: RequiredDependenciesProps) {
   const statements: string = props.dependencies
     .map(
       (dependency) =>
@@ -40,7 +40,7 @@ function groovyDependency(props: RequiredDependenciesProps) {
     .join('\n');
   return `
 dependencies {
-${props.boms == null ? '' : groovyBom(props.boms)}    ...
+${props.boms == null ? '' : gradleBom(props.boms)}    ...
 ${statements}
 }
 `;
@@ -94,7 +94,7 @@ const RequiredDependencies: React.FC<RequiredDependenciesProps> = (props) => {
     <AntdTabs>
       <AntdTabs.TabPane tab="Gradle" key="gradle">
         <CodeBlock language="groovy" filename="build.gradle">
-          {groovyDependency(props)}
+          {gradleDependency(props)}
         </CodeBlock>
       </AntdTabs.TabPane>
       <AntdTabs.TabPane tab="Maven" key="maven">

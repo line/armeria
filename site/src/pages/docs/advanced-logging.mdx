@@ -8,8 +8,11 @@ a Logback appender that exports the properties of the current <type://RequestCon
 First, you need the `armeria-logback` dependency:
 
 <RequiredDependencies
-  boms={[{groupId:"com.linecorp.armeria", artifactId:"armeria-bom"}]}
-  dependencies={[{groupId:"com.linecorp.armeria", artifactId:"armeria-logback"}]} />
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-logback' },
+  ]}
+/>
 
 Then, let's look at the following example:
 
@@ -47,7 +50,7 @@ Then, let's look at the following example:
 </configuration>
 ```
 
-The configuration defines an appender called `RCEA` which exports the following:
+The above configuration defines an appender called `RCEA` which exports the following:
 - `remote.ip`
   - the IP address of the remote peer,
 - `tls.cipher`

@@ -22,8 +22,11 @@ provider's point of view.
 The first step to configure a service provider is adding `armeria-saml` to your dependencies.
 
 <RequiredDependencies
-  boms={[{groupId:"com.linecorp.armeria", artifactId:"armeria-bom"}]}
-  dependencies={[{groupId:"com.linecorp.armeria", artifactId:"armeria-saml"}]} />
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-saml' },
+  ]}
+/>
 
 After that, you need to prepare your keystore file which contains a key pair for signing and encryption
 of a SAML message. Also, you need to import the certificate of your identity provider into the keystore

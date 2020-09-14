@@ -1435,8 +1435,11 @@ You can implement annotated services with [Kotlin coroutines](https://kotlinlang
 by adding the following dependency:
 
 <RequiredDependencies
-   boms={[{groupId:"com.linecorp.armeria", artifactId:"armeria-bom"}]}
-   dependencies={[{groupId:"com.linecorp.armeria", artifactId:"armeria-kotlin"}]} />
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-kotlin' },
+  ]}
+/>
 
 Then, define the suspending function:
 
