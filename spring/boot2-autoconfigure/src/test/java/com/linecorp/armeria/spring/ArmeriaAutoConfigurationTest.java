@@ -54,7 +54,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -151,6 +153,11 @@ public class ArmeriaAutoConfigurationTest {
                              .exampleHeaders(HelloServiceGrpc.SERVICE_NAME, "Hello",
                                              HttpHeaders.of("x-additional-header", "headerVal"));
         }
+
+        @Bean
+        public MeterIdPrefixFunction myMeterIdPrefixFunction() {
+            return GrpcMeterIdPrefixFunction.of("custom.armeria.server");
+        }
     }
 
     public static class IllegalArgumentExceptionHandler implements ExceptionHandlerFunction {
@@ -222,7 +229,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() throws Exception {
+    public void testHttpService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/ok");
@@ -233,7 +240,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testAnnotatedServiceRegistrationBean() throws Exception {
+    public void testAnnotatedService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/annotated/get");
@@ -271,7 +278,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testThriftServiceRegistrationBean() throws Exception {
+    public void testThriftService() throws Exception {
         final HelloService.Iface client = Clients.newClient(newUrl("tbinary+h1c") + "/thrift",
                                                             HelloService.Iface.class);
         assertThat(client.hello("world")).isEqualTo("hello world");
@@ -291,7 +298,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testGrpcServiceRegistrationBean() throws Exception {
+    public void testGrpcService() throws Exception {
         final HelloServiceBlockingStub client = Clients.newClient(newUrl("gproto+h2c") + '/',
                                                                   HelloServiceBlockingStub.class);
         final HelloRequest request = HelloRequest.newBuilder()
@@ -314,7 +321,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testPortConfiguration() throws Exception {
+    public void testPortConfiguration() {
         final Collection<ServerPort> ports = server.activePorts().values();
         assertThat(ports.stream().filter(ServerPort::hasHttp)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
@@ -322,11 +329,17 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testMetrics() throws Exception {
+    public void testMetrics() {
+        Clients.newClient(newUrl("gproto+h2c") + '/', HelloServiceBlockingStub.class)
+               .hello(HelloRequest.getDefaultInstance())
+               .getMessage();
+
         final String metricReport = WebClient.of(newUrl("http"))
                                              .get("/internal/metrics")
                                              .aggregate().join()
                                              .contentUtf8();
-        assertThat(metricReport).contains("# TYPE jvm_gc_live_data_size_bytes gauge");
+        assertThat(metricReport).contains("# TYPE custom_armeria_server_response_duration_seconds_max gauge");
+        assertThat(metricReport).contains(
+                "custom_armeria_server_response_duration_seconds_max{grpc_status=\"0\"");
     }
 }

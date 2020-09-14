@@ -84,7 +84,8 @@ public final class ArmeriaConfigurationUtil {
      */
     public static void configureServerWithArmeriaSettings(ServerBuilder server, ArmeriaSettings settings,
                                                           MeterRegistry meterRegistry,
-                                                          List<HealthChecker> healthCheckers) {
+                                                          List<HealthChecker> healthCheckers,
+                                                          MeterIdPrefixFunction meterIdPrefixFunction) {
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
         requireNonNull(meterRegistry, "meterRegistry");
@@ -106,30 +107,32 @@ public final class ArmeriaConfigurationUtil {
 
         server.meterRegistry(meterRegistry);
 
-        if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
-            final boolean hasPrometheus = hasAllClasses(
-                    "io.micrometer.prometheus.PrometheusMeterRegistry",
-                    "io.prometheus.client.CollectorRegistry");
+        if (settings.isEnableMetrics()) {
+            server.decorator(MetricCollectingService.newDecorator(meterIdPrefixFunction));
 
-            final boolean addedPrometheusExposition;
-            if (hasPrometheus) {
-                addedPrometheusExposition = PrometheusSupport.addExposition(settings, server, meterRegistry);
-            } else {
-                addedPrometheusExposition = false;
-            }
+            if (!Strings.isNullOrEmpty(settings.getMetricsPath())) {
+                final boolean hasPrometheus = hasAllClasses(
+                        "io.micrometer.prometheus.PrometheusMeterRegistry",
+                        "io.prometheus.client.CollectorRegistry");
 
-            if (!addedPrometheusExposition) {
-                final boolean hasDropwizard = hasAllClasses(
-                        "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
-                        "com.codahale.metrics.MetricRegistry",
-                        "com.codahale.metrics.json.MetricsModule");
-                if (hasDropwizard) {
-                    DropwizardSupport.addExposition(settings, server, meterRegistry);
+                final boolean addedPrometheusExposition;
+                if (hasPrometheus) {
+                    addedPrometheusExposition =
+                            PrometheusSupport.addExposition(settings, server, meterRegistry);
+                } else {
+                    addedPrometheusExposition = false;
+                }
+
+                if (!addedPrometheusExposition) {
+                    final boolean hasDropwizard = hasAllClasses(
+                            "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
+                            "com.codahale.metrics.MetricRegistry",
+                            "com.codahale.metrics.json.MetricsModule");
+                    if (hasDropwizard) {
+                        DropwizardSupport.addExposition(settings, server, meterRegistry);
+                    }
                 }
             }
-
-            server.decorator(MetricCollectingService.newDecorator(
-                    MeterIdPrefixFunction.ofDefault("armeria.server")));
         }
 
         if (settings.getSsl() != null) {

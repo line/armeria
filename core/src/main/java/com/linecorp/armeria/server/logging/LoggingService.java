@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.logging;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
+import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logWhenComplete;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -121,8 +122,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().whenRequestComplete().thenAccept(requestLogger);
-            ctx.log().whenComplete().thenAccept(responseLogger);
+            logWhenComplete(logger, ctx, requestLogger, responseLogger);
         }
         return unwrap().serve(ctx, req);
     }

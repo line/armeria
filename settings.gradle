@@ -47,6 +47,7 @@ includeWithFlags ':javadoc',                             'java', 'publish', 'no_
 includeWithFlags ':benchmarks',              'java'
 includeWithFlags ':it:context-storage',      'java'
 includeWithFlags ':it:grpcweb',              'java', 'akka-grpc_2.13'
+includeWithFlags ':it:kotlin',               'java', 'relocate'
 includeWithFlags ':it:micrometer1.3',        'java', 'relocate'
 includeWithFlags ':it:server',               'java', 'relocate'
 includeWithFlags ':it:spring:boot2-tomcat9', 'java', 'relocate'

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -43,6 +45,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class LoggingClientTest {
     private static final HttpClient delegate = (ctx, req) -> {
@@ -129,7 +132,6 @@ class LoggingClientTest {
 
     @Test
     void sanitizeRequestContent() throws Exception {
-
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
@@ -151,5 +153,30 @@ class LoggingClientTest {
         defaultLoggerClient.execute(ctx, req);
         // Ensure sanitize the request content of the phone number 333-490-4499
         assertThat(ctx.logBuilder().toString()).doesNotContain("333-490-4499");
+    }
+
+    @Test
+    void exceptionWhileLogging() throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        final LoggingClient loggingClient = LoggingClient.builder()
+                                                         .logger(logger)
+                                                         .requestLogLevelMapper(log -> {
+                                                             throw new AnticipatedException();
+                                                         })
+                                                         .responseLogLevelMapper(log -> {
+                                                             throw new AnticipatedException();
+                                                         })
+                                                         .build(delegate);
+        loggingClient.execute(ctx, req);
+        verify(logger).warn(eq("{} Unexpected exception while logging request: "), eq(ctx),
+                            any(CompletionException.class));
+        verify(logger).warn(eq("{} Unexpected exception while logging response: "), eq(ctx),
+                            any(CompletionException.class));
+        verifyNoMoreInteractions(logger);
+        clearInvocations(logger);
     }
 }
