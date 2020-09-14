@@ -154,6 +154,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             switch (state) {
                 case NEED_HEADERS:
                     if (msg instanceof HttpResponse) {
+
                         final HttpResponse nettyRes = (HttpResponse) msg;
                         final DecoderResult decoderResult = nettyRes.decoderResult();
                         if (!decoderResult.isSuccess()) {
@@ -166,6 +167,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
+                        if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse((HttpResponse) msg)) {
+                            close(ctx);
+                            return;
+                        }
                         assert res != null;
                         this.res = res;
 
@@ -264,7 +269,6 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
-
         final HttpResponseWrapper res = this.res;
         this.res = null;
 
@@ -274,6 +278,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             logger.warn("Unexpected exception:", cause);
         }
 
+        ctx.close();
+    }
+
+    private void close(ChannelHandlerContext ctx) {
+        state = State.DISCARD;
         ctx.close();
     }
 
