@@ -94,7 +94,7 @@ public class DnsMetricsTest {
 
                     client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com")).aggregate().get();
 
-                    final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
+                    final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
                     final double count = registry.getPrometheusRegistry()
                             .getSampleValue("armeria_client_dns_queries_total",
                                     new String[] {"cause","name","result"},
@@ -136,19 +136,12 @@ public class DnsMetricsTest {
                             .hasCauseInstanceOf(UnprocessedRequestException.class)
                             .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
 
-                    final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
-
+                    final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
                     final double count1 = registry.getPrometheusRegistry()
-                            .getSampleValue("armeria_client_dns_queries_total",
-                                    new String[] {"cause","name","result"},
-                                    new String[] {"NAME_SERVERS_EXHAUSTED_EXCEPTION","foo.com.", "failure"});
+                            .getSampleValue("armeria_client_dns_queries_written_total",
+                                    new String[] {"name","server"},
+                                    new String[] {"foo.com.", "0:0:0:0:0:0:0:1"});
                     assertThat(count1 > 1.0).isTrue();
-
-                    final double count2 = registry.getPrometheusRegistry()
-                            .getSampleValue("armeria_client_dns_queries_total",
-                                    new String[] {"cause","name","result"},
-                                    new String[] {"DNS_RESOLVER_TIMEOUT_EXCEPTION","foo.com.", "failure"});
-                    assertThat(count2 > 1.0).isTrue();
                 }
             }
         }
@@ -188,7 +181,7 @@ public class DnsMetricsTest {
                                 .aggregate().get();
                     } catch (Exception ex) {
                         final PrometheusMeterRegistry registry =
-                                (PrometheusMeterRegistry) factory.meterRegistry();
+                                (PrometheusMeterRegistry) pm1;
 
                         final double count = registry.getPrometheusRegistry()
                                 .getSampleValue("armeria_client_dns_queries_noanswer_total",
@@ -217,16 +210,16 @@ public class DnsMetricsTest {
 
     @Test
     void test_with_real_dns_query() throws ExecutionException, InterruptedException {
+        final MeterRegistry pm1 = PrometheusMeterRegistries.newRegistry();
         try (ClientFactory factory = ClientFactory.builder()
-                .meterRegistry(PrometheusMeterRegistries.newRegistry())
+                .meterRegistry(pm1)
                 .build()) {
             final WebClient client2 = WebClient.builder()
                     .factory(factory)
                     .build();
 
             client2.execute(RequestHeaders.of(HttpMethod.GET, "http://google.com")).aggregate().get();
-            final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) factory.meterRegistry();
-
+            final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
             final double count = registry.getPrometheusRegistry()
                     .getSampleValue("armeria_client_dns_queries_total",
                             new String[] {"cause","name","result"},
