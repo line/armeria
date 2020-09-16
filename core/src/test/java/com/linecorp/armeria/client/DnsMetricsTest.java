@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
@@ -95,6 +97,11 @@ public class DnsMetricsTest {
                     client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com")).aggregate().get();
 
                     final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
+                    final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
+                            .metricFamilySamples()).iterator();
+                    while (var4.hasNext()) {
+                        System.out.println(var4.next());
+                    }
                     final double count = registry.getPrometheusRegistry()
                             .getSampleValue("armeria_client_dns_queries_total",
                                     new String[] {"cause","name","result"},
@@ -137,6 +144,11 @@ public class DnsMetricsTest {
                             .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
 
                     final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
+                    final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
+                            .metricFamilySamples()).iterator();
+                    while (var4.hasNext()) {
+                        System.out.println(var4.next());
+                    }
                     final double count1 = registry.getPrometheusRegistry()
                             .getSampleValue("armeria_client_dns_queries_written_total",
                                     new String[] {"name","server"},
@@ -182,6 +194,11 @@ public class DnsMetricsTest {
                     } catch (Exception ex) {
                         final PrometheusMeterRegistry registry =
                                 (PrometheusMeterRegistry) pm1;
+                        final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
+                                .metricFamilySamples()).iterator();
+                        while (var4.hasNext()) {
+                            System.out.println(var4.next());
+                        }
 
                         final double count = registry.getPrometheusRegistry()
                                 .getSampleValue("armeria_client_dns_queries_noanswer_total",
@@ -220,6 +237,11 @@ public class DnsMetricsTest {
 
             client2.execute(RequestHeaders.of(HttpMethod.GET, "http://google.com")).aggregate().get();
             final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
+            final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
+                    .metricFamilySamples()).iterator();
+            while (var4.hasNext()) {
+                System.out.println(var4.next());
+            }
             final double count = registry.getPrometheusRegistry()
                     .getSampleValue("armeria_client_dns_queries_total",
                             new String[] {"cause","name","result"},
