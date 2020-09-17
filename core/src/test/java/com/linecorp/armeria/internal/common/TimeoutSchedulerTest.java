@@ -37,6 +37,7 @@ import com.linecorp.armeria.internal.common.TimeoutScheduler.State;
 import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class TimeoutSchedulerTest {
 
@@ -337,6 +338,22 @@ class TimeoutSchedulerTest {
             assertTimeoutWithTolerance(timeoutScheduler.timeoutNanos(), MILLISECONDS.toNanos(10000));
             completed.set(true);
         });
+        await().untilTrue(completed);
+    }
+
+    @Test
+    void initializeOnce() {
+        final AtomicBoolean completed = new AtomicBoolean();
+        final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
+        eventExecutor.execute(() -> {
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, MILLISECONDS.toNanos(100));
+            assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
+
+            timeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, MILLISECONDS.toNanos(1000));
+            assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
+            completed.set(true);
+        });
+
         await().untilTrue(completed);
     }
 
