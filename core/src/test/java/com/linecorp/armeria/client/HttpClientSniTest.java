@@ -144,13 +144,14 @@ class HttpClientSniTest {
 
     @Test
     void testTlsNoVerifyHosts() throws Exception {
-        final ClientFactory clientFactoryIgnoreHosts = ClientFactory.builder()
+        try (ClientFactory clientFactoryIgnoreHosts = ClientFactory.builder()
                 .tlsNoVerifyHosts("a.com", "b.com")
                 .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
-                .build();
-        assertThat(get("a.com", clientFactoryIgnoreHosts)).isEqualTo("a.com: CN=a.com");
-        assertThatThrownBy(() -> get("c.com", clientFactoryIgnoreHosts))
-                .hasStackTraceContaining("javax.net.ssl.SSLHandshakeException");
+                .build()) {
+            assertThat(get("a.com", clientFactoryIgnoreHosts)).isEqualTo("a.com: CN=a.com");
+            assertThatThrownBy(() -> get("c.com", clientFactoryIgnoreHosts))
+                    .hasStackTraceContaining("javax.net.ssl.SSLHandshakeException");
+        }
     }
 
     private static String get(String fqdn) throws Exception {
