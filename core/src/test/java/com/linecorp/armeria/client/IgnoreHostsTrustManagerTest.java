@@ -72,7 +72,7 @@ class IgnoreHostsTrustManagerTest {
     @AfterAll
     static void destroy() throws IOException {
         defaultSocket.close();
-        server.stop();
+        server.stop().join();
     }
 
     @Test
@@ -87,10 +87,12 @@ class IgnoreHostsTrustManagerTest {
         final MockTrustManager delegate = new MockTrustManager();
         IgnoreHostsTrustManager tm;
 
+        // if host is ignored, the check is not delegated, therefore delegate.received is false
         tm = new IgnoreHostsTrustManager(delegate, new HashSet<>(singletonList("localhost")));
         tm.checkServerTrusted(certs, "", socket);
         assertThat(delegate.received).isFalse();
 
+        // if host is not ignored, the check is delegated
         tm = new IgnoreHostsTrustManager(delegate, new HashSet<>());
         tm.checkServerTrusted(certs, "", socket);
         assertThat(delegate.received).isTrue();
@@ -105,10 +107,12 @@ class IgnoreHostsTrustManagerTest {
         final MockTrustManager delegate = new MockTrustManager();
         IgnoreHostsTrustManager tm;
 
+        // if host is ignored, the check is not delegated, therefore delegate.received is false
         tm = new IgnoreHostsTrustManager(delegate, new HashSet<>(singletonList("localhost")));
         tm.checkServerTrusted(certs, "", sslEngine);
         assertThat(delegate.received).isFalse();
 
+        // if host is not ignored, the check is delegated
         tm = new IgnoreHostsTrustManager(delegate, new HashSet<>());
         tm.checkServerTrusted(certs, "", sslEngine);
         assertThat(delegate.received).isTrue();
