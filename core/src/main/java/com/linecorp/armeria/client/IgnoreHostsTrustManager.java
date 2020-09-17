@@ -23,8 +23,6 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
 
 import javax.net.ssl.SSLEngine;
@@ -32,18 +30,29 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
  * An implementation of {@link X509ExtendedTrustManager} that skips verification on whitelisted hosts.
  */
-public final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
+final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
 
+    private final X509ExtendedTrustManager delegate;
     private final Set<String> insecureHosts;
-    private X509ExtendedTrustManager delegate;
 
-    private IgnoreHostsTrustManager(Set<String> insecureHosts) {
+    IgnoreHostsTrustManager(X509ExtendedTrustManager delegate, Set<String> insecureHosts) {
+        this.delegate = delegate;
+        this.insecureHosts = insecureHosts;
+    }
+
+    /**
+     * Returns new {@link IgnoreHostsTrustManager} instance.
+     */
+    static IgnoreHostsTrustManager of(String... insecureHosts) {
+        X509ExtendedTrustManager delegate = null;
         try {
-            final TrustManagerFactory trustManagerFactory =
-                    TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            final TrustManagerFactory trustManagerFactory = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
             trustManagerFactory.init((KeyStore) null);
             final TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
             for (TrustManager tm : trustManagers) {
@@ -55,15 +64,8 @@ public final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
         } catch (GeneralSecurityException ignored) {
             // ignore
         }
-        requireNonNull(delegate, "default X509ExtendedTrustManager");
-        this.insecureHosts = insecureHosts;
-    }
-
-    /**
-     * Returns new {@link IgnoreHostsTrustManager} instance.
-     */
-    public static IgnoreHostsTrustManager from(String... insecureHosts) {
-        return new IgnoreHostsTrustManager(new HashSet<>(Arrays.asList(insecureHosts)));
+        requireNonNull(delegate, "cannot resolve default trust manager");
+        return new IgnoreHostsTrustManager(delegate, ImmutableSet.copyOf(insecureHosts));
     }
 
     @Override

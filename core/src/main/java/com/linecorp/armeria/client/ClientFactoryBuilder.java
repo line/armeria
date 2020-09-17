@@ -261,7 +261,7 @@ public final class ClientFactoryBuilder {
      * @see #tlsCustomizer(Consumer)
      */
     public ClientFactoryBuilder tlsNoVerifyHosts(String... insecureHosts) {
-        tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.from(insecureHosts)));
+        tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
         return this;
     }
 

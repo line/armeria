@@ -49,7 +49,6 @@ class HttpClientSniTest {
 
     private static int httpsPort;
     private static ClientFactory clientFactory;
-    private static ClientFactory clientFactoryIgnoreHosts;
     private static final SelfSignedCertificate sscA;
     private static final SelfSignedCertificate sscB;
 
@@ -85,18 +84,12 @@ class HttpClientSniTest {
                              .tlsNoVerify()
                              .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
                              .build();
-        clientFactoryIgnoreHosts =
-                ClientFactory.builder()
-                        .tlsNoVerifyHosts("a.com", "b.com", "127.0.0.1", "mismatch.com")
-                        .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
-                        .build();
     }
 
     @AfterAll
     static void destroy() throws Exception {
         CompletableFuture.runAsync(() -> {
             clientFactory.close();
-            clientFactoryIgnoreHosts.close();
             server.stop();
             sscA.delete();
             sscB.delete();
@@ -111,7 +104,6 @@ class HttpClientSniTest {
 
     private static void testMatch(String fqdn) throws Exception {
         assertThat(get(fqdn)).isEqualTo(fqdn + ": CN=" + fqdn);
-        assertThat(get0(fqdn)).isEqualTo(fqdn + ": CN=" + fqdn);
     }
 
     @Test
@@ -122,35 +114,6 @@ class HttpClientSniTest {
 
     private static void testMismatch(String fqdn) throws Exception {
         assertThat(get(fqdn)).isEqualTo("b.com: CN=b.com");
-        assertThat(get0(fqdn)).isEqualTo("b.com: CN=b.com");
-    }
-
-    @Test
-    void testHandshakeFail() {
-        assertThatThrownBy(() -> get0("c.com"))
-                .hasStackTraceContaining("javax.net.ssl.SSLHandshakeException");
-    }
-
-    private static String get(String fqdn) throws Exception {
-        final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
-                                          .factory(clientFactory)
-                                          .build();
-
-        final AggregatedHttpResponse response = client.get("/").aggregate().get();
-
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        return response.contentUtf8();
-    }
-
-    private static String get0(String fqdn) throws Exception {
-        final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
-                .factory(clientFactoryIgnoreHosts)
-                .build();
-
-        final AggregatedHttpResponse response = client.get("/").aggregate().get();
-
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        return response.contentUtf8();
     }
 
     @Test
@@ -177,6 +140,39 @@ class HttpClientSniTest {
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
         }
+    }
+
+    @Test
+    void testTlsNoVerifyHosts() throws Exception {
+        final ClientFactory clientFactoryIgnoreHosts = ClientFactory.builder()
+                .tlsNoVerifyHosts("a.com", "b.com")
+                .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                .build();
+        assertThat(get("a.com", clientFactoryIgnoreHosts)).isEqualTo("a.com: CN=a.com");
+        assertThatThrownBy(() -> get("c.com", clientFactoryIgnoreHosts))
+                .hasStackTraceContaining("javax.net.ssl.SSLHandshakeException");
+    }
+
+    private static String get(String fqdn) throws Exception {
+        final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
+                .factory(clientFactory)
+                .build();
+
+        final AggregatedHttpResponse response = client.get("/").aggregate().get();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        return response.contentUtf8();
+    }
+
+    private static String get(String fqdn, ClientFactory clientFactory) throws Exception {
+        final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
+                .factory(clientFactory)
+                .build();
+
+        final AggregatedHttpResponse response = client.get("/").aggregate().get();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        return response.contentUtf8();
     }
 
     private static class SniTestService extends AbstractHttpService {
