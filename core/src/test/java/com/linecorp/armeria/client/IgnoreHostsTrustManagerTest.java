@@ -22,12 +22,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.security.NoSuchAlgorithmException;
+import java.nio.ByteBuffer;
 import java.security.cert.X509Certificate;
 import java.util.HashSet;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.junit.jupiter.api.AfterAll;
@@ -49,10 +50,10 @@ class IgnoreHostsTrustManagerTest {
     private static X509Certificate[] defaultCerts;
 
     @BeforeAll
-    static void init() throws NoSuchAlgorithmException {
+    static void init() {
         defaultCerts = new X509Certificate[0];
         defaultSocket = new Socket();
-        defaultSslEngine = SSLContext.getDefault().createSSLEngine();
+        defaultSslEngine = new MockSSLEngine("localhost", 0);
         try {
             final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
             server = Server.builder()
@@ -71,8 +72,6 @@ class IgnoreHostsTrustManagerTest {
     @AfterAll
     static void destroy() throws IOException {
         defaultSocket.close();
-        defaultSslEngine.closeOutbound();
-        defaultSslEngine.closeInbound();
         server.stop();
     }
 
@@ -101,7 +100,7 @@ class IgnoreHostsTrustManagerTest {
 
     @Test
     void testCheckServerTrusted1() throws Exception {
-        final SSLEngine sslEngine = SSLContext.getDefault().createSSLEngine("localhost", port);
+        final MockSSLEngine sslEngine = new MockSSLEngine("localhost", port);
         final X509Certificate[] certs = new X509Certificate[0];
         final MockTrustManager delegate = new MockTrustManager();
         IgnoreHostsTrustManager tm;
@@ -113,9 +112,6 @@ class IgnoreHostsTrustManagerTest {
         tm = new IgnoreHostsTrustManager(delegate, new HashSet<>());
         tm.checkServerTrusted(certs, "", sslEngine);
         assertThat(delegate.received).isTrue();
-
-        sslEngine.closeOutbound();
-        sslEngine.closeInbound();
     }
 
     @Test
@@ -153,10 +149,128 @@ class IgnoreHostsTrustManagerTest {
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
-    static class MockTrustManager extends X509ExtendedTrustManager {
+    private static final class MockSSLEngine extends SSLEngine {
 
-        boolean received;
-        X509Certificate[] certificates = new X509Certificate[0];
+        private MockSSLEngine(String peerHost, int port) {
+            super(peerHost, port);
+        }
+
+        @Override
+        public SSLEngineResult wrap(ByteBuffer[] byteBuffers, int i, int i1, ByteBuffer byteBuffer) {
+            return null;
+        }
+
+        @Override
+        public SSLEngineResult unwrap(ByteBuffer byteBuffer, ByteBuffer[] byteBuffers, int i, int i1) {
+            return null;
+        }
+
+        @Override
+        public Runnable getDelegatedTask() {
+            return null;
+        }
+
+        @Override
+        public void closeInbound() {
+        }
+
+        @Override
+        public boolean isInboundDone() {
+            return false;
+        }
+
+        @Override
+        public void closeOutbound() {
+        }
+
+        @Override
+        public boolean isOutboundDone() {
+            return false;
+        }
+
+        @Override
+        public String[] getSupportedCipherSuites() {
+            return new String[0];
+        }
+
+        @Override
+        public String[] getEnabledCipherSuites() {
+            return new String[0];
+        }
+
+        @Override
+        public void setEnabledCipherSuites(String[] strings) {
+        }
+
+        @Override
+        public String[] getSupportedProtocols() {
+            return new String[0];
+        }
+
+        @Override
+        public String[] getEnabledProtocols() {
+            return new String[0];
+        }
+
+        @Override
+        public void setEnabledProtocols(String[] strings) {
+        }
+
+        @Override
+        public SSLSession getSession() {
+            return null;
+        }
+
+        @Override
+        public void beginHandshake() {
+        }
+
+        @Override
+        public SSLEngineResult.HandshakeStatus getHandshakeStatus() {
+            return null;
+        }
+
+        @Override
+        public void setUseClientMode(boolean b) {
+        }
+
+        @Override
+        public boolean getUseClientMode() {
+            return false;
+        }
+
+        @Override
+        public void setNeedClientAuth(boolean b) {
+        }
+
+        @Override
+        public boolean getNeedClientAuth() {
+            return false;
+        }
+
+        @Override
+        public void setWantClientAuth(boolean b) {
+        }
+
+        @Override
+        public boolean getWantClientAuth() {
+            return false;
+        }
+
+        @Override
+        public void setEnableSessionCreation(boolean b) {
+        }
+
+        @Override
+        public boolean getEnableSessionCreation() {
+            return false;
+        }
+    }
+
+    private static final class MockTrustManager extends X509ExtendedTrustManager {
+
+        private boolean received;
+        private final X509Certificate[] certificates = new X509Certificate[0];
 
         @Override
         public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket) {
