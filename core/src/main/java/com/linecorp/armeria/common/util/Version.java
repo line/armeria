@@ -111,7 +111,7 @@ public final class Version {
 
     /**
      * Retrieves the version information of Armeria artifacts.
-     * This method is a shortcut for {@code getAll(Version.class.getClassLoader())}.
+     * This method is a shortcut for {@linkplain #getAll(ClassLoader) getAll(Version.class.getClassLoader())}.
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
