@@ -174,7 +174,7 @@ io.dropwizard:
   dropwizard-core:
     version: &DROPWIZARD_VERSION '2.0.13'
     javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.12/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.13/
   dropwizard-jackson: { version: *DROPWIZARD_VERSION }
   dropwizard-lifecycle: { version: *DROPWIZARD_VERSION }
   dropwizard-jersey: { version: *DROPWIZARD_VERSION }
