@@ -69,7 +69,7 @@ public final class Tomcat90InputBuffer implements InputBuffer {
         return nioBuf.remaining();
     }
 
-    @Override
+    // required in Tomcat 9.0.38+
     public int available() {
         return content.length();
     }
