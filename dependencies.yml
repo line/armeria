@@ -6,9 +6,9 @@ boms:
   - com.fasterxml.jackson:jackson-bom:2.11.2
   - io.dropwizard.metrics:metrics-bom:4.1.12.1
   - io.grpc:grpc-bom:1.31.1
-  - io.micrometer:micrometer-bom:1.5.4
+  - io.micrometer:micrometer-bom:1.5.5
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.51.Final
+  - io.netty:netty-bom:4.1.52.Final
   - io.zipkin.brave:brave-bom:5.12.4
   - org.eclipse.jetty:jetty-bom:9.4.31.v20200723
   - org.junit:junit-bom:5.6.2
@@ -235,11 +235,11 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.31.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.34.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.9.RELEASE'
+    version: &REACTOR_VERSION '3.3.10.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -376,7 +376,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.37'
+    version: &TOMCAT_VERSION '9.0.38'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -515,11 +515,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.2.8.RELEASE' }
+  spring-web: { version: '5.2.9.RELEASE' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.3.3.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.3.4.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
