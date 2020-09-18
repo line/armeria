@@ -71,7 +71,8 @@ new RetryRule() {
             }
         }
 
-        if (ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS).responseHeaders().status() == HttpStatus.TOO_MANY_REQUESTS) {
+        HttpStatus status = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS).responseHeaders().status();
+        if (status == HttpStatus.TOO_MANY_REQUESTS) {
             return CompletableFuture.completedFuture(RetryDecision.stop());
         }
 
