@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -24,7 +23,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.cert.X509Certificate;
-import java.util.HashSet;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -34,45 +32,41 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerPort;
-
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class IgnoreHostsTrustManagerTest {
 
-    private static int port;
-    private static Server server;
+    private static int httpsPort;
     private static Socket defaultSocket;
     private static SSLEngine defaultSslEngine;
     private static X509Certificate[] defaultCerts;
 
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/", (ctx, req) -> HttpResponse.of());
+            sb.tlsSelfSigned();
+        }
+    };
+
     @BeforeAll
     static void init() {
+        httpsPort = server.httpsPort();
         defaultCerts = new X509Certificate[0];
         defaultSocket = new Socket();
         defaultSslEngine = new MockSSLEngine("localhost", 0);
-        try {
-            final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
-            server = Server.builder()
-                    .service("/", (ctx, req) -> HttpResponse.of())
-                    .tls(ssc.certificate(), ssc.privateKey())
-                    .build();
-            server.start().get();
-            port = server.activePorts().values().stream()
-                    .filter(ServerPort::hasHttps).findAny().get().localAddress()
-                    .getPort();
-        } catch (Exception e) {
-            throw new Error(e);
-        }
     }
 
     @AfterAll
     static void destroy() throws IOException {
         defaultSocket.close();
-        server.stop().join();
     }
 
     @Test
@@ -82,18 +76,18 @@ class IgnoreHostsTrustManagerTest {
 
     @Test
     void testCheckServerTrusted() throws Exception {
-        final Socket socket = new Socket("localhost", port);
+        final Socket socket = new Socket("localhost", httpsPort);
         final X509Certificate[] certs = new X509Certificate[0];
         final MockTrustManager delegate = new MockTrustManager();
         IgnoreHostsTrustManager tm;
 
         // if host is ignored, the check is not delegated, therefore delegate.received is false
-        tm = new IgnoreHostsTrustManager(delegate, new HashSet<>(singletonList("localhost")));
+        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of("localhost"));
         tm.checkServerTrusted(certs, "", socket);
         assertThat(delegate.received).isFalse();
 
         // if host is not ignored, the check is delegated
-        tm = new IgnoreHostsTrustManager(delegate, new HashSet<>());
+        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of());
         tm.checkServerTrusted(certs, "", socket);
         assertThat(delegate.received).isTrue();
 
@@ -102,18 +96,18 @@ class IgnoreHostsTrustManagerTest {
 
     @Test
     void testCheckServerTrusted1() throws Exception {
-        final MockSSLEngine sslEngine = new MockSSLEngine("localhost", port);
+        final MockSSLEngine sslEngine = new MockSSLEngine("localhost", httpsPort);
         final X509Certificate[] certs = new X509Certificate[0];
         final MockTrustManager delegate = new MockTrustManager();
         IgnoreHostsTrustManager tm;
 
         // if host is ignored, the check is not delegated, therefore delegate.received is false
-        tm = new IgnoreHostsTrustManager(delegate, new HashSet<>(singletonList("localhost")));
+        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of("localhost"));
         tm.checkServerTrusted(certs, "", sslEngine);
         assertThat(delegate.received).isFalse();
 
         // if host is not ignored, the check is delegated
-        tm = new IgnoreHostsTrustManager(delegate, new HashSet<>());
+        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of());
         tm.checkServerTrusted(certs, "", sslEngine);
         assertThat(delegate.received).isTrue();
     }
@@ -121,7 +115,7 @@ class IgnoreHostsTrustManagerTest {
     @Test
     void testGetAcceptedIssuers() {
         final MockTrustManager delegate = new MockTrustManager();
-        final IgnoreHostsTrustManager tm = new IgnoreHostsTrustManager(delegate, new HashSet<>());
+        final IgnoreHostsTrustManager tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of());
         assertThat(tm.getAcceptedIssuers()).isEqualTo(delegate.certificates);
     }
 

@@ -20,11 +20,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.cert.X509Certificate;
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -36,64 +36,42 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class HttpClientSniTest {
 
-    private static final Server server;
-
     private static int httpsPort;
     private static ClientFactory clientFactory;
-    private static final SelfSignedCertificate sscA;
-    private static final SelfSignedCertificate sscB;
 
-    static {
-        try {
-            final ServerBuilder sb = Server.builder();
-            sscA = new SelfSignedCertificate("a.com");
-            sscB = new SelfSignedCertificate("b.com");
-
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
             sb.virtualHost("a.com")
-              .service("/", new SniTestService("a.com"))
-              .tls(sscA.certificate(), sscA.privateKey())
-              .and()
-              .defaultVirtualHost()
-              .defaultHostname("b.com")
-              .service("/", new SniTestService("b.com"))
-              .tls(sscB.certificate(), sscB.privateKey());
-
-            server = sb.build();
-        } catch (Exception e) {
-            throw new Error(e);
+                    .service("/", new SniTestService("a.com"))
+                    .tlsSelfSigned()
+                    .and()
+                    .defaultVirtualHost()
+                    .defaultHostname("b.com")
+                    .service("/", new SniTestService("b.com"))
+                    .tlsSelfSigned();
         }
-    }
+    };
 
     @BeforeAll
-    static void init() throws Exception {
-        server.start().get();
-        httpsPort = server.activePorts().values().stream()
-                          .filter(ServerPort::hasHttps).findAny().get().localAddress()
-                          .getPort();
-        clientFactory =
-                ClientFactory.builder()
-                             .tlsNoVerify()
-                             .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
-                             .build();
+    static void init() {
+        httpsPort = server.httpsPort();
+        clientFactory = ClientFactory.builder()
+                .tlsNoVerify()
+                .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                .build();
     }
 
     @AfterAll
-    static void destroy() throws Exception {
-        CompletableFuture.runAsync(() -> {
-            clientFactory.close();
-            server.stop();
-            sscA.delete();
-            sscB.delete();
-        });
+    static void destroy() {
+        clientFactory.close();
     }
 
     @Test
@@ -155,14 +133,7 @@ class HttpClientSniTest {
     }
 
     private static String get(String fqdn) throws Exception {
-        final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
-                .factory(clientFactory)
-                .build();
-
-        final AggregatedHttpResponse response = client.get("/").aggregate().get();
-
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        return response.contentUtf8();
+        return get(fqdn, clientFactory);
     }
 
     private static String get(String fqdn, ClientFactory clientFactory) throws Exception {
