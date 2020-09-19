@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.RequestContext;
  *       {@link #isAvailable(Iterable)}, {@link #whenAvailable(RequestLogProperty)},
  *       {@link #whenAvailable(RequestLogProperty...)} or {@link #whenAvailable(Iterable)} to check if or
  *       to get notified when a certain set of properties are available.</li>
- * </ul></p>
+ * </ul>
  *
  * <p>If you are sure that certain properties are available, you can convert a {@link RequestLogAccess} into
  * a {@link RequestLog} or {@link RequestOnlyLog} by using the {@code "ensure*()"} methods, such as

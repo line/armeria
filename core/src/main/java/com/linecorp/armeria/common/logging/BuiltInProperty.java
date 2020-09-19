@@ -206,6 +206,7 @@ public enum BuiltInProperty {
      * {@code "req.content"} - the content of the request. The content may have one of the following:
      *
      * <table>
+     * <caption>the content of the request</caption>
      * <tr><th>request type</th><th>description</th></tr>
      *
      * <tr><td>RPC</td>
@@ -254,9 +255,10 @@ public enum BuiltInProperty {
     }),
 
     /**
-     * {@code "res.content"} - the content of the request. The content may have one of the following:
+     * {@code "res.content"} - the content of the response. The content may have one of the following:
      *
      * <table>
+     * <caption>the content of the response</caption>
      * <tr><th>response type</th><th>description</th></tr>
      *
      * <tr><td>RPC</td>

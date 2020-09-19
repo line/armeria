@@ -314,6 +314,7 @@ public interface ClientRequestContext extends RequestContext {
      * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
@@ -373,6 +374,7 @@ public interface ClientRequestContext extends RequestContext {
      * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>

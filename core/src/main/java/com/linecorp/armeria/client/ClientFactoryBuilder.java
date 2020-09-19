@@ -433,7 +433,7 @@ public final class ClientFactoryBuilder {
      * Sets the PING interval in milliseconds.
      * When neither read nor write was performed for the given {@code pingIntervalMillis},
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
@@ -457,7 +457,7 @@ public final class ClientFactoryBuilder {
      * Sets the PING interval.
      * When neither read nor write was performed for the given {@code pingInterval},
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or

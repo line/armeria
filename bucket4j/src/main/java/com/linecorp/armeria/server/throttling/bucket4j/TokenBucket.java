@@ -78,7 +78,7 @@ public final class TokenBucket {
      * Defines throttling configuration comprised of zero or more bandwidth limits in accordance to
      * token-bucket algorithm.
      *
-     * <h3>Multiple bandwidths:</h3>
+     * <h2>Multiple bandwidths:</h2>
      * It is possible to specify more than one bandwidth per bucket, and bucket will handle all bandwidth in
      * strongly atomic way. Strongly atomic means that token will be consumed from all bandwidth or from
      * nothing, in other words any token can not be partially consumed.

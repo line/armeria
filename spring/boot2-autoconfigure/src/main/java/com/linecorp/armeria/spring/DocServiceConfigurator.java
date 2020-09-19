@@ -25,7 +25,7 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**
- * Configures a {@link DocService} built by {@link ArmeriaAutoConfiguration}.
+ * Configures a {@link DocService} built by Armeria auto configuration.
  */
 @FunctionalInterface
 public interface DocServiceConfigurator extends Ordered {

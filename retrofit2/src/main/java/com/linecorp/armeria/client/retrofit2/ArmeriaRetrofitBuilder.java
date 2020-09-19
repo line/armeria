@@ -103,7 +103,7 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
      *   <li>Whether the connection is secured (HTTPS or HTTPS)</li>
      *   <li>Host name</li>
      *   <li>Port number</li>
-     * </ul></p>
+     * </ul>
      *
      * <p>You can use this method to create a customized non-base {@link WebClient}, for example to send
      * an additional header, override the timeout or enforce HTTP/1:
@@ -126,7 +126,7 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
      *                                    .build();
      *                })
      *                .build();
-     * }</pre></p>
+     * }</pre>
      *
      * <p>Note that the specified {@link BiFunction} is not used for sending requests to the base URL's
      * authority. The default {@link WebClient} specified with {@link ArmeriaRetrofit#of(WebClient)} or
@@ -137,7 +137,7 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
      *                             .setHeader(HttpHeaderNames.AUTHORIZATION,
      *                                        "bearer my-access-token")
      *                             .build());
-     * }</pre></p>
+     * }</pre>
      */
     public ArmeriaRetrofitBuilder nonBaseClientFactory(
             BiFunction<? super SessionProtocol, ? super Endpoint, ? extends WebClient> nonBaseClientFactory) {
