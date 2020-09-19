@@ -322,8 +322,8 @@ net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.18.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
-net.sf.proguard:
-  proguard-gradle: { version: '6.2.2' }
+com.guardsquare:
+  proguard-gradle: { version: '7.0.0' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.5.1' }
