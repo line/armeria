@@ -342,7 +342,7 @@ class TimeoutSchedulerTest {
     }
 
     @Test
-    void initializeOnce() {
+    void initializeOnlyOnce() {
         final AtomicBoolean completed = new AtomicBoolean();
         final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
         eventExecutor.execute(() -> {
