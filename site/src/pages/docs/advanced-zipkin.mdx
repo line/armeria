@@ -6,7 +6,16 @@ failing or taking more time than others in a distributed environment. Armeria su
 [Brave](https://github.com/openzipkin/brave/), which is a Java tracing library compatible with
 [Zipkin](https://zipkin.io/). Let's find out how to use it to trace requests.
 
-First, you need to create the `HttpTracing`:
+First, You need the `armeria-brave` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-brave' },
+  ]}
+/>
+
+Then, you need to create the `HttpTracing`:
 
 ```java
     import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;

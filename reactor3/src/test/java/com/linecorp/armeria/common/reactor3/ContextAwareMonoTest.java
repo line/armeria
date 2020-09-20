@@ -231,6 +231,23 @@ class ContextAwareMonoTest {
                     .verifyComplete();
     }
 
+    @Test
+    void subscriberContextIsNotMissing() {
+        final ClientRequestContext ctx = newContext();
+        final Mono<String> mono;
+        try (SafeCloseable ignored = ctx.push()) {
+            mono = Mono.subscriberContext().handle((reactorCtx, sink) -> {
+                assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
+                sink.next("baz");
+            });
+        }
+        final Mono<String> mono1 = mono.subscriberContext(reactorCtx -> reactorCtx.put("foo", "bar"));
+        StepVerifier.create(mono1)
+                    .expectSubscriptionMatches(s -> ctxExists(ctx))
+                    .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))
+                    .verifyComplete();
+    }
+
     static Subscription noopSubscription() {
         return new Subscription() {
             @Override
