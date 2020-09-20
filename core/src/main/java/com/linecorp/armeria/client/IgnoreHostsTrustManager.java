@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -49,6 +50,13 @@ final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
      * Returns new {@link IgnoreHostsTrustManager} instance.
      */
     static IgnoreHostsTrustManager of(String... insecureHosts) {
+        return of(ImmutableSet.copyOf(insecureHosts));
+    }
+
+    /**
+     * Returns new {@link IgnoreHostsTrustManager} instance.
+     */
+    static IgnoreHostsTrustManager of(Set<String> insecureHosts) {
         X509ExtendedTrustManager delegate = null;
         try {
             final TrustManagerFactory trustManagerFactory = TrustManagerFactory
@@ -65,13 +73,13 @@ final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
             // ignore
         }
         requireNonNull(delegate, "cannot resolve default trust manager");
-        return new IgnoreHostsTrustManager(delegate, ImmutableSet.copyOf(insecureHosts));
+        return new IgnoreHostsTrustManager(delegate, insecureHosts);
     }
 
     @Override
     public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
             throws CertificateException {
-        if (!insecureHosts.contains(socket.getInetAddress().getHostName())) {
+        if (!insecureHosts.contains(((InetSocketAddress) socket.getRemoteSocketAddress()).getHostString())) {
             delegate.checkServerTrusted(x509Certificates, s, socket);
         }
     }

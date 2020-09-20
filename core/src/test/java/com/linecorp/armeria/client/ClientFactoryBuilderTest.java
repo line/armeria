@@ -68,6 +68,23 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
+    void tlsNoVerifyAndTlsNoVerifyHostsAreMutuallyExclusive() {
+        final ClientFactoryBuilder builder1 = ClientFactory.builder();
+        builder1.tlsNoVerify();
+
+        assertThatThrownBy(() -> builder1.tlsNoVerifyHosts("localhost"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("mutually exclusive");
+
+        final ClientFactoryBuilder builder2 = ClientFactory.builder();
+        builder2.tlsNoVerifyHosts("localhost");
+
+        assertThatThrownBy(builder2::tlsNoVerify)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("mutually exclusive");
+    }
+
+    @Test
     void shouldInheritClientFactoryOptions() {
         try (ClientFactory factory1 = ClientFactory.builder()
                                                    .maxNumEventLoopsPerEndpoint(2)

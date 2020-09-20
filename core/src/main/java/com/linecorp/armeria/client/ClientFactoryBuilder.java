@@ -28,9 +28,12 @@ import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -103,6 +106,8 @@ public final class ClientFactoryBuilder {
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
+    private boolean tlsNoVerifySet;
+    private final Set<String> insecureHosts = new HashSet<>();
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
@@ -242,26 +247,30 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Disables the verification of server's key certificate chain. This method is a shortcut for:
-     * {@code tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))}.
+     * Disables the verification of server's TLS certificate chain. If you want to disable verification for
+     * only specific hosts, use {@link #tlsNoVerifyHosts(String...)}.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see InsecureTrustManagerFactory
      * @see #tlsCustomizer(Consumer)
      */
     public ClientFactoryBuilder tlsNoVerify() {
-        tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+        checkState(insecureHosts.isEmpty(), "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        tlsNoVerifySet = true;
         return this;
     }
 
     /**
-     * Disables the verification of server's key certificate chain for specific hosts.
+     * Disables the verification of server's TLS certificate chain for specific hosts. If you want to disable
+     * all verification, use {@link #tlsNoVerify()} .
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
+     * @see IgnoreHostsTrustManager
      * @see #tlsCustomizer(Consumer)
      */
     public ClientFactoryBuilder tlsNoVerifyHosts(String... insecureHosts) {
-        tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+        checkState(!tlsNoVerifySet, "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        this.insecureHosts.addAll(Arrays.asList(insecureHosts));
         return this;
     }
 
@@ -612,6 +621,12 @@ public final class ClientFactoryBuilder {
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
+
+        if (tlsNoVerifySet) {
+            tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+        } else if (!insecureHosts.isEmpty()) {
+            tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+        }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
