@@ -12,7 +12,16 @@ Armeria provides 2 <type://ServerListener> implementations for service registrat
 
 ## ZooKeeper-based service registration with `ZooKeeperUpdatingListener`
 
-Use <type://ZooKeeperUpdatingListener> and <type://ZooKeeperRegistrationSpec> to register your server
+First, You need the `armeria-zookeeper3` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-zookeeper3' },
+  ]}
+/>
+
+Then, use <type://ZooKeeperUpdatingListener> and <type://ZooKeeperRegistrationSpec> to register your server
 to a ZooKeeper cluster:
 
 ```java
@@ -78,7 +87,16 @@ See [ZooKeeper service discovery](/docs/client-service-discovery#zookeeper-based
 
 ## Eureka-based service registration with `EurekaUpdatingListener`
 
-Use <type://EurekaUpdatingListener> to register your server to the Eureka:
+First, You need the `armeria-eureka` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-eureka' },
+  ]}
+/>
+
+Then, use <type://EurekaUpdatingListener> to register your server to the Eureka:
 
 ```java
 import com.linecorp.armeria.server.Server;

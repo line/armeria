@@ -234,7 +234,17 @@ group.whenReady().get();
 
 ## ZooKeeper-based service discovery with `ZooKeeperEndpointGroup`
 
-Use <type://ZooKeeperEndpointGroup> and <type://ZooKeeperDiscoverySpec> to retrieve the information of servers:
+First, You need the `armeria-zookeeper3` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-zookeeper3' },
+  ]}
+/>
+
+Then, use <type://ZooKeeperEndpointGroup> and <type://ZooKeeperDiscoverySpec> to retrieve the information
+of servers:
 
 ```java
 import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
@@ -284,7 +294,16 @@ See [ZooKeeper service registration](/docs/server-service-registration#zookeeper
 
 ## Eureka-based service discovery with `EurekaEndpointGroup`
 
-Use <type://EurekaEndpointGroup> to retrieve the information of servers:
+First, You need the `armeria-eureka` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-eureka' },
+  ]}
+/>
+
+Then, use <type://EurekaEndpointGroup> to retrieve the information of servers:
 
 ```java
 import com.linecorp.armeria.client.eureka.EurekaEndpointGroup;
