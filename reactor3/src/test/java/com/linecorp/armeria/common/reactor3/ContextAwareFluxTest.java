@@ -385,6 +385,23 @@ class ContextAwareFluxTest {
         assertThat(future.join().isDisposed()).isTrue();
     }
 
+    @Test
+    void subscriberContextIsNotMissing() {
+        final ClientRequestContext ctx = newContext();
+        final Flux<String> flux;
+        try (SafeCloseable ignored = ctx.push()) {
+            flux = Flux.deferWithContext(reactorCtx -> {
+                assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
+                return Flux.just("baz");
+            });
+        }
+        final Flux<String> flux1 = flux.subscriberContext(reactorCtx -> reactorCtx.put("foo", "bar"));
+        StepVerifier.create(flux1)
+                    .expectSubscriptionMatches(s -> ctxExists(ctx))
+                    .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))
+                    .verifyComplete();
+    }
+
     private static <T> Flux<T> addCallbacks(Flux<T> flux, ClientRequestContext ctx) {
         return flux.doFirst(() -> assertThat(ctxExists(ctx)).isTrue())
                    .doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())
