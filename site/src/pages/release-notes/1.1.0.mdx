@@ -11,6 +11,12 @@ date: 2020-09-21
       return MeterIdPrefixFunction.of("custom.armeria.server");
   }
   ```
+- You can now disable TLS verification for certain hosts only. #2722 #3057
+  ```java
+  ClientFactoryBuilder builder = ...
+  // You should never use this in production but only for a testing purpose.
+  builder.tlsNoVerifyHosts("trustin.com", "trustus.com");
+  ```
 - You can now use a string to specify the `Logger` for <type://LoggingService> and <type://LoggingClient>. #3035
   ```java
   ServerBuilder sb = ...
