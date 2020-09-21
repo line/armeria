@@ -31,27 +31,10 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 
-import com.google.common.collect.ImmutableSet;
-
 /**
  * An implementation of {@link X509ExtendedTrustManager} that skips verification on whitelisted hosts.
  */
 final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
-
-    private final X509ExtendedTrustManager delegate;
-    private final Set<String> insecureHosts;
-
-    IgnoreHostsTrustManager(X509ExtendedTrustManager delegate, Set<String> insecureHosts) {
-        this.delegate = delegate;
-        this.insecureHosts = insecureHosts;
-    }
-
-    /**
-     * Returns new {@link IgnoreHostsTrustManager} instance.
-     */
-    static IgnoreHostsTrustManager of(String... insecureHosts) {
-        return of(ImmutableSet.copyOf(insecureHosts));
-    }
 
     /**
      * Returns new {@link IgnoreHostsTrustManager} instance.
@@ -76,42 +59,50 @@ final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
         return new IgnoreHostsTrustManager(delegate, insecureHosts);
     }
 
+    private final X509ExtendedTrustManager delegate;
+    private final Set<String> insecureHosts;
+
+    IgnoreHostsTrustManager(X509ExtendedTrustManager delegate, Set<String> insecureHosts) {
+        this.delegate = delegate;
+        this.insecureHosts = insecureHosts;
+    }
+
     @Override
-    public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
+    public void checkServerTrusted(X509Certificate[] x509Certificates, String authType, Socket socket)
             throws CertificateException {
         if (!insecureHosts.contains(((InetSocketAddress) socket.getRemoteSocketAddress()).getHostString())) {
-            delegate.checkServerTrusted(x509Certificates, s, socket);
+            delegate.checkServerTrusted(x509Certificates, authType, socket);
         }
     }
 
     @Override
-    public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
+    public void checkServerTrusted(X509Certificate[] x509Certificates, String authType, SSLEngine sslEngine)
             throws CertificateException {
         if (!insecureHosts.contains(sslEngine.getPeerHost())) {
-            delegate.checkServerTrusted(x509Certificates, s, sslEngine);
+            delegate.checkServerTrusted(x509Certificates, authType, sslEngine);
         }
     }
 
     @Override
-    public void checkServerTrusted(X509Certificate[] x509Certificates, String s)
+    public void checkServerTrusted(X509Certificate[] x509Certificates, String authType)
             throws CertificateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
+    public void checkClientTrusted(X509Certificate[] x509Certificates, String authType, Socket socket)
             throws CertificateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
+    public void checkClientTrusted(X509Certificate[] x509Certificates, String authType, SSLEngine sslEngine)
             throws CertificateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] x509Certificates, String s)
+    public void checkClientTrusted(X509Certificate[] x509Certificates, String authType)
             throws CertificateException {
         throw new UnsupportedOperationException();
     }

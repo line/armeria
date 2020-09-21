@@ -42,6 +42,9 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class IgnoreHostsTrustManagerTest {
 
+    private static final String[] EMPTY_STRINGS = new String[0];
+    private static final X509Certificate[] EMPTY_CERTIFICATES = new X509Certificate[0];
+
     private static int httpsPort;
     private static Socket defaultSocket;
     private static SSLEngine defaultSslEngine;
@@ -59,7 +62,7 @@ class IgnoreHostsTrustManagerTest {
     @BeforeAll
     static void init() {
         httpsPort = server.httpsPort();
-        defaultCerts = new X509Certificate[0];
+        defaultCerts = EMPTY_CERTIFICATES;
         defaultSocket = new Socket();
         defaultSslEngine = new MockSSLEngine("localhost", 0);
     }
@@ -71,13 +74,13 @@ class IgnoreHostsTrustManagerTest {
 
     @Test
     void testCreate() {
-        assertThat(IgnoreHostsTrustManager.of("localhost")).isNotNull();
+        assertThat(IgnoreHostsTrustManager.of(ImmutableSet.of("localhost"))).isNotNull();
     }
 
     @Test
-    void testCheckServerTrusted() throws Exception {
+    void testCheckServerTrustedWithSocket() throws Exception {
         final Socket socket = new Socket("localhost", httpsPort);
-        final X509Certificate[] certs = new X509Certificate[0];
+        final X509Certificate[] certs = EMPTY_CERTIFICATES;
         final MockTrustManager delegate = new MockTrustManager();
         IgnoreHostsTrustManager tm;
 
@@ -95,9 +98,9 @@ class IgnoreHostsTrustManagerTest {
     }
 
     @Test
-    void testCheckServerTrusted1() throws Exception {
+    void testCheckServerTrustedWithSslEngine() throws Exception {
         final MockSSLEngine sslEngine = new MockSSLEngine("localhost", httpsPort);
-        final X509Certificate[] certs = new X509Certificate[0];
+        final X509Certificate[] certs = EMPTY_CERTIFICATES;
         final MockTrustManager delegate = new MockTrustManager();
         IgnoreHostsTrustManager tm;
 
@@ -120,29 +123,29 @@ class IgnoreHostsTrustManagerTest {
     }
 
     @Test
-    void testCheckServerTrusted2() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of();
+    void testCheckServerTrustedWithAuthType() {
+        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
         assertThatThrownBy(() -> tm.checkServerTrusted(defaultCerts, ""))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    void testCheckClientTrusted() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of();
+    void testCheckClientTrustedWithSocket() {
+        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
         assertThatThrownBy(() -> tm.checkClientTrusted(defaultCerts, "", defaultSocket))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    void testCheckClientTrusted1() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of();
+    void testCheckClientTrustedWithSslEngine() {
+        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
         assertThatThrownBy(() -> tm.checkClientTrusted(defaultCerts, "", defaultSslEngine))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    void testCheckClientTrusted2() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of();
+    void testCheckClientTrustedWithAuthType() {
+        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
         assertThatThrownBy(() -> tm.checkClientTrusted(defaultCerts, ""))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
@@ -169,8 +172,7 @@ class IgnoreHostsTrustManagerTest {
         }
 
         @Override
-        public void closeInbound() {
-        }
+        public void closeInbound() {}
 
         @Override
         public boolean isInboundDone() {
@@ -178,8 +180,7 @@ class IgnoreHostsTrustManagerTest {
         }
 
         @Override
-        public void closeOutbound() {
-        }
+        public void closeOutbound() {}
 
         @Override
         public boolean isOutboundDone() {
@@ -188,26 +189,25 @@ class IgnoreHostsTrustManagerTest {
 
         @Override
         public String[] getSupportedCipherSuites() {
-            return new String[0];
+            return EMPTY_STRINGS;
         }
 
         @Override
         public String[] getEnabledCipherSuites() {
-            return new String[0];
+            return EMPTY_STRINGS;
         }
 
         @Override
-        public void setEnabledCipherSuites(String[] strings) {
-        }
+        public void setEnabledCipherSuites(String[] strings) {}
 
         @Override
         public String[] getSupportedProtocols() {
-            return new String[0];
+            return EMPTY_STRINGS;
         }
 
         @Override
         public String[] getEnabledProtocols() {
-            return new String[0];
+            return EMPTY_STRINGS;
         }
 
         @Override
@@ -220,8 +220,7 @@ class IgnoreHostsTrustManagerTest {
         }
 
         @Override
-        public void beginHandshake() {
-        }
+        public void beginHandshake() {}
 
         @Override
         public SSLEngineResult.HandshakeStatus getHandshakeStatus() {
@@ -229,8 +228,7 @@ class IgnoreHostsTrustManagerTest {
         }
 
         @Override
-        public void setUseClientMode(boolean b) {
-        }
+        public void setUseClientMode(boolean b) {}
 
         @Override
         public boolean getUseClientMode() {
@@ -247,8 +245,7 @@ class IgnoreHostsTrustManagerTest {
         }
 
         @Override
-        public void setWantClientAuth(boolean b) {
-        }
+        public void setWantClientAuth(boolean b) {}
 
         @Override
         public boolean getWantClientAuth() {
@@ -256,8 +253,7 @@ class IgnoreHostsTrustManagerTest {
         }
 
         @Override
-        public void setEnableSessionCreation(boolean b) {
-        }
+        public void setEnableSessionCreation(boolean b) {}
 
         @Override
         public boolean getEnableSessionCreation() {
@@ -268,35 +264,37 @@ class IgnoreHostsTrustManagerTest {
     private static final class MockTrustManager extends X509ExtendedTrustManager {
 
         private boolean received;
-        private final X509Certificate[] certificates = new X509Certificate[0];
+        private final X509Certificate[] certificates = EMPTY_CERTIFICATES;
 
         @Override
-        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket) {
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String authType, Socket socket) {
             received = true;
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String authType,
+                                       SSLEngine sslEngine) {
             received = true;
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] x509Certificates, String s) {
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String autyType) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket) {
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String authType, Socket socket) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String authType,
+                                       SSLEngine sslEngine) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] x509Certificates, String s) {
+        public void checkClientTrusted(X509Certificate[] x509Certificates, String authType) {
             throw new UnsupportedOperationException();
         }
 
