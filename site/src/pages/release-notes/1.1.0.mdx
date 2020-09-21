@@ -37,6 +37,7 @@ date: 2020-09-21
 is `true`. #3048
 - You now see the proper exception from WebFlux `WebClient` when <type://CircuitBreakerClient> is applied. #3064
 - Armeria client now rejects a `PUSH_PROMISE` frame correctly because it doesn't support it yet. #3045
+  - `SETTINGS_ENABLE_PUSH` is now disabled.
 - Armeria gRPC server does not raise a `NullPointerException` anymore when a gRPC server interceptor closes
   the `ServerCall`. #3022
 
