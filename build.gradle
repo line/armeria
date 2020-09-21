@@ -207,7 +207,7 @@ allprojects {
     }
 }
 
-// Require to use JDK 15 when releasing.
+// Require to use JDK 14 when releasing.
 tasks.release.doFirst {
     if (JavaVersion.current() != JavaVersion.VERSION_14) {
         throw new IllegalStateException("You must release using JDK 14.");
