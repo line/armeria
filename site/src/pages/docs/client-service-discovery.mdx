@@ -234,4 +234,102 @@ group.whenReady().get();
 
 ## ZooKeeper-based service discovery with `ZooKeeperEndpointGroup`
 
-See [Service discovery with ZooKeeper](/docs/advanced-zookeeper).
+First, You need the `armeria-zookeeper3` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-zookeeper3' },
+  ]}
+/>
+
+Then, use <type://ZooKeeperEndpointGroup> and <type://ZooKeeperDiscoverySpec> to retrieve the information
+of servers:
+
+```java
+import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
+import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
+
+String zkConnectionStr = "myZooKeeperHost:2181";
+String znodePath = "/myProductionEndpoints";
+ZooKeeperDiscoverySpec discoverySpec = ZooKeeperDiscoverySpec.curator(serviceName);
+ZooKeeperEndpointGroup myEndpointGroup =
+        ZooKeeperEndpointGroup.builder(zkConnectionStr, znodePath, discoverySpec)
+                              .sessionTimeoutMillis(10000)
+                              .build();
+```
+
+The <type://ZooKeeperEndpointGroup> is used to fetch the binary representation of server information.
+The <type://ZooKeeperDiscoverySpec> converts the binary representation to an <type://Endpoint>.
+
+<type://ZooKeeperDiscoverySpec#curator(String)> uses the format of
+[Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html) which is compatible
+with [Spring Cloud Zookeeper](https://cloud.spring.io/spring-cloud-zookeeper/reference/html/). If you
+registered your server with <type://ZooKeeperRegistrationSpec#curator(String)>, you must use
+<type://ZooKeeperDiscoverySpec#curator(String)>.
+
+You can use an existing
+[CuratorFramework](https://curator.apache.org/apidocs/org/apache/curator/framework/CuratorFramework.html)
+instance instead of the ZooKeeper connection string at this time as well.
+
+```java
+import org.apache.curator.framework.CuratorFramework;
+
+CuratorFramework client = ...
+String znodePath = ...
+ZooKeeperDiscoverySpec discoverySpec = ...
+ZooKeeperEndpointGroup myEndpointGroup =
+        ZooKeeperEndpointGroup.builder(client, znodePath, discoverySpec)
+                              .build();
+```
+
+For more information, please refer to the API documentation of the
+[com.linecorp.armeria.client.zookeeper](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/server/client/package-summary.html) package.
+
+<Tip>
+
+See [ZooKeeper service registration](/docs/server-service-registration#zookeeper-based-service-registration-with-zookeeperupdatinglistener).
+
+</Tip>
+
+## Eureka-based service discovery with `EurekaEndpointGroup`
+
+First, You need the `armeria-eureka` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-eureka' },
+  ]}
+/>
+
+Then, use <type://EurekaEndpointGroup> to retrieve the information of servers:
+
+```java
+import com.linecorp.armeria.client.eureka.EurekaEndpointGroup;
+
+EurekaEndpointGroup eurekaEndpointGroup =
+        EurekaEndpointGroup.of("https://eureka.com:8001/eureka/v2");
+```
+
+If you want to retrieve the information of certain regions or a service,
+use <type://EurekaEndpointGroupBuilder>:
+
+```java
+import com.linecorp.armeria.client.eureka.EurekaEndpointGroupBuilder;
+
+EurekaEndpointGroupBuilder builder =
+        EurekaEndpointGroup.builder("https://eureka.com:8001/eureka/v2");
+                           .regions("aws")
+                           .appName("myApplication");
+EurekaEndpointGroup eurekaEndpointGroup = builder.build();
+```
+
+For more information, please refer to the API documentation of the
+[com.linecorp.armeria.client.eureka](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/eureka/package-summary.html) package.
+
+<Tip>
+
+See [Eureka service registration](/docs/server-service-registration#eureka-based-service-registration-with-eurekaupdatinglistener).
+
+</Tip>
