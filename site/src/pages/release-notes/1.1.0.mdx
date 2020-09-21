@@ -1,10 +1,10 @@
 ---
-date: 2020-09-18
+date: 2020-09-21
 ---
 
 ## 🌟 New features
 
-- You can now inject your own <type://MeterIdPrefixFunction> when using Armeria Spring boot autoconfigure. #3034
+- You can now inject your own <type://MeterIdPrefixFunction> when using Armeria Spring Boot integration. #3034
   ```java
   @Bean
   public MeterIdPrefixFunction myMeterIdPrefixFunction() {
@@ -21,23 +21,24 @@ date: 2020-09-18
 
 ## 📈 Improvements
 
-- Span name is the service name if you use the default `HttpRequestParser` and `HttpResponseParser` with
-  `BraveClient` and `BraveService`. #3023
+- <type://RequestLog#serviceNam()> is now used as a span name if you use the default `HttpRequestParser`
+  and `HttpResponseParser` with `BraveClient` and `BraveService` for recognize a span easily. #3023
 - You can now easily find out whether SPI service interfaces are applied from the logs. #3039
-- You can now get the log of the exception which is raised while making request and response logs. #3043
-- The stack-trace of <type://HttpStatusException> and <type://HttpResponseException> are not logged in
-  <type://LoggingService>. #3053, #3054
+- You can now get the log of the exception which is raised while converting a <type://RequestLog> into a
+  `String`. #3043
+- The stack trace of <type://HttpStatusException> and <type://HttpResponseException> are not logged anymore by
+  <type://LoggingService> because a user already knows where they are come from. #3053, #3054
 
 ## 🛠️ Bug fixes
 
-- <type://TimeoutScheduler> is initialized exactly once. #3066
+- <type://TimeoutScheduler> is now initialized exactly once. #3066
 - Reactor subscriber context is now properly propagated. #3058
-- Armeria Spring boot autoconfigure collects metrics correctly if <type://ArmeriaSettings#enableMetrics>
+- Armeria Spring Boot integration collects metrics correctly if <type://ArmeriaSettings#enableMetrics>
 is `true`. #3048
 - You now see the proper exception from WebFlux `WebClient` when <type://CircuitBreakerClient> is applied. #3064
-- Armeria client rejects `PUSH_PROMISE` frame correctly because it doesn't support it yet. #3045
+- Armeria client now rejects a `PUSH_PROMISE` frame correctly because it doesn't support it yet. #3045
 - Armeria gRPC server does not raise a `NullPointerException` anymore when a gRPC server interceptor closes
-  the `ServerCall`.
+  the `ServerCall`. #3022
 
 ## 🏚️ Deprecations
 
