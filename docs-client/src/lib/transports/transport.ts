@@ -53,7 +53,7 @@ export default abstract class Transport {
 
   public findDebugMimeTypeEndpoint(
     method: Method,
-    endpointPath?: string | null,
+    endpointPath?: string,
   ): Endpoint | undefined {
     return method.endpoints.find((ep) => {
       return (

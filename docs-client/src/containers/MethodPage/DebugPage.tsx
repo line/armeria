@@ -166,7 +166,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       urlPath =
         transport.findDebugMimeTypeEndpoint(
           method,
-          urlParams.get('endpoint_path'),
+          urlParams.get('endpoint_path') || undefined,
         )?.pathMapping || '';
     }
 
