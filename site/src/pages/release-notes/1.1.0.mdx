@@ -27,8 +27,9 @@ date: 2020-09-22
 
 ## 📈 Improvements
 
-- <type://RequestLog#serviceNam()> is now used as a span name if you use the default `HttpRequestParser`
-  and `HttpResponseParser` with `BraveClient` and `BraveService` for recognizing a span easily. #3023
+- <type://RequestLog#serviceName()> is now used as a span name if you use the default `HttpRequestParser`
+  and `HttpResponseParser` with <type://BraveClient> and <type://BraveService> for recognizing
+  a span easily. #3023
 - You can now easily find out whether SPI service interfaces are applied from the logs. #3039
 - You can now get the log of the exception which is raised while converting a <type://RequestLog> into a
   `String`. #3043
@@ -37,7 +38,7 @@ date: 2020-09-22
 
 ## 🛠️ Bug fixes
 
-- <type://TimeoutScheduler> is now initialized exactly once. #3066
+- `TimeoutScheduler` is now initialized exactly once. #3066
 - Reactor subscriber context is now properly propagated. #3058
 - Armeria Spring Boot integration collects metrics correctly if <type://ArmeriaSettings#enableMetrics>
 is `true`. #3048
@@ -89,6 +90,7 @@ is `true`. #3048
     'okue',
     'rickyrattlesnake',
     'trustin',
+    'tumile',
     'wooyeong',
   ]}
 />
