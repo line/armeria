@@ -46,6 +46,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
  * An implementation of {@link X509ExtendedTrustManager} that skips verification on whitelisted hosts.
  */
@@ -74,7 +76,7 @@ final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
             // ignore
         }
         requireNonNull(delegate, "cannot resolve default trust manager");
-        return new IgnoreHostsTrustManager(delegate, insecureHosts);
+        return new IgnoreHostsTrustManager(delegate, ImmutableSet.copyOf(insecureHosts));
     }
 
     private final X509ExtendedTrustManager delegate;

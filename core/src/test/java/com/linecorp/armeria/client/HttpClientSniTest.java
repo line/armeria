@@ -50,13 +50,13 @@ class HttpClientSniTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.virtualHost("a.com")
-                    .service("/", new SniTestService("a.com"))
-                    .tlsSelfSigned()
-                    .and()
-                    .defaultVirtualHost()
-                    .defaultHostname("b.com")
-                    .service("/", new SniTestService("b.com"))
-                    .tlsSelfSigned();
+              .service("/", new SniTestService("a.com"))
+              .tlsSelfSigned()
+              .and()
+              .defaultVirtualHost()
+              .defaultHostname("b.com")
+              .service("/", new SniTestService("b.com"))
+              .tlsSelfSigned();
         }
     };
 
@@ -64,9 +64,9 @@ class HttpClientSniTest {
     static void init() {
         httpsPort = server.httpsPort();
         clientFactory = ClientFactory.builder()
-                .tlsNoVerify()
-                .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
-                .build();
+                                     .tlsNoVerify()
+                                     .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                                     .build();
     }
 
     @AfterAll
@@ -123,11 +123,14 @@ class HttpClientSniTest {
     @Test
     void testTlsNoVerifyHosts() throws Exception {
         try (ClientFactory clientFactoryIgnoreHosts = ClientFactory.builder()
-                .tlsNoVerifyHosts("a.com", "b.com")
-                .tlsNoVerifyHosts("c.com")
-                .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
-                .build()) {
+                                                                   .tlsNoVerifyHosts("a.com")
+                                                                   .tlsNoVerifyHosts("b.com")
+                                                                   .addressResolverGroupFactory(
+                                                                           group -> MockAddressResolverGroup
+                                                                                   .localhost())
+                                                                   .build()) {
             assertThat(get("a.com", clientFactoryIgnoreHosts)).isEqualTo("a.com: CN=a.com");
+            assertThat(get("b.com", clientFactoryIgnoreHosts)).isEqualTo("b.com: CN=b.com");
             assertThatThrownBy(() -> get("d.com", clientFactoryIgnoreHosts))
                     .hasStackTraceContaining("javax.net.ssl.SSLHandshakeException");
         }
@@ -139,8 +142,8 @@ class HttpClientSniTest {
 
     private static String get(String fqdn, ClientFactory clientFactory) throws Exception {
         final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
-                .factory(clientFactory)
-                .build();
+                                          .factory(clientFactory)
+                                          .build();
 
         final AggregatedHttpResponse response = client.get("/").aggregate().get();
 
