@@ -14,10 +14,12 @@ fun main(args: Array<String>) {
     val server = newServer(8080)
     // To append a coroutine name to a thread name
     System.setProperty("kotlinx.coroutines.debug", "on")
-    Runtime.getRuntime().addShutdownHook(thread(start = false) {
-        server.stop().join()
-        log.info("Server has been stopped.")
-    })
+    Runtime.getRuntime().addShutdownHook(
+        thread(start = false) {
+            server.stop().join()
+            log.info("Server has been stopped.")
+        }
+    )
 
     server.start().join()
     log.info("Doc service at http://127.0.0.1:8080/docs")
@@ -29,9 +31,11 @@ fun newServer(port: Int): Server {
         // ContextAwareService
         .annotatedService()
         .pathPrefix("/contextAware")
-        .decorator(CoroutineContextService.newDecorator { ctx ->
-            CoroutineName(ctx.config().defaultServiceName() ?: "name")
-        })
+        .decorator(
+            CoroutineContextService.newDecorator { ctx ->
+                CoroutineName(ctx.config().defaultServiceName() ?: "name")
+            }
+        )
         .applyCommonDecorator()
         .build(ContextAwareService())
         // DecoratingService

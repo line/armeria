@@ -8,7 +8,7 @@ interface ProjectBadgeProps {
 
 const ProjectBadge: React.FC<ProjectBadgeProps> = (props) => (
   <span className={styles.badge}>
-    <object data={props.url} role="img" aria-label="" />
+    <object data={props.url} role="img" aria-label="badge" />
   </span>
 );
 
