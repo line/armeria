@@ -46,7 +46,7 @@ import com.google.common.annotations.VisibleForTesting;
  * tracingBuilder.sampler(RateLimitingSampler.create(10));
  * }</pre>
  *
- * <h3>Appropriate Usage</h3>
+ * <h2>Appropriate Usage</h2>
  *
  * <p>If the rate is 10 or more traces per second, an attempt is made to distribute the accept
  * decisions equally across the second. For example, if the rate is 100, 10 will pass every
@@ -55,7 +55,7 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>However, this sampler is insensitive to the trace ID and will operate correctly even if they are
  * not perfectly random.
  *
- * <h3>Implementation</h3>
+ * <h2>Implementation</h2>
  *
  * <p>The implementation uses {@link System#nanoTime} and tracks how many yes decisions occur
  * across a second window. When the rate is at least 10/s, the yes decisions are equally split over

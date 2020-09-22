@@ -61,7 +61,7 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
  * accept requests. The default behavior is to respond healthy after the server is started and unhealthy
  * after it started to stop.
  *
- * <h3>Long-polling support</h3>
+ * <h2>Long-polling support</h2>
  *
  * <p>A client that sends health check requests to this service can send a long-polling request to get notified
  * immediately when a {@link Server} becomes healthy or unhealthy, rather than sending health check requests
@@ -76,14 +76,14 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
  *       <li>e.g. {@code Prefer: wait=60}</li>
  *     </ul>
  *   </li>
- * </ul></p>
+ * </ul>
  *
  * <p>To wait until a {@link Server} becomes healthy, i.e. wait for the recovery, send an HTTP request with
  * two additional headers:
  * <ul>
  *   <li>{@code If-None-Match: "unhealthy"}</li>
  *   <li>{@code Prefer: wait=<seconds>}</li>
- * </ul></p>
+ * </ul>
  *
  * <p>The {@link Server} will wait up to the amount of seconds specified in the {@code "Prefer"} header
  * and respond with {@code "200 OK"}, {@code "503 Service Unavailable"} or {@code "304 Not Modified"}.

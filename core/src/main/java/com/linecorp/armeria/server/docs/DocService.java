@@ -76,7 +76,7 @@ import com.linecorp.armeria.server.file.HttpVfs;
  * {@link Server}. It does not require any configuration besides adding it to a {@link VirtualHost}; it
  * discovers all the eligible {@link Service}s automatically.
  *
- * <h3>How is the documentation generated?</h3>
+ * <h2>How is the documentation generated?</h2>
  *
  * <p>{@link DocService} looks up the {@link DocServicePlugin}s available in the current JVM
  * using Java SPI (Service Provider Interface). The {@link DocServicePlugin} implementations will
