@@ -265,7 +265,6 @@ public final class ClientFactoryBuilder {
      * all verification, use {@link #tlsNoVerify()} .
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
-     * @see IgnoreHostsTrustManager
      * @see #tlsCustomizer(Consumer)
      */
     public ClientFactoryBuilder tlsNoVerifyHosts(String... insecureHosts) {
