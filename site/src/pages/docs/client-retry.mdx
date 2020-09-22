@@ -55,6 +55,8 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryDecision;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 new RetryRule() {
     Backoff backoff = Backoff.ofDefault();
@@ -71,7 +73,9 @@ new RetryRule() {
             }
         }
 
-        if (ctx.log().partial().responseHeaders().status() == HttpStatus.TOO_MANY_REQUESTS) {
+        ResponseHeaders responseHeaders = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
+                                             .responseHeaders();
+        if (responseHeaders.status() == HttpStatus.TOO_MANY_REQUESTS) {
             return CompletableFuture.completedFuture(RetryDecision.stop());
         }
 
