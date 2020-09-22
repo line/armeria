@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -376,6 +377,16 @@ public interface RequestContext {
      * corresponding request passes a deadline).
      */
     boolean isTimedOut();
+
+    /**
+     * Cancels the request. Similar to {@link #timeoutNow()}, but throws a {@link CancellationException}.
+     */
+    void cancel();
+
+    /**
+     * Returns whether this {@link RequestContext} has been cancelled.
+     */
+    boolean isCancelled();
 
     /**
      * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.

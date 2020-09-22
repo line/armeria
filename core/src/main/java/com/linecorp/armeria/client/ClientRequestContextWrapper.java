@@ -146,6 +146,16 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void cancel() {
+        delegate().cancel();
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return delegate().isCancelled();
+    }
+
+    @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
         return delegate().whenResponseTimingOut();
     }

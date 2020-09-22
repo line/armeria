@@ -587,6 +587,16 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public void cancel() {
+        responseTimeoutScheduler.cancel();
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return responseTimeoutScheduler.isCancelled();
+    }
+
+    @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
         return responseTimeoutScheduler.whenTimingOut();
     }

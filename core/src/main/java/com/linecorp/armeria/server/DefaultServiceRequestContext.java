@@ -318,6 +318,16 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
+    public void cancel() {
+        requestTimeoutScheduler.cancel();
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return requestTimeoutScheduler.isCancelled();
+    }
+
+    @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
         return requestTimeoutScheduler.whenTimingOut();
     }
