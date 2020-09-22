@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -75,6 +76,16 @@ class GrpcMeterIdPrefixFunctionTest {
                                   .build());
         }
     };
+
+    @Nullable
+    private ClientFactory clientFactory;
+
+    @AfterEach
+    void tearDown() {
+        if (clientFactory != null) {
+            clientFactory.closeAsync();
+        }
+    }
 
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
     @ParameterizedTest
@@ -175,11 +186,11 @@ class GrpcMeterIdPrefixFunctionTest {
                 .isGreaterThan(0.0);
     }
 
-    private static TestServiceBlockingStub newClient(SerializationFormat serializationFormat,
-                                                     PrometheusMeterRegistry registry) {
-        final ClientFactory factory = ClientFactory.builder().meterRegistry(registry).build();
+    private TestServiceBlockingStub newClient(SerializationFormat serializationFormat,
+                                              PrometheusMeterRegistry registry) {
+        clientFactory = ClientFactory.builder().meterRegistry(registry).build();
         return Clients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
-                      .factory(factory)
+                      .factory(clientFactory)
                       .decorator(MetricCollectingClient.newDecorator(GrpcMeterIdPrefixFunction.of("client")))
                       .build(TestServiceBlockingStub.class);
     }

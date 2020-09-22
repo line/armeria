@@ -296,8 +296,8 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the amount of time allowed until receiving the {@link Response} completely
-     * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
+     * since the transfer of the {@link Response} started or the {@link Request} was fully sent. This value is
+     * initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      */
     long responseTimeoutMillis();
 
