@@ -32,6 +32,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.auth.AuthService;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
  * Builds a {@link HealthCheckService}.
@@ -54,6 +57,7 @@ public final class HealthCheckServiceBuilder {
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
+    private boolean shouldLogRequest;
 
     HealthCheckServiceBuilder() {}
 
@@ -251,12 +255,22 @@ public final class HealthCheckServiceBuilder {
     }
 
     /**
+     * Specifies whether the health check request and response are logged or recorded by
+     * {@link LoggingService}, {@link MetricCollectingService} and {@link AccessLogWriter}.
+     * This is disabled by default.
+     */
+    public HealthCheckServiceBuilder shouldLogRequest(boolean shouldLogRequest) {
+        this.shouldLogRequest = shouldLogRequest;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler);
+                                      pingIntervalMillis, updateHandler, shouldLogRequest);
     }
 }

@@ -391,7 +391,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
                         logBuilder().endResponse(cause);
-                        reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                        if (reqCtx.config().service().shouldLogRequest()) {
+                            reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                        }
                     }
                 }
             });
@@ -494,7 +496,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             if (endOfStream) {
                 if (tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                    if (reqCtx.config().service().shouldLogRequest()) {
+                        reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                    }
                 }
             } else {
                 assert subscription != null;

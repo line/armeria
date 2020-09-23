@@ -53,4 +53,9 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
     public boolean shouldCachePath(String path, @Nullable String query, Route route) {
         return unwrap().shouldCachePath(path, query, route);
     }
+
+    @Override
+    public boolean shouldLogRequest() {
+        return unwrap().shouldLogRequest();
+    }
 }
