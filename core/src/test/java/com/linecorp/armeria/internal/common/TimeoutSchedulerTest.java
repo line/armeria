@@ -153,6 +153,16 @@ class TimeoutSchedulerTest {
     }
 
     @Test
+    void scheduleTimeoutWhenCancelled() {
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.cancel();
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
+            timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
+        });
+    }
+
+    @Test
     void extendTimeoutWhenScheduled() {
         executeInEventLoop(0, timeoutScheduler -> {
             final long timeoutNanos = MILLISECONDS.toNanos(1000);
@@ -175,6 +185,16 @@ class TimeoutSchedulerTest {
     }
 
     @Test
+    void extendTimeoutWhenCancelled() {
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.cancel();
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
+            timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(1000));
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
+        });
+    }
+
+    @Test
     void cancelTimeoutWhenScheduled() {
         executeInEventLoop(0, timeoutScheduler -> {
             timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
@@ -192,12 +212,42 @@ class TimeoutSchedulerTest {
     }
 
     @Test
+    void cancelTimeoutWhenCancelled() {
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.cancel();
+            timeoutScheduler.clearTimeout();
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
+        });
+    }
+
+    @Test
     void timeoutNowWhenTimedOut() {
         executeInEventLoop(0, timeoutScheduler -> {
             timeoutScheduler.timeoutNow();
             assertThat(timeoutScheduler.isTimedOut()).isTrue();
             timeoutScheduler.timeoutNow();
             assertThat(timeoutScheduler.isTimedOut()).isTrue();
+        });
+    }
+
+    @Test
+    void cancelWhenTimedOut() {
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.timeoutNow();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+            timeoutScheduler.cancel();
+            assertThat(timeoutScheduler.isTimedOut()).isTrue();
+            assertThat(timeoutScheduler.isCancelled()).isFalse();
+        });
+    }
+
+    @Test
+    void cancelWhenCancelled() {
+        executeInEventLoop(0, timeoutScheduler -> {
+            timeoutScheduler.cancel();
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
+            timeoutScheduler.cancel();
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
         });
     }
 
