@@ -240,6 +240,11 @@ public final class RequestContextHooks {
         }
 
         @Override
+        public Context currentContext() {
+            return subscriber.currentContext();
+        }
+
+        @Override
         public void onSubscribe(Subscription s) {
             try (SafeCloseable ignored = ctx.push()) {
                 subscriber.onSubscribe(s);

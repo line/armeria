@@ -8,7 +8,7 @@ environment:
     - PROFILE: 'java11'
       APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
       APPVEYOR_BUILD_WORKER_CLOUD: 'verda'
-    - PROFILE: 'java13'
+    - PROFILE: 'java14'
       APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
       APPVEYOR_BUILD_WORKER_CLOUD: 'verda'
     - PROFILE: 'site'
@@ -19,7 +19,7 @@ environment:
       APPVEYOR_BUILD_WORKER_CLOUD: 'verda'
     - PROFILE: 'windows'
       APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2019'
-      JAVA_HOME: 'C:\Program Files\Java\jdk13'
+      JAVA_HOME: 'C:\Program Files\Java\jdk14'
 
 matrix:
   fast_finish: false

@@ -44,7 +44,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * Provides the access to request-scoped {@link MDC} properties. All properties set via the access methods in
  * this class are bound to a {@link RequestContext}, unlike the traditional thread-local {@link MDC} properties.
  *
- * <h3>Updating the request-scoped context map</h3>
+ * <h2>Updating the request-scoped context map</h2>
  *
  * <p>Update the request-scoped context map using {@link #put(RequestContext, String, String)},
  * {@link #putAll(RequestContext, Map)}, {@link #remove(RequestContext, String)} and
@@ -53,9 +53,9 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * RequestContext ctx = ...;
  * RequestScopedMdc.put(ctx, "transactionId", "1234");
  * RequestScopedMdc.putAll(ctx, Map.of("foo", "1", "bar", "2"));
- * }</pre></p>
+ * }</pre>
  *
- * <h3>Transferring thread-local properties</h3>
+ * <h2>Transferring thread-local properties</h2>
  *
  * <p>Use {@link #copy(RequestContext, String)} or {@link #copyAll(RequestContext)} to copy some or all of
  * thread-local {@link MDC} properties to the request-scoped context map:
@@ -63,16 +63,16 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * RequestContext ctx = ...;
  * MDC.put("transactionId", "1234");
  * RequestScopedMdc.copy(ctx, "transactionId");
- * }</pre></p>
+ * }</pre>
  *
- * <h3>Retrieving a value from the request-scoped context map</h3>
+ * <h2>Retrieving a value from the request-scoped context map</h2>
  *
  * <p>You can explicitly retrieve request-scoped properties using {@link #get(RequestContext, String)} or
  * {@link #getAll(RequestContext)}:
  * <pre>{@code
  * RequestContext ctx = ...;
  * String transactionId = RequestScopedMdc.get(ctx, "transactionId");
- * }</pre></p>
+ * }</pre>
  *
  * <p>{@link RequestScopedMdc} replaces SLF4J's underlying {@link MDCAdapter} implementation so that
  * {@link MDC#get(String)} and {@link MDC#getCopyOfContextMap()} look into the request-scoped context map
@@ -91,7 +91,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * // Now using the thread-local property
  * // because not in a request scope anymore
  * assert MDC.get("transactionId").equals("5678");
- * }</pre></p>
+ * }</pre>
  */
 public final class RequestScopedMdc {
 

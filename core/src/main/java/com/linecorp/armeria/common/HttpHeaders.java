@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 /**
  * Immutable HTTP/2 headers.
  *
- * <h3>Building a new {@link HttpHeaders}</h3>
+ * <h2>Building a new {@link HttpHeaders}</h2>
  *
  * <p>You can use the {@link HttpHeaders#of(CharSequence, String) HttpHeaders.of()} factory methods or
  * the {@link HttpHeadersBuilder} to build a new {@link HttpHeaders} from scratch:</p>
@@ -48,7 +48,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * assert headersWithOf.equals(headersWithBuilder);
  * }</pre>
  *
- * <h3>Building a new {@link HttpHeaders} from an existing one</h3>
+ * <h2>Building a new {@link HttpHeaders} from an existing one</h2>
  *
  * <p>You can use {@link HttpHeaders#toBuilder()} or {@link HttpHeaders#withMutations(Consumer)} to build
  * a new {@link HttpHeaders} derived from an existing one:</p>
@@ -74,7 +74,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * assert !headers.equals(headersWithMutations);
  * }</pre>
  *
- * <h3><a name="object-values">Specifying a non-{@link String} header value</a></h3>
+ * <h2><a id="object-values">Specifying a non-{@link String} header value</a></h2>
  *
  * <p>Certain header values are better represented as a Java object than as a {@link String}.
  * For example, it is more convenient to specify {@code "content-length"}, {@code "content-type"} and
@@ -107,7 +107,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  *   </li>
  * </ul>
  *
- * <h4>Using {@link HttpHeaders#of(CharSequence, Object) HttpHeaders.of()} factory methods</h4>
+ * <h2>Using {@link HttpHeaders#of(CharSequence, Object) HttpHeaders.of()} factory methods</h2>
  *
  * <pre>{@code
  * HttpHeaders headers =
@@ -116,7 +116,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  *                    HttpHeaderNames.DATE, Instant.now());
  * }</pre>
  *
- * <h4>Using {@link HttpHeadersBuilder}</h4>
+ * <h2>Using {@link HttpHeadersBuilder}</h2>
  *
  * <pre>{@code
  * HttpHeaders headers =
@@ -127,7 +127,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  *                .build();
  * }</pre>
  *
- * <h4>Specifying value type explicitly</h4>
+ * <h3>Specifying value type explicitly</h3>
  *
  * <p>You might prefer type-safe setters for more efficiency and less ambiguity:</p>
  *

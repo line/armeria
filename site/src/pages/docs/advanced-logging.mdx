@@ -5,7 +5,16 @@ With Armeria's [Logback](https://logback.qos.ch/) integration, you can log the p
 a Logback appender that exports the properties of the current <type://RequestContext> to
 [MDC] (mapped diagnostic context).
 
-For example, the following configuration:
+First, you need the `armeria-logback` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-logback' },
+  ]}
+/>
+
+Then, let's look at the following example:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -41,7 +50,7 @@ For example, the following configuration:
 </configuration>
 ```
 
-will define an appender called `RCEA` which exports the following:
+The above configuration defines an appender called `RCEA` which exports the following:
 - `remote.ip`
   - the IP address of the remote peer,
 - `tls.cipher`

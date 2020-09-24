@@ -251,7 +251,8 @@ public interface RetryRule {
      *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }
      *
-     *     ResponseHeaders responseHeaders = ctx.log().partial().responseHeaders();
+     *     ResponseHeaders responseHeaders = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
+     *                                          .responseHeaders();
      *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
      *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }

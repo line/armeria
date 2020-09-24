@@ -40,7 +40,7 @@ configure(projectsWithFlags('java')) {
                     }
                     if (project.ext.hasFlag('kotlin-grpc')) {
                         kotlinGrpc {
-                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}"
+                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}:jdk7@jar"
                         }
                     }
 

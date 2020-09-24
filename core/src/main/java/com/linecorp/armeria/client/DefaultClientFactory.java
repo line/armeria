@@ -54,7 +54,7 @@ import io.netty.util.ResourceLeakTracker;
 /**
  * A {@link ClientFactory} which combines all discovered {@link ClientFactory} implementations.
  *
- * <h3>How are the {@link ClientFactory}s discovered?</h3>
+ * <h2>How are the {@link ClientFactory}s discovered?</h2>
  *
  * <p>{@link DefaultClientFactory} looks up the {@link ClientFactoryProvider}s available in the current JVM
  * using Java SPI (Service Provider Interface). The {@link ClientFactoryProvider} implementations will create

@@ -369,7 +369,7 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *   <li>{@link RequestLogProperty#REQUEST_CONTENT_PREVIEW}</li>
      *   <li>{@link RequestLogProperty#RESPONSE_CONTENT}</li>
      *   <li>{@link RequestLogProperty#RESPONSE_CONTENT_PREVIEW}</li>
-     * </ul></p>
+     * </ul>
      */
     void defer(RequestLogProperty property);
 
@@ -386,7 +386,7 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *   <li>{@link RequestLogProperty#REQUEST_CONTENT_PREVIEW}</li>
      *   <li>{@link RequestLogProperty#RESPONSE_CONTENT}</li>
      *   <li>{@link RequestLogProperty#RESPONSE_CONTENT_PREVIEW}</li>
-     * </ul></p>
+     * </ul>
      */
     void defer(RequestLogProperty... properties);
 
@@ -403,7 +403,7 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *   <li>{@link RequestLogProperty#REQUEST_CONTENT_PREVIEW}</li>
      *   <li>{@link RequestLogProperty#RESPONSE_CONTENT}</li>
      *   <li>{@link RequestLogProperty#RESPONSE_CONTENT_PREVIEW}</li>
-     * </ul></p>
+     * </ul>
      */
     void defer(Iterable<RequestLogProperty> properties);
 
