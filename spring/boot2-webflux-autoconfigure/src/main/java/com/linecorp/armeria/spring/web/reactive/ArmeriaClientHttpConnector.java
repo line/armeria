@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpResponse;
 
 import reactor.core.publisher.Mono;
@@ -111,7 +110,7 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
     private CompletableFuture<ArmeriaClientHttpResponse> createResponse(HttpResponse response) {
         final ArmeriaHttpResponseBodyStream bodyStream =
-                new ArmeriaHttpResponseBodyStream(response, CommonPools.workerGroup().next());
+                new ArmeriaHttpResponseBodyStream(response, response.defaultSubscriberExecutor());
         return bodyStream.headers().thenApply(
                 headers -> new ArmeriaClientHttpResponse(headers, bodyStream, factoryWrapper));
     }
