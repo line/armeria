@@ -49,12 +49,10 @@ package com.linecorp.armeria.server.grpc;
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import io.grpc.ServerMethodDefinition;
@@ -65,10 +63,10 @@ import io.grpc.ServerServiceDefinition;
  * documentation generation.
  */
 final class HandlerRegistry {
-    private final List<ServerServiceDefinition> services;
+    private final Map<String, ServerServiceDefinition> services;
     private final Map<String, ServerMethodDefinition<?, ?>> methods;
 
-    private HandlerRegistry(List<ServerServiceDefinition> services,
+    private HandlerRegistry(Map<String, ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
@@ -79,7 +77,7 @@ final class HandlerRegistry {
         return methods.get(methodName);
     }
 
-    List<ServerServiceDefinition> services() {
+    Map<String, ServerServiceDefinition> services() {
         return services;
     }
 
@@ -89,23 +87,54 @@ final class HandlerRegistry {
 
     static class Builder {
         // Store per-service first, to make sure services are added/replaced atomically.
-        private final HashMap<String, ServerServiceDefinition> services =
-                new HashMap<String, ServerServiceDefinition>();
+        private final Map<String, ServerServiceDefinition> services = new HashMap<>();
 
         Builder addService(ServerServiceDefinition service) {
             services.put(service.getServiceDescriptor().getName(), service);
             return this;
         }
 
+        Builder addService(String path, ServerServiceDefinition service) {
+            services.put(normalizePath(path), service);
+            return this;
+        }
+
+        private static String extractMethodName(String fullMethodName) {
+            final int methodIndex = fullMethodName.lastIndexOf('/');
+            return fullMethodName.substring(methodIndex + 1);
+        }
+
+        private static String normalizePath(String path) {
+            if (path.isEmpty()) {
+                return path;
+            }
+
+            if (path.charAt(0) == '/') {
+                path = path.substring(1);
+            }
+
+            if (path.isEmpty()) {
+                return path;
+            }
+
+            final int lastCharIndex = path.length() - 1;
+            if (path.charAt(lastCharIndex) == '/') {
+                return path.substring(0, lastCharIndex);
+            } else {
+                return path;
+            }
+        }
+
         HandlerRegistry build() {
             final ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> mapBuilder =
                     ImmutableMap.builder();
-            for (ServerServiceDefinition service : services.values()) {
+            services.forEach((path, service) -> {
                 for (ServerMethodDefinition<?, ?> method : service.getMethods()) {
-                    mapBuilder.put(method.getMethodDescriptor().getFullMethodName(), method);
+                    final String fullMethodName = method.getMethodDescriptor().getFullMethodName();
+                    mapBuilder.put(path + '/' + extractMethodName(fullMethodName), method);
                 }
-            }
-            return new HandlerRegistry(ImmutableList.copyOf(services.values()), mapBuilder.build());
+            });
+            return new HandlerRegistry(ImmutableMap.copyOf(services), mapBuilder.build());
         }
     }
 }

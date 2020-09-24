@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -120,10 +121,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
             jsonMarshallers = ImmutableMap.of();
         } else {
-            jsonMarshallers =
-                    registry.services().stream()
-                            .map(ServerServiceDefinition::getServiceDescriptor)
-                            .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
+            jsonMarshallers = new HashMap<>();
+            registry.services().values().stream()
+                    .map(ServerServiceDefinition::getServiceDescriptor)
+                    .forEach(descriptor -> {
+                        jsonMarshallers.put(descriptor.getName(), jsonMarshallerFactory.apply(descriptor));
+                    });
         }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
@@ -342,7 +345,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public List<ServerServiceDefinition> services() {
-        return registry.services();
+        return ImmutableList.copyOf(registry.services().values());
     }
 
     @Override

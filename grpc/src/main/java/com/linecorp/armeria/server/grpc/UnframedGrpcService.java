@@ -21,9 +21,9 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -55,7 +55,6 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
-import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 
@@ -84,16 +83,14 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    UnframedGrpcService(GrpcService delegate) {
+    UnframedGrpcService(GrpcService delegate, HandlerRegistry registry) {
         super(delegate);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         delegateGrpcService = delegate;
-        methodsByName = delegate.services()
+        methodsByName = registry.methods().entrySet()
                                 .stream()
-                                .flatMap(service -> service.getMethods().stream())
-                                .map(ServerMethodDefinition::getMethodDescriptor)
-                                .collect(toImmutableMap(MethodDescriptor::getFullMethodName,
-                                                        Function.identity()));
+                                .collect(toImmutableMap(Entry::getKey,
+                                                        entry -> entry.getValue().getMethodDescriptor()));
     }
 
     @Override
