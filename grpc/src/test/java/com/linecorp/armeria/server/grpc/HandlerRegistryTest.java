@@ -41,5 +41,4 @@ class HandlerRegistryTest {
         assertThat(handlerRegistry.services().get("foo")).isNotNull();
         assertThat(handlerRegistry.services().get("bar")).isNotNull();
     }
-
 }
