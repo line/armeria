@@ -235,6 +235,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters transientService(boolean transientService) {
+        defaultServiceConfigSetters.transientService(transientService);
+        return this;
+    }
+
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *

@@ -405,7 +405,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
-            final boolean isTransient = service.as(TransientService.class) != null;
+            final boolean isTransient = service.as(TransientService.class) != null ||
+                                        serviceCfg.transientService();
             if (!isTransient) {
                 gracefulShutdownSupport.inc();
             }

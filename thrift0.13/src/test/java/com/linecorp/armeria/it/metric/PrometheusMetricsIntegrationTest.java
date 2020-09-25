@@ -87,8 +87,7 @@ public class PrometheusMetricsIntegrationTest {
             sb.service("/bar", helloService.decorate(
                     MetricCollectingService.newDecorator(new MeterIdPrefixFunctionImpl("server", "Bar"))));
 
-            sb.service("/internal/prometheus/metrics",
-                       PrometheusExpositionService.of(prometheusRegistry));
+            sb.service("/internal/prometheus/metrics", new PrometheusExpositionService(prometheusRegistry));
         }
     };
 

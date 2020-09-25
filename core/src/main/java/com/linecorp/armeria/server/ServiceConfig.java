@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -30,6 +31,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
  * An {@link HttpService} configuration.
@@ -56,6 +59,7 @@ public final class ServiceConfig {
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
     private final boolean handlesCorsPreflight;
+    private final boolean transientService;
 
     /**
      * Creates a new instance.
@@ -63,9 +67,10 @@ public final class ServiceConfig {
     ServiceConfig(Route route, HttpService service,
                   @Nullable String defaultServiceName, @Nullable String defaultLogName,
                   long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                  AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
+                  AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+                  boolean transientService) {
         this(null, route, service, defaultServiceName, defaultLogName, requestTimeoutMillis, maxRequestLength,
-             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop, transientService);
     }
 
     /**
@@ -74,7 +79,8 @@ public final class ServiceConfig {
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
                           @Nullable String defaultServiceName, @Nullable String defaultLogName,
                           long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
+                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+                          boolean transientService) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -85,6 +91,7 @@ public final class ServiceConfig {
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
+        this.transientService = transientService;
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -108,7 +115,7 @@ public final class ServiceConfig {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, service, defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientService);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -116,7 +123,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service.decorate(decorator),
                                  defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientService);
     }
 
     /**
@@ -180,6 +187,19 @@ public final class ServiceConfig {
     @Nullable
     public String defaultLogName() {
         return defaultLogName;
+    }
+
+    /**
+     * Returns whether the {@link #service()} is a transient service or not. If it is transient:
+     * <ul>
+     *   <li>requests are not taken account of
+     *       {@linkplain ServerBuilder#gracefulShutdownTimeout(Duration, Duration) graceful shutdown}.</li>
+     *   <li>requests and responses are not logged or recorded by {@link LoggingService},
+     *       {@link AccessLogWriter} and {@link MetricCollectingService}.</li>
+     * </ul>
+     */
+    public boolean transientService() {
+        return transientService;
     }
 
     /**

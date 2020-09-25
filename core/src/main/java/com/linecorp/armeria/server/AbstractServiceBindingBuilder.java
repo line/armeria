@@ -107,6 +107,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters transientService(boolean transientService) {
+        defaultServiceConfigSetters.transientService(transientService);
+        return this;
+    }
+
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {

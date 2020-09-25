@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -49,21 +50,28 @@ class TransientServiceTest {
                       .decorator(LoggingService.builder().logger(logger).newDecorator())
                       // TransientService.
                       .service("/health", HealthCheckService.of())
+                      .route()
+                      .path("/transient")
+                      .transientService(true)
+                      .build((ctx, req) -> HttpResponse.of(200))
                       .build();
         server.start().join();
         final ServerPort serverPort = server.activePort(SessionProtocol.HTTP);
         final WebClient client = WebClient.of("http://127.0.0.1:" + serverPort.localAddress().getPort());
-        client.head("/health").aggregate().join();
+        assertThat(client.head("/health").aggregate().join().status()).isSameAs(HttpStatus.OK);
+        assertThat(client.get("/transient").aggregate().join().status()).isSameAs(HttpStatus.OK);
 
         Thread.sleep(1000);
 
         // accessLogFuture is not complete.
         assertThat(accessLogFuture.isDone()).isFalse();
         verifyNoInteractions(logger);
+
+        server.stop().join();
     }
 
     @Test
-    void requestToTransientService_setShouldLogRequest() throws InterruptedException {
+    void requestToTransientService_setTransientServiceAsFalse() throws InterruptedException {
         final CompletableFuture<RequestLog> accessLogFuture = new CompletableFuture<>();
         final Logger logger = mock(Logger.class);
         when(logger.isDebugEnabled()).thenReturn(false, false);
@@ -72,12 +80,14 @@ class TransientServiceTest {
                       .service("/", (ctx, req) -> HttpResponse.of(200))
                       .accessLogWriter(accessLogFuture::complete, false)
                       .decorator(LoggingService.builder().logger(logger).newDecorator())
-                      .service("/health", HealthCheckService.builder().shouldLogRequest(true).build())
+                      .route().head("/health")
+                      .transientService(false)
+                      .build(HealthCheckService.of())
                       .build();
         server.start().join();
         final ServerPort serverPort = server.activePort(SessionProtocol.HTTP);
         final WebClient client = WebClient.of("http://127.0.0.1:" + serverPort.localAddress().getPort());
-        client.head("/health").aggregate().join();
+        assertThat(client.head("/health").aggregate().join().status()).isSameAs(HttpStatus.OK);
 
         // accessLogFuture is complete.
         accessLogFuture.join();
@@ -85,5 +95,7 @@ class TransientServiceTest {
             verify(logger, times(2)).isDebugEnabled();
             verifyNoMoreInteractions(logger);
         });
+
+        server.stop().join();
     }
 }

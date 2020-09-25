@@ -144,7 +144,6 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
-    private final boolean shouldLogRequest;
 
     @Nullable
     private Server server;
@@ -153,13 +152,11 @@ public final class HealthCheckService implements TransientHttpService {
     HealthCheckService(Iterable<HealthChecker> healthCheckers,
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
-                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
-                       boolean shouldLogRequest) {
+                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler) {
         serverHealth = new SettableHealthChecker(false);
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
-        this.shouldLogRequest = shouldLogRequest;
 
         if (maxLongPollingTimeoutMillis > 0 &&
             this.healthCheckers.stream().allMatch(ListenableHealthChecker.class::isInstance)) {
@@ -285,11 +282,6 @@ public final class HealthCheckService implements TransientHttpService {
                 }
             }
         });
-    }
-
-    @Override
-    public boolean shouldLogRequest() {
-        return shouldLogRequest;
     }
 
     @Override

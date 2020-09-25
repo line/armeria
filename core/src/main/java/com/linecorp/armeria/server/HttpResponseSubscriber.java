@@ -327,7 +327,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         if (tryComplete()) {
             setDone(true);
             logBuilder().endResponse(cause);
-            reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+            if (!reqCtx.config().transientService()) {
+                reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+            }
         }
     }
 
@@ -391,7 +393,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
                         logBuilder().endResponse(cause);
-                        if (reqCtx.config().service().shouldLogRequest()) {
+                        if (!reqCtx.config().transientService()) {
                             reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
                         }
                     }
@@ -496,7 +498,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             if (endOfStream) {
                 if (tryComplete()) {
                     logBuilder().endResponse();
-                    if (reqCtx.config().service().shouldLogRequest()) {
+                    if (!reqCtx.config().transientService()) {
                         reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
                     }
                 }

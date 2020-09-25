@@ -27,9 +27,4 @@ import com.linecorp.armeria.common.Response;
  */
 @FunctionalInterface
 public interface TransientService<I extends Request, O extends Response> extends Service<I, O> {
-
-    @Override
-    default boolean shouldLogRequest() {
-        return false;
-    }
 }

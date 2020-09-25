@@ -27,9 +27,6 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
  * Handles a {@link Request} received by a {@link Server}.
@@ -105,13 +102,5 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
      */
     default boolean shouldCachePath(String path, @Nullable String query, Route route) {
         return route.pathType() == RoutePathType.EXACT && query == null;
-    }
-
-    /**
-     * Returns whether the request and response are logged or recorded by
-     * {@link LoggingService}, {@link MetricCollectingService} and {@link AccessLogWriter}.
-     */
-    default boolean shouldLogRequest() {
-        return true;
     }
 }

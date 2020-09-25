@@ -71,7 +71,7 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.config().service().shouldLogRequest()) {
+        if (!ctx.config().transientService()) {
             RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
         }
         return unwrap().serve(ctx, req);

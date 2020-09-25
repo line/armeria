@@ -53,7 +53,7 @@ public class ServiceTest {
         // Test if FooService.serviceAdded() is invoked.
         final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultServiceName */ null,
                                                     /* defaultLogName */ null, 1, 1, true,
-                                                    AccessLogWriter.disabled(), false);
+                                                    AccessLogWriter.disabled(), false, false);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }
