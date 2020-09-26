@@ -154,16 +154,6 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public void cancel() {
-        delegate().cancel();
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return delegate().isCancelled();
-    }
-
-    @Override
     public long maxRequestLength() {
         return delegate().maxRequestLength();
     }

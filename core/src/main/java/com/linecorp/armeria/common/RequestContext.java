@@ -379,16 +379,6 @@ public interface RequestContext {
     boolean isTimedOut();
 
     /**
-     * Cancels the request. Similar to {@link #timeoutNow()}, but throws a {@link CancellationException}.
-     */
-    void cancel();
-
-    /**
-     * Returns whether this {@link RequestContext} has been cancelled.
-     */
-    boolean isCancelled();
-
-    /**
      * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.
      * The {@link ContextAwareEventLoop} sets this {@link RequestContext} as the current context
      * before executing any submitted tasks. If you want to use {@link EventLoop} without setting this context,
