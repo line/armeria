@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -146,7 +145,7 @@ class HttpClientResponseTimeoutTest {
                 })
                 .build();
         assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
-                .isInstanceOf(CancellationException.class);
+                .isInstanceOf(RequestCancellationException.class);
     }
 
     @Test
@@ -159,7 +158,7 @@ class HttpClientResponseTimeoutTest {
             final ClientRequestContext cctx = ctxCaptor.get();
             cctx.cancel();
             assertThat(cctx.isCancelled()).isFalse();
-            assertThatThrownBy(response::join).isInstanceOf(CancellationException.class);
+            assertThatThrownBy(response::join).isInstanceOf(RequestCancellationException.class);
             assertThat(cctx.isCancelled()).isTrue();
         }
     }

@@ -338,6 +338,23 @@ class TimeoutSchedulerTest {
     }
 
     @Test
+    void whenTimingOutAndWhenTimedOutAreCancelled() {
+        final AtomicReference<CompletableFuture<Void>> whenTimingOutFutureRef = new AtomicReference<>();
+        final AtomicReference<CompletableFuture<Void>> whenTimedOutFutureRef = new AtomicReference<>();
+        final AtomicBoolean completed = new AtomicBoolean();
+        executeInEventLoop(0, timeoutScheduler -> {
+            whenTimingOutFutureRef.set(timeoutScheduler.whenTimingOut());
+            whenTimedOutFutureRef.set(timeoutScheduler.whenTimedOut());
+            timeoutScheduler.cancel();
+            assertThat(timeoutScheduler.isCancelled()).isTrue();
+            completed.set(true);
+        });
+        await().untilTrue(completed);
+        assertThat(whenTimingOutFutureRef.get()).isCancelled();
+        assertThat(whenTimedOutFutureRef.get()).isCancelled();
+    }
+
+    @Test
     void pendingTimeout() {
         final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(1000);
         timeoutScheduler.setTimeoutNanos(EXTEND, 1000);

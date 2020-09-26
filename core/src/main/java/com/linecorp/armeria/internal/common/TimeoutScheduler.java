@@ -55,9 +55,13 @@ public final class TimeoutScheduler {
 
     private static final TimeoutFuture COMPLETED_FUTURE;
 
+    private static final TimeoutFuture CANCELLED_FUTURE;
+
     static {
         COMPLETED_FUTURE = new TimeoutFuture();
         COMPLETED_FUTURE.doComplete();
+        CANCELLED_FUTURE = new TimeoutFuture();
+        CANCELLED_FUTURE.cancel(true);
     }
 
     enum State {
@@ -436,9 +440,17 @@ public final class TimeoutScheduler {
                 whenTimedOut.doComplete();
             }
         } else {
+            if (!whenTimingOutUpdater.compareAndSet(this, null, CANCELLED_FUTURE)) {
+                whenTimingOut.doCancel();
+            }
+
             // Set CANCELLED flag first to prevent duplicate execution
             state = State.CANCELLED;
             timeoutTask.run();
+
+            if (!whenTimedOutUpdater.compareAndSet(this, null, CANCELLED_FUTURE)) {
+                whenTimedOut.doCancel();
+            }
         }
     }
 
@@ -521,6 +533,10 @@ public final class TimeoutScheduler {
     private static class TimeoutFuture extends UnmodifiableFuture<Void> {
         void doComplete() {
             doComplete(null);
+        }
+
+        public boolean doCancel() {
+            return super.doCancel();
         }
     }
 }

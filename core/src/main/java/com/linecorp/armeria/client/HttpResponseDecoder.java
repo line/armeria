@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -392,15 +391,12 @@ abstract class HttpResponseDecoder {
 
                 @Override
                 public void run() {
-                    RuntimeException cause = ResponseTimeoutException.get();
-                    if (ctx != null) {
-                        if (ctx.isCancelled()) {
-                            cause = new CancellationException();
-                        }
-                        ctx.request().abort(cause);
-                        ctx.logBuilder().endResponse(cause);
-                    }
+                    assert ctx != null;
+                    final RuntimeException cause = ctx.isTimedOut() ? ResponseTimeoutException.get()
+                                                                    : RequestCancellationException.get();
                     delegate.close(cause);
+                    ctx.request().abort(cause);
+                    ctx.logBuilder().endResponse(cause);
                 }
             };
         }
