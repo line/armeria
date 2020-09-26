@@ -145,7 +145,8 @@ class HttpClientResponseTimeoutTest {
                 })
                 .build();
         assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
-                .isInstanceOf(RequestCancellationException.class);
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(RequestCancellationException.class);
     }
 
     @Test
@@ -158,7 +159,9 @@ class HttpClientResponseTimeoutTest {
             final ClientRequestContext cctx = ctxCaptor.get();
             cctx.cancel();
             assertThat(cctx.isCancelled()).isFalse();
-            assertThatThrownBy(response::join).isInstanceOf(RequestCancellationException.class);
+            assertThatThrownBy(response::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(RequestCancellationException.class);
             assertThat(cctx.isCancelled()).isTrue();
         }
     }

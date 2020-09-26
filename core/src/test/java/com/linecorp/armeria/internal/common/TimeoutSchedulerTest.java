@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -350,8 +351,8 @@ class TimeoutSchedulerTest {
             completed.set(true);
         });
         await().untilTrue(completed);
-        assertThat(whenTimingOutFutureRef.get()).isCancelled();
-        assertThat(whenTimedOutFutureRef.get()).isCancelled();
+        assertThatThrownBy(() -> whenTimingOutFutureRef.get().join()).isInstanceOf(CancellationException.class);
+        assertThatThrownBy(() -> whenTimedOutFutureRef.get().join()).isInstanceOf(CancellationException.class);
     }
 
     @Test
