@@ -42,8 +42,23 @@ public final class DecodingService extends SimpleDecoratingHttpService {
      * Creates a new {@link DecodingService} decorator with the default encodings of 'gzip' and 'deflate'.
      */
     public static Function<? super HttpService, DecodingService> newDecorator() {
-        return delegate -> new DecodingService(delegate, ImmutableList
-                .of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate()));
+        return newDecorator(ImmutableList.of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate()));
+    }
+
+    /**
+     * Creates a new {@link DecodingService} decorator with the specified {@link StreamDecoderFactory}s.
+     */
+    public static Function<? super HttpService, DecodingService> newDecorator(
+            StreamDecoderFactory... decoderFactories) {
+        return newDecorator(ImmutableList.copyOf(decoderFactories));
+    }
+
+    /**
+     * Creates a new {@link DecodingService} decorator with the specified {@link StreamDecoderFactory}s.
+     */
+    public static Function<? super HttpService, DecodingService> newDecorator(
+            Iterable<? extends StreamDecoderFactory> decoderFactories) {
+        return delegate -> new DecodingService(delegate, decoderFactories);
     }
 
     private final Map<String, StreamDecoderFactory> decoderFactories;
