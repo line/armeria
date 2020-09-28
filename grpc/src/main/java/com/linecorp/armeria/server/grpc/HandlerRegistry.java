@@ -48,13 +48,16 @@ package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 
+import io.grpc.MethodDescriptor;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 
@@ -85,17 +88,22 @@ final class HandlerRegistry {
         return methods;
     }
 
-    static class Builder {
-        // Store per-service first, to make sure services are added/replaced atomically.
-        private final Map<String, ServerServiceDefinition> services = new HashMap<>();
+    static final class Builder {
+        private final List<Entry> entries = new ArrayList<>();
 
         Builder addService(ServerServiceDefinition service) {
-            services.put(service.getServiceDescriptor().getName(), service);
+            entries.add(new Entry(service.getServiceDescriptor().getName(), service, null));
             return this;
         }
 
         Builder addService(String path, ServerServiceDefinition service) {
-            services.put(normalizePath(path), service);
+            entries.add(new Entry(normalizePath(path), service, null));
+            return this;
+        }
+
+        Builder addService(String path, ServerServiceDefinition service,
+                            MethodDescriptor<?, ?> methodDescriptor) {
+            entries.add(new Entry(normalizePath(path), service, methodDescriptor));
             return this;
         }
 
@@ -125,16 +133,62 @@ final class HandlerRegistry {
             }
         }
 
+        List<Entry> entries() {
+            return entries;
+        }
+
         HandlerRegistry build() {
-            final ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> mapBuilder =
-                    ImmutableMap.builder();
-            services.forEach((path, service) -> {
-                for (ServerMethodDefinition<?, ?> method : service.getMethods()) {
-                    final String fullMethodName = method.getMethodDescriptor().getFullMethodName();
-                    mapBuilder.put(path + '/' + extractMethodName(fullMethodName), method);
+            // Store per-service first, to make sure services are added/replaced atomically.
+            final Map<String, ServerServiceDefinition> services = new HashMap<>();
+            final Map<String, ServerMethodDefinition<?, ?>> methods = new HashMap<>();
+
+            for (Entry entry : entries) {
+                final ServerServiceDefinition service = entry.service();
+                final String path = entry.path();
+                services.put(path, service);
+                final MethodDescriptor<?, ?> methodDescriptor = entry.method();
+                if (methodDescriptor == null) {
+                    for (ServerMethodDefinition<?, ?> method : service.getMethods()) {
+                        final String fullMethodName = method.getMethodDescriptor().getFullMethodName();
+                        methods.put(path + '/' + extractMethodName(fullMethodName), method);
+                    }
+                } else {
+                    final ServerMethodDefinition<?, ?> method =
+                            service.getMethods().stream()
+                                   .filter(method0 -> method0.getMethodDescriptor() == methodDescriptor)
+                                   .findFirst()
+                                   .orElseThrow(() -> new IllegalArgumentException(
+                                           "Failed to retrieve " + methodDescriptor + " in " + service));
+                    methods.put(path, method);
                 }
-            });
-            return new HandlerRegistry(ImmutableMap.copyOf(services), mapBuilder.build());
+            }
+            return new HandlerRegistry(ImmutableMap.copyOf(services), ImmutableMap.copyOf(methods));
+        }
+    }
+
+    static final class Entry {
+        private final String path;
+        private final ServerServiceDefinition service;
+        @Nullable
+        private final MethodDescriptor<?, ?> method;
+
+        Entry(String path, ServerServiceDefinition service, @Nullable MethodDescriptor<?, ?> method) {
+            this.path = path;
+            this.service = service;
+            this.method = method;
+        }
+
+        String path() {
+            return path;
+        }
+
+        ServerServiceDefinition service() {
+            return service;
+        }
+
+        @Nullable
+        MethodDescriptor<?, ?> method() {
+            return method;
         }
     }
 }

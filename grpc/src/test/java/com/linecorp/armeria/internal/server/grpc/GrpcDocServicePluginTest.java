@@ -45,7 +45,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
-import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceEntry;
+import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -63,6 +63,8 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcService;
+
+import io.grpc.MethodDescriptor;
 
 class GrpcDocServicePluginTest {
 
@@ -237,15 +239,13 @@ class GrpcDocServicePluginTest {
     void newMethodInfo() throws Exception {
         final MethodInfo methodInfo = GrpcDocServicePlugin.newMethodInfo(
                 TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
-                new ServiceEntry(
-                        TEST_SERVICE_DESCRIPTOR,
-                        ImmutableList.of(
-                                EndpointInfo.builder("*", "/foo/")
-                                            .availableFormats(GrpcSerializationFormats.PROTO)
-                                            .build(),
-                                EndpointInfo.builder("*", "/debug/foo/")
-                                            .availableFormats(GrpcSerializationFormats.JSON)
-                                            .build())));
+                ImmutableSet.of(
+                        EndpointInfo.builder("*", "/foo")
+                                    .availableFormats(GrpcSerializationFormats.PROTO)
+                                    .build(),
+                        EndpointInfo.builder("*", "/debug/foo")
+                                    .availableFormats(GrpcSerializationFormats.JSON)
+                                    .build()));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
         assertThat(methodInfo.returnTypeSignature().namedTypeDescriptor())
@@ -259,27 +259,29 @@ class GrpcDocServicePluginTest {
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.docString()).isNull();
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
-                EndpointInfo.builder("*", "/foo/UnaryCall")
+                EndpointInfo.builder("*", "/foo")
                             .availableFormats(GrpcSerializationFormats.PROTO)
                             .build(),
-                EndpointInfo.builder("*", "/debug/foo/UnaryCall")
+                EndpointInfo.builder("*", "/debug/foo")
                             .availableFormats(GrpcSerializationFormats.JSON)
                             .build());
     }
 
     @Test
     void newServiceInfo() throws Exception {
-        final ServiceInfo service = generator.newServiceInfo(
-                new ServiceEntry(
-                        TEST_SERVICE_DESCRIPTOR,
-                        ImmutableList.of(
-                                EndpointInfo.builder("*", "/foo")
-                                            .fragment("a").availableFormats(GrpcSerializationFormats.PROTO)
-                                            .build(),
-                                EndpointInfo.builder("*", "/debug/foo")
-                                            .fragment("b").availableFormats(GrpcSerializationFormats.JSON)
-                                            .build())),
-                (pluginName, serviceName, methodName) -> true);
+        final ServiceInfosBuilder builder = new ServiceInfosBuilder();
+        final TestServiceImplBase testService = new TestServiceImplBase() {};
+        builder.addService(TEST_SERVICE_DESCRIPTOR);
+        testService.bindService().getMethods().forEach(method -> {
+            final MethodDescriptor<?, ?> methodDescriptor = method.getMethodDescriptor();
+            builder.addEndpoint(methodDescriptor, EndpointInfo.builder("*", "/foo")
+                                                              .fragment("a")
+                                                              .availableFormats(GrpcSerializationFormats.PROTO)
+                                                              .build());
+        });
+        final List<ServiceInfo> serviceInfos = builder.build((pluginName, serviceName, methodName) -> true);
+        assertThat(serviceInfos).hasSize(1);
+        final ServiceInfo service = serviceInfos.get(0);
 
         final Map<String, MethodInfo> functions = service.methods()
                                                          .stream()

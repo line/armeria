@@ -14,15 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.internal.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -37,11 +34,13 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
-class CustomRouteTest {
+class GrpcDocServiceWithCustomRouteTest {
 
     private static final class TestService extends TestServiceImplBase {
 
@@ -68,39 +67,29 @@ class CustomRouteTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final TestService testService = new TestService();
             sb.service(GrpcService.builder()
-                                  .addService("foo", testService)
-                                  .addService("bar", testService)
-                                  .addService("/v1/tests/empty", testService,
-                                              TestServiceGrpc.getEmptyCallMethod())
-                                  .addService("/v1/tests/unary", testService,
-                                              TestServiceGrpc.getUnaryCallMethod())
+                                  // TODO(ikhoon) Need to fix tailing slush in DocService
+                                  .addService("/empty", testService, TestServiceGrpc.getEmptyCallMethod())
+                                  .addService("/unary", testService, TestServiceGrpc.getUnaryCallMethod())
                                   .enableUnframedRequests(true)
                                   .build());
+            sb.serviceUnder("/docs",
+                            DocService.builder()
+                                      .exampleRequests(TestServiceGrpc.SERVICE_NAME, "UnaryCall",
+                                                       SimpleRequest.newBuilder()
+                                                                    .setResponseSize(1000)
+                                                                    .setFillUsername(true).build())
+                                      .build()
+            );
         }
     };
 
-    @CsvSource({ "/foo/EmptyCall", "/v1/tests/empty" })
-    @ParameterizedTest
-    void unframedJsonRequestWithCustomPath(String path) throws InterruptedException {
+    @Test
+    void filteredSpecification() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         final HttpRequest request =
-                HttpRequest.of(HttpMethod.POST, path, MediaType.JSON_UTF_8, "{}");
+                HttpRequest.of(HttpMethod.POST, "/empty", MediaType.JSON_UTF_8, "{}");
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().getInt(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(0);
-    }
-
-    @CsvSource({ "/bar/UnaryCall", "/v1/tests/unary" })
-    @ParameterizedTest
-    void unframedProtobufRequestWithCustomPath(String path) throws InvalidProtocolBufferException {
-        final WebClient client = WebClient.of(server.httpUri());
-        final SimpleRequest simpleRequest = SimpleRequest.newBuilder().setFillUsername(true).build();
-        final HttpRequest request =
-                HttpRequest.of(HttpMethod.POST, path, MediaType.PROTOBUF, simpleRequest.toByteArray());
-        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.headers().getInt(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(0);
-        final SimpleResponse simpleResponse = SimpleResponse.parseFrom(response.content().array());
-        assertThat(simpleResponse.getUsername()).isEqualTo("Armeria");
     }
 }

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.server.grpc;
 
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.extractMethodName;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -54,17 +55,19 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceEntry;
+import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.MethodDescriptor;
 import io.grpc.stub.StreamObserver;
 
 class GrpcDocServiceTest {
@@ -148,25 +151,45 @@ class GrpcDocServiceTest {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
-        final List<ServiceEntry> entries = ImmutableList.of(
-                new ServiceEntry(TEST_SERVICE_DESCRIPTOR, ImmutableList.of(
-                        EndpointInfo.builder("*", "/test/armeria.grpc.testing.TestService/")
-                                    .availableMimeTypes(GrpcSerializationFormats.PROTO.mediaType(),
-                                                        GrpcSerializationFormats.JSON.mediaType(),
-                                                        GrpcSerializationFormats.PROTO_WEB.mediaType(),
-                                                        GrpcSerializationFormats.JSON_WEB.mediaType(),
-                                                        GrpcSerializationFormats.PROTO_WEB_TEXT.mediaType(),
-                                                        MediaType.PROTOBUF.withParameter("protocol", "gRPC"),
-                                                        MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"))
-                                    .build())),
-                new ServiceEntry(RECONNECT_SERVICE_DESCRIPTOR, ImmutableList.of(
-                        EndpointInfo.builder("*", "/armeria.grpc.testing.ReconnectService/")
-                                    .availableFormats(GrpcSerializationFormats.values())
-                                    .build())));
-        final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(
-                entries, unifyFilter((plugin, service, method) -> true,
-                                     DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME,
-                                                                   "EmptyCall"))));
+        final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
+
+        serviceInfosBuilder.addService(TEST_SERVICE_DESCRIPTOR);
+        final TestService testService = new TestService();
+        testService.bindService().getMethods().forEach(method -> {
+            final MethodDescriptor<?, ?> methodDescriptor = method.getMethodDescriptor();
+            serviceInfosBuilder.addEndpoint(
+                    methodDescriptor,
+                    EndpointInfo
+                            .builder("*", "/test/armeria.grpc.testing.TestService/" +
+                                          extractMethodName(methodDescriptor.getFullMethodName()))
+                            .availableMimeTypes(GrpcSerializationFormats.PROTO.mediaType(),
+                                                GrpcSerializationFormats.JSON.mediaType(),
+                                                GrpcSerializationFormats.PROTO_WEB.mediaType(),
+                                                GrpcSerializationFormats.JSON_WEB.mediaType(),
+                                                GrpcSerializationFormats.PROTO_WEB_TEXT.mediaType(),
+                                                MediaType.PROTOBUF.withParameter("protocol", "gRPC"),
+                                                MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"))
+                            .build());
+        });
+
+        serviceInfosBuilder.addService(RECONNECT_SERVICE_DESCRIPTOR);
+        final ReconnectServiceImplBase reconnectService = new ReconnectServiceImplBase() {};
+        reconnectService.bindService().getMethods().forEach(method -> {
+            final MethodDescriptor<?, ?> methodDescriptor = method.getMethodDescriptor();
+            serviceInfosBuilder.addEndpoint(
+                    methodDescriptor,
+                    EndpointInfo.builder("*", "/armeria.grpc.testing.ReconnectService/" +
+                                              extractMethodName(methodDescriptor.getFullMethodName()))
+                                .availableFormats(GrpcSerializationFormats.values())
+                                .build());
+        });
+
+        final List<ServiceInfo> serviceInfos =
+                serviceInfosBuilder.build(unifyFilter(
+                        (plugin, service, method) -> true,
+                        DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall")));
+
+        final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(serviceInfos));
 
         // The specification generated by GrpcDocServicePlugin does not include the examples specified
         // when building a DocService, so we add them manually here.

@@ -16,8 +16,12 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -26,6 +30,8 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 
+import io.grpc.MethodDescriptor;
+import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 
 /**
@@ -61,6 +67,17 @@ public interface GrpcService extends HttpServiceWithRoutes {
      * Returns the {@link ServerServiceDefinition}s serviced by this service.
      */
     List<ServerServiceDefinition> services();
+
+    /**
+     * Returns a {@link Map} whose key is a route path and whose value is {@link MethodDescriptor}, which is
+     * serviced by this service.
+     */
+    default Map<String, MethodDescriptor<?, ?>> methods() {
+        return services().stream()
+                         .flatMap(service -> service.getMethods().stream())
+                         .map(ServerMethodDefinition::getMethodDescriptor)
+                         .collect(toImmutableMap(MethodDescriptor::getFullMethodName, Function.identity()));
+    }
 
     /**
      * Returns the {@link SerializationFormat}s supported by this service.

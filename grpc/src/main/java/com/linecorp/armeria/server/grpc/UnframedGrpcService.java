@@ -104,6 +104,11 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     }
 
     @Override
+    public Map<String, MethodDescriptor<?, ?>> methods() {
+        return methodsByName;
+    }
+
+    @Override
     public Set<SerializationFormat> supportedSerializationFormats() {
         return delegateGrpcService.supportedSerializationFormats();
     }

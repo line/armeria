@@ -51,11 +51,13 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
+import com.linecorp.armeria.server.grpc.HandlerRegistry.Entry;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
@@ -148,6 +150,17 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * TODO(ikhoon): Update Javadoc.
+     */
+    public GrpcServiceBuilder addService(String path, ServerServiceDefinition service,
+                                         MethodDescriptor<?, ?> methodDescriptor) {
+        registryBuilder.addService(requireNonNull(path, "path"),
+                                   requireNonNull(service, "service"),
+                                   requireNonNull(methodDescriptor, "methodDescriptor"));
+        return this;
+    }
+
+    /**
      * Adds a gRPC {@link BindableService} to this {@link GrpcServiceBuilder}. Most gRPC service
      * implementations are {@link BindableService}s.
      */
@@ -183,6 +196,20 @@ public final class GrpcServiceBuilder {
         }
 
         return addService(path, bindableService.bindService());
+    }
+
+    /**
+     * TODO(ikhoon): Update Javadoc.
+     */
+    public GrpcServiceBuilder addService(String path, BindableService bindableService,
+                                         MethodDescriptor<?, ?> methodDescriptor) {
+        if (bindableService instanceof ProtoReflectionService) {
+            final ServerServiceDefinition interceptor =
+                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
+            return addService(path, interceptor, methodDescriptor);
+        }
+
+        return addService(path, bindableService.bindService(), methodDescriptor);
     }
 
     private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
@@ -393,15 +420,21 @@ public final class GrpcServiceBuilder {
     public GrpcService build() {
         final HandlerRegistry handlerRegistry;
         if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
-            final HandlerRegistry registry = registryBuilder.build();
             final ServerInterceptor coroutineContextInterceptor =
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
-            final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
-            registry.services().forEach((path, serviceDef) -> {
-                registryBuilder.addService(path, ServerInterceptors.intercept(serviceDef,
-                                                                              coroutineContextInterceptor));
-            });
-            handlerRegistry = registryBuilder.build();
+            final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
+
+            for (Entry entry : registryBuilder.entries()) {
+                final MethodDescriptor<?, ?> methodDescriptor = entry.method();
+                final ServerServiceDefinition intercepted =
+                        ServerInterceptors.intercept(entry.service(), coroutineContextInterceptor);
+                if (methodDescriptor != null) {
+                    newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
+                } else {
+                    newRegistryBuilder.addService(entry.path(), intercepted);
+                }
+            }
+            handlerRegistry = newRegistryBuilder.build();
         } else {
             handlerRegistry = registryBuilder.build();
         }
