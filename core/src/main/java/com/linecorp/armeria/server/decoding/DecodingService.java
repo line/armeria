@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * A {@link DecoratingService} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
  * content of an {@link HttpRequest}.
  */
-public class DecodingService extends SimpleDecoratingHttpService {
+public final class DecodingService extends SimpleDecoratingHttpService {
 
     /**
      * Creates a new {@link DecodingService} decorator with the default encodings of 'gzip' and 'deflate'.
@@ -51,7 +51,7 @@ public class DecodingService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance that decorates the specified {@link HttpService} with the provided decoders.
      */
-    protected DecodingService(HttpService delegate, Iterable<? extends StreamDecoderFactory> decoderFactories) {
+    private DecodingService(HttpService delegate, Iterable<? extends StreamDecoderFactory> decoderFactories) {
         super(delegate);
         this.decoderFactories = Streams.stream(decoderFactories)
                                        .collect(toImmutableMap(StreamDecoderFactory::encodingHeaderValue,

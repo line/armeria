@@ -37,7 +37,7 @@ import io.netty.buffer.ByteBufAllocator;
 /**
  * A {@link FilteredHttpRequest} that applies HTTP decoding to {@link HttpObject}s as they are published.
  */
-public class HttpDecodedRequest extends FilteredHttpRequest {
+final class HttpDecodedRequest extends FilteredHttpRequest {
 
     private final Map<String, StreamDecoderFactory> availableDecoders;
     private final ByteBufAllocator alloc;
