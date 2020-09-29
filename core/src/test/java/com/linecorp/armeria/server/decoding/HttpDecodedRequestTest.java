@@ -32,13 +32,13 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBuf;

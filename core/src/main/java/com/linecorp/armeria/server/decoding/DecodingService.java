@@ -24,9 +24,9 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
