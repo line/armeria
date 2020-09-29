@@ -27,7 +27,10 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 /**
  * A {@link StreamDecoder} that user zlib ('gzip' or 'deflate'). Netty implementation used to allow
  * for incremental decoding using an {@link EmbeddedChannel}.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.encoding.ZlibStreamDecoder} instead.
  */
+@Deprecated
 final class ZlibStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
