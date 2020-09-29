@@ -17,7 +17,7 @@
 package com.linecorp.armeria.internal.server.grpc;
 
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
-import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.extractMethodName;
+import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

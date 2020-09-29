@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UncheckedIOException;
@@ -192,11 +193,6 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             });
         }
         return generate(serviceInfosBuilder.build(filter));
-    }
-
-    static String extractMethodName(String fullMethodName) {
-        final int methodIndex = fullMethodName.lastIndexOf('/');
-        return fullMethodName.substring(methodIndex + 1);
     }
 
     @Override

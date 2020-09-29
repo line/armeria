@@ -46,6 +46,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -105,11 +106,6 @@ final class HandlerRegistry {
                             MethodDescriptor<?, ?> methodDescriptor) {
             entries.add(new Entry(normalizePath(path), service, methodDescriptor));
             return this;
-        }
-
-        private static String extractMethodName(String fullMethodName) {
-            final int methodIndex = fullMethodName.lastIndexOf('/');
-            return fullMethodName.substring(methodIndex + 1);
         }
 
         private static String normalizePath(String path) {
