@@ -76,6 +76,7 @@ public interface GrpcService extends HttpServiceWithRoutes {
         return services().stream()
                          .flatMap(service -> service.getMethods().stream())
                          .map(ServerMethodDefinition::getMethodDescriptor)
+                         .distinct()
                          .collect(toImmutableMap(MethodDescriptor::getFullMethodName, Function.identity()));
     }
 

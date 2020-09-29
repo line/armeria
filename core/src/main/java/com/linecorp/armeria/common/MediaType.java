@@ -128,14 +128,14 @@ public final class MediaType {
     private static final Map<MediaType, MediaType> KNOWN_TYPES = Maps.newHashMap();
 
     private static MediaType createConstant(String type, String subtype) {
-        MediaType mediaType =
+        final MediaType mediaType =
                 addKnownType(new MediaType(type, subtype, ImmutableListMultimap.of()));
         mediaType.parsedCharset = null;
         return mediaType;
     }
 
     private static MediaType createConstantUtf8(String type, String subtype) {
-        MediaType mediaType = addKnownType(new MediaType(type, subtype, UTF_8_CONSTANT_PARAMETERS));
+        final MediaType mediaType = addKnownType(new MediaType(type, subtype, UTF_8_CONSTANT_PARAMETERS));
         mediaType.parsedCharset = UTF_8;
         return mediaType;
     }
@@ -746,10 +746,10 @@ public final class MediaType {
     public MediaType withParameters(String attribute, Iterable<String> values) {
         checkNotNull(attribute);
         checkNotNull(values);
-        String normalizedAttribute = normalizeToken(attribute);
-        ImmutableListMultimap.Builder<String, String> builder = ImmutableListMultimap.builder();
+        final String normalizedAttribute = normalizeToken(attribute);
+        final ImmutableListMultimap.Builder<String, String> builder = ImmutableListMultimap.builder();
         for (Entry<String, String> entry : parameters.entries()) {
-            String key = entry.getKey();
+            final String key = entry.getKey();
             if (!normalizedAttribute.equals(key)) {
                 builder.put(key, entry.getValue());
             }
@@ -757,7 +757,7 @@ public final class MediaType {
         for (String value : values) {
             builder.put(normalizedAttribute, normalizeParameterValue(normalizedAttribute, value));
         }
-        MediaType mediaType = new MediaType(type, subtype, builder.build());
+        final MediaType mediaType = new MediaType(type, subtype, builder.build());
         // if the attribute isn't charset, we can just inherit the current parsedCharset
         if (!normalizedAttribute.equals(CHARSET_ATTRIBUTE)) {
             mediaType.parsedCharset = parsedCharset;
@@ -789,7 +789,7 @@ public final class MediaType {
      */
     public MediaType withCharset(Charset charset) {
         checkNotNull(charset);
-        MediaType withCharset = withParameter(CHARSET_ATTRIBUTE, charset.name());
+        final MediaType withCharset = withParameter(CHARSET_ATTRIBUTE, charset.name());
         // precache the charset so we don't need to parse it
         withCharset.parsedCharset = charset;
         return withCharset;
@@ -905,7 +905,7 @@ public final class MediaType {
      *     type, but not the subtype.
      */
     public static MediaType create(String type, String subtype) {
-        MediaType mediaType = create(type, subtype, ImmutableListMultimap.of());
+        final MediaType mediaType = create(type, subtype, ImmutableListMultimap.of());
         mediaType.parsedCharset = null;
         return mediaType;
     }
@@ -915,17 +915,17 @@ public final class MediaType {
         checkNotNull(type);
         checkNotNull(subtype);
         checkNotNull(parameters);
-        String normalizedType = normalizeToken(type);
-        String normalizedSubtype = normalizeToken(subtype);
+        final String normalizedType = normalizeToken(type);
+        final String normalizedSubtype = normalizeToken(subtype);
         checkArgument(
                 !WILDCARD.equals(normalizedType) || WILDCARD.equals(normalizedSubtype),
                 "A wildcard type cannot be used with a non-wildcard subtype");
-        ImmutableListMultimap.Builder<String, String> builder = ImmutableListMultimap.builder();
+        final ImmutableListMultimap.Builder<String, String> builder = ImmutableListMultimap.builder();
         for (Entry<String, String> entry : parameters.entries()) {
-            String attribute = normalizeToken(entry.getKey());
+            final String attribute = normalizeToken(entry.getKey());
             builder.put(attribute, normalizeParameterValue(attribute, entry.getValue()));
         }
-        MediaType mediaType = new MediaType(normalizedType, normalizedSubtype, builder.build());
+        final MediaType mediaType = new MediaType(normalizedType, normalizedSubtype, builder.build());
         // Return one of the constants if the media type is a known type.
         return firstNonNull(KNOWN_TYPES.get(mediaType), mediaType);
     }
@@ -995,22 +995,22 @@ public final class MediaType {
         if (wellKnown != null) {
             return wellKnown;
         }
-        Tokenizer tokenizer = new Tokenizer(input);
+        final Tokenizer tokenizer = new Tokenizer(input);
         try {
-            String type = tokenizer.consumeToken(TOKEN_MATCHER);
+            final String type = tokenizer.consumeToken(TOKEN_MATCHER);
             tokenizer.consumeCharacter('/');
-            String subtype = tokenizer.consumeToken(TOKEN_MATCHER);
-            ImmutableListMultimap.Builder<String, String> parameters = ImmutableListMultimap.builder();
+            final String subtype = tokenizer.consumeToken(TOKEN_MATCHER);
+            final ImmutableListMultimap.Builder<String, String> parameters = ImmutableListMultimap.builder();
             while (tokenizer.hasMore()) {
                 tokenizer.consumeTokenIfPresent(LINEAR_WHITE_SPACE);
                 tokenizer.consumeCharacter(';');
                 tokenizer.consumeTokenIfPresent(LINEAR_WHITE_SPACE);
-                String attribute = tokenizer.consumeToken(TOKEN_MATCHER);
+                final String attribute = tokenizer.consumeToken(TOKEN_MATCHER);
                 tokenizer.consumeCharacter('=');
                 final String value;
                 if ('"' == tokenizer.previewChar()) {
                     tokenizer.consumeCharacter('"');
-                    StringBuilder valueBuilder = new StringBuilder();
+                    final StringBuilder valueBuilder = new StringBuilder();
                     while ('"' != tokenizer.previewChar()) {
                         if ('\\' == tokenizer.previewChar()) {
                             tokenizer.consumeCharacter('\\');
@@ -1042,21 +1042,21 @@ public final class MediaType {
 
         String consumeTokenIfPresent(CharMatcher matcher) {
             checkState(hasMore());
-            int startPosition = position;
+            final int startPosition = position;
             position = matcher.negate().indexIn(input, startPosition);
             return hasMore() ? input.substring(startPosition, position) : input.substring(startPosition);
         }
 
         String consumeToken(CharMatcher matcher) {
-            int startPosition = position;
-            String token = consumeTokenIfPresent(matcher);
+            final int startPosition = position;
+            final String token = consumeTokenIfPresent(matcher);
             checkState(position != startPosition);
             return token;
         }
 
         char consumeCharacter(CharMatcher matcher) {
             checkState(hasMore());
-            char c = previewChar();
+            final char c = previewChar();
             checkState(matcher.matches(c));
             position++;
             return c;
@@ -1084,7 +1084,7 @@ public final class MediaType {
         if (obj == this) {
             return true;
         } else if (obj instanceof MediaType) {
-            MediaType that = (MediaType) obj;
+            final MediaType that = (MediaType) obj;
             return type.equals(that.type) &&
                    subtype.equals(that.subtype) &&
                    // compare parameters regardless of order
@@ -1123,10 +1123,10 @@ public final class MediaType {
     }
 
     private String computeToString() {
-        StringBuilder builder = new StringBuilder().append(type).append('/').append(subtype);
+        final StringBuilder builder = new StringBuilder().append(type).append('/').append(subtype);
         if (!parameters.isEmpty()) {
             builder.append("; ");
-            Multimap<String, String> quotedParameters =
+            final Multimap<String, String> quotedParameters =
                     Multimaps.transformValues(
                             parameters,
                             value -> TOKEN_MATCHER.matchesAllOf(value) ? value : escapeAndQuote(value));
@@ -1136,9 +1136,9 @@ public final class MediaType {
     }
 
     private static String escapeAndQuote(String value) {
-        StringBuilder escaped = new StringBuilder(value.length() + 16).append('"');
+        final StringBuilder escaped = new StringBuilder(value.length() + 16).append('"');
         for (int i = 0; i < value.length(); i++) {
-            char ch = value.charAt(i);
+            final char ch = value.charAt(i);
             if (ch == '\r' || ch == '\\' || ch == '"') {
                 escaped.append('\\');
             }

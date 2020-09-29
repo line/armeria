@@ -349,6 +349,14 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Override
+    public Map<String, MethodDescriptor<?, ?>> methods() {
+        return registry.methods().entrySet()
+                       .stream()
+                       .collect(toImmutableMap(Entry::getKey,
+                                               entry -> entry.getValue().getMethodDescriptor()));
+    }
+
+    @Override
     public Set<SerializationFormat> supportedSerializationFormats() {
         return supportedSerializationFormats;
     }

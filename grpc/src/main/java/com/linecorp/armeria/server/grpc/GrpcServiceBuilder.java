@@ -141,7 +141,7 @@ public final class GrpcServiceBuilder {
      *   rpc Hello (HelloRequest) returns (HelloReply) {}
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is {@code "/example.grpc.hello/Hello"}.
-     * However if you set the {@code path} to {@code "foo"}, the {@code Hello} method will be served at
+     * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
@@ -150,7 +150,21 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * TODO(ikhoon): Update Javadoc.
+     * Adds a {@linkplain MethodDescriptor method} of gRPC {@link ServerServiceDefinition} to this
+     * {@link GrpcServiceBuilder}. You can access the {@link MethodDescriptor}s from the enclosing class of
+     * your generated stub.
+     *
+     * <p>Note that the specified {@code path} replaces the normal gRPC service path.
+     * Let's say you have the following gRPC service definition.
+     * <pre>{@code
+     * package example.grpc.hello;
+     *
+     * service HelloService {
+     *   rpc Hello (HelloRequest) returns (HelloReply) {}
+     * }}</pre>
+     * The normal gRPC service path for the {@code Hello} method is {@code "/example.grpc.hello/Hello"}.
+     * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
+     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service,
                                          MethodDescriptor<?, ?> methodDescriptor) {
@@ -199,7 +213,21 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * TODO(ikhoon): Update Javadoc.
+     * Adds a {@linkplain MethodDescriptor method} of gRPC {@link BindableService} to this
+     * {@link GrpcServiceBuilder}. You can access the {@link MethodDescriptor}s from the enclosing class of
+     * your generated stub.
+     *
+     * <p>Note that the specified {@code path} replaces the normal gRPC service path.
+     * Let's say you have the following gRPC service definition.
+     * <pre>{@code
+     * package example.grpc.hello;
+     *
+     * service HelloService {
+     *   rpc Hello (HelloRequest) returns (HelloReply) {}
+     * }}</pre>
+     * The normal gRPC service path for the {@code Hello} method is {@code "/example.grpc.hello/Hello"}.
+     * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
+     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService,
                                          MethodDescriptor<?, ?> methodDescriptor) {
