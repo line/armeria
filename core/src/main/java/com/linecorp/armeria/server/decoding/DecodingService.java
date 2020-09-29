@@ -76,6 +76,7 @@ public final class DecodingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final HttpDecodedRequest decodedRequest = new HttpDecodedRequest(req, decoderFactories, ctx.alloc());
+        ctx.updateRequest(decodedRequest);
         return unwrap().serve(ctx, decodedRequest);
     }
 }
