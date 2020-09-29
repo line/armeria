@@ -45,6 +45,8 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
     @Nullable
     private StreamDecoder responseDecoder;
 
+    private boolean decoderCheck;
+
     HttpDecodedRequest(HttpRequest delegate, Map<String, StreamDecoderFactory> availableDecoders,
                        ByteBufAllocator alloc) {
         super(delegate);
@@ -55,13 +57,16 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
     @Override
     protected HttpObject filter(HttpObject obj) {
         if (obj instanceof HttpData) {
-            final String contentEncoding = headers().get(HttpHeaderNames.CONTENT_ENCODING);
-            if (contentEncoding != null) {
-                final StreamDecoderFactory decoderFactory =
-                        availableDecoders.get(Ascii.toLowerCase(contentEncoding));
-                // If the client sent an encoding we don't support, decoding will be skipped which is ok.
-                if (decoderFactory != null) {
-                    responseDecoder = decoderFactory.newDecoder(alloc);
+            if (!decoderCheck) {
+                decoderCheck = true;
+                final String contentEncoding = headers().get(HttpHeaderNames.CONTENT_ENCODING);
+                if (contentEncoding != null) {
+                    final StreamDecoderFactory decoderFactory =
+                            availableDecoders.get(Ascii.toLowerCase(contentEncoding));
+                    // If the client sent an encoding we don't support, decoding will be skipped which is ok.
+                    if (decoderFactory != null) {
+                        responseDecoder = decoderFactory.newDecoder(alloc);
+                    }
                 }
             }
             return responseDecoder != null ? responseDecoder.decode((HttpData) obj) : obj;
