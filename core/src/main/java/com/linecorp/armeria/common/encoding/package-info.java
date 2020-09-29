@@ -15,7 +15,7 @@
  */
 
 /**
- * HTTP content decoding class.
+ * Provides the common classes for HTTP content encoding and decoding.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.encoding;
