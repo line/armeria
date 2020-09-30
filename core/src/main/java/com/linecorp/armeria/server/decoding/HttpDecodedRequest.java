@@ -45,7 +45,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
     @Nullable
     private StreamDecoder responseDecoder;
 
-    private boolean decoderCheck;
+    private boolean initializedDecoder;
 
     HttpDecodedRequest(HttpRequest delegate, Map<String, StreamDecoderFactory> availableDecoders,
                        ByteBufAllocator alloc) {
@@ -57,8 +57,8 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
     @Override
     protected HttpObject filter(HttpObject obj) {
         if (obj instanceof HttpData) {
-            if (!decoderCheck) {
-                decoderCheck = true;
+            if (!initializedDecoder) {
+                initializedDecoder = true;
                 final String contentEncoding = headers().get(HttpHeaderNames.CONTENT_ENCODING);
                 if (contentEncoding != null) {
                     final StreamDecoderFactory decoderFactory =
