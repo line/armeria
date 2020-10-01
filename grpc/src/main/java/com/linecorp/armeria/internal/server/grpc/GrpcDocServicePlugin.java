@@ -276,6 +276,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                          return builder.availableMimeTypes(e.availableMimeTypes()).build();
                                      })
                                      .collect(toImmutableSet());
+
         return new MethodInfo(
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
