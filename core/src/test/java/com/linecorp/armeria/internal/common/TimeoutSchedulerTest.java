@@ -408,6 +408,22 @@ class TimeoutSchedulerTest {
         await().untilTrue(completed);
     }
 
+    @Test
+    void initializeOnlyOnce() {
+        final AtomicBoolean completed = new AtomicBoolean();
+        final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
+        eventExecutor.execute(() -> {
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, MILLISECONDS.toNanos(100));
+            assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
+
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, MILLISECONDS.toNanos(1000));
+            assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
+            completed.set(true);
+        });
+
+        await().untilTrue(completed);
+    }
+
     static void assertTimeoutWithTolerance(long actualNanos, long expectedNanos) {
         assertThat(actualNanos)
                 .isCloseTo(expectedNanos, Offset.offset(MILLISECONDS.toNanos(200)));

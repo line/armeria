@@ -122,7 +122,7 @@ public interface RequestContext {
      * Returns the value associated with the given {@link AttributeKey} or {@code null} if there's no value
      * set by {@link #setAttr(AttributeKey, Object)}.
      *
-     * <h3>Searching for attributes in a root context</h3>
+     * <h4>Searching for attributes in a root context</h4>
      *
      * <p>Note: This section applies only to a {@link ClientRequestContext}. A {@link ServiceRequestContext}
      * always has itself as a {@link #root()}.</p>
@@ -185,7 +185,7 @@ public interface RequestContext {
     /**
      * Returns the {@link Iterator} of all {@link Entry}s this context contains.
      *
-     * <h3>Searching for attributes in a root context</h3>
+     * <h4>Searching for attributes in a root context</h4>
      *
      * <p>Note: This section applies only to a {@link ClientRequestContext}. A {@link ServiceRequestContext}
      * always has itself as a {@link #root()}.</p>

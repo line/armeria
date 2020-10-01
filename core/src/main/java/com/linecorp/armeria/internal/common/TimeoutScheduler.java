@@ -111,6 +111,10 @@ public final class TimeoutScheduler {
             return;
         }
 
+        if (state != State.INIT) {
+            return;
+        }
+
         this.eventLoop = eventLoop;
         this.timeoutTask = timeoutTask;
         if (initialTimeoutNanos > 0) {

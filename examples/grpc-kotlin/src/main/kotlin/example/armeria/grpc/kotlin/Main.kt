@@ -32,7 +32,8 @@ object Main {
                 localAddress.address.isLoopbackAddress
             logger.info(
                 "Server has been started. Serving DocService at http://{}:{}/docs",
-                if (isLocalAddress) "127.0.0.1" else localAddress.hostString, localAddress.port
+                if (isLocalAddress) "127.0.0.1" else localAddress.hostString,
+                localAddress.port
             )
         }
     }
@@ -62,15 +63,18 @@ object Main {
                 DocService.builder()
                     .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
-                        "Hello", exampleRequest
+                        "Hello",
+                        exampleRequest
                     )
                     .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
-                        "LazyHello", exampleRequest
+                        "LazyHello",
+                        exampleRequest
                     )
                     .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
-                        "BlockingHello", exampleRequest
+                        "BlockingHello",
+                        exampleRequest
                     )
                     .exclude(
                         DocServiceFilter.ofServiceName(

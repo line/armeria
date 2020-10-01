@@ -24,6 +24,7 @@ const endpointPathPlaceHolder = '/foo/bar';
 
 interface Props {
   editable: boolean;
+  isAnnotatedService: boolean;
   endpointPathOpen: boolean;
   examplePaths: Option[];
   additionalPath: string;
@@ -41,27 +42,40 @@ const EndpointPath: React.FunctionComponent<Props> = (props) => (
     <Typography variant="body2" paragraph />
     {props.endpointPathOpen && (
       <>
-        {props.examplePaths.length > 0 && (
+        {props.isAnnotatedService ? (
+          <>
+            {props.examplePaths.length > 0 && (
+              <>
+                <Typography variant="body2" paragraph />
+                <Dropdown
+                  placeholder="Select an example path..."
+                  options={props.examplePaths}
+                  onChange={props.onSelectedPathChange}
+                />
+              </>
+            )}
+            <Typography variant="body2" paragraph />
+            <TextField
+              fullWidth
+              value={props.additionalPath}
+              placeholder={endpointPathPlaceHolder}
+              onChange={props.onPathFormChange}
+              inputProps={{
+                readOnly: !props.editable,
+                className: 'code',
+              }}
+            />
+          </>
+        ) : (
           <>
             <Typography variant="body2" paragraph />
             <Dropdown
-              placeholder="Select an example path..."
               options={props.examplePaths}
               onChange={props.onSelectedPathChange}
+              value={props.additionalPath}
             />
           </>
         )}
-        <Typography variant="body2" paragraph />
-        <TextField
-          fullWidth
-          value={props.additionalPath}
-          placeholder={endpointPathPlaceHolder}
-          onChange={props.onPathFormChange}
-          inputProps={{
-            readOnly: !props.editable,
-            className: 'code',
-          }}
-        />
       </>
     )}
   </>
