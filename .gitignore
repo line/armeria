@@ -133,3 +133,6 @@ typings/
 
 # ASDF
 .tool-versions
+
+# SDKMAN rc file
+.sdkmanrc
