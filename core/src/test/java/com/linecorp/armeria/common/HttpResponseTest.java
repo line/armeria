@@ -90,4 +90,17 @@ class HttpResponseTest {
                                                  HttpData.ofUtf8("bob")))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("non-1xx");
     }
+
+    @Test
+    void ofRedirect() {
+        final HttpResponse res = HttpResponse.ofRedirect("locationFor");
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+    }
+
+    @Test
+    void ofRedirectResponseCodeShouldBe300to307() {
+        assertThatThrownBy(() -> HttpResponse.ofRedirect(HttpStatus.OK, "locationFor"))
+            .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("expected: 300 .. 307");
+    }
 }
