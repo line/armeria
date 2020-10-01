@@ -23,9 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
@@ -81,8 +83,21 @@ public final class DecodingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpDecodedRequest decodedRequest = new HttpDecodedRequest(req, decoderFactories, ctx.alloc());
-        ctx.updateRequest(decodedRequest);
-        return unwrap().serve(ctx, decodedRequest);
+        final String contentEncoding = req.headers().get(HttpHeaderNames.CONTENT_ENCODING);
+        if (contentEncoding == null) {
+            // If the request does not contain [Content-Encoding] header,
+            // pass the request to the next service.
+            return unwrap().serve(ctx, req);
+        }
+        final StreamDecoderFactory decoderFactory = decoderFactories.get(Ascii.toLowerCase(contentEncoding));
+        if (decoderFactory != null) {
+            final HttpDecodedRequest decodedRequest = new HttpDecodedRequest(req, decoderFactory, ctx.alloc());
+            ctx.updateRequest(decodedRequest);
+            return unwrap().serve(ctx, decodedRequest);
+        } else {
+            // The request contain [Content-Encoding] but not exist appropriate decoder,
+            // pass the request to the next service.
+            return unwrap().serve(ctx, req);
+        }
     }
 }

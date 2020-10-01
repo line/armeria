@@ -16,17 +16,10 @@
 
 package com.linecorp.armeria.server.decoding;
 
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
-
-import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
@@ -39,37 +32,18 @@ import io.netty.buffer.ByteBufAllocator;
  */
 final class HttpDecodedRequest extends FilteredHttpRequest {
 
-    private final Map<String, StreamDecoderFactory> availableDecoders;
-    private final ByteBufAllocator alloc;
+    private final StreamDecoder responseDecoder;
 
-    @Nullable
-    private StreamDecoder responseDecoder;
-
-    private boolean initializedDecoder;
-
-    HttpDecodedRequest(HttpRequest delegate, Map<String, StreamDecoderFactory> availableDecoders,
+    HttpDecodedRequest(HttpRequest delegate, StreamDecoderFactory decoderFactory,
                        ByteBufAllocator alloc) {
         super(delegate);
-        this.availableDecoders = availableDecoders;
-        this.alloc = alloc;
+        responseDecoder = decoderFactory.newDecoder(alloc);
     }
 
     @Override
     protected HttpObject filter(HttpObject obj) {
         if (obj instanceof HttpData) {
-            if (!initializedDecoder) {
-                initializedDecoder = true;
-                final String contentEncoding = headers().get(HttpHeaderNames.CONTENT_ENCODING);
-                if (contentEncoding != null) {
-                    final StreamDecoderFactory decoderFactory =
-                            availableDecoders.get(Ascii.toLowerCase(contentEncoding));
-                    // If the client sent an encoding we don't support, decoding will be skipped which is ok.
-                    if (decoderFactory != null) {
-                        responseDecoder = decoderFactory.newDecoder(alloc);
-                    }
-                }
-            }
-            return responseDecoder != null ? responseDecoder.decode((HttpData) obj) : obj;
+            return responseDecoder.decode((HttpData) obj);
         } else {
             return obj;
         }
@@ -77,9 +51,6 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-        if (responseDecoder == null) {
-            return;
-        }
         final HttpData lastData = responseDecoder.finish();
         if (!lastData.isEmpty()) {
             subscriber.onNext(lastData);
@@ -88,9 +59,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        if (responseDecoder != null) {
-            responseDecoder.finish();
-        }
+        responseDecoder.finish();
         return cause;
     }
 }

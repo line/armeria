@@ -22,15 +22,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -46,8 +43,7 @@ import io.netty.buffer.ByteBufAllocator;
 
 class HttpDecodedRequestTest {
 
-    private static final Map<String, StreamDecoderFactory> DECODERS =
-            ImmutableMap.of("gzip", StreamDecoderFactory.gzip());
+    private static final StreamDecoderFactory DECODER = StreamDecoderFactory.gzip();
 
     private static final RequestHeaders REQUEST_HEADERS =
             RequestHeaders.of(HttpMethod.POST, "/", HttpHeaderNames.CONTENT_ENCODING, "gzip");
@@ -68,7 +64,7 @@ class HttpDecodedRequestTest {
     void unpooledPayload_unpooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
         final HttpData decodedPayload = requestData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -79,7 +75,7 @@ class HttpDecodedRequestTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
         final HttpData decodedPayload = requestData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -90,7 +86,7 @@ class HttpDecodedRequestTest {
     void unpooledPayload_pooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
         final HttpData decodedPayload = requestData(decoded, true);
 
         assertThat(decodedPayload.isPooled()).isTrue();
@@ -103,7 +99,7 @@ class HttpDecodedRequestTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
         final HttpData decodedPayload = requestData(decoded, true);
         final ByteBuf decodedPayloadBuf = decodedPayload.byteBuf();
 
