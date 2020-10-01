@@ -22,15 +22,17 @@ import com.linecorp.armeria.common.HttpData;
  * An interface for objects that apply HTTP content decoding to incoming {@link HttpData}.
  * Implement this interface to use content decoding schemes not built-in to the JDK.
  */
-public interface StreamDecoder {
+public interface StreamDecoder extends com.linecorp.armeria.client.encoding.StreamDecoder {
 
     /**
      * Decodes an {@link HttpData} and returns the decoded {@link HttpData}.
      */
+    @Override
     HttpData decode(HttpData obj);
 
     /**
      * Closes the decoder and returns any decoded data that may be left over.
      */
+    @Override
     HttpData finish();
 }
