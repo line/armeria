@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-public class HttpDecodedRequestTest {
+class HttpDecodedRequestTest {
 
     private static final Map<String, StreamDecoderFactory> DECODERS =
             ImmutableMap.of("gzip", StreamDecoderFactory.gzip());

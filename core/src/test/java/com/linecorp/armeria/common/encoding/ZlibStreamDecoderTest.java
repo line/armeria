@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.encoding;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
-public class ZlibStreamDecoderTest extends AbstractStreamDecoderTest {
+class ZlibStreamDecoderTest extends AbstractStreamDecoderTest {
     @Override
     StreamDecoder newDecoder() {
         return new ZlibStreamDecoder(ZlibWrapper.NONE, ByteBufAllocator.DEFAULT);
