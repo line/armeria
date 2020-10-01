@@ -391,12 +391,33 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response of the redirect to specific location.
+     */
+    static HttpResponse ofRedirect(HttpStatus redirectStatus, String location) {
+        requireNonNull(redirectStatus, "redirectStatus");
+        requireNonNull(location, "location");
+        if (redirectStatus.compareTo(HttpStatus.MULTIPLE_CHOICES) < 0 ||
+            redirectStatus.compareTo(HttpStatus.TEMPORARY_REDIRECT) > 0) {
+            throw new IllegalArgumentException("redirectStatus: " + redirectStatus + " (expected: 300 .. 307)");
+        }
+
+        return of(ResponseHeaders.of(redirectStatus, HttpHeaderNames.LOCATION, location));
+    }
+
+    /**
+     * Creates a new HTTP response of the redirect to specific location using string format.
+     */
+    static HttpResponse ofRedirect(HttpStatus redirectStatus, String format, Object... args) {
+        requireNonNull(format, "format");
+
+        return ofRedirect(redirectStatus, String.format(format, args));
+    }
+
+    /**
      * Creates a new HTTP response of the temporary redirect to specific location.
      */
     static HttpResponse ofRedirect(String location) {
-        requireNonNull(location, "location");
-        return of(ResponseHeaders.of(RedirectType.TEMPORARY.toHttpStatus(), HttpHeaderNames.LOCATION,
-            location));
+        return ofRedirect(HttpStatus.TEMPORARY_REDIRECT, location);
     }
 
     /**
@@ -404,27 +425,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse ofRedirect(String format, Object... args) {
         requireNonNull(format, "format");
-        return of(ResponseHeaders.of(RedirectType.TEMPORARY.toHttpStatus(), HttpHeaderNames.LOCATION,
-            String.format(format, args)));
-    }
 
-    /**
-     * Creates a new HTTP response of the redirect to specific location.
-     */
-    static HttpResponse ofRedirect(RedirectType redirectType, String location) {
-        requireNonNull(redirectType, "redirectType");
-        requireNonNull(location, "location");
-        return of(ResponseHeaders.of(redirectType.toHttpStatus(), HttpHeaderNames.LOCATION, location));
-    }
-
-    /**
-     * Creates a new HTTP response of the redirect to specific location using string format.
-     */
-    static HttpResponse ofRedirect(RedirectType redirectType, String format, Object... args) {
-        requireNonNull(redirectType, "redirectType");
-        requireNonNull(format, "format");
-        return of(ResponseHeaders.of(redirectType.toHttpStatus(), HttpHeaderNames.LOCATION,
-            String.format(format, args)));
+        return ofRedirect(HttpStatus.TEMPORARY_REDIRECT, String.format(format, args));
     }
 
     /**
