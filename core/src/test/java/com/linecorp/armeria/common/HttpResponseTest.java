@@ -92,15 +92,62 @@ class HttpResponseTest {
     }
 
     @Test
-    void ofRedirect() {
+    void ofRedirectTemporary() {
         final HttpResponse res = HttpResponse.ofRedirect("locationFor");
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+        assertThat(aggregatedRes.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("locationFor");
+    }
+
+    @Test
+    void ofRedirectTemporaryUsingFormat() {
+        final HttpResponse res = HttpResponse.ofRedirect("location%s", "For");
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+        assertThat(aggregatedRes.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("locationFor");
+    }
+
+    @Test
+    void ofRedirectPermanently() {
+        final HttpResponse res = HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "locationFor");
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.MOVED_PERMANENTLY);
+        assertThat(aggregatedRes.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("locationFor");
+    }
+
+    @Test
+    void ofRedirectPermanentlyUsingStringFormat() {
+        final HttpResponse res = HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "location%s", "For");
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.MOVED_PERMANENTLY);
+        assertThat(aggregatedRes.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("locationFor");
     }
 
     @Test
     void ofRedirectResponseCodeShouldBe300to307() {
         assertThatThrownBy(() -> HttpResponse.ofRedirect(HttpStatus.OK, "locationFor"))
             .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("expected: 300 .. 307");
+    }
+
+    @Test
+    void ofRedirectParamsShouldNotBeNull() {
+        //check redirect status
+        assertThatThrownBy(() -> HttpResponse.ofRedirect(null, "locationFor"))
+            .isInstanceOf(NullPointerException.class).hasMessageContaining("redirectStatus");
+
+        //check location
+        assertThatThrownBy(() -> HttpResponse.ofRedirect(null))
+            .isInstanceOf(NullPointerException.class).hasMessageContaining("location");
+
+        assertThatThrownBy(() -> HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, null))
+            .isInstanceOf(NullPointerException.class).hasMessageContaining("location");
+
+        //check args
+        assertThatThrownBy(() -> HttpResponse.ofRedirect("locationFor", null))
+            .isInstanceOf(NullPointerException.class).hasMessageContaining("args");
+
+        assertThatThrownBy(() -> HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "locationFor : %s",
+            null))
+            .isInstanceOf(NullPointerException.class).hasMessageContaining("args");
     }
 }
