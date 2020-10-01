@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
@@ -103,7 +102,7 @@ class FlagsTest {
             // Reload every class in common package.
             try {
                 // Classes do not have an inner class.
-                final String replaced = name.replace('.', File.separatorChar) + ".class";
+                final String replaced = name.replace('.', '/') + ".class";
                 final URL url = getClass().getClassLoader().getResource(replaced);
                 final URLConnection connection = url.openConnection();
                 final InputStream input = connection.getInputStream();
