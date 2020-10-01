@@ -409,6 +409,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse ofRedirect(HttpStatus redirectStatus, String format, Object... args) {
         requireNonNull(format, "format");
+        requireNonNull(args, "args");
 
         return ofRedirect(redirectStatus, String.format(format, args));
     }
@@ -425,6 +426,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse ofRedirect(String format, Object... args) {
         requireNonNull(format, "format");
+        requireNonNull(args, "args");
 
         return ofRedirect(HttpStatus.TEMPORARY_REDIRECT, String.format(format, args));
     }
