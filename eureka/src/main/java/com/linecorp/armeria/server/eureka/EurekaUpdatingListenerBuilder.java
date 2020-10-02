@@ -65,7 +65,7 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
  *                               .vipAddress("armeria.service.com:8080");
  *                               .build();
  * ServerBuilder sb = Server.builder();
- * sb.addListener(listener);
+ * sb.serverListener(listener);
  * }</pre>
  */
 public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilder {

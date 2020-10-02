@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.Server;
  *                              .sessionTimeoutMillis(10000)
  *                              .build();
  * ServerBuilder sb = Server.builder();
- * sb.addListener(listener);
+ * sb.serverListener(listener);
  * }</pre>
  * This registers the {@link Server} using the format compatible with
  * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
@@ -51,7 +51,7 @@ import com.linecorp.armeria.server.Server;
  *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints", spec)
  *                              .build();
  * ServerBuilder sb = Server.builder();
- * sb.addListener(listener);
+ * sb.serverListener(listener);
  * }</pre>
  * */
 public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
