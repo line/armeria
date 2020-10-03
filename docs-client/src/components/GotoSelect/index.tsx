@@ -207,6 +207,9 @@ function SingleValue(props: SingleValueProps<OptionType>) {
   return (
     <Typography
       className={props.selectProps.classes.singleValue}
+      style={{
+        display: props.selectProps.menuIsOpen ? 'none' : 'block',
+      }}
       noWrap
       {...props.innerProps}
     >
