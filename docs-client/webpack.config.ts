@@ -19,8 +19,20 @@ const config: Configuration = {
   },
   output: {
     path: path.resolve(process.cwd(), './build/web'),
+    filename: isDev ? '[name].js' : '[name].[contenthash].js',
     // We don't mount to '/' for production build since we want the code to be relocatable.
     publicPath: isDev ? '/' : '',
+  },
+  optimization: {
+    splitChunks: {
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendor',
+          chunks: 'all',
+        },
+      },
+    },
   },
   module: {
     rules: [
