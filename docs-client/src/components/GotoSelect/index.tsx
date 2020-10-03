@@ -41,9 +41,8 @@ import { ControlProps } from 'react-select/src/components/Control';
 import { IndicatorProps } from 'react-select/src/components/indicators';
 import { MenuProps, NoticeProps } from 'react-select/src/components/Menu';
 import { OptionProps } from 'react-select/src/components/Option';
-import { PlaceholderProps } from 'react-select/src/components/Placeholder';
 import { SingleValueProps } from 'react-select/src/components/SingleValue';
-import { ValueType } from 'react-select/src/types';
+import { CommonProps, ValueType } from 'react-select/src/types';
 import { Specification } from '../../lib/specification';
 
 interface OptionType {
@@ -191,12 +190,11 @@ function Option(props: OptionProps<OptionType>) {
   );
 }
 
-function Placeholder(props: PlaceholderProps<OptionType>) {
+function Placeholder(props: CommonProps<OptionType>) {
   return (
     <Typography
       color="textSecondary"
       className={props.selectProps.classes.placeholder}
-      {...props.innerProps}
     >
       Go to ...
     </Typography>
@@ -219,8 +217,12 @@ function SingleValue(props: SingleValueProps<OptionType>) {
 }
 
 function ValueContainer(props: ValueContainerProps<OptionType>) {
+  const { inputValue, menuIsOpen } = props.selectProps;
+  const showPlaceholder = props.hasValue && !inputValue && menuIsOpen;
+
   return (
     <div className={props.selectProps.classes.valueContainer}>
+      {showPlaceholder && Placeholder(props)}
       {props.children}
     </div>
   );
